@@ -152,8 +152,15 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { useNotificationStore } from '../../stores/notifications'
+
+// Component name for ESLint
+defineOptions({
+  name: 'SupportPage'
+})
 
 const router = useRouter()
+const notificationStore = useNotificationStore()
 const loading = ref(false)
 const showFAQ = ref(false)
 
@@ -207,7 +214,7 @@ const handleSubmit = async () => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000))
     
-    alert('Message sent successfully! We\'ll get back to you soon.')
+    notificationStore.showSuccess('Message sent successfully! We\'ll get back to you soon.')
     
     // Reset form
     Object.keys(formData).forEach(key => {
@@ -215,7 +222,7 @@ const handleSubmit = async () => {
     })
   } catch (error) {
     console.error('Submit error:', error)
-    alert('Failed to send message: ' + error.message)
+    notificationStore.showError('Failed to send message: ' + error.message)
   } finally {
     loading.value = false
   }

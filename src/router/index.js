@@ -12,13 +12,13 @@ import Support from '../pages/unauth/Support.vue'
 import Home from '../pages/auth/Home.vue'
 
 const routes = [
-  // Unauthorized user routes
+  // Root redirects to onboarding
   {
     path: '/',
-    name: 'Onboarding',
-    component: Onboarding,
-    meta: { requiresAuth: false }
+    redirect: '/onboarding'
   },
+
+  // Unauthorized user routes
   {
     path: '/onboarding',
     name: 'Onboarding',

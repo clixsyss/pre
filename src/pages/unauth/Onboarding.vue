@@ -1,27 +1,53 @@
 <template>
   <div class="onboarding">
-    <!-- Background with blur effect -->
-    <div class="background-overlay"></div>
-    
+    <!-- Background Image -->
+    <div class="background-image">
+      <img src="../../assets/onboarding.png" alt="PRE Group Development" />
+    </div>
+
+    <!-- Dark Overlay -->
+    <div class="overlay"></div>
+
     <!-- Content -->
     <div class="content">
-      <div class="welcome-text">
-        <h1 class="main-title">DISCOVER. <br /> MANAGE. <br /> RELIVE.</h1>
-        <p class="description">
-          Experience the future of property management with PRE Group. 
-          Discover innovative solutions, manage your properties efficiently, 
-          and relive the joy of hassle-free real estate management.
+      <!-- Main Title -->
+      <div class="main-title">
+        <h1>DISCOVER.</h1>
+        <h1>MANAGE.</h1>
+        <h1>RELIVE.</h1>
+      </div>
+
+      <!-- Company Description -->
+      <div class="description-section">
+        <div class="description-line"></div>
+        <p class="company-description">
+          Pioneers for Real Estate Development "PRE" is a real estate investor, developer and operator of integrated
+          mixed-use projects based in Egypt. With expertise in planning and developing projects, PRE offers its clients
+          tailored and crafted spaces that suit their every need.
+        </p>
+        <p class="company-description">
+          Established in 2017, PRE quickly and adaptively managed to bring a new concept to the market in which luxury
+          and practicality are fused together to offer its clients the best of all worlds. Through exclusive and
+          contemporary residential and commercial projects, PRE continuously and skillfully tailor nature and the latest
+          technological tools to create sustainable thriving communities that add elegance to our modern world.
+        </p>
+        <p class="company-description">
+          Our developments are a true testimony to the expertise, knowledge and dedication brought daily to establish a
+          brighter future.
         </p>
       </div>
-      
-      <!-- Pagination dots -->
-      <div class="pagination">
-        <div class="dot active"></div>
-        <div class="dot"></div>
-        <div class="dot"></div>
-      </div>
-      
-      <!-- Action buttons -->
+
+      <!-- Pagination and More Content -->
+      <!-- <div class="pagination-section">
+        <div class="pagination-dots">
+          <div class="dot active"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <span class="more-content">200+ more...</span>
+      </div> -->
+
+      <!-- Action Buttons -->
       <div class="actions">
         <button @click="goToRegister" class="register-btn">
           Register
@@ -30,7 +56,6 @@
           <span class="signin-text">Already have an account?</span>
           <button @click="goToSignIn" class="signin-btn">Sign in</button>
         </div>
-        
         <div class="support-link">
           <button @click="goToSupport" class="support-btn">Need Help?</button>
         </div>
@@ -41,6 +66,11 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
+
+// Component name for ESLint
+defineOptions({
+  name: 'OnboardingPage'
+})
 
 const router = useRouter()
 
@@ -62,55 +92,105 @@ const goToSupport = () => {
   position: relative;
   width: 100%;
   height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
 }
 
-.background-overlay {
+.background-image {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><filter id="blur"><feGaussianBlur stdDeviation="2"/></filter></defs><rect width="100" height="100" fill="%23333" filter="url(%23blur)"/></svg>');
+  z-index: -2;
+}
+
+.background-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg,
+      rgba(34, 34, 34, 0.95) 0%,
+      rgba(34, 34, 34, 0.8) 30%,
+      rgba(34, 34, 34, 0.6) 60%,
+      rgba(34, 34, 34, 0.4) 100%);
   z-index: -1;
 }
 
 .content {
-  text-align: center;
-  padding: 0 40px;
-  max-width: 500px;
+  position: relative;
   z-index: 1;
-}
-
-.welcome-text {
-  margin-bottom: 60px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 60px 30px 40px;
+  padding-top: 100px !important;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .main-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: white;
-  margin-bottom: 30px;
-  line-height: 1.2;
-  letter-spacing: 1px;
+  margin-bottom: 40px;
+  text-align: left;
 }
 
-.description {
-  font-size: 1.1rem;
+.main-title h1 {
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.description-section {
+  margin-bottom: 40px;
+  position: relative;
+}
+
+.description-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background-color: white;
+  opacity: 0.8;
+}
+
+.company-description {
   color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
   line-height: 1.6;
+  margin: 0 0 20px 20px;
+  text-align: left;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.company-description:last-of-type {
   margin-bottom: 0;
 }
 
-.pagination {
+.pagination-section {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 50px;
+  margin-left: 20px;
+}
+
+.pagination-dots {
+  display: flex;
   gap: 12px;
-  margin-bottom: 60px;
 }
 
 .dot {
@@ -122,28 +202,36 @@ const goToSupport = () => {
 }
 
 .dot.active {
-  background-color: white;
+  background-color: rgba(255, 255, 255, 0.8);
   transform: scale(1.2);
 }
 
+.more-content {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
 .actions {
+  margin-top: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 25px;
 }
 
 .register-btn {
   background-color: #ff6b35;
   color: white;
   border: none;
-  padding: 18px 60px;
+  padding: 18px 80px;
   border-radius: 50px;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+  min-width: 200px;
 }
 
 .register-btn:hover {
@@ -199,39 +287,67 @@ const goToSupport = () => {
 /* Responsive design */
 @media (max-width: 768px) {
   .content {
-    padding: 0 30px;
+    padding: 50px 25px 30px;
   }
-  
-  .main-title {
-    font-size: 2rem;
+
+  .main-title h1 {
+    font-size: 2.4rem;
   }
-  
-  .description {
-    font-size: 1rem;
+
+  .company-description {
+    font-size: 0.9rem;
   }
-  
+
   .register-btn {
-    padding: 16px 50px;
+    padding: 16px 60px;
     font-size: 1rem;
+    min-width: 180px;
   }
 }
 
 @media (max-width: 480px) {
   .content {
-    padding: 0 20px;
+    padding: 40px 20px 25px;
   }
-  
-  .main-title {
-    font-size: 1.8rem;
+
+  .main-title h1 {
+    font-size: 2.2rem;
   }
-  
-  .description {
-    font-size: 0.95rem;
+
+  .company-description {
+    font-size: 0.85rem;
+    margin-left: 15px;
   }
-  
+
+  .pagination-section {
+    margin-left: 15px;
+  }
+
   .register-btn {
-    padding: 14px 40px;
+    padding: 14px 50px;
     font-size: 0.95rem;
+    min-width: 160px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .content {
+    max-width: 600px;
+    padding: 80px 40px 60px;
+  }
+
+  .main-title h1 {
+    font-size: 3.2rem;
+  }
+
+  .company-description {
+    font-size: 1rem;
+  }
+
+  .register-btn {
+    padding: 20px 100px;
+    font-size: 1.2rem;
+    min-width: 240px;
   }
 }
 </style>

@@ -51,6 +51,7 @@
               class="form-input"
               placeholder="First Name"
               required
+              @input="saveToStore"
             />
           </div>
 
@@ -63,20 +64,22 @@
               class="form-input"
               placeholder="Last Name"
               required
+              @input="saveToStore"
             />
           </div>
         </div>
 
         <div class="form-group">
           <label for="mobile" class="form-label">Mobile Number</label>
-          <input
-            id="mobile"
-            v-model="formData.mobile"
-            type="tel"
-            class="form-input"
-            placeholder="Mobile Number"
-            required
-          />
+                      <input
+              id="mobile"
+              v-model="formData.mobile"
+              type="tel"
+              class="form-input"
+              placeholder="Mobile Number"
+              required
+              @input="saveToStore"
+            />
         </div>
 
         <div class="form-group">
@@ -88,6 +91,7 @@
               type="date"
               class="form-input"
               required
+              @change="saveToStore"
             />
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="calendar-icon">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
@@ -101,33 +105,34 @@
         <div class="form-group">
           <label class="form-label">Gender</label>
           <div class="gender-buttons">
-            <button 
-              type="button"
-              @click="formData.gender = 'male'"
-              :class="['gender-btn', { active: formData.gender === 'male' }]"
-            >
-              Male
-            </button>
-            <button 
-              type="button"
-              @click="formData.gender = 'female'"
-              :class="['gender-btn', { active: formData.gender === 'female' }]"
-            >
-              Female
-            </button>
+                          <button 
+                type="button"
+                @click="() => { formData.gender = 'male'; saveToStore(); }"
+                :class="['gender-btn', { active: formData.gender === 'male' }]"
+              >
+                Male
+              </button>
+                          <button 
+                type="button"
+                @click="() => { formData.gender = 'female'; saveToStore(); }"
+                :class="['gender-btn', { active: formData.gender === 'female' }]"
+              >
+                Female
+              </button>
           </div>
         </div>
 
         <div class="form-group">
           <label for="nationalId" class="form-label">National ID</label>
-          <input
-            id="nationalId"
-            v-model="formData.nationalId"
-            type="text"
-            class="form-input"
-            placeholder="National ID"
-            required
-          />
+                      <input
+              id="nationalId"
+              v-model="formData.nationalId"
+              type="text"
+              class="form-input"
+              placeholder="National ID"
+              required
+              @input="saveToStore"
+            />
         </div>
 
         <div class="form-row">
@@ -184,6 +189,7 @@
               class="form-input"
               placeholder="Password"
               required
+              @input="saveToStore"
             />
             <button
               type="button"
@@ -214,12 +220,21 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { useRouter } from 'vue-router'
+import { updateProfile } from 'firebase/auth'
 import { auth } from '../../boot/firebase'
+import { useRegistrationStore } from '../../stores/registration'
+import { useNotificationStore } from '../../stores/notifications'
+
+// Component name for ESLint
+defineOptions({
+  name: 'PersonalDetailsPage'
+})
 
 const router = useRouter()
-const route = useRoute()
+// route removed - not needed in this component
+const registrationStore = useRegistrationStore()
+const notificationStore = useNotificationStore()
 const loading = ref(false)
 const showPassword = ref(false)
 const frontIdFile = ref(null)
@@ -237,9 +252,25 @@ const formData = reactive({
 })
 
 onMounted(() => {
-  // Get email from route params or localStorage
-  const email = route.params.email || localStorage.getItem('registrationEmail') || 'Example@gmail.com'
+  // Get email from registration store
+  const email = registrationStore.personalData.email || 'Example@gmail.com'
   formData.email = email
+  
+  // Load existing data from store if available
+  if (registrationStore.userDetails.firstName) {
+    formData.firstName = registrationStore.userDetails.firstName
+    formData.lastName = registrationStore.userDetails.lastName
+    formData.mobile = registrationStore.userDetails.mobile
+    formData.dateOfBirth = registrationStore.userDetails.dateOfBirth
+    formData.gender = registrationStore.userDetails.gender
+    formData.nationalId = registrationStore.userDetails.nationalId
+  }
+  
+  // Check if user is authenticated
+  if (!auth.currentUser) {
+    notificationStore.showWarning('Please complete email verification first')
+    router.push('/register')
+  }
 })
 
 const goBack = () => {
@@ -248,6 +279,19 @@ const goBack = () => {
 
 const togglePassword = () => {
   showPassword.value = !showPassword.value
+}
+
+const saveToStore = () => {
+  // Save current form data to store
+  registrationStore.setUserDetails({
+    firstName: formData.firstName,
+    lastName: formData.lastName,
+    mobile: formData.mobile,
+    dateOfBirth: formData.dateOfBirth,
+    gender: formData.gender,
+    nationalId: formData.nationalId,
+    password: formData.password
+  })
 }
 
 const handleFrontIdUpload = (event) => {
@@ -267,27 +311,68 @@ const handleBackIdUpload = (event) => {
 const handleSubmit = async () => {
   if (loading.value) return
   
+  // Validate required fields
+  if (!formData.firstName || !formData.lastName || !formData.mobile || 
+      !formData.dateOfBirth || !formData.nationalId || !formData.password) {
+    notificationStore.showError('Please fill in all required fields')
+    return
+  }
+  
+  if (formData.password.length < 6) {
+    notificationStore.showWarning('Password must be at least 6 characters long')
+    return
+  }
+  
   loading.value = true
   
   try {
-    // Create user account with Firebase
-    const userCredential = await createUserWithEmailAndPassword(
-      auth, 
-      formData.email, 
-      formData.password
-    )
+    // Save user details to store
+    registrationStore.setUserDetails({
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      mobile: formData.mobile,
+      dateOfBirth: formData.dateOfBirth,
+      gender: formData.gender,
+      nationalId: formData.nationalId,
+      password: formData.password
+    })
     
-    // TODO: Save additional user data to Firestore
-    console.log('User created successfully:', userCredential.user)
-    console.log('Form data:', formData)
-    
-    // TODO: Upload ID images to Firebase Storage
-    
-    // Redirect to home page after successful registration
-    router.push('/home')
+    // Update the existing user's profile
+    if (auth.currentUser) {
+      await updateProfile(auth.currentUser, {
+        displayName: `${formData.firstName} ${formData.lastName}`,
+        photoURL: null
+      })
+      
+      console.log('User profile updated successfully:', auth.currentUser)
+      console.log('Complete registration data:', registrationStore.getRegistrationData())
+      
+      // Show success notification
+      notificationStore.showSuccess('Registration completed successfully! Welcome to PRE Group!')
+      
+      // TODO: Save additional user data to Firestore
+      // TODO: Upload ID images to Firebase Storage
+      
+      // Clear registration store
+      registrationStore.resetRegistration()
+      
+      // Redirect to home page after successful registration
+      router.push('/home')
+    } else {
+      throw new Error('No authenticated user found. Please try again.')
+    }
   } catch (error) {
-    console.error('Registration error:', error)
-    alert('Registration failed: ' + error.message)
+    console.error('Profile update error:', error)
+    
+    // Handle specific Firebase auth errors
+    let errorMessage = 'Profile update failed'
+    if (error.code === 'auth/requires-recent-login') {
+      errorMessage = 'Session expired. Please sign in again.'
+    } else {
+      errorMessage += ': ' + error.message
+    }
+    
+    notificationStore.showError(errorMessage)
   } finally {
     loading.value = false
   }

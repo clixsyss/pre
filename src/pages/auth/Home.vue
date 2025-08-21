@@ -101,7 +101,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth } from '../../boot/firebase'
-import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { onAuthStateChanged } from 'firebase/auth'
+
+// Component name for ESLint
+defineOptions({
+  name: 'HomePage'
+})
 
 const router = useRouter()
 const user = ref(null)
@@ -149,14 +154,15 @@ onMounted(() => {
   })
 })
 
-const handleSignOut = async () => {
-  try {
-    await signOut(auth)
-    router.push('/onboarding')
-  } catch (error) {
-    console.error('Sign out error:', error)
-  }
-}
+// Sign out function (can be used later when adding sign out button)
+// const handleSignOut = async () => {
+//   try {
+//     await signOut(auth)
+//     router.push('/onboarding')
+//   } catch (error) {
+//     console.error('Sign out error:', error)
+//   }
+// }
 </script>
 
 <style scoped>

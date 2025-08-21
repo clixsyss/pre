@@ -106,8 +106,15 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../../boot/firebase'
+import { useNotificationStore } from '../../stores/notifications'
+
+// Component name for ESLint
+defineOptions({
+  name: 'SignInPage'
+})
 
 const router = useRouter()
+const notificationStore = useNotificationStore()
 const loading = ref(false)
 const showPassword = ref(false)
 
@@ -136,7 +143,7 @@ const handleSignIn = async () => {
     router.push('/home')
   } catch (error) {
     console.error('Sign in error:', error)
-    alert('Sign in failed: ' + error.message)
+    notificationStore.showError('Sign in failed: ' + error.message)
   } finally {
     loading.value = false
   }

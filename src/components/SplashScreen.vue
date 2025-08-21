@@ -1,6 +1,11 @@
 <template>
   <Transition name="splash-fade">
     <div class="splash-screen" v-if="splashStore.show">
+      
+      <!-- Dark Overlay -->
+      <div class="overlay"></div>
+      
+      <!-- Logo Content -->
       <div class="logo-container">
         <img src="../assets/logo.png" alt="PRE Logo" class="logo" />
         <div class="tagline">Relive.</div>
@@ -38,27 +43,46 @@ onMounted(() => {
 
 <style scoped>
 .splash-screen {
+  background-color: #222;
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: #222222;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 9999;
+  overflow: hidden;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(34, 34, 34, 0.95) 0%,
+    rgba(34, 34, 34, 0.8) 30%,
+    rgba(34, 34, 34, 0.6) 60%,
+    rgba(34, 34, 34, 0.4) 100%
+  );
+  z-index: -1;
 }
 
 .logo-container {
   text-align: center;
   animation: fadeInUp 1s ease-out;
+  z-index: 1;
 }
 
 .logo {
   max-width: 200px;
   height: auto;
   margin-bottom: 20px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
 }
 
 .tagline {
@@ -68,6 +92,7 @@ onMounted(() => {
   letter-spacing: 1px;
   opacity: 0.9;
   margin-bottom: 30px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .loading-indicator {
@@ -83,8 +108,8 @@ onMounted(() => {
 .dot {
   width: 8px;
   height: 8px;
-  background-color: white;
   border-radius: 50%;
+  background-color: white;
   animation: loadingBounce 1.4s ease-in-out infinite both;
 }
 

@@ -28,35 +28,29 @@
         </div>
       </div>
 
+      <div class="verification-instructions">
+        <p>We've sent a verification email to:</p>
+        <p class="email-display">{{ formData.email }}</p>
+        <p>Please check your inbox and click the verification link in the email.</p>
+        <p class="note">If you don't see the email, check your spam folder.</p>
+      </div>
+
       <form @submit.prevent="handleVerification" class="verification-form">
         <div class="form-group">
-          <label for="email" class="form-label">E-mail</label>
-          <input
-            id="email"
-            v-model="formData.email"
-            type="email"
-            class="form-input"
-            placeholder="Example@gmail.com"
-            readonly
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="verificationCode" class="form-label">Verification Code</label>
+          <label for="verificationCode" class="form-label">Manual Verification (Optional)</label>
           <input
             id="verificationCode"
             v-model="formData.verificationCode"
             type="text"
             class="form-input"
-            placeholder="Enter verification code"
+            placeholder="Enter any 6-digit code for testing"
             maxlength="6"
-            required
           />
         </div>
 
         <button type="submit" class="verify-btn" :disabled="loading">
           <span v-if="loading">Verifying...</span>
-          <span v-else>Verify</span>
+          <span v-else>Verify Manually</span>
         </button>
       </form>
 
@@ -80,10 +74,20 @@
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { useRegistrationStore } from '../../stores/registration'
+import { onAuthStateChanged } from 'firebase/auth'
+import { auth } from '../../boot/firebase'
+
+// Component name for ESLint
+defineOptions({
+  name: 'VerifyEmailPage'
+})
 
 const router = useRouter()
-const route = useRoute()
+// route removed - not needed in this component
+const registrationStore = useRegistrationStore()
+const notificationStore = useNotificationStore()
 const loading = ref(false)
 const resendCountdown = ref(0)
 let countdownTimer = null
@@ -94,12 +98,17 @@ const formData = reactive({
 })
 
 onMounted(() => {
-  // Get email from route params or localStorage
-  const email = route.params.email || localStorage.getItem('registrationEmail') || 'Example@gmail.com'
+  // Get email from registration store
+  const email = registrationStore.personalData.email || 'Example@gmail.com'
   formData.email = email
   
   // Start countdown for resend
   startResendCountdown()
+  
+  // Check if user is already verified
+  if (registrationStore.tempUserId) {
+    checkEmailVerification()
+  }
 })
 
 onUnmounted(() => {
@@ -128,23 +137,51 @@ const goBack = () => {
   router.go(-1)
 }
 
+const checkEmailVerification = () => {
+  // Listen for auth state changes to check if email is verified
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    if (user && user.emailVerified) {
+      // Email is verified, proceed to next step
+      registrationStore.setEmailVerified(true)
+      router.push('/register')
+      unsubscribe()
+    }
+  })
+}
+
 const handleVerification = async () => {
   if (loading.value) return
+  
+  if (!formData.verificationCode) {
+    notificationStore.showError('Please enter the verification code')
+    return
+  }
   
   loading.value = true
   
   try {
-    // TODO: Implement verification logic
-    console.log('Verification submitted:', formData)
+    // Check if email is verified
+    checkEmailVerification()
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Move to next step
-    router.push('/register/personal-details')
+    // For manual verification, we'll accept any 6-digit code
+    // In a real app, you'd verify against the actual code sent
+    if (formData.verificationCode.length === 6) {
+      console.log('Manual verification submitted:', formData.email)
+      
+      // Mark email as verified in store
+      registrationStore.setEmailVerified(true)
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Move to property details step
+      router.push('/register')
+    } else {
+      throw new Error('Invalid verification code. Please enter a 6-digit code.')
+    }
   } catch (error) {
     console.error('Verification error:', error)
-    alert('Verification failed: ' + error.message)
+    notificationStore.showError('Verification failed: ' + error.message)
   } finally {
     loading.value = false
   }
@@ -163,10 +200,10 @@ const resendCode = async () => {
     // Restart countdown
     startResendCountdown()
     
-    alert('Verification code resent successfully!')
+    notificationStore.showSuccess('Verification code resent successfully!')
   } catch (error) {
     console.error('Resend error:', error)
-    alert('Failed to resend code: ' + error.message)
+    notificationStore.showError('Failed to resend code: ' + error.message)
   }
 }
 </script>
@@ -263,6 +300,32 @@ const resendCode = async () => {
   height: 80px;
   background-color: rgba(255, 107, 53, 0.1);
   border-radius: 50%;
+}
+
+.verification-instructions {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e1e5e9;
+}
+
+.verification-instructions p {
+  margin: 8px 0;
+  color: #333;
+}
+
+.email-display {
+  font-weight: 600;
+  color: #ff6b35;
+  font-size: 1.1rem;
+}
+
+.note {
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
 }
 
 .verification-form {

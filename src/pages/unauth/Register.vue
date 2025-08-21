@@ -128,10 +128,21 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useRegistrationStore } from '../../stores/registration'
+import { useNotificationStore } from '../../stores/notifications'
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth'
+import { auth } from '../../boot/firebase'
+
+// Component name for ESLint
+defineOptions({
+  name: 'RegisterPage'
+})
 
 const router = useRouter()
+const registrationStore = useRegistrationStore()
+const notificationStore = useNotificationStore()
 const activeTab = ref('personal')
 const loading = ref(false)
 
@@ -145,6 +156,23 @@ const propertyForm = reactive({
   role: ''
 })
 
+onMounted(() => {
+  // Load existing data from store if available
+  if (registrationStore.personalData.email) {
+    personalForm.email = registrationStore.personalData.email
+  }
+  if (registrationStore.propertyData.project) {
+    propertyForm.project = registrationStore.propertyData.project
+    propertyForm.unit = registrationStore.propertyData.unit
+    propertyForm.role = registrationStore.propertyData.role
+  }
+  
+  // If email is verified, show property tab
+  if (registrationStore.isEmailVerified) {
+    activeTab.value = 'property'
+  }
+})
+
 const goBack = () => {
   router.go(-1)
 }
@@ -152,20 +180,50 @@ const goBack = () => {
 const handlePersonalSubmit = async () => {
   if (loading.value) return
   
+  if (!personalForm.email) {
+    notificationStore.showError('Please enter your email address')
+    return
+  }
+  
   loading.value = true
   
   try {
-    // TODO: Implement email verification logic
-    console.log('Personal form submitted:', personalForm)
+    // Store email in registration store
+    registrationStore.setPersonalData({ email: personalForm.email })
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Create a temporary user account with a random password
+    const tempPassword = Math.random().toString(36).slice(-10) + 'A1!'
     
-    // Move to next step or show verification
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      personalForm.email,
+      tempPassword
+    )
+    
+    // Send verification email
+    await sendEmailVerification(userCredential.user)
+    
+    // Store the user ID for later use
+    registrationStore.setTempUserId(userCredential.user.uid)
+    
+    console.log('Verification email sent to:', personalForm.email)
+    notificationStore.showSuccess('Verification email sent! Please check your inbox and click the verification link.')
+    
+    // Move to email verification step
     router.push('/register/verify-email')
   } catch (error) {
     console.error('Personal submit error:', error)
-    alert('Failed to proceed: ' + error.message)
+    
+    let errorMessage = 'Failed to proceed'
+    if (error.code === 'auth/email-already-in-use') {
+      errorMessage = 'An account with this email already exists. Please sign in instead.'
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = 'Invalid email address. Please check your email format.'
+    } else {
+      errorMessage += ': ' + error.message
+    }
+    
+    notificationStore.showError(errorMessage)
   } finally {
     loading.value = false
   }
@@ -174,20 +232,31 @@ const handlePersonalSubmit = async () => {
 const handlePropertySubmit = async () => {
   if (loading.value) return
   
+  if (!propertyForm.project || !propertyForm.unit || !propertyForm.role) {
+    notificationStore.showError('Please fill in all property details')
+    return
+  }
+  
   loading.value = true
   
   try {
-    // TODO: Implement property verification logic
+    // Store property data in registration store
+    registrationStore.setPropertyData({
+      project: propertyForm.project,
+      unit: propertyForm.unit,
+      role: propertyForm.role
+    })
+    
     console.log('Property form submitted:', propertyForm)
     
-    // Simulate API call
+    // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000))
     
-    // Move to next step
+    // Move to personal details step
     router.push('/register/personal-details')
   } catch (error) {
     console.error('Property submit error:', error)
-    alert('Failed to verify: ' + error.message)
+    notificationStore.showError('Failed to verify: ' + error.message)
   } finally {
     loading.value = false
   }
