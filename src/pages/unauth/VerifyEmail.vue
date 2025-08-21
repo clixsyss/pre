@@ -130,6 +130,7 @@ const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
 const loading = ref(false)
 const resendCountdown = ref(0)
+const nextCheckIn = ref(3)
 let countdownTimer = null
 
 const formData = reactive({
