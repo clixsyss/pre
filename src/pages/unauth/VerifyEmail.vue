@@ -33,6 +33,15 @@
         <p class="email-display">{{ formData.email }}</p>
         <p>Please check your inbox and click the verification link in the email.</p>
         <p class="note">If you don't see the email, check your spam folder.</p>
+        <div class="verification-tips">
+          <p><strong>After clicking the verification link:</strong></p>
+          <ul>
+            <li>Click the verification link in your email</li>
+            <li>Return to this app (keep this tab open)</li>
+            <li>Wait a few seconds for automatic detection</li>
+            <li>Or click "Check Verification Status" below</li>
+          </ul>
+        </div>
       </div>
 
       <form @submit.prevent="handleVerification" class="verification-form">
@@ -53,6 +62,36 @@
           <span v-else>Verify Manually</span>
         </button>
       </form>
+
+      <div class="check-verification-section">
+        <h3>Ready to Continue?</h3>
+        <p class="check-description">If you've already clicked the verification link in your email:</p>
+        <button 
+          @click="checkVerificationStatus" 
+          class="check-verification-btn"
+        >
+          🔍 Check Verification Status Now
+        </button>
+        <p class="check-note">Or wait for automatic detection (checks every 3 seconds)</p>
+        <div class="auto-check-info">
+          <p>🔄 Automatic check in: <span class="countdown">{{ nextCheckIn }}s</span></p>
+        </div>
+      </div>
+
+      <div class="resend-section">
+        <button 
+          @click="resendCode" 
+          class="resend-btn" 
+          :disabled="resendCountdown > 0"
+        >
+          <span v-if="resendCountdown > 0">
+            Resend Code ({{ formatTime(resendCountdown) }})
+          </span>
+          <span v-else>
+            Resend Verification Code
+          </span>
+        </button>
+      </div>
 
       <div class="resend-section">
         <button 
@@ -76,7 +115,8 @@
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRegistrationStore } from '../../stores/registration'
-import { onAuthStateChanged } from 'firebase/auth'
+import { useNotificationStore } from '../../stores/notifications'
+import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth'
 import { auth } from '../../boot/firebase'
 
 // Component name for ESLint
@@ -108,6 +148,37 @@ onMounted(() => {
   // Check if user is already verified
   if (registrationStore.tempUserId) {
     checkEmailVerification()
+    
+    // Set up periodic check for email verification
+    const verificationCheckInterval = setInterval(async () => {
+      try {
+        // Reload the current user to get latest verification status
+        if (auth.currentUser) {
+          await auth.currentUser.reload()
+          
+          if (auth.currentUser.emailVerified) {
+            console.log('Periodic check: Email verified, proceeding to next step')
+            clearInterval(verificationCheckInterval)
+            notificationStore.showSuccess('Email verified! Redirecting to continue registration...')
+            registrationStore.setEmailVerified(true)
+            router.push('/register')
+          }
+        }
+      } catch (error) {
+        console.error('Error in periodic check:', error)
+      }
+    }, 3000) // Check every 3 seconds
+    
+    // Set up countdown for next check
+    const countdownInterval = setInterval(() => {
+      nextCheckIn.value = nextCheckIn.value > 1 ? nextCheckIn.value - 1 : 3
+    }, 1000)
+    
+    // Clean up intervals when component unmounts
+    onUnmounted(() => {
+      if (verificationCheckInterval) clearInterval(verificationCheckInterval)
+      clearInterval(countdownInterval)
+    })
   }
 })
 
@@ -149,6 +220,26 @@ const checkEmailVerification = () => {
   })
 }
 
+const checkVerificationStatus = async () => {
+  try {
+    // Reload the current user to get latest verification status
+    await auth.currentUser?.reload()
+    
+    const currentUser = auth.currentUser
+    if (currentUser && currentUser.emailVerified) {
+      console.log('Manual check: Email verified, proceeding to next step')
+      notificationStore.showSuccess('Email verified! Redirecting to continue registration...')
+      registrationStore.setEmailVerified(true)
+      router.push('/register')
+    } else {
+      notificationStore.showInfo('Email not yet verified. Please check your inbox and click the verification link.')
+    }
+  } catch (error) {
+    console.error('Error checking verification status:', error)
+    notificationStore.showError('Failed to check verification status. Please try again.')
+  }
+}
+
 const handleVerification = async () => {
   if (loading.value) return
   
@@ -160,9 +251,6 @@ const handleVerification = async () => {
   loading.value = true
   
   try {
-    // Check if email is verified
-    checkEmailVerification()
-    
     // For manual verification, we'll accept any 6-digit code
     // In a real app, you'd verify against the actual code sent
     if (formData.verificationCode.length === 6) {
@@ -191,19 +279,21 @@ const resendCode = async () => {
   if (resendCountdown.value > 0) return
   
   try {
-    // TODO: Implement resend logic
-    console.log('Resending verification code to:', formData.email)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Restart countdown
-    startResendCountdown()
-    
-    notificationStore.showSuccess('Verification code resent successfully!')
+    // Resend verification email via Firebase
+    if (auth.currentUser) {
+      await sendEmailVerification(auth.currentUser)
+      console.log('Verification email resent to:', formData.email)
+      
+      // Restart countdown
+      startResendCountdown()
+      
+      notificationStore.showSuccess('Verification email resent successfully!')
+    } else {
+      throw new Error('No user found. Please try again.')
+    }
   } catch (error) {
     console.error('Resend error:', error)
-    notificationStore.showError('Failed to resend code: ' + error.message)
+    notificationStore.showError('Failed to resend email: ' + error.message)
   }
 }
 </script>
@@ -328,9 +418,76 @@ const resendCode = async () => {
   font-style: italic;
 }
 
+
+
+.verification-tips {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #e3f2fd;
+  border-radius: 6px;
+  border-left: 4px solid #1976d2;
+}
+
+.verification-tips p {
+  margin: 8px 0;
+  color: #1976d2;
+  font-weight: 500;
+}
+
+.verification-tips ul {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.verification-tips li {
+  margin: 5px 0;
+  color: #333;
+  font-size: 0.9rem;
+}
+
 .verification-form {
   margin-bottom: 30px;
 }
+
+.code-input-container {
+  position: relative;
+}
+
+.code-input {
+  width: 100%;
+  padding: 18px;
+  border: 2px solid #e1e5e9;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 2px;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  background-color: white;
+  font-family: 'Courier New', monospace;
+}
+
+.code-input:focus {
+  outline: none;
+  border-color: #ff6b35;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.code-input::placeholder {
+  color: #ccc;
+  letter-spacing: 1px;
+}
+
+.code-input-hint {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #666;
+  font-style: italic;
+}
+
+
 
 .form-group {
   margin-bottom: 25px;

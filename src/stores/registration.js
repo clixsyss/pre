@@ -6,6 +6,7 @@ export const useRegistrationStore = defineStore('registration', () => {
   const currentStep = ref('personal') // personal -> verify -> property -> details -> complete
   const isEmailVerified = ref(false)
   const tempUserId = ref(null)
+  const verificationCode = ref('')
   
   // Form data
   const personalData = reactive({
@@ -25,7 +26,8 @@ export const useRegistrationStore = defineStore('registration', () => {
     dateOfBirth: '',
     gender: 'male',
     nationalId: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   })
   
   // Methods
@@ -49,6 +51,10 @@ export const useRegistrationStore = defineStore('registration', () => {
     tempUserId.value = uid
   }
   
+  const setVerificationCode = (code) => {
+    verificationCode.value = code
+  }
+  
   const setCurrentStep = (step) => {
     currentStep.value = step
   }
@@ -57,11 +63,12 @@ export const useRegistrationStore = defineStore('registration', () => {
     currentStep.value = 'personal'
     isEmailVerified.value = false
     tempUserId.value = null
+    verificationCode.value = ''
     Object.assign(personalData, { email: '' })
     Object.assign(propertyData, { project: '', unit: '', role: '' })
     Object.assign(userDetails, {
       firstName: '', lastName: '', mobile: '', dateOfBirth: '',
-      gender: 'male', nationalId: '', password: ''
+      gender: 'male', nationalId: '', password: '', confirmPassword: ''
     })
   }
   
@@ -78,6 +85,7 @@ export const useRegistrationStore = defineStore('registration', () => {
     currentStep,
     isEmailVerified,
     tempUserId,
+    verificationCode,
     personalData,
     propertyData,
     userDetails,
@@ -88,6 +96,7 @@ export const useRegistrationStore = defineStore('registration', () => {
     setUserDetails,
     setEmailVerified,
     setTempUserId,
+    setVerificationCode,
     setCurrentStep,
     resetRegistration,
     getRegistrationData

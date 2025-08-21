@@ -128,7 +128,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
@@ -169,8 +169,23 @@ onMounted(() => {
   
   // If email is verified, show property tab
   if (registrationStore.isEmailVerified) {
+    console.log('Email verified, switching to property tab')
     activeTab.value = 'property'
+    notificationStore.showInfo('Email verified! Please complete your property details.')
   }
+  
+  // Listen for verification code display (development only)
+  const handleShowCode = (event) => {
+    const { code, email } = event.detail
+    notificationStore.showInfo(`🔐 Verification Code: ${code} (sent to ${email})`, 10000)
+  }
+  
+  window.addEventListener('showVerificationCode', handleShowCode)
+  
+  // Cleanup
+  onUnmounted(() => {
+    window.removeEventListener('showVerificationCode', handleShowCode)
+  })
 })
 
 const goBack = () => {
@@ -200,7 +215,7 @@ const handlePersonalSubmit = async () => {
       tempPassword
     )
     
-    // Send verification email
+    // Send verification email via Firebase
     await sendEmailVerification(userCredential.user)
     
     // Store the user ID for later use
@@ -248,6 +263,9 @@ const handlePropertySubmit = async () => {
     })
     
     console.log('Property form submitted:', propertyForm)
+    
+    // Show success notification
+    notificationStore.showSuccess('Property details saved! Now let\'s complete your personal information.')
     
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000))
