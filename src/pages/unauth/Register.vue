@@ -11,26 +11,43 @@
       <div class="placeholder"></div>
     </div>
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <button 
-        @click="activeTab = 'personal'" 
-        :class="['tab-btn', { active: activeTab === 'personal' }]"
-      >
-        Personal
-      </button>
-      <button 
-        @click="activeTab = 'property'" 
-        :class="['tab-btn', { active: activeTab === 'property' }]"
-      >
-        Property
-      </button>
+    <!-- Orange Separator Line -->
+    <div class="separator-line"></div>
+
+    <!-- Progress Indicator -->
+    <div class="progress-indicator">
+      <div class="progress-line"></div>
+      
+      <!-- Personal Step -->
+      <div class="progress-step" :class="{ active: currentStep === 'personal', completed: currentStep === 'property' || currentStep === 'details' }">
+        <div class="step-icon">
+          <svg v-if="currentStep === 'personal'" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="7" r="4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 6L9 17L4 12" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="step-label">Personal</span>
+      </div>
+      
+      <!-- Property Step -->
+      <div class="progress-step" :class="{ active: currentStep === 'property', completed: currentStep === 'details' }">
+        <div class="step-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="step-label">Property</span>
+      </div>
     </div>
 
-    <!-- Tab Content -->
-    <div class="tab-content">
-      <!-- Personal Tab -->
-      <div v-if="activeTab === 'personal'" class="tab-panel">
+    <!-- Step Content -->
+    <div class="step-content">
+      <!-- Personal Step -->
+      <div v-if="currentStep === 'personal'" class="step-panel">
         <div class="icon-section">
           <div class="icon-wrapper">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -60,8 +77,8 @@
         </form>
       </div>
 
-      <!-- Property Tab -->
-      <div v-if="activeTab === 'property'" class="tab-panel">
+      <!-- Property Step -->
+      <div v-if="currentStep === 'property'" class="step-panel">
         <div class="icon-section">
           <div class="icon-wrapper">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -73,22 +90,30 @@
 
         <form @submit.prevent="handlePropertySubmit" class="form">
           <div class="form-group">
-            <label for="project" class="form-label">Project</label>
-            <select id="project" v-model="propertyForm.project" class="form-input" required>
-              <option value="" disabled>Project Name</option>
-              <option value="project1">Project 1</option>
-              <option value="project2">Project 2</option>
-              <option value="project3">Project 3</option>
+            <label for="compound" class="form-label">Compound</label>
+            <select id="compound" v-model="propertyForm.compound" class="form-input" required>
+              <option value="" disabled>Select Compound</option>
+              <option value="palm_hills">Palm Hills Compound</option>
+              <option value="beverly_hills">Beverly Hills Compound</option>
+              <option value="garden_city">Garden City Compound</option>
+              <option value="sunset_valley">Sunset Valley Compound</option>
+              <option value="oasis_gardens">Oasis Gardens Compound</option>
             </select>
           </div>
 
           <div class="form-group">
             <label for="unit" class="form-label">Unit</label>
-            <select id="unit" v-model="propertyForm.unit" class="form-input" required>
-              <option value="" disabled>Management</option>
-              <option value="unit1">Unit 1</option>
-              <option value="unit2">Unit 2</option>
-              <option value="unit3">Unit 3</option>
+            <select id="unit" v-model="propertyForm.unit" class="form-input" required :disabled="!propertyForm.compound">
+              <option value="" disabled>{{ propertyForm.compound ? 'Select Unit' : 'Select Compound First' }}</option>
+              <option v-if="propertyForm.compound" value="A1">Unit A1</option>
+              <option v-if="propertyForm.compound" value="A2">Unit A2</option>
+              <option v-if="propertyForm.compound" value="A3">Unit A3</option>
+              <option v-if="propertyForm.compound" value="B1">Unit B1</option>
+              <option v-if="propertyForm.compound" value="B2">Unit B2</option>
+              <option v-if="propertyForm.compound" value="B3">Unit B3</option>
+              <option v-if="propertyForm.compound" value="C1">Unit C1</option>
+              <option v-if="propertyForm.compound" value="C2">Unit C2</option>
+              <option v-if="propertyForm.compound" value="C3">Unit C3</option>
             </select>
           </div>
 
@@ -113,12 +138,12 @@
           </div>
 
           <div class="form-actions">
-            <button type="button" @click="goBack" class="back-action-btn">
+            <button type="button" @click="goToPreviousStep" class="back-action-btn">
               Back
             </button>
-            <button type="submit" class="verify-btn" :disabled="loading">
+            <button type="submit" class="verify-btn" :disabled="loading || !canProceedToNext">
               <span v-if="loading">Verifying...</span>
-              <span v-else>Verify</span>
+              <span v-else>Continue</span>
             </button>
           </div>
         </form>
@@ -128,7 +153,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
@@ -144,7 +169,7 @@ defineOptions({
 const router = useRouter()
 const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
-const activeTab = ref('personal')
+const currentStep = ref('personal')
 const loading = ref(false)
 
 const personalForm = reactive({
@@ -152,7 +177,7 @@ const personalForm = reactive({
 })
 
 const propertyForm = reactive({
-  project: '',
+  compound: '',
   unit: '',
   role: ''
 })
@@ -169,7 +194,7 @@ const saveUserDataToFirestore = async (userId, userData) => {
       emailVerified: userData.personal.emailVerified || false,
       
       // Property Information
-      project: userData.property.project || '',
+      compound: userData.property.compound || '',
       unit: userData.property.unit || '',
       role: userData.property.role || '',
       
@@ -228,16 +253,16 @@ onMounted(() => {
   if (registrationStore.personalData.email) {
     personalForm.email = registrationStore.personalData.email
   }
-  if (registrationStore.propertyData.project) {
-    propertyForm.project = registrationStore.propertyData.project
+  if (registrationStore.propertyData.compound) {
+    propertyForm.compound = registrationStore.propertyData.compound
     propertyForm.unit = registrationStore.propertyData.unit
     propertyForm.role = registrationStore.propertyData.role
   }
   
-  // If email is verified, show property tab
+  // If email is verified, show property step
   if (registrationStore.isEmailVerified) {
-    console.log('Email verified, switching to property tab')
-    activeTab.value = 'property'
+    console.log('Email verified, switching to property step')
+    currentStep.value = 'property'
     notificationStore.showInfo('Email verified! Please complete your property details.')
   }
   
@@ -258,6 +283,21 @@ onMounted(() => {
 const goBack = () => {
   router.go(-1)
 }
+
+const goToPreviousStep = () => {
+  if (currentStep.value === 'property') {
+    currentStep.value = 'personal'
+  }
+}
+
+const canProceedToNext = computed(() => {
+  if (currentStep.value === 'personal') {
+    return personalForm.email && !loading.value
+  } else if (currentStep.value === 'property') {
+    return propertyForm.compound && propertyForm.unit && propertyForm.role && !loading.value
+  }
+  return false
+})
 
 const handlePersonalSubmit = async () => {
   if (loading.value) return
@@ -291,7 +331,7 @@ const handlePersonalSubmit = async () => {
     // Save initial user data to Firestore
     const initialUserData = {
       personal: { email: personalForm.email, emailVerified: false },
-      property: { project: '', unit: '', role: '' },
+      property: { compound: '', unit: '', role: '' },
       userDetails: {}
     }
     
@@ -325,7 +365,7 @@ const handlePersonalSubmit = async () => {
 const handlePropertySubmit = async () => {
   if (loading.value) return
   
-  if (!propertyForm.project || !propertyForm.unit || !propertyForm.role) {
+  if (!propertyForm.compound || !propertyForm.unit || !propertyForm.role) {
     notificationStore.showError('Please fill in all property details')
     return
   }
@@ -335,7 +375,7 @@ const handlePropertySubmit = async () => {
   try {
     // Store property data in registration store
     registrationStore.setPropertyData({
-      project: propertyForm.project,
+      compound: propertyForm.compound,
       unit: propertyForm.unit,
       role: propertyForm.role
     })
@@ -343,7 +383,7 @@ const handlePropertySubmit = async () => {
     // Update user data in Firestore with property information
     if (registrationStore.tempUserId) {
       const propertyUpdateData = {
-        project: propertyForm.project,
+        compound: propertyForm.compound,
         unit: propertyForm.unit,
         role: propertyForm.role,
         registrationStep: 'property'
@@ -390,8 +430,20 @@ const handlePropertySubmit = async () => {
   align-items: center;
   justify-content: space-between;
   padding: 20px;
-  background-color: #222222;
+  background-color: #000000;
   color: white;
+  margin-bottom: 0;
+}
+
+.page-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+  color: white;
+}
+
+.placeholder {
+  width: 40px;
 }
 
 .back-btn {
@@ -408,57 +460,142 @@ const handlePropertySubmit = async () => {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-.page-title {
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin: 0;
+.back-btn svg {
+  stroke: white;
 }
 
-.placeholder {
-  width: 40px;
-}
-
-.tabs {
-  display: flex;
-  background-color: white;
-  border-bottom: 1px solid #e1e5e9;
-}
-
-.tab-btn {
-  flex: 1;
-  padding: 20px;
-  background: none;
-  border: none;
-  font-size: 1rem;
-  font-weight: 500;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.tab-btn.active {
-  color: #ff6b35;
-  font-weight: 600;
-}
-
-.tab-btn.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+.separator-line {
   height: 3px;
   background-color: #ff6b35;
+  margin: 0;
+  width: 100%;
+  margin-bottom: 0;
 }
 
-.tab-content {
+.progress-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 30px;
+  padding: 0 40px;
+  position: relative;
+  gap: 120px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.progress-line {
+  position: absolute;
+  height: 2px;
+  background-color: #e1e5e9;
+  width: 70%;
+  margin-left: 15%;
+  top: 30%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  border-radius: 8px;
+  min-width: 80px;
+}
+
+.progress-step.active .step-icon {
+  background-color: #000000;
+  border-color: #000000;
+  color: white;
+  width: 48px;
+  height: 48px;
+}
+
+.progress-step.active .step-label {
+  color: #000000;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 12px;
+}
+
+.progress-step.completed .step-icon {
+  background-color: #e1e5e9;
+  border-color: #e1e5e9;
+  color: #2196F3;
+  width: 48px;
+  height: 48px;
+}
+
+.progress-step.completed .step-label {
+  color: #2196F3;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 12px;
+}
+
+.progress-step:not(.active):not(.completed) .step-icon {
+  background-color: #e1e5e9;
+  border-color: #e1e5e9;
+  color: #999;
+  width: 48px;
+  height: 48px;
+}
+
+.progress-step:not(.active):not(.completed) .step-label {
+  color: #999;
+  font-weight: 500;
+  font-size: 1rem;
+  margin-top: 12px;
+}
+
+.step-icon {
+  border: 2px solid #e1e5e9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.step-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.progress-step.active .step-icon svg {
+  stroke: white;
+}
+
+.progress-step.completed .step-icon svg {
+  stroke: #2196F3;
+}
+
+.progress-step:not(.active):not(.completed) .step-icon svg {
+  stroke: #999;
+}
+
+.step-label {
+  font-weight: 500;
+  transition: all 0.3s ease;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.step-content {
   padding: 40px 20px;
-  max-width: 400px;
+  max-width: 500px;
   margin: 0 auto;
+  margin-top: 20px;
 }
 
-.tab-panel {
+.step-panel {
   animation: fadeIn 0.3s ease;
 }
 
@@ -607,7 +744,7 @@ select.form-input {
 
 /* Responsive design */
 @media (max-width: 480px) {
-  .tab-content {
+  .step-content {
     padding: 30px 15px;
   }
   
@@ -625,6 +762,34 @@ select.form-input {
   
   .verify-btn {
     flex: 1;
+  }
+  
+  .progress-indicator {
+    gap: 40px;
+    padding: 0 15px;
+  }
+  
+  .step-icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .step-label {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 16px;
+  }
+  
+  .page-title {
+    font-size: 1.1rem;
+  }
+  
+  .progress-indicator {
+    gap: 50px;
   }
 }
 </style>

@@ -14,7 +14,7 @@ export const useRegistrationStore = defineStore('registration', () => {
   })
   
   const propertyData = reactive({
-    project: '',
+    compound: '',
     unit: '',
     role: ''
   })
@@ -65,7 +65,7 @@ export const useRegistrationStore = defineStore('registration', () => {
     tempUserId.value = null
     verificationCode.value = ''
     Object.assign(personalData, { email: '' })
-    Object.assign(propertyData, { project: '', unit: '', role: '' })
+    Object.assign(propertyData, { compound: '', unit: '', role: '' })
     Object.assign(userDetails, {
       firstName: '', lastName: '', mobile: '', dateOfBirth: '',
       gender: 'male', nationalId: '', password: '', confirmPassword: ''
