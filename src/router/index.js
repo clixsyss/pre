@@ -10,6 +10,7 @@ import VerifyEmail from '../pages/unauth/VerifyEmail.vue'
 import PersonalDetails from '../pages/unauth/PersonalDetails.vue'
 import Support from '../pages/unauth/Support.vue'
 import Home from '../pages/auth/Home.vue'
+import Profile from '../pages/auth/ProfilePage.vue'
 
 const routes = [
   // Root redirects to onboarding
@@ -61,6 +62,12 @@ const routes = [
     path: '/home',
     name: 'Home',
     component: Home,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: Profile,
     meta: { requiresAuth: true }
   },
   

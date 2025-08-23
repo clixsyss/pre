@@ -25,7 +25,15 @@
           <div class="test-badge">TEST</div>
         </div>
       </div>
-      <button class="home-btn">Home</button>
+      <div class="header-right">
+        <button class="home-btn">Home</button>
+        <button class="profile-btn" @click="goToProfile">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- Content -->
@@ -67,26 +75,26 @@
 
     <!-- Bottom Navigation -->
     <div class="bottom-nav">
-      <button class="nav-btn active">
+      <button class="nav-btn active" @click="goToHome">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-      <button class="nav-btn">
+      <button class="nav-btn" @click="goToServices">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-      <button class="nav-btn">
+      <button class="nav-btn" @click="goToProfile">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-      <button class="nav-btn">
+      <button class="nav-btn" @click="goToAnalytics">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 20V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M18 20V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -163,6 +171,25 @@ onMounted(() => {
 //     console.error('Sign out error:', error)
 //   }
 // }
+
+// Navigation functions
+const goToHome = () => {
+  // Already on home page
+}
+
+const goToServices = () => {
+  // TODO: Implement services page navigation
+  console.log('Services page coming soon')
+}
+
+const goToProfile = () => {
+  router.push('/profile')
+}
+
+const goToAnalytics = () => {
+  // TODO: Implement analytics page navigation
+  console.log('Analytics page coming soon')
+}
 </script>
 
 <style scoped>
@@ -183,6 +210,12 @@ onMounted(() => {
 }
 
 .header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-right {
   display: flex;
   align-items: center;
   gap: 15px;
@@ -238,6 +271,23 @@ onMounted(() => {
 
 .home-btn:hover {
   background-color: #e55a2b;
+}
+
+.profile-btn {
+  background: none;
+  border: none;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .content {

@@ -133,7 +133,8 @@ import { useRouter } from 'vue-router'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth'
-import { auth } from '../../boot/firebase'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { auth, db } from '../../boot/firebase'
 
 // Component name for ESLint
 defineOptions({
@@ -155,6 +156,72 @@ const propertyForm = reactive({
   unit: '',
   role: ''
 })
+
+// Function to save user data to Firestore
+const saveUserDataToFirestore = async (userId, userData) => {
+  try {
+    const userDocRef = doc(db, 'users', userId)
+    
+    // Prepare the user document data
+    const userDocument = {
+      // Personal Information
+      email: userData.personal.email,
+      emailVerified: userData.personal.emailVerified || false,
+      
+      // Property Information
+      project: userData.property.project || '',
+      unit: userData.property.unit || '',
+      role: userData.property.role || '',
+      
+      // User Details (if available)
+      firstName: userData.userDetails?.firstName || '',
+      lastName: userData.userDetails?.lastName || '',
+      mobile: userData.userDetails?.mobile || '',
+      dateOfBirth: userData.userDetails?.dateOfBirth || '',
+      gender: userData.userDetails?.gender || '',
+      nationalId: userData.userDetails?.nationalId || '',
+      
+      // Metadata
+      registrationStatus: 'pending', // pending, completed, verified
+      registrationStep: 'personal', // personal, property, details, complete
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      
+      // Firebase Auth Info
+      authUid: userId,
+      lastLoginAt: serverTimestamp()
+    }
+    
+    // Save to Firestore
+    await setDoc(userDocRef, userDocument)
+    
+    console.log('User data saved to Firestore successfully:', userDocument)
+    return true
+  } catch (error) {
+    console.error('Error saving user data to Firestore:', error)
+    throw error
+  }
+}
+
+// Function to update user data in Firestore
+const updateUserDataInFirestore = async (userId, updateData) => {
+  try {
+    const userDocRef = doc(db, 'users', userId)
+    
+    const updateDocument = {
+      ...updateData,
+      updatedAt: serverTimestamp()
+    }
+    
+    await setDoc(userDocRef, updateDocument, { merge: true })
+    
+    console.log('User data updated in Firestore successfully:', updateDocument)
+    return true
+  } catch (error) {
+    console.error('Error updating user data in Firestore:', error)
+    throw error
+  }
+}
 
 onMounted(() => {
   // Load existing data from store if available
@@ -221,6 +288,15 @@ const handlePersonalSubmit = async () => {
     // Store the user ID for later use
     registrationStore.setTempUserId(userCredential.user.uid)
     
+    // Save initial user data to Firestore
+    const initialUserData = {
+      personal: { email: personalForm.email, emailVerified: false },
+      property: { project: '', unit: '', role: '' },
+      userDetails: {}
+    }
+    
+    await saveUserDataToFirestore(userCredential.user.uid, initialUserData)
+    
     console.log('Verification email sent to:', personalForm.email)
     notificationStore.showSuccess('Verification email sent! Please check your inbox and click the verification link.')
     
@@ -234,6 +310,8 @@ const handlePersonalSubmit = async () => {
       errorMessage = 'An account with this email already exists. Please sign in instead.'
     } else if (error.code === 'auth/invalid-email') {
       errorMessage = 'Invalid email address. Please check your email format.'
+    } else if (error.code === 'firestore/permission-denied') {
+      errorMessage = 'Database access denied. Please contact support.'
     } else {
       errorMessage += ': ' + error.message
     }
@@ -262,6 +340,18 @@ const handlePropertySubmit = async () => {
       role: propertyForm.role
     })
     
+    // Update user data in Firestore with property information
+    if (registrationStore.tempUserId) {
+      const propertyUpdateData = {
+        project: propertyForm.project,
+        unit: propertyForm.unit,
+        role: propertyForm.role,
+        registrationStep: 'property'
+      }
+      
+      await updateUserDataInFirestore(registrationStore.tempUserId, propertyUpdateData)
+    }
+    
     console.log('Property form submitted:', propertyForm)
     
     // Show success notification
@@ -274,7 +364,15 @@ const handlePropertySubmit = async () => {
     router.push('/register/personal-details')
   } catch (error) {
     console.error('Property submit error:', error)
-    notificationStore.showError('Failed to verify: ' + error.message)
+    
+    let errorMessage = 'Failed to save property details'
+    if (error.code === 'firestore/permission-denied') {
+      errorMessage = 'Database access denied. Please contact support.'
+    } else {
+      errorMessage += ': ' + error.message
+    }
+    
+    notificationStore.showError(errorMessage)
   } finally {
     loading.value = false
   }

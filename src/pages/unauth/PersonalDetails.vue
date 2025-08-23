@@ -252,7 +252,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { updateProfile } from 'firebase/auth'
-import { auth } from '../../boot/firebase'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { auth, db } from '../../boot/firebase'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 
@@ -281,6 +282,40 @@ const formData = reactive({
   password: '',
   confirmPassword: ''
 })
+
+// Function to update user data in Firestore with personal details
+const updateUserDetailsInFirestore = async (userId, userDetails) => {
+  try {
+    const userDocRef = doc(db, 'users', userId)
+    
+    const updateDocument = {
+      // Personal Details
+      firstName: userDetails.firstName,
+      lastName: userDetails.lastName,
+      mobile: userDetails.mobile,
+      dateOfBirth: userDetails.dateOfBirth,
+      gender: userDetails.gender,
+      nationalId: userDetails.nationalId,
+      
+      // Update registration status
+      registrationStatus: 'completed',
+      registrationStep: 'complete',
+      updatedAt: serverTimestamp(),
+      
+      // Additional metadata
+      fullName: `${userDetails.firstName} ${userDetails.lastName}`,
+      isProfileComplete: true
+    }
+    
+    await setDoc(userDocRef, updateDocument, { merge: true })
+    
+    console.log('User details saved to Firestore successfully:', updateDocument)
+    return true
+  } catch (error) {
+    console.error('Error saving user details to Firestore:', error)
+    throw error
+  }
+}
 
 onMounted(() => {
   // Get email from registration store
@@ -389,10 +424,22 @@ const handleSubmit = async () => {
       console.log('User profile updated successfully:', auth.currentUser)
       console.log('Complete registration data:', registrationStore.getRegistrationData())
       
+      // Save all user data to Firestore
+      const userId = auth.currentUser.uid
+      const userDetails = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        mobile: formData.mobile,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        nationalId: formData.nationalId
+      }
+      
+      await updateUserDetailsInFirestore(userId, userDetails)
+      
       // Show success notification
       notificationStore.showSuccess('Registration completed successfully! Welcome to PRE Group!')
       
-      // TODO: Save additional user data to Firestore
       // TODO: Upload ID images to Firebase Storage
       
       // Clear registration store
@@ -410,6 +457,8 @@ const handleSubmit = async () => {
     let errorMessage = 'Profile update failed'
     if (error.code === 'auth/requires-recent-login') {
       errorMessage = 'Session expired. Please sign in again.'
+    } else if (error.code === 'firestore/permission-denied') {
+      errorMessage = 'Database access denied. Please contact support.'
     } else {
       errorMessage += ': ' + error.message
     }

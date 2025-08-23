@@ -117,7 +117,8 @@ import { useRouter } from 'vue-router'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth'
-import { auth } from '../../boot/firebase'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { auth, db } from '../../boot/firebase'
 
 // Component name for ESLint
 defineOptions({
@@ -137,6 +138,27 @@ const formData = reactive({
   email: '',
   verificationCode: ''
 })
+
+// Function to update user data in Firestore when email is verified
+const updateEmailVerificationInFirestore = async (userId) => {
+  try {
+    const userDocRef = doc(db, 'users', userId)
+    
+    const updateDocument = {
+      emailVerified: true,
+      registrationStep: 'email_verified',
+      updatedAt: serverTimestamp()
+    }
+    
+    await setDoc(userDocRef, updateDocument, { merge: true })
+    
+    console.log('Email verification status updated in Firestore successfully')
+    return true
+  } catch (error) {
+    console.error('Error updating email verification in Firestore:', error)
+    throw error
+  }
+}
 
 onMounted(() => {
   // Get email from registration store
@@ -160,6 +182,14 @@ onMounted(() => {
           if (auth.currentUser.emailVerified) {
             console.log('Periodic check: Email verified, proceeding to next step')
             clearInterval(verificationCheckInterval)
+            
+            // Update Firestore with email verification status
+            try {
+              await updateEmailVerificationInFirestore(auth.currentUser.uid)
+            } catch (firestoreError) {
+              console.warn('Failed to update Firestore, but continuing with registration:', firestoreError)
+            }
+            
             notificationStore.showSuccess('Email verified! Redirecting to continue registration...')
             registrationStore.setEmailVerified(true)
             router.push('/register')
@@ -211,9 +241,17 @@ const goBack = () => {
 
 const checkEmailVerification = () => {
   // Listen for auth state changes to check if email is verified
-  const unsubscribe = onAuthStateChanged(auth, (user) => {
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
     if (user && user.emailVerified) {
       // Email is verified, proceed to next step
+      
+      // Update Firestore with email verification status
+      try {
+        await updateEmailVerificationInFirestore(user.uid)
+      } catch (firestoreError) {
+        console.warn('Failed to update Firestore, but continuing with registration:', firestoreError)
+      }
+      
       registrationStore.setEmailVerified(true)
       router.push('/register')
       unsubscribe()
@@ -229,6 +267,14 @@ const checkVerificationStatus = async () => {
     const currentUser = auth.currentUser
     if (currentUser && currentUser.emailVerified) {
       console.log('Manual check: Email verified, proceeding to next step')
+      
+      // Update Firestore with email verification status
+      try {
+        await updateEmailVerificationInFirestore(currentUser.uid)
+      } catch (firestoreError) {
+        console.warn('Failed to update Firestore, but continuing with registration:', firestoreError)
+      }
+      
       notificationStore.showSuccess('Email verified! Redirecting to continue registration...')
       registrationStore.setEmailVerified(true)
       router.push('/register')
@@ -259,6 +305,15 @@ const handleVerification = async () => {
       
       // Mark email as verified in store
       registrationStore.setEmailVerified(true)
+      
+      // Update Firestore with email verification status if we have a user ID
+      if (registrationStore.tempUserId) {
+        try {
+          await updateEmailVerificationInFirestore(registrationStore.tempUserId)
+        } catch (firestoreError) {
+          console.warn('Failed to update Firestore, but continuing with registration:', firestoreError)
+        }
+      }
       
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000))
