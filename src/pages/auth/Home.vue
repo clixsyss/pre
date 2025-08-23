@@ -1,40 +1,5 @@
 <template>
   <div class="home-page">
-    <!-- Header -->
-    <div class="header">
-      <div class="header-left">
-        <div class="qr-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 3H7V7H3V3Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M17 3H21V7H17V3Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M3 17H7V21H3V17Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M17 17H21V21H17V17Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M7 3V7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M17 3V7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M7 17V21" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M17 17V21" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M3 7H7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M3 17H7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M17 7H21" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M17 17H21" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="user-info">
-          <div class="user-name">{{ user?.displayName || 'User Name' }}</div>
-          <div class="project-name">{{ projectName }}</div>
-          <div class="test-badge">TEST</div>
-        </div>
-      </div>
-      <div class="header-right">
-        <button class="home-btn">Home</button>
-        <button class="profile-btn" @click="goToProfile">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-      </div>
-    </div>
 
     <!-- Content -->
     <div class="content">
@@ -72,42 +37,11 @@
         </div>
       </div>
     </div>
-
-    <!-- Bottom Navigation -->
-    <div class="bottom-nav">
-      <button class="nav-btn active" @click="goToHome">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-      <button class="nav-btn" @click="goToServices">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-      <button class="nav-btn" @click="goToProfile">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-      <button class="nav-btn" @click="goToAnalytics">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 20V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M18 20V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M6 20V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { auth } from '../../boot/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 
@@ -116,7 +50,6 @@ defineOptions({
   name: 'HomePage'
 })
 
-const router = useRouter()
 const user = ref(null)
 const activeTab = ref('all')
 const projectName = ref('Test Unit')
@@ -155,140 +88,23 @@ onMounted(() => {
   onAuthStateChanged(auth, (currentUser) => {
     if (currentUser) {
       user.value = currentUser
-    } else {
-      // Redirect to onboarding if not authenticated
-      router.push('/onboarding')
     }
   })
 })
 
-// Sign out function (can be used later when adding sign out button)
-// const handleSignOut = async () => {
-//   try {
-//     await signOut(auth)
-//     router.push('/onboarding')
-//   } catch (error) {
-//     console.error('Sign out error:', error)
-//   }
-// }
 
-// Navigation functions
-const goToHome = () => {
-  // Already on home page
-}
 
-const goToServices = () => {
-  // TODO: Implement services page navigation
-  console.log('Services page coming soon')
-}
 
-const goToProfile = () => {
-  router.push('/profile')
-}
-
-const goToAnalytics = () => {
-  // TODO: Implement analytics page navigation
-  console.log('Analytics page coming soon')
-}
 </script>
 
 <style scoped>
 .home-page {
   min-height: 100vh;
-  background-color: #f8f9fa;
   display: flex;
   flex-direction: column;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px;
-  background-color: #222222;
-  color: white;
-}
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.qr-icon {
-  width: 40px;
-  height: 40px;
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.user-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.user-name {
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-.project-name {
-  font-size: 0.9rem;
-  opacity: 0.8;
-}
-
-.test-badge {
-  background-color: #ff6b35;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  align-self: flex-start;
-}
-
-.home-btn {
-  background-color: #ff6b35;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.home-btn:hover {
-  background-color: #e55a2b;
-}
-
-.profile-btn {
-  background: none;
-  border: none;
-  color: white;
-  padding: 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.profile-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
 
 .content {
   flex: 1;
@@ -390,49 +206,10 @@ const goToAnalytics = () => {
   line-height: 1.4;
 }
 
-.bottom-nav {
-  display: flex;
-  background-color: #222222;
-  padding: 15px 20px;
-  gap: 20px;
-}
-
-.nav-btn {
-  flex: 1;
-  background: none;
-  border: none;
-  color: #666;
-  padding: 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.nav-btn.active {
-  color: #ff6b35;
-  background-color: rgba(255, 107, 53, 0.1);
-}
-
-.nav-btn:hover:not(.active) {
-  color: white;
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
 /* Responsive design */
 @media (max-width: 768px) {
   .content {
     padding: 20px 15px;
-  }
-  
-  .header {
-    padding: 15px;
-  }
-  
-  .user-info {
-    font-size: 0.9rem;
   }
   
   .greeting h2 {
@@ -441,20 +218,6 @@ const goToAnalytics = () => {
 }
 
 @media (max-width: 480px) {
-  .header-left {
-    gap: 10px;
-  }
-  
-  .qr-icon {
-    width: 35px;
-    height: 35px;
-  }
-  
-  .home-btn {
-    padding: 8px 16px;
-    font-size: 0.8rem;
-  }
-  
   .news-item {
     padding: 15px;
   }

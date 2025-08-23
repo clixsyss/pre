@@ -67,6 +67,24 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/access',
+    name: 'Access',
+    component: () => import('../pages/auth/Access.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/services',
+    name: 'Services',
+    component: () => import('../pages/auth/Services.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/analytics',
+    name: 'Analytics',
+    component: () => import('../pages/auth/Analytics.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/profile',
     name: 'Profile',
     component: Profile,

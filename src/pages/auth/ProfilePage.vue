@@ -1,15 +1,5 @@
 <template>
   <div class="profile-page">
-    <!-- Header -->
-    <div class="header">
-      <h1 class="page-title">Profile</h1>
-      <button @click="showLogoutConfirm = true" class="logout-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        Logout
-      </button>
-    </div>
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
@@ -139,6 +129,13 @@
             <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           Edit Profile
+        </button>
+        
+        <button @click="showLogoutConfirm = true" class="logout-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Logout
         </button>
       </div>
     </div>
@@ -352,41 +349,6 @@ onMounted(() => {
 <style scoped>
 .profile-page {
   min-height: 100vh;
-  background-color: #f8f9fa;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px;
-  background-color: #222222;
-  color: white;
-}
-
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.logout-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.logout-btn:hover {
-  background-color: #c82333;
 }
 
 .loading-container {
@@ -561,6 +523,10 @@ onMounted(() => {
 .actions-section {
   text-align: center;
   margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
 }
 
 .edit-btn {
@@ -580,6 +546,26 @@ onMounted(() => {
 
 .edit-btn:hover {
   background-color: #e55a2b;
+  transform: translateY(-2px);
+}
+
+.logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background-color: #c82333;
   transform: translateY(-2px);
 }
 
@@ -706,14 +692,6 @@ onMounted(() => {
   
   .info-grid {
     grid-template-columns: 1fr;
-  }
-  
-  .header {
-    padding: 16px;
-  }
-  
-  .page-title {
-    font-size: 1.3rem;
   }
   
   .profile-header {
