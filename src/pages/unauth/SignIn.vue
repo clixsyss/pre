@@ -81,7 +81,16 @@
         <span>or</span>
       </div>
 
-      <div class="social-signin">
+      <div class="google-signin-section">
+        <div class="google-notice">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 8V12" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 16H12.01" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Google sign-in available for existing accounts only</span>
+        </div>
+        
         <button @click="signInWithGoogle" class="social-btn google-btn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -104,10 +113,13 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth'
-import { auth, googleProvider } from '../../boot/firebase'
+import { signInWithEmailAndPassword } from 'firebase/auth'
+import { auth } from '../../boot/firebase'
 import { useNotificationStore } from '../../stores/notifications'
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { useRegistrationStore } from '../../stores/registration'
+import { validateProfileCompletion, getNextProfileStep } from '../../utils/profileValidation'
+import { attemptGoogleSignIn } from '../../utils/googleAuthHelper'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../boot/firebase'
 
 // Component name for ESLint
@@ -157,54 +169,74 @@ const signInWithGoogle = async () => {
   loading.value = true
   
   try {
-    const result = await signInWithPopup(auth, googleProvider)
-    const user = result.user
+    // Attempt Google sign-in with validation
+    const signInResult = await attemptGoogleSignIn()
     
-    // Check if user already exists in Firestore
-    const userDocRef = doc(db, 'users', user.uid)
-    const userDoc = await getDoc(userDocRef)
-    
-    if (!userDoc.exists()) {
-      // New Google user - create user document
-      const userData = {
-        email: user.email,
-        firstName: user.displayName?.split(' ')[0] || '',
-        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
-        displayName: user.displayName || '',
-        photoURL: user.photoURL || '',
-        emailVerified: user.emailVerified,
-        registrationStep: 'completed',
-        registrationCompleted: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        authProvider: 'google',
-        lastLogin: serverTimestamp()
-      }
-      
-      await setDoc(userDocRef, userData)
-      notificationStore.showSuccess('Welcome! Your account has been created successfully.')
-    } else {
-      // Existing user - update last login
-      await setDoc(userDocRef, {
-        lastLogin: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      }, { merge: true })
-      notificationStore.showSuccess('Welcome back!')
+    if (!signInResult.success) {
+      // Sign-in was rejected
+      notificationStore.showError(signInResult.reason)
+      return
     }
     
-    // Redirect to home page
+    // User is eligible for Google sign-in
+    // Check if profile is complete
+    const userData = signInResult.userData
+    const profileValidation = validateProfileCompletion(userData)
+    
+    if (!profileValidation.isComplete) {
+      // Profile incomplete - redirect to appropriate completion step
+      const nextStep = getNextProfileStep(userData)
+      notificationStore.showWarning(`Please complete your profile information before proceeding. Missing: ${profileValidation.message}`)
+      
+      // Store user data in registration store for completion
+      const registrationStore = useRegistrationStore()
+      registrationStore.setPersonalData({ email: userData.email })
+      registrationStore.setPropertyData({
+        compound: userData.compound || '',
+        unit: userData.unit || '',
+        role: userData.role || ''
+      })
+      registrationStore.setUserDetails({
+        firstName: userData.firstName || '',
+        lastName: userData.lastName || '',
+        mobile: userData.mobile || '',
+        dateOfBirth: userData.dateOfBirth || '',
+        gender: userData.gender || 'male',
+        nationalId: userData.nationalId || ''
+      })
+      registrationStore.setTempUserId(userData.uid)
+      registrationStore.setEmailVerified(userData.emailVerified || false)
+      
+      // Redirect to appropriate completion step
+      switch (nextStep) {
+        case 'email_verification':
+          router.push('/register/verify-email')
+          break
+        case 'property_details':
+          router.push('/register')
+          break
+        case 'personal_details':
+          router.push('/register/personal-details')
+          break
+        default:
+          router.push('/register')
+      }
+      return
+    }
+    
+    // Profile complete - update last login and proceed
+    const userDocRef = doc(db, 'users', userData.uid)
+    await setDoc(userDocRef, {
+      lastLogin: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }, { merge: true })
+    
+    notificationStore.showSuccess('Welcome back!')
     router.push('/home')
     
   } catch (error) {
     console.error('Google sign in error:', error)
-    
-    if (error.code === 'auth/popup-closed-by-user') {
-      notificationStore.showError('Sign in was cancelled')
-    } else if (error.code === 'auth/popup-blocked') {
-      notificationStore.showError('Pop-up was blocked. Please allow pop-ups for this site.')
-    } else {
-      notificationStore.showError('Google sign in failed: ' + error.message)
-    }
+    notificationStore.showError('Google sign in failed. Please try again.')
   } finally {
     loading.value = false
   }
@@ -427,6 +459,28 @@ const goToSignUp = () => {
   padding: 0 20px;
   color: #666;
   font-size: 0.9rem;
+}
+
+.google-signin-section {
+  margin-bottom: 30px;
+}
+
+.google-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #f8f9fa;
+  border: 1px solid #e1e5e9;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 15px;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.google-notice svg {
+  flex-shrink: 0;
 }
 
 .social-signin {

@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { auth } from '../boot/firebase'
+import { auth, db } from '../boot/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
+import { validateProfileCompletion, getNextProfileStep } from '../utils/profileValidation'
 
 // Import pages
 import Onboarding from '../pages/unauth/Onboarding.vue'
@@ -89,7 +91,7 @@ router.beforeEach(async (to, from, next) => {
   
   // Check authentication status
   return new Promise((resolve) => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       unsubscribe()
       
       if (requiresAuth && !user) {
@@ -100,8 +102,50 @@ router.beforeEach(async (to, from, next) => {
         // User is authenticated but trying to access onboarding
         next('/home')
         resolve()
+      } else if (user && requiresAuth) {
+        // User is authenticated and trying to access protected route
+        // Check if profile is complete
+        try {
+          const userDocRef = doc(db, 'users', user.uid)
+          const userDoc = await getDoc(userDocRef)
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data()
+            const profileValidation = validateProfileCompletion(userData)
+            
+            if (!profileValidation.isComplete) {
+              // Profile incomplete - redirect to appropriate completion step
+              const nextStep = getNextProfileStep(userData)
+              
+              switch (nextStep) {
+                case 'email_verification':
+                  next('/register/verify-email')
+                  break
+                case 'property_details':
+                  next('/register')
+                  break
+                case 'personal_details':
+                  next('/register/personal-details')
+                  break
+                default:
+                  next('/register')
+              }
+              resolve()
+              return
+            }
+          }
+          
+          // Profile complete or no profile data - allow access
+          next()
+          resolve()
+        } catch (error) {
+          console.error('Error checking profile completion:', error)
+          // On error, allow access but log the issue
+          next()
+          resolve()
+        }
       } else {
-        // Allow navigation
+        // Allow navigation for non-protected routes
         next()
         resolve()
       }

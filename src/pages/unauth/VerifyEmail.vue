@@ -44,68 +44,60 @@
         </div>
       </div>
 
-      <form @submit.prevent="handleVerification" class="verification-form">
-        <div class="form-group">
-          <label for="verificationCode" class="form-label">Manual Verification (Optional)</label>
-          <input
-            id="verificationCode"
-            v-model="formData.verificationCode"
-            type="text"
-            class="form-input"
-            placeholder="Enter any 6-digit code for testing"
-            maxlength="6"
-          />
+      <div class="verification-actions">
+        <!-- Manual Check Section -->
+        <div class="action-section">
+          <div class="section-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h3>Ready to Continue?</h3>
+          </div>
+          <p>If you've already clicked the verification link in your email:</p>
+          <button 
+            @click="checkVerificationStatus" 
+            class="action-btn primary"
+          >
+            Check Verification Status
+          </button>
         </div>
 
-        <button type="submit" class="verify-btn" :disabled="loading">
-          <span v-if="loading">Verifying...</span>
-          <span v-else>Verify Manually</span>
-        </button>
-      </form>
-
-      <div class="check-verification-section">
-        <h3>Ready to Continue?</h3>
-        <p class="check-description">If you've already clicked the verification link in your email:</p>
-        <button 
-          @click="checkVerificationStatus" 
-          class="check-verification-btn"
-        >
-          🔍 Check Verification Status Now
-        </button>
-        <p class="check-note">Or wait for automatic detection (checks every 3 seconds)</p>
-        <div class="auto-check-info">
-          <p>🔄 Automatic check in: <span class="countdown">{{ nextCheckIn }}s</span></p>
+        <!-- Auto Check Section -->
+        <div class="action-section">
+          <div class="section-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2V6M12 18V22M4.93 4.93L7.76 7.76M16.24 16.24L19.07 19.07M2 12H6M18 12H22M7.76 7.76L4.93 4.93M19.07 19.07L16.24 16.24" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h3>Automatic Detection</h3>
+          </div>
+          <p>We'll automatically check your verification status every 3 seconds</p>
+          <div class="countdown-info">
+            <span class="countdown-text">Next check in <strong>{{ nextCheckIn }}s</strong></span>
+          </div>
         </div>
-      </div>
 
-      <div class="resend-section">
-        <button 
-          @click="resendCode" 
-          class="resend-btn" 
-          :disabled="resendCountdown > 0"
-        >
-          <span v-if="resendCountdown > 0">
-            Resend Code ({{ formatTime(resendCountdown) }})
-          </span>
-          <span v-else>
-            Resend Verification Code
-          </span>
-        </button>
-      </div>
-
-      <div class="resend-section">
-        <button 
-          @click="resendCode" 
-          class="resend-btn" 
-          :disabled="resendCountdown > 0"
-        >
-          <span v-if="resendCountdown > 0">
-            Resend Verification E-mail ({{ formatTime(resendCountdown) }})
-          </span>
-          <span v-else>
-            Resend Verification E-mail
-          </span>
-        </button>
+        <!-- Resend Section -->
+        <div class="action-section">
+          <div class="section-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12Z" stroke="#FF9800" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h3>Didn't Receive Email?</h3>
+          </div>
+          <p>Check your spam folder or request a new verification email</p>
+          <button 
+            @click="resendCode" 
+            class="action-btn secondary" 
+            :disabled="resendCountdown > 0"
+          >
+            <span v-if="resendCountdown > 0">
+              Resend in {{ formatTime(resendCountdown) }}
+            </span>
+            <span v-else>
+              Resend Verification Email
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -129,7 +121,6 @@ const router = useRouter()
 // route removed - not needed in this component
 const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
-const loading = ref(false)
 const resendCountdown = ref(0)
 const nextCheckIn = ref(3)
 let countdownTimer = null
@@ -287,49 +278,7 @@ const checkVerificationStatus = async () => {
   }
 }
 
-const handleVerification = async () => {
-  if (loading.value) return
-  
-  if (!formData.verificationCode) {
-    notificationStore.showError('Please enter the verification code')
-    return
-  }
-  
-  loading.value = true
-  
-  try {
-    // For manual verification, we'll accept any 6-digit code
-    // In a real app, you'd verify against the actual code sent
-    if (formData.verificationCode.length === 6) {
-      console.log('Manual verification submitted:', formData.email)
-      
-      // Mark email as verified in store
-      registrationStore.setEmailVerified(true)
-      
-      // Update Firestore with email verification status if we have a user ID
-      if (registrationStore.tempUserId) {
-        try {
-          await updateEmailVerificationInFirestore(registrationStore.tempUserId)
-        } catch (firestoreError) {
-          console.warn('Failed to update Firestore, but continuing with registration:', firestoreError)
-        }
-      }
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Move to property details step
-      router.push('/register')
-    } else {
-      throw new Error('Invalid verification code. Please enter a 6-digit code.')
-    }
-  } catch (error) {
-    console.error('Verification error:', error)
-    notificationStore.showError('Verification failed: ' + error.message)
-  } finally {
-    loading.value = false
-  }
-}
+
 
 const resendCode = async () => {
   if (resendCountdown.value > 0) return
@@ -429,7 +378,7 @@ const resendCode = async () => {
 
 .content {
   padding: 40px 20px;
-  max-width: 400px;
+  max-width: 600px;
   margin: 0 auto;
 }
 
@@ -625,6 +574,100 @@ const resendCode = async () => {
   text-decoration: none;
 }
 
+/* Minimal design styles */
+.verification-actions {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.action-section {
+  background: white;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  padding: 16px;
+  transition: border-color 0.2s ease;
+}
+
+.action-section:hover {
+  border-color: #ff6b35;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.section-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.section-header svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.action-section p {
+  color: #666;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin: 0 0 16px 0;
+}
+
+.action-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn.primary {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.action-btn.primary:hover {
+  background-color: #43A047;
+}
+
+.action-btn.secondary {
+  background-color: #FF9800;
+  color: white;
+}
+
+.action-btn.secondary:hover:not(:disabled) {
+  background-color: #F57C00;
+}
+
+.action-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.countdown-info {
+  margin-top: 12px;
+}
+
+.countdown-text {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.countdown-text strong {
+  color: #2196F3;
+  font-weight: 600;
+}
+
 /* Responsive design */
 @media (max-width: 480px) {
   .content {
@@ -633,6 +676,34 @@ const resendCode = async () => {
   
   .form-input {
     padding: 14px;
+  }
+  
+  .action-section {
+    padding: 16px;
+    border-radius: 6px;
+  }
+  
+  .section-header h3 {
+    font-size: 0.95rem;
+  }
+  
+  .action-section p {
+    font-size: 0.8rem;
+  }
+  
+  .action-btn {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .verification-actions {
+    gap: 20px;
+  }
+  
+  .action-section {
+    padding: 16px;
   }
 }
 </style>
