@@ -104,9 +104,11 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { signInWithEmailAndPassword } from 'firebase/auth'
-import { auth } from '../../boot/firebase'
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth'
+import { auth, googleProvider } from '../../boot/firebase'
 import { useNotificationStore } from '../../stores/notifications'
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from '../../boot/firebase'
 
 // Component name for ESLint
 defineOptions({
@@ -149,9 +151,63 @@ const handleSignIn = async () => {
   }
 }
 
-const signInWithGoogle = () => {
-  // TODO: Implement Google sign in
-  console.log('Google sign in clicked')
+const signInWithGoogle = async () => {
+  if (loading.value) return
+  
+  loading.value = true
+  
+  try {
+    const result = await signInWithPopup(auth, googleProvider)
+    const user = result.user
+    
+    // Check if user already exists in Firestore
+    const userDocRef = doc(db, 'users', user.uid)
+    const userDoc = await getDoc(userDocRef)
+    
+    if (!userDoc.exists()) {
+      // New Google user - create user document
+      const userData = {
+        email: user.email,
+        firstName: user.displayName?.split(' ')[0] || '',
+        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+        displayName: user.displayName || '',
+        photoURL: user.photoURL || '',
+        emailVerified: user.emailVerified,
+        registrationStep: 'completed',
+        registrationCompleted: true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        authProvider: 'google',
+        lastLogin: serverTimestamp()
+      }
+      
+      await setDoc(userDocRef, userData)
+      notificationStore.showSuccess('Welcome! Your account has been created successfully.')
+    } else {
+      // Existing user - update last login
+      await setDoc(userDocRef, {
+        lastLogin: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true })
+      notificationStore.showSuccess('Welcome back!')
+    }
+    
+    // Redirect to home page
+    router.push('/home')
+    
+  } catch (error) {
+    console.error('Google sign in error:', error)
+    
+    if (error.code === 'auth/popup-closed-by-user') {
+      notificationStore.showError('Sign in was cancelled')
+    } else if (error.code === 'auth/popup-blocked') {
+      notificationStore.showError('Pop-up was blocked. Please allow pop-ups for this site.')
+    } else {
+      notificationStore.showError('Google sign in failed: ' + error.message)
+    }
+  } finally {
+    loading.value = false
+  }
 }
 
 const forgotPassword = () => {

@@ -1,6 +1,6 @@
 import { defineBoot } from '#q-app/wrappers'
 import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
@@ -22,13 +22,20 @@ const auth = getAuth(app)
 const db = getFirestore(app)
 const storage = getStorage(app)
 
+// Initialize Google Auth Provider
+const googleProvider = new GoogleAuthProvider()
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+})
+
 export default defineBoot(({ app }) => {
   // Make Firebase services available globally
   app.config.globalProperties.$firebase = app
   app.config.globalProperties.$auth = auth
   app.config.globalProperties.$db = db
   app.config.globalProperties.$storage = storage
+  app.config.globalProperties.$googleProvider = googleProvider
 })
 
 // Export Firebase services for use in components
-export { app, auth, db, storage }
+export { app, auth, db, storage, googleProvider }
