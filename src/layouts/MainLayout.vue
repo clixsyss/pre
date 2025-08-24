@@ -44,6 +44,7 @@
             <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
+        <span class="nav-label">Home</span>
       </router-link>
 
       <router-link to="/access" class="nav-item" active-class="active">
@@ -63,6 +64,7 @@
             <path d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
+        <span class="nav-label">Services</span>
       </router-link>
 
       <router-link to="/profile" class="nav-item" active-class="active">
@@ -72,6 +74,7 @@
             <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
+        <span class="nav-label">Profile</span>
       </router-link>
     </nav>
   </div>
@@ -185,14 +188,13 @@ defineOptions({
 
 /* Bottom Navigation */
 .bottom-navigation {
-  background-color: #333;
+  background-color: #2a2a2a;
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
-  padding: 20px 20px 40px;
+  padding: 20px 20px;
   display: flex;
   justify-content: space-around;
   align-items: flex-end;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
   position: sticky;
   bottom: 0;
   z-index: 100;
@@ -202,9 +204,8 @@ defineOptions({
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
   text-decoration: none;
-  color: #999;
+  color: white;
   transition: all 0.3s ease;
   position: relative;
 }
@@ -231,11 +232,11 @@ defineOptions({
 .nav-item.active .nav-icon {
   background-color: #ff6b35;
   color: white;
-  transform: translateY(-20px);
+  transform: translateY(-60px);
   box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
-  border: 4px solid white;
-  width: 68px;
-  height: 68px;
+  border: 3px solid white;
+  width: 66px;
+  height: 66px;
 }
 
 .nav-item.active .nav-icon svg {
@@ -246,10 +247,23 @@ defineOptions({
   background: none;
 }
 
+.nav-item:not(.active) .nav-icon svg {
+  stroke: white;
+}
+
 .nav-item .nav-label {
   font-size: 0.8rem;
   font-weight: 500;
   margin-top: 4px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  color: white;
+}
+
+.nav-item.active .nav-label {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* Responsive Design */
@@ -277,12 +291,14 @@ defineOptions({
   }
   
   .nav-icon {
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
   }
   
   .nav-item.active .nav-icon {
-    transform: translateY(-8px);
+    transform: translateY(-20px);
+    width: 56px;
+    height: 56px;
   }
 }
 
@@ -300,12 +316,14 @@ defineOptions({
   }
   
   .nav-icon {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
   }
   
   .nav-item.active .nav-icon {
-    transform: translateY(-6px);
+    transform: translateY(-18px);
+    width: 50px;
+    height: 50px;
   }
 }
 </style>
