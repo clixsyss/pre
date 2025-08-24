@@ -191,7 +191,7 @@ defineOptions({
   background-color: #2a2a2a;
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
-  padding: 20px 20px;
+  padding: 16px 20px 32px;
   display: flex;
   justify-content: space-around;
   align-items: flex-end;
@@ -208,6 +208,8 @@ defineOptions({
   color: white;
   transition: all 0.3s ease;
   position: relative;
+  flex: 1;
+  max-width: 80px;
 }
 
 .nav-item:hover {
@@ -219,28 +221,29 @@ defineOptions({
 }
 
 .nav-icon {
-  width: 60px;
-  height: 60px;
+  width: 56px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   transition: all 0.3s ease;
   position: relative;
+  margin-bottom: -18px;
 }
 
 .nav-item.active .nav-icon {
   background-color: #ff6b35;
   color: white;
-  transform: translateY(-60px);
-  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
-  border: 3px solid white;
-  width: 66px;
-  height: 66px;
+  transform: translateY(-40px);
+  border: 5px solid white;
+  width: 64px;
+  height: 64px;
 }
 
 .nav-item.active .nav-icon svg {
   stroke: white;
+  stroke-width: 2;
 }
 
 .nav-item:not(.active) .nav-icon {
@@ -249,16 +252,19 @@ defineOptions({
 
 .nav-item:not(.active) .nav-icon svg {
   stroke: white;
+  stroke-width: 2;
 }
 
 .nav-item .nav-label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  margin-top: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(8px);
   transition: all 0.3s ease;
   color: white;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
 }
 
 .nav-item.active .nav-label {
@@ -287,18 +293,22 @@ defineOptions({
   }
   
   .bottom-navigation {
-    padding: 12px 16px 28px;
+    padding: 12px 16px 24px;
   }
   
   .nav-icon {
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
   }
   
   .nav-item.active .nav-icon {
-    transform: translateY(-20px);
+    transform: translateY(-32px);
     width: 56px;
     height: 56px;
+  }
+  
+  .nav-item {
+    max-width: 70px;
   }
 }
 
@@ -312,7 +322,7 @@ defineOptions({
   }
   
   .bottom-navigation {
-    padding: 10px 12px 24px;
+    padding: 10px 12px 20px;
   }
   
   .nav-icon {
@@ -321,9 +331,17 @@ defineOptions({
   }
   
   .nav-item.active .nav-icon {
-    transform: translateY(-18px);
-    width: 50px;
-    height: 50px;
+    transform: translateY(-28px);
+    width: 52px;
+    height: 52px;
+  }
+  
+  .nav-item {
+    max-width: 65px;
+  }
+  
+  .nav-item .nav-label {
+    font-size: 0.7rem;
   }
 }
 </style>
