@@ -4,7 +4,14 @@
     <div class="content">
       <div class="greeting">
         <h2>Hello {{ user?.displayName?.split(' ')[0] || 'User' }}.</h2>
-        <p>Project: {{ projectName }}</p>
+        <div class="project-info">
+          <p class="project-name">Project: {{ projectName }}</p>
+          <p class="project-location">{{ projectLocation }}</p>
+          <div class="user-details">
+            <span class="user-unit">Unit: {{ userUnit }}</span>
+            <span class="user-role">Role: {{ userRole }}</span>
+          </div>
+        </div>
       </div>
 
       <!-- Dashboard Grid -->
@@ -95,6 +102,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth } from '../../boot/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
+import { useProjectStore } from '../../stores/projectStore'
 import HomeCalendar from '../../components/HomeCalendar.vue'
 import UpcomingBookingsCard from '../../components/UpcomingBookingsCard.vue'
 import sampleDataService from '../../services/sampleDataService.js'
@@ -105,9 +113,15 @@ defineOptions({
 })
 
 const router = useRouter()
+const projectStore = useProjectStore()
 const user = ref(null)
 const activeTab = ref('all')
-const projectName = ref('Test Unit')
+
+// Computed properties
+const projectName = computed(() => projectStore.selectedProject?.name || 'No Project Selected')
+const projectLocation = computed(() => projectStore.selectedProject?.location || 'Location not set')
+const userUnit = computed(() => projectStore.selectedProject?.userUnit || 'N/A')
+const userRole = computed(() => projectStore.selectedProject?.userRole || 'Member')
 
 // Sample news data
 const newsItems = ref([
@@ -159,6 +173,18 @@ onMounted(async () => {
     }
   })
 
+  // Check if project is selected, if not redirect to project selection
+  if (!projectStore.hasSelectedProject) {
+    // Try to load the selected project from localStorage
+    projectStore.loadSelectedProject()
+    
+    // If still no project selected, redirect to project selection
+    if (!projectStore.hasSelectedProject) {
+      router.push('/project-selection')
+      return
+    }
+  }
+
   // Initialize sample data for testing
   try {
     await sampleDataService.initializeAllSampleData()
@@ -195,6 +221,47 @@ onMounted(async () => {
   color: #666;
   font-size: 1.125rem;
   margin: 0;
+}
+
+.project-info {
+  margin-top: 8px;
+}
+
+.project-name {
+  color: #ff6b35;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+
+.project-location {
+  color: #888;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.user-details {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.user-unit,
+.user-role {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.user-unit {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.user-role {
+  background: #f3e5f5;
+  color: #7b1fa2;
 }
 
 .dashboard-grid {

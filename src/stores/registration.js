@@ -17,7 +17,7 @@ export const useRegistrationStore = defineStore('registration', () => {
     compound: '',
     unit: '',
     role: '',
-    projects: [] // New field for multiple projects
+    projects: [] // Array of project IDs the user has access to
   })
   
   const userDetails = reactive({

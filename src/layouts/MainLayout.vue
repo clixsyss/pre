@@ -16,6 +16,18 @@
         </div>
         
         <div class="header-right">
+          <!-- Current Project Display -->
+          <div v-if="currentProject" class="current-project">
+            <span class="project-label">Project:</span>
+            <span class="project-name">{{ currentProject.name }}</span>
+            <span v-if="currentProject.userUnit" class="project-unit">Unit: {{ currentProject.userUnit }}</span>
+            <button @click="changeProject" class="change-project-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          
           <div class="qr-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 3H7V7H3V3Z" stroke="#ff6b35" stroke-width="2" fill="#ff6b35"/>
@@ -81,10 +93,25 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useProjectStore } from '../stores/projectStore'
+
 // Component name for ESLint
 defineOptions({
   name: 'MainLayout'
 })
+
+const router = useRouter()
+const projectStore = useProjectStore()
+
+// Computed properties
+const currentProject = computed(() => projectStore.selectedProject)
+
+// Methods
+const changeProject = () => {
+  router.push('/project-selection')
+}
 </script>
 
 <style scoped>
@@ -165,6 +192,62 @@ defineOptions({
 .header-right {
   display: flex;
   align-items: center;
+  gap: 16px;
+}
+
+/* Current Project Display */
+.current-project {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.project-label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.project-name {
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-unit {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.75rem;
+  font-weight: 500;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.change-project-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.change-project-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .qr-icon {

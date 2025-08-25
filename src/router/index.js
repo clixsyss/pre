@@ -13,6 +13,7 @@ import PersonalDetails from '../pages/unauth/PersonalDetails.vue'
 import Support from '../pages/unauth/Support.vue'
 import Home from '../pages/auth/Home.vue'
 import Profile from '../pages/auth/ProfilePage.vue'
+import ProjectSelection from '../pages/auth/ProjectSelection.vue'
 
 const routes = [
   // Root redirects to onboarding
@@ -60,6 +61,12 @@ const routes = [
   },
   
   // Authorized user routes
+  {
+    path: '/project-selection',
+    name: 'ProjectSelection',
+    component: ProjectSelection,
+    meta: { requiresAuth: true }
+  },
   {
     path: '/home',
     name: 'Home',
@@ -201,6 +208,19 @@ router.beforeEach(async (to, from, next) => {
                 return
               } else {
                 console.log('Profile is complete, allowing access to:', to.path)
+              }
+              
+              // Check if user has selected a project (except for project-selection page)
+              if (to.path !== '/project-selection') {
+                // Check localStorage for selected project
+                const selectedProjectId = localStorage.getItem('selectedProjectId')
+                
+                if (!selectedProjectId) {
+                  console.log('No project selected, redirecting to project selection')
+                  next('/project-selection')
+                  resolve()
+                  return
+                }
               }
             } else {
               console.log('No user document found in Firestore')
