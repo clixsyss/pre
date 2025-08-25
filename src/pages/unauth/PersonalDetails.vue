@@ -371,6 +371,7 @@ onMounted(() => {
 })
 
 const goToOnboarding = () => {
+  console.log('goToOnboarding called from PersonalDetails, navigating to /onboarding')
   router.push('/onboarding')
 }
 

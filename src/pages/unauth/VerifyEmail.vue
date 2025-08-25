@@ -229,6 +229,7 @@ const formatTime = (seconds) => {
 }
 
 const goToOnboarding = () => {
+  console.log('goToOnboarding called from VerifyEmail, navigating to /onboarding')
   router.push('/onboarding')
 }
 

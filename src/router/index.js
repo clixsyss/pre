@@ -129,6 +129,7 @@ const router = createRouter({
 
 // Navigation guard
 router.beforeEach(async (to, from, next) => {
+  console.log('Navigation guard - to:', to.path, 'from:', from.path)
   const requiresAuth = to.meta.requiresAuth
   
   // Check authentication status
@@ -136,14 +137,30 @@ router.beforeEach(async (to, from, next) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       unsubscribe()
       
+      console.log('Auth state changed - user:', user ? 'authenticated' : 'not authenticated')
+      
+      // Allow navigation to onboarding during registration process
+      if (to.path === '/onboarding' && from.path && from.path.startsWith('/register')) {
+        console.log('Allowing navigation to onboarding from registration')
+        next()
+        resolve()
+        return
+      }
+      
       if (requiresAuth && !user) {
         // Route requires auth but user is not authenticated
         next('/onboarding')
         resolve()
       } else if (!requiresAuth && user && to.path === '/onboarding') {
         // User is authenticated but trying to access onboarding
-        next('/home')
-        resolve()
+        // Only redirect if they're not in the middle of registration
+        if (!from.path || !from.path.startsWith('/register')) {
+          next('/home')
+          resolve()
+        } else {
+          next()
+          resolve()
+        }
       } else if (user && requiresAuth) {
         // User is authenticated and trying to access protected route
         // Check if profile is complete

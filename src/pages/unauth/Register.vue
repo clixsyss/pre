@@ -586,6 +586,7 @@ const handlePropertySubmit = async () => {
 }
 
 const goToOnboarding = () => {
+  console.log('goToOnboarding called, navigating to /onboarding')
   router.push('/onboarding')
 }
 
