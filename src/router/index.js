@@ -163,46 +163,58 @@ router.beforeEach(async (to, from, next) => {
         }
       } else if (user && requiresAuth) {
         // User is authenticated and trying to access protected route
-        // Check if profile is complete
-        try {
-          const userDocRef = doc(db, 'users', user.uid)
-          const userDoc = await getDoc(userDocRef)
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data()
-            const profileValidation = validateProfileCompletion(userData)
+                  // Check if profile is complete
+          try {
+            const userDocRef = doc(db, 'users', user.uid)
+            const userDoc = await getDoc(userDocRef)
             
-            if (!profileValidation.isComplete) {
-              // Profile incomplete - redirect to appropriate completion step
-              const nextStep = getNextProfileStep(userData)
+            if (userDoc.exists()) {
+              const userData = userDoc.data()
+              console.log('User data from Firestore:', userData)
               
-              switch (nextStep) {
-                case 'email_verification':
-                  next('/register/verify-email')
-                  break
-                case 'property_details':
-                  next('/register')
-                  break
-                case 'personal_details':
-                  next('/register/personal-details')
-                  break
-                default:
-                  next('/register')
+              const profileValidation = validateProfileCompletion(userData)
+              console.log('Profile validation result:', profileValidation)
+              
+              if (!profileValidation.isComplete) {
+                // Profile incomplete - redirect to appropriate completion step
+                const nextStep = getNextProfileStep(userData)
+                console.log('Next step for profile completion:', nextStep)
+                
+                switch (nextStep) {
+                  case 'email_verification':
+                    console.log('Redirecting to email verification')
+                    next('/register/verify-email')
+                    break
+                  case 'property_details':
+                    console.log('Redirecting to property details')
+                    next('/register')
+                    break
+                  case 'personal_details':
+                    console.log('Redirecting to personal details')
+                    next('/register/personal-details')
+                    break
+                  default:
+                    console.log('Redirecting to register (default)')
+                    next('/register')
+                }
+                resolve()
+                return
+              } else {
+                console.log('Profile is complete, allowing access to:', to.path)
               }
-              resolve()
-              return
+            } else {
+              console.log('No user document found in Firestore')
             }
+            
+            // Profile complete or no profile data - allow access
+            next()
+            resolve()
+          } catch (error) {
+            console.error('Error checking profile completion:', error)
+            // On error, allow access but log the issue
+            next()
+            resolve()
           }
-          
-          // Profile complete or no profile data - allow access
-          next()
-          resolve()
-        } catch (error) {
-          console.error('Error checking profile completion:', error)
-          // On error, allow access but log the issue
-          next()
-          resolve()
-        }
       } else {
         // Allow navigation for non-protected routes
         next()
