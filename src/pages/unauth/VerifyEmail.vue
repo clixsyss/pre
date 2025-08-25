@@ -2,13 +2,15 @@
   <div class="verify-email-page">
     <!-- Header -->
     <div class="header">
-      <button @click="goBack" class="back-btn">
+      <button @click="goToOnboarding" class="back-btn">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M19 12H5M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
       <h1 class="page-title">Registration</h1>
-      <div class="placeholder"></div>
+      <div class="header-actions">
+        <button @click="goToSignIn" class="signin-header-btn">Sign In</button>
+      </div>
     </div>
 
     <!-- Tabs -->
@@ -226,8 +228,12 @@ const formatTime = (seconds) => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
-const goBack = () => {
-  router.go(-1)
+const goToOnboarding = () => {
+  router.push('/onboarding')
+}
+
+const goToSignIn = () => {
+  router.push('/signin')
 }
 
 const checkEmailVerification = () => {
@@ -336,6 +342,27 @@ const resendCode = async () => {
   font-size: 1.2rem;
   font-weight: 600;
   margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.signin-header-btn {
+  background: none;
+  border: 1px solid white;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.signin-header-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .placeholder {

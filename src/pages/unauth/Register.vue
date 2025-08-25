@@ -2,13 +2,15 @@
   <div class="register-page">
     <!-- Header -->
     <div class="header">
-      <button @click="goBack" class="back-btn">
+      <button @click="goToOnboarding" class="back-btn">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M19 12H5M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
       <h1 class="page-title">Registration</h1>
-      <div class="placeholder"></div>
+      <div class="header-actions">
+        <button @click="goToSignIn" class="signin-header-btn">Sign In</button>
+      </div>
     </div>
 
     <!-- Orange Separator Line -->
@@ -105,6 +107,21 @@
             <span v-else>Proceed</span>
           </button>
         </form>
+
+        <!-- Navigation Options -->
+        <div class="step-navigation">
+          <div class="nav-divider">
+            <span>or</span>
+          </div>
+          <div class="nav-options">
+            <button @click="goToSignIn" class="nav-btn secondary">
+              Already have an account? Sign In
+            </button>
+            <button @click="goToOnboarding" class="nav-btn secondary">
+              Back to Onboarding
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Property Step -->
@@ -226,6 +243,21 @@
             </button>
           </div>
         </form>
+
+        <!-- Navigation Options -->
+        <div class="step-navigation">
+          <div class="nav-divider">
+            <span>or</span>
+          </div>
+          <div class="nav-options">
+            <button @click="goToSignIn" class="nav-btn secondary">
+              Already have an account? Sign In
+            </button>
+            <button @click="goToOnboarding" class="nav-btn secondary">
+              Back to Onboarding
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -416,10 +448,6 @@ onMounted(() => {
   })
 })
 
-const goBack = () => {
-  router.go(-1)
-}
-
 const goToPreviousStep = () => {
   if (currentStep.value === 'property') {
     currentStep.value = 'personal'
@@ -556,6 +584,14 @@ const handlePropertySubmit = async () => {
     loading.value = false
   }
 }
+
+const goToOnboarding = () => {
+  router.push('/onboarding')
+}
+
+const goToSignIn = () => {
+  router.push('/signin')
+}
 </script>
 
 <style scoped>
@@ -601,6 +637,27 @@ const handlePropertySubmit = async () => {
 
 .back-btn svg {
   stroke: white;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.signin-header-btn {
+  background-color: #ff6b35;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.signin-header-btn:hover {
+  background-color: #e55a2b;
 }
 
 .separator-line {
@@ -1120,6 +1177,60 @@ select.form-input {
   font-size: 0.9rem;
   line-height: 1.5;
   margin: 0;
+}
+
+.step-navigation {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.nav-divider {
+  display: flex;
+  align-items: center;
+  margin: 20px 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.nav-divider::before,
+.nav-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: #e1e5e9;
+}
+
+.nav-divider span {
+  padding: 0 15px;
+  background-color: #f8f9fa;
+}
+
+.nav-options {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.nav-btn.secondary {
+  background-color: white;
+  color: #666;
+}
+
+.nav-btn.secondary:hover {
+  border-color: #ff6b35;
+  color: #ff6b35;
 }
 
 @keyframes fadeIn {
