@@ -288,9 +288,7 @@ defineOptions({
     justify-content: center;
   }
   
-  .main-content {
-    padding: 16px;
-  }
+  /* Removed main-content padding adjustment since we removed the main padding */
   
   .bottom-navigation {
     padding: 12px 16px 24px;
@@ -317,9 +315,7 @@ defineOptions({
     padding: 10px 12px;
   }
   
-  .main-content {
-    padding: 12px;
-  }
+  /* Removed main-content padding adjustment since we removed the main padding */
   
   .bottom-navigation {
     padding: 10px 12px 20px;

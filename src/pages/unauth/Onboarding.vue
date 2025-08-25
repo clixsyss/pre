@@ -38,14 +38,14 @@
       </div>
 
       <!-- Pagination and More Content -->
-      <!-- <div class="pagination-section">
+      <div class="pagination-section">
         <div class="pagination-dots">
           <div class="dot active"></div>
           <div class="dot"></div>
           <div class="dot"></div>
         </div>
         <span class="more-content">200+ more...</span>
-      </div> -->
+      </div>
 
       <!-- Action Buttons -->
       <div class="actions">
@@ -93,6 +93,8 @@ const goToSupport = () => {
   width: 100%;
   height: 100vh;
   overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 .background-image {
