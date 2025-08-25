@@ -1,9 +1,7 @@
 <template>
   <div class="onboarding">
-    <!-- Background Image -->
-    <div class="background-image">
-      <img src="../../assets/onboarding.png" alt="PRE Group Development" />
-    </div>
+    <!-- Background Image (now handled via CSS) -->
+    <div class="background-image"></div>
 
     <!-- Dark Overlay -->
     <div class="overlay"></div>
@@ -106,11 +104,14 @@ const goToSupport = () => {
   z-index: -2;
 }
 
-.background-image img {
+.fallback-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  z-index: -2;
 }
 
 .overlay {
@@ -137,6 +138,10 @@ const goToSupport = () => {
   padding-top: 100px !important;
   max-width: 500px;
   margin: 0 auto;
+  background-image: url('../../assets/onboarding.png'); /* Added background image */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .main-title {
