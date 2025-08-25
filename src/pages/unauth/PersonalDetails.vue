@@ -17,6 +17,19 @@
       <button class="tab-btn">Property</button>
     </div>
 
+    <!-- Completion Info -->
+    <div class="completion-info">
+      <div class="info-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="info-content">
+        <h3>Almost Done!</h3>
+        <p>Complete your personal details to finish registration. You'll be redirected to sign in with your new account.</p>
+      </div>
+    </div>
+
     <!-- Content -->
     <div class="content">
       <div class="icon-section">
@@ -256,6 +269,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../../boot/firebase'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
+import { signOut } from 'firebase/auth'
 
 // Component name for ESLint
 defineOptions({
@@ -432,21 +446,26 @@ const handleSubmit = async () => {
         mobile: formData.mobile,
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender,
-        nationalId: formData.nationalId
+        nationalId: formData.nationalId,
+        // Include projects data from registration store
+        projects: registrationStore.propertyData.projects || []
       }
       
       await updateUserDetailsInFirestore(userId, userDetails)
       
       // Show success notification
-      notificationStore.showSuccess('Registration completed successfully! Welcome to PRE Group!')
+      notificationStore.showSuccess('Registration completed successfully! Please sign in with your new account.')
       
       // TODO: Upload ID images to Firebase Storage
       
       // Clear registration store
       registrationStore.resetRegistration()
       
-      // Redirect to home page after successful registration
-      router.push('/home')
+      // Sign out the user since they need to log in with their new account
+      await signOut(auth)
+      
+      // Redirect to sign in page after successful registration
+      router.push('/signin')
     } else {
       throw new Error('No authenticated user found. Please try again.')
     }
@@ -541,6 +560,36 @@ const handleSubmit = async () => {
   right: 0;
   height: 3px;
   background-color: #ff6b35;
+}
+
+.completion-info {
+  display: flex;
+  align-items: center;
+  background-color: #e8f5e9; /* Light green background */
+  padding: 15px 20px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  border: 1px solid #a5d6a7; /* Green border */
+}
+
+.info-icon {
+  margin-right: 15px;
+}
+
+.info-icon svg {
+  color: #4caf50; /* Green color for the icon */
+}
+
+.info-content h3 {
+  margin: 0 0 5px 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.info-content p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
 }
 
 .content {

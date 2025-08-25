@@ -18,6 +18,14 @@
         <p class="welcome-subtitle">Sign in to access your PRE Group account</p>
       </div>
 
+      <!-- New User Message -->
+      <div class="new-user-message">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Just completed registration? Sign in with your email and the password you created.</span>
+      </div>
+
       <form @submit.prevent="handleSignIn" class="signin-form">
         <div class="form-group">
           <label for="email" class="form-label">Email</label>
@@ -194,7 +202,8 @@ const signInWithGoogle = async () => {
       registrationStore.setPropertyData({
         compound: userData.compound || '',
         unit: userData.unit || '',
-        role: userData.role || ''
+        role: userData.role || '',
+        projects: userData.projects || [] // Include projects data
       })
       registrationStore.setUserDetails({
         firstName: userData.firstName || '',
@@ -313,6 +322,25 @@ const goToSignUp = () => {
   color: #666;
   font-size: 1rem;
   margin: 0;
+}
+
+.new-user-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #e8f5e9; /* Light green background */
+  border: 1px solid #a5d6a7; /* Green border */
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 20px;
+  color: #2e7d32; /* Dark green text */
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.new-user-message svg {
+  flex-shrink: 0;
 }
 
 .signin-form {

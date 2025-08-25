@@ -36,14 +36,14 @@
       </div>
 
       <!-- Pagination and More Content -->
-      <div class="pagination-section">
+      <!-- <div class="pagination-section">
         <div class="pagination-dots">
           <div class="dot active"></div>
           <div class="dot"></div>
           <div class="dot"></div>
         </div>
         <span class="more-content">200+ more...</span>
-      </div>
+      </div> -->
 
       <!-- Action Buttons -->
       <div class="actions">
@@ -102,6 +102,10 @@ const goToSupport = () => {
   width: 100%;
   height: 100%;
   z-index: -2;
+  background-image: url('../../assets/onboarding.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .fallback-bg {
@@ -136,9 +140,8 @@ const goToSupport = () => {
   flex-direction: column;
   padding: 60px 30px 40px;
   padding-top: 100px !important;
-  max-width: 500px;
   margin: 0 auto;
-  background-image: url('../../assets/onboarding.png'); /* Added background image */
+  background-image: url('../../assets/onboarding.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

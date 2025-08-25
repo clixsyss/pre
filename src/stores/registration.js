@@ -16,7 +16,8 @@ export const useRegistrationStore = defineStore('registration', () => {
   const propertyData = reactive({
     compound: '',
     unit: '',
-    role: ''
+    role: '',
+    projects: [] // New field for multiple projects
   })
   
   const userDetails = reactive({
@@ -65,7 +66,7 @@ export const useRegistrationStore = defineStore('registration', () => {
     tempUserId.value = null
     verificationCode.value = ''
     Object.assign(personalData, { email: '' })
-    Object.assign(propertyData, { compound: '', unit: '', role: '' })
+    Object.assign(propertyData, { compound: '', unit: '', role: '', projects: [] })
     Object.assign(userDetails, {
       firstName: '', lastName: '', mobile: '', dateOfBirth: '',
       gender: 'male', nationalId: '', password: '', confirmPassword: ''
