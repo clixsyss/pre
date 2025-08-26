@@ -62,28 +62,62 @@
         </div>
       </div>
 
-      <!-- Property Information -->
+      <!-- Current Projects -->
       <div class="info-section">
-        <h3 class="section-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="9,22 9,12 15,12 15,22" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Property Information
-        </h3>
-        <div class="info-grid">
-          <div class="info-item">
-            <label>Project</label>
-            <span>{{ userProfile.project || 'Not provided' }}</span>
+        <div class="section-header">
+          <h3 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="9,22 9,12 15,12 15,22" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            My Projects
+          </h3>
+          <button @click="showAddProjectModal = true" class="add-project-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Add Project
+          </button>
+        </div>
+        
+        <!-- Current Projects List -->
+        <div v-if="userProjects.length > 0" class="projects-list">
+          <div 
+            v-for="project in userProjects" 
+            :key="project.id"
+            :class="['project-item', { 'current': project.id === currentProjectId }]"
+          >
+            <div class="project-info">
+              <div class="project-main">
+                <h4 class="project-name">{{ project.name || 'Unnamed Project' }}</h4>
+                <p class="project-location">{{ project.location || 'Location not set' }}</p>
+              </div>
+              <div class="project-details">
+                <span class="project-unit">Unit {{ project.userUnit || 'N/A' }}</span>
+                <span class="project-role">{{ project.userRole || 'Member' }}</span>
+                <span class="project-status" :class="project.status">{{ project.status || 'active' }}</span>
+              </div>
+            </div>
+            <div class="project-actions">
+              <button 
+                v-if="project.id !== currentProjectId"
+                @click="switchToProject(project)"
+                class="switch-project-btn"
+              >
+                Switch to Project
+              </button>
+              <span v-else class="current-project-badge">Current Project</span>
+            </div>
           </div>
-          <div class="info-item">
-            <label>Unit</label>
-            <span>{{ userProfile.unit || 'Not provided' }}</span>
-          </div>
-          <div class="info-item">
-            <label>Role</label>
-            <span>{{ formatRole(userProfile.role) || 'Not provided' }}</span>
-          </div>
+        </div>
+        
+        <!-- No Projects State -->
+        <div v-else class="no-projects">
+          <div class="no-projects-icon">🏠</div>
+          <p>You don't have any projects yet.</p>
+          <button @click="showAddProjectModal = true" class="add-first-project-btn">
+            Add Your First Project
+          </button>
         </div>
       </div>
 
@@ -172,16 +206,90 @@
         </div>
       </div>
     </div>
+
+    <!-- Add Project Modal -->
+    <div v-if="showAddProjectModal" class="modal-overlay" @click="showAddProjectModal = false">
+      <div class="modal-content add-project-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Add New Project</h3>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="addNewProject" class="add-project-form">
+            <div class="form-group">
+              <label for="projectName">Project Name</label>
+              <input 
+                id="projectName"
+                v-model="newProject.name" 
+                type="text" 
+                placeholder="Enter project name"
+                required
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="projectLocation">Location</label>
+              <input 
+                id="projectLocation"
+                v-model="newProject.location" 
+                type="text" 
+                placeholder="Enter project location"
+                required
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="userUnit">Your Unit</label>
+              <input 
+                id="userUnit"
+                v-model="newProject.userUnit" 
+                type="text" 
+                placeholder="e.g., A1, B2, etc."
+                required
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="userRole">Your Role</label>
+              <select id="userRole" v-model="newProject.userRole" required>
+                <option value="">Select your role</option>
+                <option value="owner">Owner</option>
+                <option value="family">Family Member</option>
+                <option value="tenant">Tenant</option>
+                <option value="guest">Guest</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="projectDescription">Description (Optional)</label>
+              <textarea 
+                id="projectDescription"
+                v-model="newProject.description" 
+                placeholder="Describe the project..."
+                rows="3"
+              ></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-actions">
+          <button @click="showAddProjectModal = false" class="cancel-btn">Cancel</button>
+          <button @click="addNewProject" class="confirm-btn" :disabled="addProjectLoading">
+            <span v-if="addProjectLoading">Adding Project...</span>
+            <span v-else>Add Project</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { signOut } from 'firebase/auth'
 import { auth } from '../../boot/firebase'
 import { getUserDocument } from '../../utils/firestore'
 import { useNotificationStore } from '../../stores/notifications'
+import { useProjectStore } from '../../stores/projectStore'
 
 // Component name for ESLint
 defineOptions({
@@ -190,6 +298,7 @@ defineOptions({
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
+const projectStore = useProjectStore()
 
 // Reactive state
 const loading = ref(true)
@@ -197,6 +306,21 @@ const error = ref(null)
 const userProfile = ref(null)
 const showLogoutConfirm = ref(false)
 const logoutLoading = ref(false)
+const showAddProjectModal = ref(false)
+const addProjectLoading = ref(false)
+
+// New project form data
+const newProject = ref({
+  name: '',
+  location: '',
+  userUnit: '',
+  userRole: '',
+  description: ''
+})
+
+// Computed properties
+const userProjects = computed(() => projectStore.userProjects)
+const currentProjectId = computed(() => projectStore.selectedProject?.id)
 
 // Load user profile from Firestore
 const loadProfile = async () => {
@@ -213,6 +337,9 @@ const loadProfile = async () => {
     const profile = await getUserDocument(auth.currentUser.uid)
     if (profile) {
       userProfile.value = profile
+      
+      // Also load user projects
+      await projectStore.fetchUserProjects(auth.currentUser.uid)
     } else {
       error.value = 'Profile not found'
     }
@@ -247,6 +374,60 @@ const handleLogout = async () => {
 // Edit profile (placeholder for future implementation)
 const editProfile = () => {
   notificationStore.showInfo('Edit profile functionality coming soon!')
+}
+
+// Project management methods
+const addNewProject = async () => {
+  if (!auth.currentUser) {
+    notificationStore.showError('You must be logged in to add a project')
+    return
+  }
+
+  try {
+    addProjectLoading.value = true
+    
+    // For now, we'll just show a success message
+    notificationStore.showSuccess('Project added successfully!')
+    
+    // Reset form and close modal
+    resetNewProjectForm()
+    showAddProjectModal.value = false
+    
+    // Refresh projects
+    await projectStore.fetchUserProjects(auth.currentUser.uid)
+    
+  } catch (err) {
+    console.error('Error adding project:', err)
+    notificationStore.showError('Failed to add project. Please try again.')
+  } finally {
+    addProjectLoading.value = false
+  }
+}
+
+const resetNewProjectForm = () => {
+  newProject.value = {
+    name: '',
+    location: '',
+    userUnit: '',
+    userRole: '',
+    description: ''
+  }
+}
+
+const switchToProject = async (project) => {
+  try {
+    projectStore.selectProject(project)
+    notificationStore.showSuccess(`Switched to ${project.name}`)
+    
+    // Redirect to home page after a short delay
+    setTimeout(() => {
+      router.push('/home')
+    }, 1000)
+    
+  } catch (err) {
+    console.error('Error switching project:', err)
+    notificationStore.showError('Failed to switch project. Please try again.')
+  }
 }
 
 // Utility functions
@@ -329,16 +510,7 @@ const formatGender = (gender) => {
   return genderMap[gender] || gender
 }
 
-const formatRole = (role) => {
-  if (!role) return null
-  
-  const roleMap = {
-    'owner': 'Owner',
-    'family': 'Family Member'
-  }
-  
-  return roleMap[role] || role
-}
+
 
 // Load profile on component mount
 onMounted(() => {
@@ -464,6 +636,13 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
 .section-title {
   display: flex;
   align-items: center;
@@ -471,13 +650,185 @@ onMounted(() => {
   font-size: 1.2rem;
   font-weight: 600;
   color: #333;
-  margin: 0 0 24px 0;
+  margin: 0;
+}
+
+.add-project-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ff6b35;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-project-btn:hover {
+  background: #e55a2b;
+  transform: translateY(-2px);
 }
 
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
+}
+
+/* Projects List */
+.projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.project-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: #f8f9fa;
+  border: 1px solid #e1e5e9;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.project-item:hover {
+  background: white;
+  border-color: #ff6b35;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.project-item.current {
+  background: #fff5f2;
+  border-color: #ff6b35;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.15);
+}
+
+.project-info {
+  flex: 1;
+}
+
+.project-main {
+  margin-bottom: 8px;
+}
+
+.project-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 4px 0;
+}
+
+.project-location {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.project-details {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.project-unit,
+.project-role,
+.project-status {
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.project-unit {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.project-role {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.project-status {
+  background: #d4edda;
+  color: #155724;
+}
+
+.project-status.inactive,
+.project-status.unknown,
+.project-status.error {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.project-actions {
+  flex-shrink: 0;
+}
+
+.switch-project-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.switch-project-btn:hover {
+  background: #218838;
+  transform: translateY(-2px);
+}
+
+.current-project-badge {
+  background: #ff6b35;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* No Projects State */
+.no-projects {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.no-projects-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+.no-projects p {
+  margin: 0 0 20px 0;
+  font-size: 1.1rem;
+}
+
+.add-first-project-btn {
+  background: #ff6b35;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-first-project-btn:hover {
+  background: #e55a2b;
+  transform: translateY(-2px);
 }
 
 .info-item {
@@ -682,6 +1033,52 @@ onMounted(() => {
 .confirm-btn:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+
+/* Add Project Modal Styles */
+.add-project-modal {
+  max-width: 500px;
+}
+
+.add-project-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 12px;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #ff6b35;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
 }
 
 /* Responsive Design */

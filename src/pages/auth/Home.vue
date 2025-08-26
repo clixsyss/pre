@@ -3,7 +3,18 @@
     <!-- Content -->
     <div class="content">
       <div class="greeting">
-        <h2>Hello {{ user?.displayName?.split(' ')[0] || 'User' }}.</h2>
+        <div class="greeting-header">
+          <h2>Hello {{ user?.displayName?.split(' ')[0] || 'User' }}.</h2>
+          <div class="project-switcher">
+            <button @click="showProjectSwitcher = true" class="switch-project-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H16C17.1046 21 18 20.1046 18 19V5C18 3.89543 17.1046 3 16 3Z" stroke="currentColor" stroke-width="2"/>
+                <path d="M8 7H12M8 11H12M8 15H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Switch Project
+            </button>
+          </div>
+        </div>
         <div class="project-info">
           <p class="project-name">Project: {{ projectName }}</p>
           <p class="project-location">{{ projectLocation }}</p>
@@ -94,6 +105,60 @@
         </div>
       </div>
     </div>
+
+    <!-- Project Switcher Modal -->
+    <div v-if="showProjectSwitcher" class="modal-overlay" @click="showProjectSwitcher = false">
+      <div class="modal-content project-switcher-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Switch Project</h3>
+          <button @click="showProjectSwitcher = false" class="close-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div v-if="userProjects.length > 0" class="projects-list">
+            <div 
+              v-for="project in userProjects" 
+              :key="project.id"
+              :class="['project-option', { 'current': project.id === currentProjectId }]"
+              @click="switchToProject(project)"
+            >
+              <div class="project-option-info">
+                <h4 class="project-option-name">{{ project.name || 'Unnamed Project' }}</h4>
+                <p class="project-option-location">{{ project.location || 'Location not set' }}</p>
+                <div class="project-option-details">
+                  <span class="project-option-unit">Unit {{ project.userUnit || 'N/A' }}</span>
+                  <span class="project-option-role">{{ project.userRole || 'Member' }}</span>
+                </div>
+              </div>
+              <div class="project-option-status">
+                <span v-if="project.id === currentProjectId" class="current-badge">Current</span>
+                <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <div v-else class="no-projects">
+            <p>No projects available</p>
+            <button @click="goToProjectSelection" class="go-to-selection-btn">
+              Go to Project Selection
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="goToProjectSelection" class="secondary-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Manage Projects
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -116,12 +181,15 @@ const router = useRouter()
 const projectStore = useProjectStore()
 const user = ref(null)
 const activeTab = ref('all')
+const showProjectSwitcher = ref(false)
 
 // Computed properties
 const projectName = computed(() => projectStore.selectedProject?.name || 'No Project Selected')
 const projectLocation = computed(() => projectStore.selectedProject?.location || 'Location not set')
 const userUnit = computed(() => projectStore.selectedProject?.userUnit || 'N/A')
 const userRole = computed(() => projectStore.selectedProject?.userRole || 'Member')
+const userProjects = computed(() => projectStore.userProjects)
+const currentProjectId = computed(() => projectStore.selectedProject?.id)
 
 // Sample news data
 const newsItems = ref([
@@ -163,6 +231,30 @@ const navigateToMyBookings = () => {
 
 const navigateToCalendar = () => {
   router.push('/calendar')
+}
+
+// Project switching methods
+const switchToProject = async (project) => {
+  try {
+    projectStore.selectProject(project)
+    showProjectSwitcher.value = false
+    
+    // Show success message
+    // You can add a notification system here if you have one
+    
+    // Refresh the page to show new project data
+    setTimeout(() => {
+      window.location.reload()
+    }, 500)
+    
+  } catch (err) {
+    console.error('Error switching project:', err)
+  }
+}
+
+const goToProjectSelection = () => {
+  showProjectSwitcher.value = false
+  router.push('/project-selection')
 }
 
 onMounted(async () => {
@@ -208,6 +300,39 @@ onMounted(async () => {
 
 .greeting {
   margin-bottom: 32px;
+}
+
+.greeting-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.project-switcher {
+  flex-shrink: 0;
+}
+
+.switch-project-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8f9fa;
+  color: #666;
+  border: 1px solid #e1e5e9;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.switch-project-btn:hover {
+  background: #fff5f2;
+  border-color: #ff6b35;
+  color: #ff6b35;
+  transform: translateY(-2px);
 }
 
 .greeting h2 {
@@ -461,5 +586,213 @@ onMounted(async () => {
     flex-direction: column;
     text-align: center;
   }
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
+}
+
+.project-switcher-modal {
+  max-width: 500px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e1e5e9;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.3rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background-color 0.3s ease;
+}
+
+.close-btn:hover {
+  background: #f8f9fa;
+}
+
+.modal-body {
+  margin-bottom: 24px;
+}
+
+.projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.project-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #f8f9fa;
+  border: 1px solid #e1e5e9;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.project-option:hover {
+  background: white;
+  border-color: #ff6b35;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.project-option.current {
+  background: #fff5f2;
+  border-color: #ff6b35;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.15);
+}
+
+.project-option-info {
+  flex: 1;
+}
+
+.project-option-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 4px 0;
+}
+
+.project-option-location {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0 0 8px 0;
+}
+
+.project-option-details {
+  display: flex;
+  gap: 12px;
+}
+
+.project-option-unit,
+.project-option-role {
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.project-option-unit {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.project-option-role {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.project-option-status {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.current-badge {
+  background: #ff6b35;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.project-option-status svg {
+  color: #ff6b35;
+}
+
+.no-projects {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.no-projects p {
+  margin: 0 0 20px 0;
+  font-size: 1.1rem;
+}
+
+.go-to-selection-btn {
+  background: #ff6b35;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.go-to-selection-btn:hover {
+  background: #e55a2b;
+  transform: translateY(-2px);
+}
+
+.modal-footer {
+  padding-top: 16px;
+  border-top: 1px solid #e1e5e9;
+  text-align: center;
+}
+
+.secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8f9fa;
+  color: #666;
+  border: 1px solid #e1e5e9;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.secondary-btn:hover {
+  background: #fff5f2;
+  border-color: #ff6b35;
+  color: #ff6b35;
 }
 </style>

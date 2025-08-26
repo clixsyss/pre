@@ -134,6 +134,18 @@
         <p>If you can't see your projects or need assistance, please contact support.</p>
         <button @click="goToSupport" class="help-btn">Get Help</button>
       </div>
+
+      <!-- Back to Home Section (if user already has a project selected) -->
+      <div v-if="selectedProject" class="back-home-section">
+        <h3>Already have a project selected?</h3>
+        <p>You're currently working with: <strong>{{ selectedProject.name }}</strong></p>
+        <button @click="goToHome" class="back-home-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Continue with Current Project
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -179,6 +191,10 @@ const goToSupport = () => {
   router.push('/support')
 }
 
+const goToHome = () => {
+  router.push('/home')
+}
+
   // Lifecycle
   onMounted(async () => {
     // Listen for auth state changes
@@ -190,8 +206,9 @@ const goToSupport = () => {
         // Load previously selected project if any
         projectStore.loadSelectedProject()
         
-        // If user has only one project, auto-select and redirect
-        if (userProjects.value.length === 1) {
+        // Only auto-redirect if user has exactly one project AND no project is currently selected
+        // This prevents auto-redirect when user intentionally comes back to project selection
+        if (userProjects.value.length === 1 && !projectStore.selectedProject) {
           projectStore.selectProject(userProjects.value[0])
           // Small delay for smooth UX
           setTimeout(() => {
@@ -817,6 +834,54 @@ const goToSupport = () => {
 .help-btn:hover {
   background: #ff6b35;
   color: white;
+}
+
+/* Back to Home Section */
+.back-home-section {
+  text-align: center;
+  padding: 40px;
+  background: linear-gradient(135deg, #fff5f2, #fff);
+  border-radius: 12px;
+  border: 1px solid #ff6b35;
+  margin-top: 20px;
+}
+
+.back-home-section h3 {
+  color: #333;
+  margin: 0 0 16px 0;
+  font-size: 1.2rem;
+}
+
+.back-home-section p {
+  color: #666;
+  margin: 0 0 20px 0;
+  font-size: 1rem;
+}
+
+.back-home-section strong {
+  color: #ff6b35;
+  font-weight: 700;
+}
+
+.back-home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ff6b35;
+  color: white;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-home-btn:hover {
+  background: #e55a2b;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
 }
 
 /* Responsive Design */
