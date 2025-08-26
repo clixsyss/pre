@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { db } from '../boot/firebase'
-import { collection, getDocs, doc, getDoc, getDocsFromCache, enableNetwork, disableNetwork } from 'firebase/firestore'
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore'
 
 export const useProjectStore = defineStore('project', () => {
   // State
@@ -10,6 +10,10 @@ export const useProjectStore = defineStore('project', () => {
   const availableProjects = ref([])
   const loading = ref(false)
   const error = ref(null)
+  
+  // Cache management
+  const lastFetchTime = ref(0)
+  const cacheDuration = 5 * 60 * 1000 // 5 minutes
 
   // Getters
   const hasMultipleProjects = computed(() => userProjects.value.length > 1)
@@ -21,6 +25,13 @@ export const useProjectStore = defineStore('project', () => {
 
   // Actions
   const fetchUserProjects = async (userId) => {
+    // Check cache first
+    const now = Date.now()
+    if (userProjects.value.length > 0 && (now - lastFetchTime.value) < cacheDuration) {
+      console.log('Using cached projects data')
+      return
+    }
+    
     try {
       loading.value = true
       error.value = null
@@ -52,18 +63,29 @@ export const useProjectStore = defineStore('project', () => {
           const projectIds = userProjectsArray.map(up => up.projectId || up.id).filter(Boolean)
           
           if (projectIds.length > 0) {
-            // Fetch all projects in parallel for better performance
-            const projectPromises = projectIds.map(async (projectId) => {
+            // Use getDocs with 'in' query for much faster batch fetching
+            const { query, where, getDocs } = await import('firebase/firestore')
+            
+            // Split into chunks of 10 (Firestore 'in' query limit)
+            const chunkSize = 10
+            const projectChunks = []
+            for (let i = 0; i < projectIds.length; i += chunkSize) {
+              projectChunks.push(projectIds.slice(i, i + chunkSize))
+            }
+            
+            // Fetch all chunks in parallel
+            const chunkPromises = projectChunks.map(async (chunk) => {
               try {
-                const projectRef = doc(db, 'projects', projectId)
-                const projectDoc = await getDoc(projectRef)
+                const projectsRef = collection(db, 'projects')
+                const q = query(projectsRef, where('__name__', 'in', chunk))
+                const snapshot = await getDocs(q)
                 
-                if (projectDoc.exists()) {
-                  const projectData = projectDoc.data()
-                  const userProject = userProjectsArray.find(up => (up.projectId || up.id) === projectId)
+                return snapshot.docs.map(doc => {
+                  const projectData = doc.data()
+                  const userProject = userProjectsArray.find(up => (up.projectId || up.id) === doc.id)
                   
                   return {
-                    id: projectId,
+                    id: doc.id,
                     name: projectData.name || 'Unnamed Project',
                     description: projectData.description || 'No description available',
                     location: projectData.location || 'Location not set',
@@ -76,8 +98,11 @@ export const useProjectStore = defineStore('project', () => {
                     registrationStep: userProject?.registrationStep || 'unknown',
                     updatedAt: userProject?.updatedAt || null
                   }
-                } else {
-                  // Fallback for non-existent projects
+                })
+              } catch (err) {
+                console.error(`Failed to fetch project chunk:`, err)
+                // Fallback to individual fetches for failed chunks
+                return chunk.map(projectId => {
                   const userProject = userProjectsArray.find(up => (up.projectId || up.id) === projectId)
                   return {
                     id: projectId,
@@ -92,29 +117,13 @@ export const useProjectStore = defineStore('project', () => {
                     registrationStep: userProject?.registrationStep || 'unknown',
                     updatedAt: userProject?.updatedAt || null
                   }
-                }
-              } catch (err) {
-                console.error(`Failed to fetch project ${projectId}:`, err)
-                const userProject = userProjectsArray.find(up => (up.projectId || up.id) === projectId)
-                return {
-                  id: projectId,
-                  name: `Project ${projectId?.slice(-6) || 'Unknown'}`,
-                  description: 'Project details not available',
-                  location: 'Location not set',
-                  status: 'error',
-                  type: 'unknown',
-                  userRole: userProject?.role || 'member',
-                  userUnit: userProject?.unit || 'N/A',
-                  registrationStatus: userProject?.registrationStatus || 'unknown',
-                  registrationStep: userProject?.registrationStep || 'unknown',
-                  updatedAt: userProject?.updatedAt || null
-                }
+                })
               }
             })
             
-            // Wait for all projects to be fetched
-            const results = await Promise.all(projectPromises)
-            projectsData.push(...results)
+            // Wait for all chunks to be fetched and flatten results
+            const chunkResults = await Promise.all(chunkPromises)
+            projectsData.push(...chunkResults.flat())
           }
         } catch (err) {
           console.error('Error fetching projects in batch:', err)
@@ -123,6 +132,7 @@ export const useProjectStore = defineStore('project', () => {
       
       // Set the projects in the store
       userProjects.value = projectsData
+      lastFetchTime.value = Date.now()
       
       // If user has only one project, auto-select it
       if (projectsData.length === 1) {

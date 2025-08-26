@@ -10,11 +10,6 @@
     <div class="content">
       <!-- Welcome Section -->
       <div class="welcome-section">
-        <div class="welcome-icon">
-          <div class="icon-container">
-            <span class="icon-text">🏠</span>
-          </div>
-        </div>
         <h1>Welcome Back!</h1>
         <p>Select your project to continue</p>
         <div class="welcome-subtitle">Tap any project to get started</div>
@@ -59,7 +54,6 @@
             </div>
             <div class="skeleton-content">
               <div class="skeleton-title"></div>
-              <div class="skeleton-description"></div>
               <div class="skeleton-location"></div>
               <div class="skeleton-user-info">
                 <div class="skeleton-unit"></div>
@@ -68,58 +62,53 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Actual Projects -->
         <transition-group name="project-list" tag="div" class="projects-grid">
-          <div 
-            v-for="(project, index) in userProjects" 
-            :key="project.id"
-            @click="selectProject(project)"
+          <div v-for="(project, index) in userProjects" :key="project.id" @click="selectProject(project)"
             :class="['project-card', { 'selected': selectedProject?.id === project.id }]"
-            :style="{ '--delay': `${index * 0.1}s` }"
-          >
+            :style="{ '--delay': `${index * 0.1}s` }">
             <div class="project-header">
-              <div class="project-icon">
-                <span class="project-logo">{{ project.name?.charAt(0) || 'P' }}</span>
-              </div>
-              <div class="project-status" :class="project.status">
-                {{ project.status || 'active' }}
-              </div>
-            </div>
-            
-            <div class="project-content">
               <h3 class="project-name">{{ project.name || 'Unnamed Project' }}</h3>
-              <p class="project-description">{{ project.description || 'No description available' }}</p>
-              
-              <div class="project-location">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" stroke-width="2"/>
-                  <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
-                </svg>
-                {{ project.location || 'Location not set' }}
-              </div>
-              
+            </div>
+
+            <div class="project-content">
               <div class="user-info">
+                <!-- location -->
+                <div class="user-location">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z"
+                      stroke="currentColor" stroke-width="2" />
+                  </svg>
+                  {{ project.location || 'Location not set' }}
+                </div>
+
                 <div class="user-unit">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2"/>
+                    <path
+                      d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+                      stroke="currentColor" stroke-width="2" />
                   </svg>
                   Unit {{ project.userUnit || 'N/A' }}
                 </div>
                 <div class="user-role">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15C10.9391 15 9.92172 15.4214 9.17157 16.1716C8.42143 16.9217 8 17.9391 8 19V21" stroke="currentColor" stroke-width="2"/>
-                    <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                    <path
+                      d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15C10.9391 15 9.92172 15.4214 9.17157 16.1716C8.42143 16.9217 8 17.9391 8 19V21"
+                      stroke="currentColor" stroke-width="2" />
+                    <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
                   </svg>
                   {{ project.userRole || 'Member' }}
                 </div>
               </div>
             </div>
-            
+
             <!-- Click indicator -->
             <div class="click-indicator">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
             </div>
           </div>
@@ -141,7 +130,9 @@
         <p>You're currently working with: <strong>{{ selectedProject.name }}</strong></p>
         <button @click="goToHome" class="back-home-btn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path
+              d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
           Continue with Current Project
         </button>
@@ -172,7 +163,7 @@ const selectedProject = computed(() => projectStore.selectedProject)
 // Methods
 const selectProject = async (project) => {
   projectStore.selectProject(project)
-  
+
   // Add a small delay for smooth UX, then redirect
   setTimeout(() => {
     router.push('/home')
@@ -195,35 +186,35 @@ const goToHome = () => {
   router.push('/home')
 }
 
-  // Lifecycle
-  onMounted(async () => {
-    // Listen for auth state changes
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // Fetch user projects from their saved data
-        await projectStore.fetchUserProjects(user.uid)
-        
-        // Load previously selected project if any
-        projectStore.loadSelectedProject()
-        
-        // Only auto-redirect if user has exactly one project AND no project is currently selected
-        // This prevents auto-redirect when user intentionally comes back to project selection
-        if (userProjects.value.length === 1 && !projectStore.selectedProject) {
-          projectStore.selectProject(userProjects.value[0])
-          // Small delay for smooth UX
-          setTimeout(() => {
-            router.push('/home')
-          }, 500)
-        }
-      } else {
-        // User not authenticated, redirect to sign in
-        router.push('/signin')
-      }
-    })
+// Lifecycle
+onMounted(async () => {
+  // Listen for auth state changes
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      // Fetch user projects from their saved data
+      await projectStore.fetchUserProjects(user.uid)
 
-    // Cleanup subscription
-    return () => unsubscribe()
+      // Load previously selected project if any
+      projectStore.loadSelectedProject()
+
+      // Only auto-redirect if user has exactly one project AND no project is currently selected
+      // This prevents auto-redirect when user intentionally comes back to project selection
+      if (userProjects.value.length === 1 && !projectStore.selectedProject) {
+        projectStore.selectProject(userProjects.value[0])
+        // Small delay for smooth UX
+        setTimeout(() => {
+          router.push('/home')
+        }, 500)
+      }
+    } else {
+      // User not authenticated, redirect to sign in
+      router.push('/signin')
+    }
   })
+
+  // Cleanup subscription
+  return () => unsubscribe()
+})
 </script>
 
 <style scoped>
@@ -316,8 +307,15 @@ const goToHome = () => {
 }
 
 @keyframes icon-float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 /* Loading State */
@@ -344,15 +342,27 @@ const goToHome = () => {
   animation: dot-bounce 1.4s ease-in-out infinite both;
 }
 
-.dot:nth-child(1) { animation-delay: -0.32s; }
-.dot:nth-child(2) { animation-delay: -0.16s; }
-.dot:nth-child(3) { animation-delay: 0s; }
+.dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0s;
+}
 
 @keyframes dot-bounce {
-  0%, 80%, 100% {
+
+  0%,
+  80%,
+  100% {
     transform: scale(0);
     opacity: 0.5;
   }
+
   40% {
     transform: scale(1);
     opacity: 1;
@@ -367,8 +377,15 @@ const goToHome = () => {
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Error State */
@@ -495,8 +512,15 @@ const goToHome = () => {
 }
 
 @keyframes skeleton-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .projects-grid {
@@ -668,7 +692,8 @@ const goToHome = () => {
 }
 
 .user-unit,
-.user-role {
+.user-role,
+.user-location {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -683,6 +708,11 @@ const goToHome = () => {
 .user-unit {
   background: linear-gradient(135deg, #e3f2fd, #bbdefb);
   color: #1565c0;
+}
+
+.user-location {
+  background: linear-gradient(135deg, #f6e3dc, #ffcfc0);
+  color: #ff6b35;
 }
 
 .user-role {
@@ -777,6 +807,7 @@ const goToHome = () => {
     opacity: 0;
     transform: translateY(40px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -891,15 +922,15 @@ const goToHome = () => {
     text-align: center;
     gap: 16px;
   }
-  
+
   .project-meta {
     justify-content: center;
   }
-  
+
   .welcome-section h1 {
     font-size: 2rem;
   }
-  
+
   .logo-image {
     height: 50px;
   }
@@ -909,7 +940,7 @@ const goToHome = () => {
   .logo-image {
     height: 45px;
   }
-  
+
   .welcome-section h1 {
     font-size: 1.75rem;
   }

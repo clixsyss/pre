@@ -5,42 +5,86 @@
       <div class="header-content">
         <div class="logo-section">
           <div class="logo">
-            <div class="logo-text">P</div>
-            <div class="logo-subtext">
-              <span class="relive-text">Relive.</span>
-              <div class="pre-text">
-                <span class="r-letter">R</span><span class="e-letter">E</span>
-              </div>
-            </div>
+            <img src="../assets/logo.png" alt="PRE Logo" class="logo-image" />
           </div>
         </div>
         
         <div class="header-right">
+          <!-- Loading State -->
+          <div v-if="projectStore.loading && !currentProject" class="loading-projects">
+            <div class="loading-dots">
+              <div class="dot"></div>
+              <div class="dot"></div>
+              <div class="dot"></div>
+            </div>
+            <span>Loading projects...</span>
+          </div>
+          
           <!-- Current Project Display -->
-          <div v-if="currentProject" class="current-project">
+          <div v-else-if="currentProject" class="current-project">
             <span class="project-label">Project:</span>
             <span class="project-name">{{ currentProject.name }}</span>
             <span v-if="currentProject.userUnit" class="project-unit">Unit: {{ currentProject.userUnit }}</span>
-            <button @click="changeProject" class="change-project-btn">
+            <button @click="showProjectSwitcher = true" class="change-project-btn" title="Switch Project">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
           </div>
-          
-          <div class="qr-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 3H7V7H3V3Z" stroke="#ff6b35" stroke-width="2" fill="#ff6b35"/>
-              <path d="M17 3H21V7H17V3Z" stroke="#ff6b35" stroke-width="2" fill="#ff6b35"/>
-              <path d="M3 17H7V21H3V17Z" stroke="#ff6b35" stroke-width="2" fill="#ff6b35"/>
-              <path d="M17 17H21V21H17V17Z" stroke="#ff6b35" stroke-width="2" fill="#ff6b35"/>
-              <path d="M9 9H11V11H9V9Z" stroke="#ff6b35" stroke-width="2" fill="#ff6b35"/>
-              <path d="M13 13H15V15H13V13Z" stroke="#ff6b35" stroke-width="2" fill="#ff6b35"/>
-            </svg>
-          </div>
         </div>
       </div>
     </header>
+
+    <!-- Project Switcher Modal -->
+    <div v-if="showProjectSwitcher" class="modal-overlay" @click="showProjectSwitcher = false">
+      <div class="modal-content project-switcher-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Switch Project</h3>
+          <button @click="showProjectSwitcher = false" class="close-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="projects-list">
+            <div 
+              v-for="project in userProjects" 
+              :key="project.id" 
+              class="project-option"
+              :class="{ 'current': project.id === currentProjectId }"
+            >
+              <div class="project-info">
+                <h4>{{ project.name }}</h4>
+                <p>{{ project.location }}</p>
+                <span class="project-role">{{ project.userRole }} • Unit {{ project.userUnit }}</span>
+              </div>
+              
+              <div class="project-actions">
+                <span v-if="project.id === currentProjectId" class="current-badge">Current</span>
+                <button 
+                  v-else 
+                  @click="switchToProject(project)" 
+                  class="switch-btn"
+                >
+                  Switch
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button @click="goToProjectSelection" class="secondary-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Add New Project
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Main Content -->
     <main class="main-content">
@@ -93,9 +137,10 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
+import { getAuth, onAuthStateChanged } from 'firebase/auth'
 
 // Component name for ESLint
 defineOptions({
@@ -105,13 +150,40 @@ defineOptions({
 const router = useRouter()
 const projectStore = useProjectStore()
 
+// Reactive state
+const showProjectSwitcher = ref(false)
+
 // Computed properties
 const currentProject = computed(() => projectStore.selectedProject)
+const userProjects = computed(() => projectStore.userProjects)
+const currentProjectId = computed(() => currentProject.value?.id)
 
 // Methods
-const changeProject = () => {
-  router.push('/project-selection')
+const switchToProject = async (project) => {
+  projectStore.selectProject(project)
+  showProjectSwitcher.value = false
+  // Navigate to home page with the new project selected
+  router.push('/home')
 }
+
+const goToProjectSelection = () => {
+  showProjectSwitcher.value = false
+  router.push('/profile')
+}
+
+// Load user projects when component mounts
+onMounted(async () => {
+  const auth = getAuth()
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      // Only fetch if we don't have projects or if cache is expired
+      if (projectStore.userProjects.length === 0) {
+        await projectStore.fetchUserProjects(user.uid)
+      }
+    }
+  })
+  return () => unsubscribe()
+})
 </script>
 
 <style scoped>
@@ -148,51 +220,59 @@ const changeProject = () => {
 .logo {
   display: flex;
   align-items: center;
-  gap: 12px;
 }
 
-.logo-text {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: white;
-  line-height: 1;
-}
-
-.logo-subtext {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.relive-text {
-  font-size: 0.75rem;
-  color: #ccc;
-  font-weight: 400;
-}
-
-.pre-text {
-  display: flex;
-  gap: 2px;
-}
-
-.r-letter {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #ff6b35;
-  line-height: 1;
-}
-
-.e-letter {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #ff6b35;
-  line-height: 1;
+.logo-image {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+/* Loading State */
+.loading-projects {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background: #ff6b35;
+  border-radius: 50%;
+  animation: dot-bounce 1.4s ease-in-out infinite both;
+}
+
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+.dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes dot-bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* Current Project Display */
@@ -355,6 +435,193 @@ const changeProject = () => {
   transform: translateY(0);
 }
 
+/* Project Switcher Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: modal-slide-up 0.3s ease-out;
+}
+
+@keyframes modal-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.project-switcher-modal {
+  width: 500px;
+  max-height: 600px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.modal-body {
+  padding: 16px 24px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.project-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.project-option:hover {
+  border-color: #ff6b35;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.1);
+}
+
+.project-option.current {
+  border-color: #ff6b35;
+  background: #fff5f2;
+}
+
+.project-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.project-info p {
+  margin: 0 0 4px 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.project-role {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.project-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.current-badge {
+  background: #ff6b35;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.switch-btn {
+  background: #ff6b35;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.switch-btn:hover {
+  background: #e55a2b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: center;
+}
+
+.secondary-btn {
+  background: none;
+  border: 2px solid #e5e7eb;
+  color: #6b7280;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.secondary-btn:hover {
+  border-color: #ff6b35;
+  color: #ff6b35;
+  background: #fff5f2;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .app-header {
@@ -391,6 +658,23 @@ const changeProject = () => {
   .nav-item {
     max-width: 70px;
   }
+  
+  .project-switcher-modal {
+    width: 90vw;
+    max-height: 80vh;
+  }
+  
+  .modal-header {
+    padding: 20px 20px 16px;
+  }
+  
+  .modal-body {
+    padding: 16px 20px;
+  }
+  
+  .modal-footer {
+    padding: 16px 20px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -421,6 +705,22 @@ const changeProject = () => {
   
   .nav-item .nav-label {
     font-size: 0.7rem;
+  }
+  
+  .project-switcher-modal {
+    width: 95vw;
+    max-height: 85vh;
+  }
+  
+  .project-option {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .project-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 </style>
