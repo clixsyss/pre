@@ -752,7 +752,7 @@ onMounted(() => {
 .project-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  gap: 10px;
   padding: 20px;
   background: #f8f9fa;
   border: 1px solid #e1e5e9;
@@ -835,9 +835,9 @@ onMounted(() => {
 }
 
 .switch-project-btn {
-  background: #28a745;
-  color: white;
-  border: none;
+  background: transparent;
+  border: 2px solid #ff6b35;
+  color: #ff6b35;
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -847,7 +847,8 @@ onMounted(() => {
 }
 
 .switch-project-btn:hover {
-  background: #218838;
+  background: #ff6b35;
+  color: white;
   transform: translateY(-2px);
 }
 

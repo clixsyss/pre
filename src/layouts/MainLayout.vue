@@ -721,13 +721,12 @@ onMounted(async () => {
   }
   
   .project-option {
-    flex-direction: column;
+    flex-direction: row;
     align-items: flex-start;
     gap: 12px;
   }
   
   .project-actions {
-    width: 100%;
     justify-content: flex-end;
   }
 }
