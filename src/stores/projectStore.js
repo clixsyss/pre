@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { db } from '../boot/firebase'
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore'
+import { collection, getDocs, doc, getDoc, getDocsFromCache, enableNetwork, disableNetwork } from 'firebase/firestore'
 
 export const useProjectStore = defineStore('project', () => {
   // State
@@ -43,68 +43,81 @@ export const useProjectStore = defineStore('project', () => {
         return
       }
       
-      // Fetch project details from the projects collection for each project ID
+      // Fetch all projects at once for better performance
       const projectsData = []
       
-      for (const userProject of userProjectsArray) {
+      if (userProjectsArray.length > 0) {
         try {
-          const projectId = userProject.projectId || userProject.id
+          // Get all project IDs
+          const projectIds = userProjectsArray.map(up => up.projectId || up.id).filter(Boolean)
           
-          if (projectId) {
-            const projectRef = doc(db, 'projects', projectId)
-            const projectDoc = await getDoc(projectRef)
+          if (projectIds.length > 0) {
+            // Fetch all projects in parallel for better performance
+            const projectPromises = projectIds.map(async (projectId) => {
+              try {
+                const projectRef = doc(db, 'projects', projectId)
+                const projectDoc = await getDoc(projectRef)
+                
+                if (projectDoc.exists()) {
+                  const projectData = projectDoc.data()
+                  const userProject = userProjectsArray.find(up => (up.projectId || up.id) === projectId)
+                  
+                  return {
+                    id: projectId,
+                    name: projectData.name || 'Unnamed Project',
+                    description: projectData.description || 'No description available',
+                    location: projectData.location || 'Location not set',
+                    status: projectData.status || 'active',
+                    type: projectData.type || 'residential',
+                    // User-specific project data
+                    userRole: userProject?.role || 'member',
+                    userUnit: userProject?.unit || 'N/A',
+                    registrationStatus: userProject?.registrationStatus || 'unknown',
+                    registrationStep: userProject?.registrationStep || 'unknown',
+                    updatedAt: userProject?.updatedAt || null
+                  }
+                } else {
+                  // Fallback for non-existent projects
+                  const userProject = userProjectsArray.find(up => (up.projectId || up.id) === projectId)
+                  return {
+                    id: projectId,
+                    name: `Project ${projectId.slice(-6)}`,
+                    description: 'Project details not available',
+                    location: 'Location not set',
+                    status: 'unknown',
+                    type: 'unknown',
+                    userRole: userProject?.role || 'member',
+                    userUnit: userProject?.unit || 'N/A',
+                    registrationStatus: userProject?.registrationStatus || 'unknown',
+                    registrationStep: userProject?.registrationStep || 'unknown',
+                    updatedAt: userProject?.updatedAt || null
+                  }
+                }
+              } catch (err) {
+                console.error(`Failed to fetch project ${projectId}:`, err)
+                const userProject = userProjectsArray.find(up => (up.projectId || up.id) === projectId)
+                return {
+                  id: projectId,
+                  name: `Project ${projectId?.slice(-6) || 'Unknown'}`,
+                  description: 'Project details not available',
+                  location: 'Location not set',
+                  status: 'error',
+                  type: 'unknown',
+                  userRole: userProject?.role || 'member',
+                  userUnit: userProject?.unit || 'N/A',
+                  registrationStatus: userProject?.registrationStatus || 'unknown',
+                  registrationStep: userProject?.registrationStep || 'unknown',
+                  updatedAt: userProject?.updatedAt || null
+                }
+              }
+            })
             
-            if (projectDoc.exists()) {
-              const projectData = projectDoc.data()
-              projectsData.push({
-                id: projectId,
-                name: projectData.name || 'Unnamed Project',
-                description: projectData.description || 'No description available',
-                location: projectData.location || 'Location not set',
-                status: projectData.status || 'active',
-                type: projectData.type || 'residential',
-                // User-specific project data
-                userRole: userProject.role || 'member',
-                userUnit: userProject.unit || 'N/A',
-                registrationStatus: userProject.registrationStatus || 'unknown',
-                registrationStep: userProject.registrationStep || 'unknown',
-                updatedAt: userProject.updatedAt || null
-              })
-            } else {
-              // If project document doesn't exist, create a fallback entry
-              projectsData.push({
-                id: projectId,
-                name: `Project ${projectId.slice(-6)}`,
-                description: 'Project details not available',
-                location: 'Location not set',
-                status: 'unknown',
-                type: 'unknown',
-                // User-specific project data
-                userRole: userProject.role || 'member',
-                userUnit: userProject.unit || 'N/A',
-                registrationStatus: userProject.registrationStatus || 'unknown',
-                registrationStep: userProject.registrationStep || 'unknown',
-                updatedAt: userProject.updatedAt || null
-              })
-            }
+            // Wait for all projects to be fetched
+            const results = await Promise.all(projectPromises)
+            projectsData.push(...results)
           }
         } catch (err) {
-          console.error(`Failed to fetch project ${userProject.projectId}:`, err)
-          // Add fallback entry for failed projects
-          const projectId = userProject.projectId || userProject.id
-          projectsData.push({
-            id: projectId,
-            name: `Project ${projectId?.slice(-6) || 'Unknown'}`,
-            description: 'Project details not available',
-            location: 'Location not set',
-            status: 'error',
-            type: 'unknown',
-            userRole: userProject.role || 'member',
-            userUnit: userProject.unit || 'N/A',
-            registrationStatus: userProject.registrationStatus || 'unknown',
-            registrationStep: userProject.registrationStep || 'unknown',
-            updatedAt: userProject.updatedAt || null
-          })
+          console.error('Error fetching projects in batch:', err)
         }
       }
       

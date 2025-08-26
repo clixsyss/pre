@@ -76,7 +76,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Add Project
+            Join Project
           </button>
         </div>
         
@@ -116,7 +116,7 @@
           <div class="no-projects-icon">🏠</div>
           <p>You don't have any projects yet.</p>
           <button @click="showAddProjectModal = true" class="add-first-project-btn">
-            Add Your First Project
+            Join Your First Project
           </button>
         </div>
       </div>
@@ -211,30 +211,37 @@
     <div v-if="showAddProjectModal" class="modal-overlay" @click="showAddProjectModal = false">
       <div class="modal-content add-project-modal" @click.stop>
         <div class="modal-header">
-          <h3>Add New Project</h3>
+          <h3>Join Existing Project</h3>
         </div>
         <div class="modal-body">
           <form @submit.prevent="addNewProject" class="add-project-form">
             <div class="form-group">
-              <label for="projectName">Project Name</label>
-              <input 
-                id="projectName"
-                v-model="newProject.name" 
-                type="text" 
-                placeholder="Enter project name"
+              <label for="projectSelection">Select Project</label>
+              <select 
+                id="projectSelection"
+                v-model="newProject.projectId" 
                 required
-              />
-            </div>
-            
-            <div class="form-group">
-              <label for="projectLocation">Location</label>
-              <input 
-                id="projectLocation"
-                v-model="newProject.location" 
-                type="text" 
-                placeholder="Enter project location"
-                required
-              />
+                @change="onProjectChange"
+                :disabled="loadingAvailableProjects"
+              >
+                <option value="">
+                  {{ loadingAvailableProjects ? 'Loading projects...' : 'Choose a project to join' }}
+                </option>
+                <option 
+                  v-for="project in availableProjects" 
+                  :key="project.id" 
+                  :value="project.id"
+                >
+                  {{ project.name }} - {{ project.location }}
+                </option>
+              </select>
+              <div v-if="loadingAvailableProjects" class="loading-indicator">
+                <div class="loading-dots">
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                </div>
+              </div>
             </div>
             
             <div class="form-group">
@@ -254,27 +261,23 @@
                 <option value="">Select your role</option>
                 <option value="owner">Owner</option>
                 <option value="family">Family Member</option>
-                <option value="tenant">Tenant</option>
-                <option value="guest">Guest</option>
               </select>
-            </div>
-            
-            <div class="form-group">
-              <label for="projectDescription">Description (Optional)</label>
-              <textarea 
-                id="projectDescription"
-                v-model="newProject.description" 
-                placeholder="Describe the project..."
-                rows="3"
-              ></textarea>
             </div>
           </form>
         </div>
-        <div class="modal-actions">
+        <!-- Success State -->
+        <div v-if="projectJoinSuccess" class="success-state">
+          <div class="success-icon">✅</div>
+          <h3>Successfully Joined Project!</h3>
+          <p>You can now access your new project from the home page.</p>
+        </div>
+        
+        <!-- Form Actions -->
+        <div v-else class="modal-actions">
           <button @click="showAddProjectModal = false" class="cancel-btn">Cancel</button>
-          <button @click="addNewProject" class="confirm-btn" :disabled="addProjectLoading">
-            <span v-if="addProjectLoading">Adding Project...</span>
-            <span v-else>Add Project</span>
+          <button @click="addNewProject" class="confirm-btn" :disabled="addProjectLoading || !newProject.projectId">
+            <span v-if="addProjectLoading">Joining Project...</span>
+            <span v-else>Join Project</span>
           </button>
         </div>
       </div>
@@ -290,6 +293,8 @@ import { auth } from '../../boot/firebase'
 import { getUserDocument } from '../../utils/firestore'
 import { useNotificationStore } from '../../stores/notifications'
 import { useProjectStore } from '../../stores/projectStore'
+import { collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore'
+import { db } from '../../boot/firebase'
 
 // Component name for ESLint
 defineOptions({
@@ -308,15 +313,18 @@ const showLogoutConfirm = ref(false)
 const logoutLoading = ref(false)
 const showAddProjectModal = ref(false)
 const addProjectLoading = ref(false)
+const projectJoinSuccess = ref(false)
 
 // New project form data
 const newProject = ref({
-  name: '',
-  location: '',
+  projectId: '',
   userUnit: '',
-  userRole: '',
-  description: ''
+  userRole: ''
 })
+
+// Available projects from Firestore
+const availableProjects = ref([])
+const loadingAvailableProjects = ref(false)
 
 // Computed properties
 const userProjects = computed(() => projectStore.userProjects)
@@ -338,8 +346,9 @@ const loadProfile = async () => {
     if (profile) {
       userProfile.value = profile
       
-      // Also load user projects
+      // Also load user projects and available projects
       await projectStore.fetchUserProjects(auth.currentUser.uid)
+      await fetchAvailableProjects()
     } else {
       error.value = 'Profile not found'
     }
@@ -377,28 +386,78 @@ const editProfile = () => {
 }
 
 // Project management methods
+const fetchAvailableProjects = async () => {
+  try {
+    loadingAvailableProjects.value = true
+    const projectsRef = collection(db, 'projects')
+    const snapshot = await getDocs(projectsRef)
+    
+    availableProjects.value = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+  } catch (err) {
+    console.error('Error fetching available projects:', err)
+    notificationStore.showError('Failed to load available projects')
+  } finally {
+    loadingAvailableProjects.value = false
+  }
+}
+
 const addNewProject = async () => {
   if (!auth.currentUser) {
-    notificationStore.showError('You must be logged in to add a project')
+    notificationStore.showError('You must be logged in to join a project')
+    return
+  }
+
+  if (!newProject.value.projectId || !newProject.value.userUnit || !newProject.value.userRole) {
+    notificationStore.showError('Please fill in all required fields')
     return
   }
 
   try {
     addProjectLoading.value = true
     
-    // For now, we'll just show a success message
-    notificationStore.showSuccess('Project added successfully!')
+    // Get the selected project details
+    const selectedProject = availableProjects.value.find(p => p.id === newProject.value.projectId)
     
-    // Reset form and close modal
-    resetNewProjectForm()
-    showAddProjectModal.value = false
+    if (!selectedProject) {
+      notificationStore.showError('Selected project not found')
+      return
+    }
+
+    // Update the user's document in Firestore to add the new project
+    const userRef = doc(db, 'users', auth.currentUser.uid)
     
-    // Refresh projects
+    // Create the project object to add to the user's projects array
+    const newUserProject = {
+      projectId: newProject.value.projectId,
+      role: newProject.value.userRole,
+      unit: newProject.value.userUnit,
+      updatedAt: new Date()
+    }
+    
+    // Add the new project to the user's projects array
+    await updateDoc(userRef, {
+      projects: arrayUnion(newUserProject)
+    })
+    
+    notificationStore.showSuccess(`Successfully joined ${selectedProject.name}!`)
+    
+    // Show success state briefly before closing
+    projectJoinSuccess.value = true
+    setTimeout(() => {
+      projectJoinSuccess.value = false
+      showAddProjectModal.value = false
+      resetNewProjectForm()
+    }, 1500)
+    
+    // Refresh user's projects
     await projectStore.fetchUserProjects(auth.currentUser.uid)
     
   } catch (err) {
-    console.error('Error adding project:', err)
-    notificationStore.showError('Failed to add project. Please try again.')
+    console.error('Error joining project:', err)
+    notificationStore.showError('Failed to join project. Please try again.')
   } finally {
     addProjectLoading.value = false
   }
@@ -406,12 +465,16 @@ const addNewProject = async () => {
 
 const resetNewProjectForm = () => {
   newProject.value = {
-    name: '',
-    location: '',
+    projectId: '',
     userUnit: '',
-    userRole: '',
-    description: ''
+    userRole: ''
   }
+}
+
+const onProjectChange = () => {
+  // Reset unit and role when project changes
+  newProject.value.userUnit = ''
+  newProject.value.userRole = ''
 }
 
 const switchToProject = async (project) => {
@@ -657,7 +720,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #ff6b35;
+  background: #ff6b35 !important;
   color: white;
   border: none;
   padding: 10px 16px;
@@ -829,6 +892,15 @@ onMounted(() => {
 .add-first-project-btn:hover {
   background: #e55a2b;
   transform: translateY(-2px);
+}
+
+/* Update button text to reflect new functionality */
+.add-project-btn {
+  background: #28a745;
+}
+
+.add-project-btn:hover {
+  background: #218838;
 }
 
 .info-item {
@@ -1040,10 +1112,50 @@ onMounted(() => {
   max-width: 500px;
 }
 
+/* Success State */
+.success-state {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.success-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  animation: success-bounce 0.6s ease-out;
+}
+
+.success-state h3 {
+  color: #28a745;
+  margin: 0 0 16px 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.success-state p {
+  color: #666;
+  margin: 0;
+  font-size: 1rem;
+}
+
+@keyframes success-bounce {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
 .add-project-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
+  padding: 8px 0;
+}
+
+/* Enhanced form group spacing */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
 }
 
 .form-group {
@@ -1059,7 +1171,6 @@ onMounted(() => {
 }
 
 .form-group input,
-.form-group select,
 .form-group textarea {
   padding: 12px;
   border: 1px solid #e1e5e9;
@@ -1068,17 +1179,141 @@ onMounted(() => {
   transition: border-color 0.3s ease;
 }
 
+.form-group select {
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 16px center;
+  background-repeat: no-repeat;
+  background-size: 20px;
+  padding-right: 52px;
+  min-height: 48px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.form-group select:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
 .form-group input:focus,
-.form-group select:focus,
 .form-group textarea:focus {
   outline: none;
   border-color: #ff6b35;
   box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
 }
 
+.form-group select:focus {
+  outline: none;
+  border-color: #ff6b35;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+  transform: translateY(-1px);
+}
+
+.form-group select:hover {
+  border-color: #ff6b35;
+  background-color: #fff5f2;
+}
+
+/* Custom dropdown options styling */
+.form-group select option {
+  padding: 16px 20px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+  background: white;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.form-group select option:hover {
+  background-color: #fff5f2;
+  color: #ff6b35;
+  transform: translateX(4px);
+}
+
+.form-group select option:checked {
+  background: linear-gradient(135deg, #ff6b35, #ff8a65);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+/* Placeholder styling for select */
+.form-group select:invalid {
+  color: #9ca3af;
+}
+
+.form-group select:valid {
+  color: #2c3e50;
+}
+
+/* Enhanced form group styling */
+.form-group label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-group label::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  background: #ff6b35;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 .form-group textarea {
   resize: vertical;
   min-height: 80px;
+}
+
+/* Loading indicator for project selection */
+.loading-indicator {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background: #ff6b35;
+  border-radius: 50%;
+  animation: dot-bounce 1.4s ease-in-out infinite both;
+}
+
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+.dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes dot-bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* Responsive Design */
