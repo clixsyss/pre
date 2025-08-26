@@ -10,15 +10,26 @@
     <div class="content">
       <!-- Welcome Section -->
       <div class="welcome-section">
-        <div class="welcome-icon">🏠</div>
+        <div class="welcome-icon">
+          <div class="icon-container">
+            <span class="icon-text">🏠</span>
+          </div>
+        </div>
         <h1>Welcome Back!</h1>
-        <p>Choose the project you want to work with today</p>
+        <p>Select your project to continue</p>
+        <div class="welcome-subtitle">Tap any project to get started</div>
       </div>
 
       <!-- Loading State -->
       <div v-if="projectStore.loading" class="loading-state">
-        <div class="spinner"></div>
-        <p>Loading your projects...</p>
+        <div class="loading-animation">
+          <div class="loading-dots">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+        </div>
+        <p class="loading-text">Loading your projects...</p>
       </div>
 
       <!-- Error State -->
@@ -39,12 +50,33 @@
 
       <!-- Projects Selection -->
       <div v-else class="projects-selection">
-        <div class="projects-grid">
+        <!-- Skeleton Loading -->
+        <div v-if="projectStore.loading" class="projects-grid">
+          <div v-for="i in 3" :key="`skeleton-${i}`" class="project-card skeleton">
+            <div class="skeleton-header">
+              <div class="skeleton-icon"></div>
+              <div class="skeleton-status"></div>
+            </div>
+            <div class="skeleton-content">
+              <div class="skeleton-title"></div>
+              <div class="skeleton-description"></div>
+              <div class="skeleton-location"></div>
+              <div class="skeleton-user-info">
+                <div class="skeleton-unit"></div>
+                <div class="skeleton-role"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Actual Projects -->
+        <transition-group name="project-list" tag="div" class="projects-grid">
           <div 
-            v-for="project in userProjects" 
+            v-for="(project, index) in userProjects" 
             :key="project.id"
             @click="selectProject(project)"
             :class="['project-card', { 'selected': selectedProject?.id === project.id }]"
+            :style="{ '--delay': `${index * 0.1}s` }"
           >
             <div class="project-header">
               <div class="project-icon">
@@ -84,23 +116,16 @@
               </div>
             </div>
             
-            <div class="selection-indicator">
-              <div class="radio-button" :class="{ 'selected': projectStore.selectedProject?.id === project.id }">
-                <div v-if="projectStore.selectedProject?.id === project.id" class="radio-inner"></div>
-              </div>
+            <!-- Click indicator -->
+            <div class="click-indicator">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </div>
           </div>
-        </div>
+        </transition-group>
 
-        <!-- Continue Button -->
-        <div v-if="hasSelectedProject" class="continue-section">
-          <button @click="continueToApp" class="continue-btn">
-            <span>Continue to {{ selectedProject?.name || 'App' }}</span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-        </div>
+
       </div>
 
       <!-- Help Section -->
@@ -131,18 +156,18 @@ const projectStore = useProjectStore()
 // Computed properties
 const userProjects = computed(() => projectStore.userProjects)
 const selectedProject = computed(() => projectStore.selectedProject)
-const hasSelectedProject = computed(() => projectStore.hasSelectedProject)
 
 // Methods
-const selectProject = (project) => {
+const selectProject = async (project) => {
   projectStore.selectProject(project)
+  
+  // Add a small delay for smooth UX, then redirect
+  setTimeout(() => {
+    router.push('/home')
+  }, 300)
 }
 
-const continueToApp = () => {
-  if (projectStore.hasSelectedProject) {
-    router.push('/home')
-  }
-}
+
 
 const retryLoading = async () => {
   if (auth.currentUser) {
@@ -156,36 +181,24 @@ const goToSupport = () => {
 
   // Lifecycle
   onMounted(async () => {
-    console.log('ProjectSelection component mounted')
-    
     // Listen for auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('Auth state changed:', user ? 'User authenticated' : 'No user')
-      
       if (user) {
-        console.log('User authenticated, fetching projects for:', user.uid)
-        
         // Fetch user projects from their saved data
         await projectStore.fetchUserProjects(user.uid)
-        
-        console.log('Projects fetched, count:', userProjects.value.length)
-        console.log('Projects data:', userProjects.value)
         
         // Load previously selected project if any
         projectStore.loadSelectedProject()
         
-        // If user has only one project, auto-select it
-        if (userProjects.value.length === 1 && !hasSelectedProject.value) {
-          console.log('Auto-selecting single project')
+        // If user has only one project, auto-select and redirect
+        if (userProjects.value.length === 1) {
           projectStore.selectProject(userProjects.value[0])
-        }
-        
-        // If no projects found, show appropriate message
-        if (userProjects.value.length === 0) {
-          console.log('No projects found for user')
+          // Small delay for smooth UX
+          setTimeout(() => {
+            router.push('/home')
+          }, 500)
         }
       } else {
-        console.log('User not authenticated, redirecting to signin')
         // User not authenticated, redirect to sign in
         router.push('/signin')
       }
@@ -235,25 +248,59 @@ const goToSupport = () => {
 /* Welcome Section */
 .welcome-section {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 50px;
   color: #333;
+  position: relative;
 }
 
 .welcome-icon {
-  font-size: 4rem;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+}
+
+.icon-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #ff6b35, #ff8a65);
+  border-radius: 50%;
+  box-shadow: 0 8px 32px rgba(255, 107, 53, 0.3);
+  animation: icon-float 3s ease-in-out infinite;
+}
+
+.icon-text {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .welcome-section h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
+  font-size: 2.8rem;
+  font-weight: 800;
   margin: 0 0 16px 0;
+  background: linear-gradient(135deg, #333, #555);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .welcome-section p {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   color: #666;
-  margin: 0;
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+
+.welcome-subtitle {
+  font-size: 0.95rem;
+  color: #888;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+@keyframes icon-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
 }
 
 /* Loading State */
@@ -262,19 +309,49 @@ const goToSupport = () => {
   padding: 60px 20px;
 }
 
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #e1e5e9;
-  border-top: 4px solid #ff6b35;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
+.loading-animation {
+  margin-bottom: 20px;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.loading-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  background: #ff6b35;
+  border-radius: 50%;
+  animation: dot-bounce 1.4s ease-in-out infinite both;
+}
+
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+.dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes dot-bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.loading-text {
+  color: #666;
+  font-size: 1.1rem;
+  margin: 0;
+  animation: fade-in 0.5s ease-in;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Error State */
@@ -331,6 +408,80 @@ const goToSupport = () => {
   margin-bottom: 40px;
 }
 
+/* Skeleton Loading */
+.project-card.skeleton {
+  pointer-events: none;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.skeleton-icon {
+  width: 60px;
+  height: 60px;
+  background: #e1e5e9;
+  border-radius: 16px;
+}
+
+.skeleton-status {
+  width: 80px;
+  height: 24px;
+  background: #e1e5e9;
+  border-radius: 20px;
+}
+
+.skeleton-content {
+  margin-bottom: 20px;
+}
+
+.skeleton-title {
+  width: 70%;
+  height: 24px;
+  background: #e1e5e9;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.skeleton-description {
+  width: 90%;
+  height: 16px;
+  background: #e1e5e9;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.skeleton-location {
+  width: 60%;
+  height: 16px;
+  background: #e1e5e9;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.skeleton-user-info {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.skeleton-unit,
+.skeleton-role {
+  width: 80px;
+  height: 32px;
+  background: #e1e5e9;
+  border-radius: 12px;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 .projects-grid {
   display: grid;
   gap: 20px;
@@ -339,25 +490,46 @@ const goToSupport = () => {
 
 .project-card {
   background: white;
-  border: 2px solid #e1e5e9;
-  border-radius: 16px;
-  padding: 24px;
+  border: 1px solid #e1e5e9;
+  border-radius: 20px;
+  padding: 28px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.project-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ff6b35, #ff8a65);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
 }
 
 .project-card:hover {
-  border-color: #ff6b35;
-  transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  border-color: transparent;
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+}
+
+.project-card:hover::before {
+  transform: scaleX(1);
 }
 
 .project-card.selected {
-  border-color: #ff6b35;
-  background: #fff5f2;
-  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.15);
+  border-color: transparent;
+  background: linear-gradient(135deg, #fff5f2, #fff);
+  box-shadow: 0 16px 32px rgba(255, 107, 53, 0.15);
+}
+
+.project-card.selected::before {
+  transform: scaleX(1);
 }
 
 /* Project Header */
@@ -369,41 +541,53 @@ const goToSupport = () => {
 }
 
 .project-icon {
-  width: 60px;
-  height: 60px;
-  background: #ff6b35;
-  border-radius: 16px;
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #ff6b35, #ff8a65);
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
+  transition: all 0.3s ease;
+}
+
+.project-card:hover .project-icon {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
 }
 
 .project-logo {
   color: white;
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
 .project-status {
-  padding: 6px 12px;
-  border-radius: 20px;
+  padding: 8px 16px;
+  border-radius: 24px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
 .project-status.active {
-  background: #d4edda;
-  color: #155724;
+  background: linear-gradient(135deg, #4caf50, #66bb6a);
+  color: white;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
 .project-status.inactive,
 .project-status.unknown,
 .project-status.error {
-  background: #f8d7da;
-  color: #721c24;
+  background: linear-gradient(135deg, #f44336, #ef5350);
+  color: white;
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
 }
 
 /* Project Content */
@@ -412,31 +596,51 @@ const goToSupport = () => {
 }
 
 .project-name {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #333;
-  margin: 0 0 12px 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #2c3e50;
+  margin: 0 0 16px 0;
   line-height: 1.2;
+  transition: color 0.3s ease;
+}
+
+.project-card:hover .project-name {
+  color: #ff6b35;
 }
 
 .project-description {
-  color: #666;
-  margin: 0 0 20px 0;
-  line-height: 1.6;
-  font-size: 1rem;
+  color: #7f8c8d;
+  margin: 0 0 24px 0;
+  line-height: 1.7;
+  font-size: 1.05rem;
+  font-weight: 400;
 }
 
 .project-location {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #666;
-  font-size: 0.875rem;
-  margin-bottom: 16px;
+  gap: 10px;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.project-card:hover .project-location {
+  background: #fff5f2;
+  color: #ff6b35;
 }
 
 .project-location svg {
   color: #ff6b35;
+  transition: transform 0.3s ease;
+}
+
+.project-card:hover .project-location svg {
+  transform: scale(1.1);
 }
 
 /* User Info */
@@ -450,62 +654,116 @@ const goToSupport = () => {
 .user-role {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.875rem;
-  padding: 8px 12px;
-  border-radius: 12px;
-  font-weight: 500;
+  gap: 8px;
+  font-size: 0.9rem;
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .user-unit {
-  background: #e3f2fd;
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
   color: #1565c0;
 }
 
 .user-role {
-  background: #f3e5f5;
+  background: linear-gradient(135deg, #f3e5f5, #e1bee7);
   color: #7b1fa2;
+}
+
+.user-unit:hover,
+.user-role:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .user-unit svg,
 .user-role svg {
   color: currentColor;
+  transition: transform 0.3s ease;
 }
 
-/* Selection Indicator */
-.selection-indicator {
+.user-unit:hover svg,
+.user-role:hover svg {
+  transform: scale(1.1);
+}
+
+/* Click Indicator */
+.click-indicator {
   position: absolute;
-  top: 20px;
-  right: 20px;
-}
-
-.radio-button {
-  width: 24px;
-  height: 24px;
-  border: 2px solid #e1e5e9;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  top: 24px;
+  right: 24px;
+  opacity: 0.6;
   transition: all 0.3s ease;
 }
 
-.radio-button.selected {
-  border-color: #ff6b35;
-  background: #ff6b35;
+.click-indicator svg {
+  color: #ff6b35;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
-.radio-inner {
-  width: 12px;
-  height: 12px;
-  background: white;
-  border-radius: 50%;
+.project-card:hover .click-indicator {
+  opacity: 1;
+  transform: scale(1.1);
 }
 
 /* Continue Section */
 .continue-section {
   text-align: center;
   margin-bottom: 40px;
+}
+
+/* Transitions */
+.project-list-enter-active,
+.project-list-leave-active {
+  transition: all 0.5s ease;
+}
+
+.project-list-enter-from {
+  opacity: 0;
+  transform: translateY(30px) scale(0.9);
+}
+
+.project-list-leave-to {
+  opacity: 0;
+  transform: translateY(-30px) scale(0.9);
+}
+
+.project-list-move {
+  transition: transform 0.5s ease;
+}
+
+.fade-slide-up-enter-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-slide-up-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.fade-slide-up-enter-to {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Project card entrance animation */
+.project-card {
+  animation: slide-in-up 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .continue-btn {

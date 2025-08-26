@@ -25,49 +25,37 @@ export const useProjectStore = defineStore('project', () => {
       loading.value = true
       error.value = null
       
-      console.log('Fetching projects for user:', userId)
-      
       // Get user document to find their projects
       const userDocRef = doc(db, 'users', userId)
       const userDoc = await getDoc(userDocRef)
       
       if (!userDoc.exists()) {
-        console.log('User document does not exist')
         throw new Error('User not found')
       }
       
       const userData = userDoc.data()
-      console.log('User data:', userData)
       
       // Check if user has projects in the projects array
-      const userProjects = userData.projects || []
-      console.log('User projects from data:', userProjects)
-      console.log('User projects length:', userProjects.length)
+      const userProjectsArray = userData.projects || []
       
-      if (userProjects.length === 0) {
-        console.log('No projects found for user')
+      if (userProjectsArray.length === 0) {
         userProjects.value = []
         return
       }
       
       // Fetch project details from the projects collection for each project ID
       const projectsData = []
-      console.log('Starting to fetch project details...')
       
-      for (const userProject of userProjects) {
+      for (const userProject of userProjectsArray) {
         try {
-          console.log('Processing user project:', userProject)
           const projectId = userProject.projectId || userProject.id
-          console.log('Project ID:', projectId)
           
           if (projectId) {
             const projectRef = doc(db, 'projects', projectId)
-            console.log('Fetching project document for ID:', projectId)
             const projectDoc = await getDoc(projectRef)
             
             if (projectDoc.exists()) {
               const projectData = projectDoc.data()
-              console.log('Project data found:', projectData)
               projectsData.push({
                 id: projectId,
                 name: projectData.name || 'Unnamed Project',
@@ -83,7 +71,6 @@ export const useProjectStore = defineStore('project', () => {
                 updatedAt: userProject.updatedAt || null
               })
             } else {
-              console.log('Project document does not exist for ID:', projectId)
               // If project document doesn't exist, create a fallback entry
               projectsData.push({
                 id: projectId,
@@ -100,8 +87,6 @@ export const useProjectStore = defineStore('project', () => {
                 updatedAt: userProject.updatedAt || null
               })
             }
-          } else {
-            console.log('No project ID found in userProject:', userProject)
           }
         } catch (err) {
           console.error(`Failed to fetch project ${userProject.projectId}:`, err)
@@ -123,14 +108,12 @@ export const useProjectStore = defineStore('project', () => {
         }
       }
       
-      console.log('Fetched projects data:', projectsData)
+      // Set the projects in the store
       userProjects.value = projectsData
-      console.log('Store userProjects after setting:', userProjects.value)
       
       // If user has only one project, auto-select it
       if (projectsData.length === 1) {
         selectedProject.value = projectsData[0]
-        console.log('Auto-selected project:', selectedProject.value)
       }
       
     } catch (err) {
