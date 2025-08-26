@@ -370,7 +370,7 @@ const handleLogout = async () => {
     notificationStore.showSuccess('Logged out successfully')
     
     // Redirect to login/register page
-    router.push('/register')
+    router.push('/onboarding')
   } catch (err) {
     console.error('Logout error:', err)
     notificationStore.showError('Failed to logout. Please try again.')

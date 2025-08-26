@@ -13,10 +13,46 @@
       </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active">Personal</button>
-      <button class="tab-btn">Property</button>
+    <!-- Progress Indicator -->
+    <div class="progress-indicator">
+      <div class="progress-line"></div>
+
+      <!-- Personal Step -->
+      <div class="progress-step"
+        :class="{ active: activeTab === 'personal', completed: activeTab === 'property' }"
+        @click="activeTab = 'personal'">
+        <div class="step-icon">
+          <svg v-if="activeTab === 'personal'" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+              stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="12" cy="7" r="4" stroke="white" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+          <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 6L9 17L4 12" stroke="#2196F3" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+        </div>
+        <span class="step-label">Personal</span>
+      </div>
+
+      <!-- Property Step -->
+      <div class="progress-step" 
+        :class="{ active: activeTab === 'property', completed: false }"
+        @click="activeTab = 'property'">
+        <div class="step-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+        </div>
+        <span class="step-label">Property</span>
+      </div>
     </div>
 
     <!-- Content -->
@@ -125,6 +161,7 @@ const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
 const resendCountdown = ref(0)
 const nextCheckIn = ref(3)
+const activeTab = ref('personal')
 let countdownTimer = null
 
 const formData = reactive({
@@ -370,38 +407,85 @@ const resendCode = async () => {
   width: 40px;
 }
 
-.tabs {
+.progress-indicator {
   display: flex;
-  background-color: white;
-  border-bottom: 1px solid #e1e5e9;
-}
-
-.tab-btn {
-  flex: 1;
-  padding: 20px;
-  background: none;
-  border: none;
-  font-size: 1rem;
-  font-weight: 500;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  align-items: center;
+  justify-content: center;
+  margin: 40px 0;
   position: relative;
 }
 
-.tab-btn.active {
+.progress-line {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 2px;
+  background-color: #e1e5e9;
+  z-index: 1;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.progress-step:first-child {
+  margin-right: 200px;
+}
+
+.progress-step:last-child {
+  margin-left: 200px;
+}
+
+.step-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.progress-step.active .step-icon {
+  background-color: #ff6b35;
+  color: white;
+}
+
+.progress-step.completed .step-icon {
+  background-color: #2196F3;
+  color: white;
+}
+
+.progress-step:not(.active):not(.completed) .step-icon {
+  background-color: #f5f5f5;
+  color: #666;
+  border: 2px solid #e1e5e9;
+}
+
+.step-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #666;
+  text-align: center;
+}
+
+.progress-step.active .step-label {
   color: #ff6b35;
   font-weight: 600;
 }
 
-.tab-btn.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background-color: #ff6b35;
+.progress-step.completed .step-label {
+  color: #2196F3;
+  font-weight: 600;
 }
 
 .content {
