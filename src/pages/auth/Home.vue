@@ -5,23 +5,6 @@
       <div class="greeting">
         <div class="greeting-header">
           <h2>Hello {{ user?.displayName?.split(' ')[0] || 'User' }}.</h2>
-          <div class="project-switcher">
-            <button @click="showProjectSwitcher = true" class="switch-project-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H16C17.1046 21 18 20.1046 18 19V5C18 3.89543 17.1046 3 16 3Z" stroke="currentColor" stroke-width="2"/>
-                <path d="M8 7H12M8 11H12M8 15H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-              Switch Project
-            </button>
-          </div>
-        </div>
-        <div class="project-info">
-          <p class="project-name">Project: {{ projectName }}</p>
-          <p class="project-location">{{ projectLocation }}</p>
-          <div class="user-details">
-            <span class="user-unit">Unit: {{ userUnit }}</span>
-            <span class="user-role">Role: {{ userRole }}</span>
-          </div>
         </div>
       </div>
 
@@ -182,12 +165,6 @@ const projectStore = useProjectStore()
 const user = ref(null)
 const activeTab = ref('all')
 const showProjectSwitcher = ref(false)
-
-// Computed properties
-const projectName = computed(() => projectStore.selectedProject?.name || 'No Project Selected')
-const projectLocation = computed(() => projectStore.selectedProject?.location || 'Location not set')
-const userUnit = computed(() => projectStore.selectedProject?.userUnit || 'N/A')
-const userRole = computed(() => projectStore.selectedProject?.userRole || 'Member')
 const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => projectStore.selectedProject?.id)
 

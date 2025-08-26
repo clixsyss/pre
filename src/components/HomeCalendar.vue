@@ -80,6 +80,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAcademiesStore } from 'src/stores/academyStore';
+import { getAuth } from 'firebase/auth';
 
 // Component name for ESLint
 defineOptions({
@@ -207,7 +208,10 @@ const viewEvent = (event) => {
 // Lifecycle
 onMounted(async () => {
   try {
-    await academiesStore.fetchUserBookings('current-user-id'); // This should come from auth store
+    const auth = getAuth();
+    if (auth.currentUser) {
+      await academiesStore.fetchUserBookings(auth.currentUser.uid);
+    }
   } catch (error) {
     console.error("Error fetching user bookings:", error);
   }
