@@ -213,52 +213,7 @@
           </div>
         </div>
 
-        <!-- Property Form (shown when email is verified AND personal details are completed) -->
-        <div v-if="isEmailVerified && isPersonalDetailsCompleted()" class="property-form">
-          <h3>Add Your Properties</h3>
-          <p>Great! Now you can add your properties. This information will be used to determine your access to different projects.</p>
-          
-          <form @submit.prevent="savePropertyDetails" class="form-grid">
-            <div class="form-group">
-              <label for="compound">Compound *</label>
-              <input 
-                id="compound" 
-                v-model="propertyForm.compound" 
-                type="text" 
-                required 
-                placeholder="Enter compound name"
-              />
-            </div>
-            
-            <div class="form-group">
-              <label for="unit">Unit *</label>
-              <input 
-                id="unit" 
-                v-model="propertyForm.unit" 
-                type="text" 
-                required 
-                placeholder="Enter unit number"
-              />
-            </div>
-            
-            <div class="form-group">
-              <label for="role">Role *</label>
-              <select id="role" v-model="propertyForm.role" required>
-                <option value="">Select your role</option>
-                <option value="owner">Owner</option>
-                <option value="tenant">Tenant</option>
-                <option value="resident">Resident</option>
-              </select>
-            </div>
-            
-            <div class="form-actions">
-              <button type="submit" class="action-btn primary" :disabled="savingProperty">
-                <span v-if="savingProperty">Saving...</span>
-                <span v-else>Save Property Details</span>
-              </button>
-            </div>
-          </form>
-        </div>
+
       </div>
     </div>
   </div>
@@ -293,13 +248,7 @@ const formData = reactive({
   verificationCode: ''
 })
 
-const propertyForm = reactive({
-  compound: '',
-  unit: '',
-  role: ''
-})
 
-const savingProperty = ref(false)
 
 // Function to update user data in Firestore when email is verified
 const updateEmailVerificationInFirestore = async (userId) => {
@@ -456,7 +405,7 @@ const handleEmailVerified = async (userId) => {
   
   // Redirect to PersonalDetails.vue to complete personal information
   setTimeout(() => {
-    router.push('/personal-details')
+    router.push('/register/personal-details')
   }, 1500)
 }
 
@@ -500,56 +449,7 @@ const manualCheckVerification = async () => {
   await checkVerificationStatus()
 }
 
-// Function to save property details
-const savePropertyDetails = async () => {
-  if (savingProperty.value) return
-  
-  // Validate required fields
-  if (!propertyForm.compound || !propertyForm.unit || !propertyForm.role) {
-    notificationStore.showError('Please fill in all required property fields')
-    return
-  }
-  
-  savingProperty.value = true
-  
-  try {
-    // Save property data to store
-    registrationStore.setPropertyData({
-      compound: propertyForm.compound,
-      unit: propertyForm.unit,
-      role: propertyForm.role
-    })
-    
-    // Update Firestore with property information
-    if (auth.currentUser) {
-      const userDocRef = doc(db, 'users', auth.currentUser.uid)
-      
-      const updateDocument = {
-        propertyDetails: {
-          compound: propertyForm.compound,
-          unit: propertyForm.unit,
-          role: propertyForm.role
-        },
-        registrationStep: 'property_completed',
-        updatedAt: serverTimestamp()
-      }
-      
-      await setDoc(userDocRef, updateDocument, { merge: true })
-      
-      notificationStore.showSuccess('Property details saved successfully!')
-      
-      // Navigate to onboarding or next step
-      setTimeout(() => {
-        router.push('/onboarding')
-      }, 1500)
-    }
-  } catch (error) {
-    console.error('Error saving property details:', error)
-    notificationStore.showError('Failed to save property details. Please try again.')
-  } finally {
-    savingProperty.value = false
-  }
-}
+
 
 const handlePropertyTabClick = () => {
   if (!isEmailVerified.value) {
@@ -861,61 +761,7 @@ const resendCode = async () => {
   color: #856404;
 }
 
-.property-form {
-  margin-top: 30px;
-  padding: 20px;
-  background-color: white;
-  border-radius: 8px;
-  border: 1px solid #e1e5e9;
-}
 
-.property-form h3 {
-  margin: 0 0 10px 0;
-  color: #333;
-  font-size: 1.2rem;
-}
-
-.property-form p {
-  margin: 0 0 20px 0;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.form-grid {
-  display: grid;
-  gap: 20px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.form-group label {
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #333;
-  font-size: 0.9rem;
-}
-
-.form-group input,
-.form-group select {
-  padding: 12px;
-  border: 2px solid #e1e5e9;
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: border-color 0.3s ease;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #ff6b35;
-}
-
-.form-actions {
-  margin-top: 20px;
-}
 
 .note {
   font-size: 0.9rem;

@@ -25,8 +25,8 @@
       <div class="progress-step"
         :class="{ active: currentStep === 'personal' && !isPersonalDetailsCompleted, completed: currentStep === 'property' || currentStep === 'details' || isPersonalDetailsCompleted }">
         <div class="step-icon">
-          <svg v-if="currentStep === 'personal' && !isPersonalDetailsCompleted" width="24" height="24" viewBox="0 0 24 24" fill="none"
-            xmlns="http://www.w3.org/2000/svg">
+          <svg v-if="currentStep === 'personal' && !isPersonalDetailsCompleted" width="24" height="24"
+            viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
               stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -42,10 +42,11 @@
       </div>
 
       <!-- Property Step -->
-      <div class="progress-step" :class="{ active: currentStep === 'property' || isPersonalDetailsCompleted, completed: currentStep === 'details' }">
+      <div class="progress-step"
+        :class="{ active: currentStep === 'property' || isPersonalDetailsCompleted, completed: currentStep === 'details' }">
         <div class="step-icon">
-          <svg v-if="currentStep === 'property' || isPersonalDetailsCompleted" width="24" height="24" viewBox="0 0 24 24" fill="none"
-            xmlns="http://www.w3.org/2000/svg">
+          <svg v-if="currentStep === 'property' || isPersonalDetailsCompleted" width="24" height="24"
+            viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
               stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -170,7 +171,8 @@
             <div class="section-header">
               <div class="section-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
               </div>
               <h4 class="section-title">Primary Property</h4>
@@ -205,17 +207,23 @@
                 <button type="button" @click="propertyForm.role = 'owner'"
                   :class="['role-btn', { active: propertyForm.role === 'owner' }]">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path
+                      d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
                   </svg>
                   Owner
                 </button>
                 <button type="button" @click="propertyForm.role = 'family'"
                   :class="['role-btn', { active: propertyForm.role === 'family' }]">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
                   </svg>
                   Family Member
                 </button>
@@ -234,49 +242,14 @@
             </div>
           </div>
 
-          <!-- Primary Property Summary (when primary property is added) -->
-          <div v-if="selectedProjects.length > 0" class="property-section primary-property-summary">
-            <div class="section-header">
-              <div class="section-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 6L9 17L4 12" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <h4 class="section-title">Primary Property Added</h4>
-              <p class="section-subtitle">Your primary property has been selected. You can now add additional properties if needed.</p>
-            </div>
-            
-            <div class="primary-property-display">
-              <div class="property-card primary">
-                <div class="property-info">
-                  <div class="property-name">{{ getProjectName(selectedProjects[0].projectId) }}</div>
-                  <div class="property-details">
-                    <span class="detail-item">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                      {{ selectedProjects[0].unit }}
-                    </span>
-                    <span class="detail-item">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                      {{ selectedProjects[0].role }}
-                    </span>
-                  </div>
-                </div>
-                <div class="property-badge primary-badge">Primary</div>
-              </div>
-            </div>
-          </div>
-
           <!-- Additional Properties Section -->
           <div v-if="selectedProjects.length > 0" class="property-section additional-properties">
             <div class="section-header">
               <div class="section-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M19 11H13V5C13 4.44772 12.5523 4 12 4C11.4477 4 11 4.44772 11 5V11H5C4.44772 11 4 11.4477 4 12C4 12.5523 4.44772 13 5 13H11V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V13H19C19.5523 13 20 12.5523 20 12C20 11.4477 19.5523 11 19 11Z" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M19 11H13V5C13 4.44772 12.5523 4 12 4C11.4477 4 11 4.44772 11 5V11H5C4.44772 11 4 11.4477 4 12C4 12.5523 4.44772 13 5 13H11V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V13H19C19.5523 13 20 12.5523 20 12C20 11.4477 19.5523 11 19 11Z"
+                    stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
               <h4 class="section-title">Additional Properties (Optional)</h4>
@@ -290,14 +263,19 @@
                   <div class="project-details">
                     <span class="detail-item">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path
+                          d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                       </svg>
                       {{ project.unit }}
                     </span>
                     <span class="detail-item">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path
+                          d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" />
                       </svg>
                       {{ project.role }}
                     </span>
@@ -314,20 +292,22 @@
 
             <!-- Add Another Property Button -->
             <div class="add-another-section">
-              <button type="button" @click="showAddAnotherForm = true" class="add-another-btn" v-if="!showAddAnotherForm">
+              <button type="button" @click="showAddAnotherForm = true" class="add-another-btn"
+                v-if="!showAddAnotherForm">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
                 Add Another Property
               </button>
-              
+
               <!-- Additional Property Form -->
               <div v-if="showAddAnotherForm" class="additional-property-form">
                 <div class="form-group">
                   <label for="additional-project" class="form-label">Project</label>
                   <div class="select-wrapper">
-                    <select id="additional-project" v-model="additionalPropertyForm.selectedProject" class="form-input custom-select"
-                      @change="onAdditionalProjectChange">
+                    <select id="additional-project" v-model="additionalPropertyForm.selectedProject"
+                      class="form-input custom-select" @change="onAdditionalProjectChange">
                       <option value="" disabled>Select Project</option>
                       <option v-for="project in availableProjects" :key="project.id" :value="project.id">
                         {{ project.name }} - {{ project.type }} ({{ project.location }})
@@ -349,17 +329,23 @@
                     <button type="button" @click="additionalPropertyForm.role = 'owner'"
                       :class="['role-btn', { active: additionalPropertyForm.role === 'owner' }]">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path
+                          d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" />
                       </svg>
                       Owner
                     </button>
                     <button type="button" @click="additionalPropertyForm.role = 'family'"
                       :class="['role-btn', { active: additionalPropertyForm.role === 'family' }]">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2"
+                          stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" />
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" />
                       </svg>
                       Family Member
                     </button>
@@ -367,10 +353,11 @@
                 </div>
 
                 <div class="additional-form-actions">
-                  <button type="button" @click="addAdditionalProperty" class="add-property-btn" 
+                  <button type="button" @click="addAdditionalProperty" class="add-property-btn"
                     :disabled="!canAddAdditionalProperty">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
                     </svg>
                     Add Property
                   </button>
@@ -387,33 +374,18 @@
               Back
             </button>
             <button type="submit" class="verify-btn" :disabled="loading || !canProceedToNext">
-              <span v-if="loading">Verifying...</span>
-              <span v-else>Continue</span>
+              <span v-if="loading">Saving...</span>
+              <span v-else>Complete Registration</span>
             </button>
           </div>
         </form>
-
-        <!-- Navigation Options -->
-        <div class="step-navigation">
-          <div class="nav-divider">
-            <span>or</span>
-          </div>
-          <div class="nav-options">
-            <a @click="goToSignIn" class="nav-link">
-              Already have an account? Sign In
-            </a>
-            <a @click="goToOnboarding" class="nav-link">
-              Back to Onboarding
-            </a>
-          </div>
-        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
@@ -520,13 +492,13 @@ const addAdditionalProperty = () => {
       unit: additionalPropertyForm.unit,
       role: additionalPropertyForm.role
     })
-    
+
     // Reset form
     additionalPropertyForm.selectedProject = ''
     additionalPropertyForm.unit = ''
     additionalPropertyForm.role = ''
     showAddAnotherForm.value = false
-    
+
     notificationStore.showSuccess('Additional property added!')
   } else {
     notificationStore.showError('Please fill in all fields for the additional property.')
@@ -623,7 +595,7 @@ onMounted(() => {
     propertyForm.unit = registrationStore.propertyData.unit
     propertyForm.role = registrationStore.propertyData.role
   }
-  
+
   // Clear password fields for security
   personalForm.password = ''
   personalForm.confirmPassword = ''
@@ -632,15 +604,16 @@ onMounted(() => {
   if (registrationStore.isEmailVerified) {
     console.log('Email verified, switching to property step')
     currentStep.value = 'property'
-    notificationStore.showInfo('Email verified! Please complete your property details.')
+    // Don't show notification here to avoid spam
   }
-  
+
   // If personal details are already completed, show property step and hide personal step
   if (isPersonalDetailsCompleted.value) {
     console.log('Personal details completed, switching to property step')
     currentStep.value = 'property'
-    notificationStore.showInfo('Personal details completed! Please complete your property details.')
-    
+    // Show only one notification for the user's current status
+    notificationStore.showInfo('Please complete your property details to finish registration.')
+
     // Hide the personal step content since it's already completed
     // The user should only see the property step
   }
@@ -648,18 +621,7 @@ onMounted(() => {
   // Fetch available projects on mount
   fetchAvailableProjects()
 
-  // Listen for verification code display (development only)
-  const handleShowCode = (event) => {
-    const { code, email } = event.detail
-    notificationStore.showInfo(`🔐 Verification Code: ${code} (sent to ${email})`, 10000)
-  }
-
-  window.addEventListener('showVerificationCode', handleShowCode)
-
-  // Cleanup
-  onUnmounted(() => {
-    window.removeEventListener('showVerificationCode', handleShowCode)
-  })
+  // Development verification code listener removed to avoid unnecessary notifications
 })
 
 const goToPreviousStep = () => {
@@ -680,17 +642,17 @@ const canProceedToNext = computed(() => {
 // Check if personal details are completed
 const isPersonalDetailsCompleted = computed(() => {
   const userDetails = registrationStore.userDetails
-  return userDetails.firstName && userDetails.lastName && userDetails.mobile && 
-         userDetails.dateOfBirth && userDetails.nationalId
+  return userDetails.firstName && userDetails.lastName && userDetails.mobile &&
+    userDetails.dateOfBirth && userDetails.nationalId
 })
 
 const canProceed = computed(() => {
-  return personalForm.email && 
-         personalForm.password && 
-         personalForm.confirmPassword && 
-         personalForm.password === personalForm.confirmPassword &&
-         personalForm.password.length >= 8 &&
-         !loading.value
+  return personalForm.email &&
+    personalForm.password &&
+    personalForm.confirmPassword &&
+    personalForm.password === personalForm.confirmPassword &&
+    personalForm.password.length >= 8 &&
+    !loading.value
 })
 
 const canAddProject = computed(() => {
@@ -809,13 +771,13 @@ const handlePropertySubmit = async () => {
     console.log('Property form submitted:', selectedProjects.value)
 
     // Show success notification
-    notificationStore.showSuccess('Property details saved! Now let\'s complete your personal information.')
+    notificationStore.showSuccess('Property details saved! Registration completed successfully.')
 
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000))
 
-    // Move to personal details step
-    router.push('/register/personal-details')
+    // Registration is complete, redirect to login page
+    router.push('/signin')
   } catch (error) {
     console.error('Property submit error:', error)
 
@@ -1521,7 +1483,7 @@ select.form-input:disabled {
   transition: border-top-color 0.3s ease;
 }
 
-.custom-select:focus + .select-arrow {
+.custom-select:focus+.select-arrow {
   border-top-color: #ff6b35;
 }
 

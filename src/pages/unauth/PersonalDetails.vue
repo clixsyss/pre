@@ -13,12 +13,6 @@
       </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active">Personal</button>
-      <button class="tab-btn">Property</button>
-    </div>
-
     <!-- Orange Separator Line -->
     <div class="separator-line"></div>
 
@@ -27,10 +21,10 @@
       <div class="progress-line"></div>
 
       <!-- Personal Step -->
-      <div class="progress-step" :class="{ active: true, completed: true }">
+      <div class="progress-step" :class="{ active: true }">
         <div class="step-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 6L9 17L4 12" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M20 6L9 17L4 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
         <span class="step-label">Personal</span>
@@ -48,19 +42,6 @@
           </svg>
         </div>
         <span class="step-label">Property</span>
-      </div>
-    </div>
-
-    <!-- Completion Info -->
-    <div class="completion-info">
-      <div class="info-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="info-content">
-        <h3>Almost Done!</h3>
-        <p>Complete your personal details to finish registration. You'll be redirected to sign in with your new account.</p>
       </div>
     </div>
 
@@ -525,13 +506,13 @@ const handleSubmit = async () => {
 .progress-step.completed .step-icon {
   background-color: #e1e5e9;
   border-color: #e1e5e9;
-  color: #2196F3;
+  color: white;
   width: 48px;
   height: 48px;
 }
 
 .progress-step.completed .step-label {
-  color: #2196F3;
+  color: white;
   font-weight: 600;
   font-size: 1rem;
   margin-top: 12px;
@@ -574,7 +555,7 @@ const handleSubmit = async () => {
 }
 
 .progress-step.completed .step-icon svg {
-  stroke: #2196F3;
+  stroke: white;
 }
 
 .progress-step:not(.active):not(.completed) .step-icon svg {
