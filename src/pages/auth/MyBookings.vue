@@ -10,7 +10,7 @@
         </button>
         <h1>My Bookings</h1>
       </div>
-      <p class="header-subtitle">View and manage all your bookings</p>
+      <p class="header-subtitle">{{ projectName ? `Bookings in ${projectName}` : 'View and manage all your bookings' }}</p>
     </div>
 
     <div class="bookings-content">
@@ -43,6 +43,16 @@
       <div v-if="loading" class="loading-state">
         <div class="loading-spinner"></div>
         <p>Loading your bookings...</p>
+      </div>
+
+      <!-- No Project Selected -->
+      <div v-else-if="!projectId" class="no-project-state">
+        <div class="no-project-icon">🏗️</div>
+        <h3>No Project Selected</h3>
+        <p>Please select a project to view your bookings.</p>
+        <button @click="$router.push('/project-selection')" class="select-project-btn">
+          Select Project
+        </button>
       </div>
 
       <!-- Empty State -->
@@ -221,9 +231,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAcademiesStore } from 'src/stores/academyStore';
+import { useProjectStore } from 'src/stores/projectStore';
 import bookingService from 'src/services/bookingService';
 import { getAuth } from 'firebase/auth';
 
@@ -234,13 +245,18 @@ defineOptions({
 
 const router = useRouter();
 const academiesStore = useAcademiesStore();
+const projectStore = useProjectStore();
 
 // Reactive data
 const loading = ref(true);
+const error = ref(null);
 const activeFilter = ref('all');
 const selectedBooking = ref(null);
 
 // Computed properties
+const projectId = computed(() => projectStore.selectedProject?.id);
+const projectName = computed(() => projectStore.selectedProject?.name);
+
 const filteredBookings = computed(() => {
   if (activeFilter.value === 'all') {
     return academiesStore.userBookings;
@@ -359,19 +375,58 @@ const navigateToServices = () => {
   router.push('/services');
 };
 
+
+
+
+
+
+
 // Lifecycle
 onMounted(async () => {
-  try {
-    const auth = getAuth();
-    if (auth.currentUser) {
-      await academiesStore.fetchUserBookings(auth.currentUser.uid);
-    }
-  } catch (error) {
-    console.error('Error fetching user bookings:', error);
-  } finally {
+  if (projectId.value) {
+    await fetchUserBookings();
+  } else {
+    error.value = 'No project selected. Please select a project first.';
     loading.value = false;
   }
 });
+
+// Watch for project changes
+watch(projectId, async (newProjectId) => {
+  if (newProjectId) {
+    await fetchUserBookings();
+  } else {
+    // Clear bookings when no project is selected
+    academiesStore.clearUserBookings();
+    // Also clear any error state
+    error.value = null;
+  }
+});
+
+const fetchUserBookings = async () => {
+  if (!projectId.value) {
+    console.log('No project ID, skipping fetchUserBookings');
+    return;
+  }
+  
+  try {
+    console.log('Fetching user bookings for project:', projectId.value);
+    loading.value = true;
+    const auth = getAuth();
+    if (auth.currentUser) {
+      console.log('User authenticated:', auth.currentUser.uid);
+      await academiesStore.fetchUserBookings(auth.currentUser.uid, projectId.value);
+      console.log('User bookings fetched:', academiesStore.userBookings);
+    } else {
+      console.log('No authenticated user found');
+    }
+  } catch (error) {
+    console.error('Error fetching user bookings:', error);
+    error.value = 'Failed to fetch bookings: ' + error.message;
+  } finally {
+    loading.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -482,10 +537,38 @@ onMounted(async () => {
   margin: 0;
 }
 
-.empty-state {
+.no-project-state, .empty-state {
   text-align: center;
   padding: 60px 20px;
 }
+
+.no-project-icon {
+  font-size: 4rem;
+  color: #ff6b35;
+  margin-bottom: 16px;
+}
+
+.select-project-btn {
+  background: #ff6b35;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 16px;
+}
+
+.select-project-btn:hover {
+  background: #e55a2b;
+  transform: translateY(-2px);
+}
+
+
+
+
 
 .empty-icon {
   margin-bottom: 24px;

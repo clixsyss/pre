@@ -1,10 +1,17 @@
 import { defineStore } from "pinia";
-import { ref, onMounted } from "vue";
+import { ref } from "vue";
 import { db } from "boot/firebase";
 import {
-    collection, getDocs, updateDoc, doc,
-    setDoc, deleteDoc, serverTimestamp,
-    query, where, orderBy
+    collection,
+    getDocs,
+    updateDoc,
+    doc, 
+    setDoc,
+    deleteDoc,
+    serverTimestamp,
+    query,
+    where,
+    orderBy
 } from "firebase/firestore";
 
 export const useAcademiesStore = defineStore("academiesStore", () => {
@@ -12,27 +19,6 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
     const programsByAcademy = ref({});
     const selectedAcademy = ref(null);
     const userBookings = ref([]);
-
-    const fetchAcademies = async () => {
-        try {
-            const querySnapshot = await getDocs(collection(db, "academies"));
-            const academyData = [];
-            const programData = {};
-
-            querySnapshot.forEach((docSnap) => {
-                const academyId = docSnap.id;
-                const data = docSnap.data();
-                academyData.push({ id: academyId, ...data });
-                programData[academyId] = data.programs || [];
-            });
-
-            academyOptions.value = academyData;
-            programsByAcademy.value = programData;
-        } catch (error) {
-            console.error("Error fetching academies:", error);
-            throw error;
-        }
-    };
 
     const addAcademy = async (academy) => {
         try {
@@ -149,33 +135,79 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
         }
     };
 
-    const fetchUserBookings = async (userId) => {
+    // Method to create a test booking in project-specific collection
+    const createTestBooking = async (projectId, userId, bookingData) => {
         try {
+            if (!projectId || !userId) {
+                console.warn("Missing projectId or userId for test booking");
+                return false;
+            }
+
+            const bookingRef = doc(collection(db, `projects/${projectId}/bookings`));
+            const newBooking = {
+                ...bookingData,
+                id: bookingRef.id,
+                userId: userId,
+                createdAt: serverTimestamp(),
+                status: "confirmed"
+            };
+
+            await setDoc(bookingRef, newBooking);
+            console.log("Test booking created successfully:", newBooking);
+            return true;
+        } catch (error) {
+            console.error("Error creating test booking:", error);
+            throw error;
+        }
+    };
+
+    const fetchUserBookings = async (userId, projectId) => {
+        try {
+            if (!projectId) {
+                console.warn("No project ID provided to fetchUserBookings");
+                return;
+            }
+
+            console.log('=== ACADEMY STORE: fetchUserBookings ===');
+            console.log('User ID:', userId);
+            console.log('Project ID:', projectId);
+            console.log('Collection path:', `projects/${projectId}/bookings`);
+
             const q = query(
-                collection(db, "userBookings"),
+                collection(db, `projects/${projectId}/bookings`),
                 where("userId", "==", userId),
                 orderBy("createdAt", "desc")
             );
+            
+            console.log('Query created, executing...');
             const querySnapshot = await getDocs(q);
+            console.log('Query result size:', querySnapshot.size);
+            
             const bookings = [];
             querySnapshot.forEach((doc) => {
-                bookings.push({ id: doc.id, ...doc.data() });
+                const data = doc.data();
+                console.log('Document data:', data);
+                bookings.push({ id: doc.id, ...data });
             });
+            
+            console.log('Final bookings array:', bookings);
             userBookings.value = bookings;
+            console.log('Updated userBookings.value:', userBookings.value);
         } catch (error) {
             console.error("Error fetching user bookings:", error);
             throw error;
         }
     };
 
-    onMounted(fetchAcademies);
+    const clearUserBookings = () => {
+        userBookings.value = [];
+    };
 
     return {
         academyOptions,
         programsByAcademy,
         selectedAcademy,
         userBookings,
-        fetchAcademies,
         addAcademy,
         updateAcademy,
         deleteAcademy,
@@ -185,5 +217,7 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
         setSelectedAcademy,
         addUserBooking,
         fetchUserBookings,
+        clearUserBookings,
+        createTestBooking,
     };
 });

@@ -55,14 +55,14 @@ export class BookingService {
         return days;
     }
 
-    // Check if a time slot is available
-    async checkSlotAvailability(courtId, date, time) {
+    // Check if a time slot is available for a specific court in a project
+    async checkSlotAvailability(projectId, courtId, date, time) {
         try {
             const q = query(
-                collection(this.db, "bookings"),
+                collection(this.db, `projects/${projectId}/bookings`),
                 where("courtId", "==", courtId),
                 where("date", "==", date),
-                where("time", "==", time),
+                where("timeSlots", "array-contains", time),
                 where("status", "in", ["confirmed", "pending"])
             );
             
@@ -74,18 +74,71 @@ export class BookingService {
         }
     }
 
-    // Create a court booking
-    async createCourtBooking(bookingData) {
+    // Get available time slots for a specific court and date
+    async getAvailableTimeSlots(projectId, courtId, date) {
         try {
-            const bookingRef = doc(collection(this.db, "bookings"));
+            const baseSlots = this.generateTimeSlots();
+            
+            // Check which slots are already booked
+            const q = query(
+                collection(this.db, `projects/${projectId}/bookings`),
+                where("courtId", "==", courtId),
+                where("date", "==", date),
+                where("status", "in", ["confirmed", "pending"])
+            );
+            
+            const querySnapshot = await getDocs(q);
+            const bookedSlots = [];
+            
+            querySnapshot.forEach((doc) => {
+                const booking = doc.data();
+                if (booking.timeSlots) {
+                    bookedSlots.push(...booking.timeSlots);
+                }
+            });
+            
+            // Filter out booked slots
+            return baseSlots.map(slot => ({
+                ...slot,
+                isReserved: bookedSlots.includes(slot.time)
+            }));
+        } catch (error) {
+            console.error("Error getting available time slots:", error);
+            return this.generateTimeSlots();
+        }
+    }
+
+    // Create a court booking in a specific project
+    async createCourtBooking(projectId, bookingData) {
+        try {
+            // Validate required fields
+            if (!projectId) {
+                throw new Error('Project ID is required');
+            }
+            if (!bookingData.userId) {
+                throw new Error('User ID is required');
+            }
+            if (!bookingData.courtId) {
+                throw new Error('Court ID is required');
+            }
+            if (!bookingData.date) {
+                throw new Error('Date is required');
+            }
+            if (!bookingData.timeSlots || bookingData.timeSlots.length === 0) {
+                throw new Error('Time slots are required');
+            }
+
+            const bookingRef = doc(collection(this.db, `projects/${projectId}/bookings`));
             const newBooking = {
                 id: bookingRef.id,
                 ...bookingData,
+                projectId: projectId,
                 createdAt: serverTimestamp(),
                 status: "confirmed",
                 type: "court"
             };
 
+            console.log('Creating court booking:', newBooking);
             await setDoc(bookingRef, newBooking);
             return { success: true, bookingId: bookingRef.id, booking: newBooking };
         } catch (error) {
@@ -94,18 +147,34 @@ export class BookingService {
         }
     }
 
-    // Create an academy program booking
-    async createAcademyBooking(bookingData) {
+    // Create an academy program booking in a specific project
+    async createAcademyBooking(projectId, bookingData) {
         try {
-            const bookingRef = doc(collection(this.db, "bookings"));
+            // Validate required fields
+            if (!projectId) {
+                throw new Error('Project ID is required');
+            }
+            if (!bookingData.userId) {
+                throw new Error('User ID is required');
+            }
+            if (!bookingData.academyId) {
+                throw new Error('Academy ID is required');
+            }
+            if (!bookingData.programId) {
+                throw new Error('Program ID is required');
+            }
+
+            const bookingRef = doc(collection(this.db, `projects/${projectId}/bookings`));
             const newBooking = {
                 id: bookingRef.id,
                 ...bookingData,
+                projectId: projectId,
                 createdAt: serverTimestamp(),
                 status: "confirmed",
                 type: "academy"
             };
 
+            console.log('Creating academy booking:', newBooking);
             await setDoc(bookingRef, newBooking);
             return { success: true, bookingId: bookingRef.id, booking: newBooking };
         } catch (error) {
@@ -114,29 +183,23 @@ export class BookingService {
         }
     }
 
-    // Get user's bookings
-    async getUserBookings(userId, type = null) {
+    // Get user's bookings from a specific project
+    async getUserBookings(projectId, userId) {
         try {
-            let q;
-            if (type) {
-                q = query(
-                    collection(this.db, "bookings"),
-                    where("userId", "==", userId),
-                    where("type", "==", type),
-                    orderBy("createdAt", "desc")
-                );
-            } else {
-                q = query(
-                    collection(this.db, "bookings"),
-                    where("userId", "==", userId),
-                    orderBy("createdAt", "desc")
-                );
-            }
+            const q = query(
+                collection(this.db, `projects/${projectId}/bookings`),
+                where("userId", "==", userId),
+                orderBy("createdAt", "desc")
+            );
             
             const querySnapshot = await getDocs(q);
             const bookings = [];
+            
             querySnapshot.forEach((doc) => {
-                bookings.push({ id: doc.id, ...doc.data() });
+                bookings.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
             });
             
             return bookings;
@@ -146,13 +209,54 @@ export class BookingService {
         }
     }
 
-    // Cancel a booking
-    async cancelBooking(bookingId) {
+    // Get all bookings for a specific project (admin view)
+    async getProjectBookings(projectId) {
         try {
-            const bookingRef = doc(this.db, "bookings", bookingId);
+            const q = query(
+                collection(this.db, `projects/${projectId}/bookings`),
+                orderBy("createdAt", "desc")
+            );
+            
+            const querySnapshot = await getDocs(q);
+            const bookings = [];
+            
+            querySnapshot.forEach((doc) => {
+                bookings.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            return bookings;
+        } catch (error) {
+            console.error("Error fetching project bookings:", error);
+            throw error;
+        }
+    }
+
+    // Update booking status
+    async updateBookingStatus(projectId, bookingId, newStatus) {
+        try {
+            const bookingRef = doc(this.db, `projects/${projectId}/bookings`, bookingId);
+            await updateDoc(bookingRef, {
+                status: newStatus,
+                updatedAt: serverTimestamp()
+            });
+            
+            return { success: true };
+        } catch (error) {
+            console.error("Error updating booking status:", error);
+            throw error;
+        }
+    }
+
+    // Cancel a booking
+    async cancelBooking(projectId, bookingId) {
+        try {
+            const bookingRef = doc(this.db, `projects/${projectId}/bookings`, bookingId);
             await updateDoc(bookingRef, {
                 status: "cancelled",
-                cancelledAt: serverTimestamp()
+                updatedAt: serverTimestamp()
             });
             
             return { success: true };
@@ -162,82 +266,25 @@ export class BookingService {
         }
     }
 
-    // Get available courts for a sport
-    async getAvailableCourts(sport, date) {
-        try {
-            const q = query(
-                collection(this.db, "courts"),
-                where("sport", "==", sport),
-                where("isActive", "==", true)
-            );
-            
-            const querySnapshot = await getDocs(q);
-            const courts = [];
-            
-            querySnapshot.forEach((doc) => {
-                courts.push({ id: doc.id, ...doc.data() });
-            });
-            
-            // Filter out courts that are fully booked for the given date
-            const availableCourts = [];
-            for (const court of courts) {
-                const isAvailable = await this.checkCourtAvailability(court.id, date);
-                if (isAvailable) {
-                    availableCourts.push(court);
-                }
-            }
-            
-            return availableCourts;
-        } catch (error) {
-            console.error("Error fetching available courts:", error);
-            throw error;
-        }
-    }
-
-    // Check if a court has any available slots for a given date
-    async checkCourtAvailability(courtId, date) {
-        try {
-            const q = query(
-                collection(this.db, "bookings"),
-                where("courtId", "==", courtId),
-                where("date", "==", date),
-                where("status", "in", ["confirmed", "pending"])
-            );
-            
-            const querySnapshot = await getDocs(q);
-            const bookedSlots = querySnapshot.size;
-            
-            // Assuming each court has 16 time slots (6 AM to 10 PM)
-            const totalSlots = 16;
-            return bookedSlots < totalSlots;
-        } catch (error) {
-            console.error("Error checking court availability:", error);
-            return false;
-        }
-    }
-
-    // Calculate booking price
-    calculatePrice(courtPrice, selectedSlots) {
-        return courtPrice * selectedSlots.length;
+    // Calculate price for selected time slots
+    calculatePrice(hourlyRate, timeSlots) {
+        if (!hourlyRate || !timeSlots || timeSlots.length === 0) return 0;
+        return hourlyRate * timeSlots.length;
     }
 
     // Format date for display
     formatDate(date) {
-        return date.toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric'
-        });
-    }
-
-    // Format time for display
-    formatTime(time) {
-        return time.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
+        if (!date) return '';
+        
+        const options = { 
+            weekday: 'short', 
+            day: 'numeric', 
+            month: 'short' 
+        };
+        
+        return date.toLocaleDateString('en-US', options);
     }
 }
 
+// Export a default instance
 export default new BookingService();

@@ -174,21 +174,90 @@ export const useProjectStore = defineStore('project', () => {
     selectedProject.value = project
     // Store selection in localStorage for persistence
     localStorage.setItem('selectedProjectId', project.id)
+    localStorage.setItem('selectedProjectTimestamp', Date.now().toString())
+    console.log('Project selected and saved to localStorage:', project.name)
+  }
+
+  const validateSavedProject = (savedProjectId) => {
+    if (!savedProjectId || userProjects.value.length === 0) {
+      return false
+    }
+    
+    // Check if the saved project ID exists in user's current projects
+    const hasAccess = userProjects.value.some(p => p.id === savedProjectId)
+    if (!hasAccess) {
+      console.log('User no longer has access to saved project, clearing...')
+      clearSelectedProject()
+      return false
+    }
+    
+    return true
   }
 
   const loadSelectedProject = () => {
     const savedProjectId = localStorage.getItem('selectedProjectId')
+    const savedTimestamp = localStorage.getItem('selectedProjectTimestamp')
+    
     if (savedProjectId && userProjects.value.length > 0) {
+      // Check if the saved selection is not too old (24 hours)
+      const now = Date.now()
+      const savedTime = parseInt(savedTimestamp || '0')
+      const maxAge = 24 * 60 * 60 * 1000 // 24 hours
+      
+      if (now - savedTime > maxAge) {
+        console.log('Saved project selection is too old, clearing...')
+        clearSelectedProject()
+        return false
+      }
+      
+      // Validate that user still has access to this project
+      if (!validateSavedProject(savedProjectId)) {
+        return false
+      }
+      
       const project = userProjects.value.find(p => p.id === savedProjectId)
       if (project) {
         selectedProject.value = project
+        console.log('Restored selected project from localStorage:', project.name)
+        return true
       }
+    }
+    return false
+  }
+
+  const rehydrateStore = async (userId) => {
+    try {
+      // First try to load from localStorage if we have projects
+      if (userProjects.value.length > 0) {
+        const restored = loadSelectedProject()
+        if (restored) return true
+      }
+      
+      // If no projects or couldn't restore, fetch projects
+      await fetchUserProjects(userId)
+      
+      // Try to restore again after fetching
+      const restored = loadSelectedProject()
+      if (restored) return true
+      
+      // If still no project selected and user has only one project, auto-select it
+      if (userProjects.value.length === 1) {
+        selectProject(userProjects.value[0])
+        console.log('Auto-selected single project:', userProjects.value[0].name)
+        return true
+      }
+      
+      return false
+    } catch (error) {
+      console.error('Error rehydrating project store:', error)
+      return false
     }
   }
 
   const clearSelectedProject = () => {
     selectedProject.value = null
     localStorage.removeItem('selectedProjectId')
+    localStorage.removeItem('selectedProjectTimestamp')
   }
 
   const resetStore = () => {
@@ -198,6 +267,18 @@ export const useProjectStore = defineStore('project', () => {
     loading.value = false
     error.value = null
     localStorage.removeItem('selectedProjectId')
+    localStorage.removeItem('selectedProjectTimestamp')
+  }
+
+  const debugState = () => {
+    console.log('=== PROJECT STORE DEBUG ===')
+    console.log('User Projects Count:', userProjects.value.length)
+    console.log('Selected Project:', selectedProject.value?.name || 'None')
+    console.log('LocalStorage Project ID:', localStorage.getItem('selectedProjectId'))
+    console.log('LocalStorage Timestamp:', localStorage.getItem('selectedProjectTimestamp'))
+    console.log('Has Selected Project:', hasSelectedProject.value)
+    console.log('Loading:', loading.value)
+    console.log('Error:', error.value)
   }
 
   return {
@@ -218,7 +299,10 @@ export const useProjectStore = defineStore('project', () => {
     fetchAvailableProjects,
     selectProject,
     loadSelectedProject,
+    rehydrateStore,
+    validateSavedProject,
     clearSelectedProject,
-    resetStore
+    resetStore,
+    debugState
   }
 })

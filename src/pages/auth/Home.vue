@@ -256,7 +256,9 @@ onMounted(async () => {
 
   // Initialize sample data for testing
   try {
-    await sampleDataService.initializeAllSampleData()
+    if (projectStore.selectedProject?.id) {
+      await sampleDataService.initializeAllSampleData(projectStore.selectedProject.id)
+    }
   } catch (error) {
     console.error('Error initializing sample data:', error)
   }

@@ -10,13 +10,51 @@
         </button>
         <h1>Court Booking</h1>
       </div>
-      <p class="header-subtitle">Choose your sport, court, date, and time</p>
+      <p class="header-subtitle">{{ projectName ? `Book courts in ${projectName}` : 'Choose your sport, court, date, and time' }}</p>
     </div>
 
-    <div class="booking-content">
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Loading available sports and courts...</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="error-state">
+      <div class="error-icon">⚠️</div>
+      <p>{{ error }}</p>
+      <button @click="retryFetch" class="retry-btn">Try Again</button>
+    </div>
+
+    <!-- No Project Selected -->
+    <div v-else-if="!projectId" class="no-project-state">
+      <div class="no-project-icon">🏗️</div>
+      <h3>No Project Selected</h3>
+      <p>Please select a project to book courts.</p>
+      <button @click="$router.push('/project-selection')" class="select-project-btn">
+        Select Project
+      </button>
+    </div>
+
+    <!-- No Sports Available -->
+    <div v-else-if="sportsOptions.length === 0" class="no-sports-state">
+      <div class="no-sports-icon">🏟️</div>
+      <h3>No Sports Available</h3>
+      <p>There are no sports with courts available in this project yet.</p>
+      <p>Please contact the project administrator to set up sports and courts.</p>
+      
+      <!-- Debug button for development -->
+      <button @click="debugSportsData" class="debug-btn" v-if="projectId">
+        Debug Sports Data
+      </button>
+    </div>
+
+    <!-- Booking Content -->
+    <div v-else class="booking-content">
       <!-- Sport Selection -->
       <div class="booking-section">
         <h2 class="section-title">Select Sport</h2>
+        <p class="section-subtitle">Choose from sports that have available courts</p>
         <div class="sport-options">
           <div 
             v-for="sport in sportsOptions" 
@@ -25,7 +63,10 @@
             :class="{ active: selectedSport === sport }"
             @click="selectSport(sport)"
           >
-            {{ sport }}
+            <div class="sport-info">
+              <span class="sport-name">{{ sport }}</span>
+              <span class="court-count">{{ getCourtsForSport(sport).length }} court(s)</span>
+            </div>
           </div>
         </div>
       </div>
@@ -33,9 +74,10 @@
       <!-- Court Selection -->
       <div v-if="selectedSport" class="booking-section">
         <h2 class="section-title">Select Court</h2>
+        <p class="section-subtitle">Available courts for {{ selectedSport }}</p>
         <div class="court-options">
           <div 
-            v-for="court in availableCourts" 
+            v-for="court in getCourtsForSport(selectedSport)" 
             :key="court.id"
             class="court-option"
             :class="{ active: selectedCourt?.id === court.id }"
@@ -43,9 +85,15 @@
           >
             <div class="court-info">
               <h3>{{ court.name }}</h3>
-              <p>{{ court.price }} EGP/hour</p>
+              <p class="court-location">{{ court.location }}</p>
+              <p class="court-details">
+                <span class="court-type">{{ court.type }}</span>
+                <span class="court-surface">{{ formatSurface(court.surface) }}</span>
+                <span class="court-capacity">{{ court.capacity }} people</span>
+              </p>
             </div>
-            <div class="court-status">
+            <div class="court-pricing">
+              <span class="price">{{ court.hourlyRate }} EGP/hour</span>
               <span class="status-badge available">Available</span>
             </div>
           </div>
@@ -55,6 +103,7 @@
       <!-- Date Selection -->
       <div v-if="selectedCourt" class="booking-section">
         <h2 class="section-title">Select Date</h2>
+        <p class="section-subtitle">Choose from the next 7 days</p>
         <div class="date-options">
           <div 
             v-for="day in availableDays" 
@@ -73,6 +122,7 @@
       <!-- Time Selection -->
       <div v-if="selectedDay && selectedCourt" class="booking-section">
         <h2 class="section-title">Select Time Slots</h2>
+        <p class="section-subtitle">Available time slots for {{ formatDate(selectedDay) }}</p>
         <div class="time-options">
           <div 
             v-for="slot in availableTimeSlots" 
@@ -86,6 +136,7 @@
             :style="{ pointerEvents: slot.isReserved ? 'none' : 'auto' }"
           >
             {{ slot.time }}
+            <span v-if="slot.isReserved" class="reserved-label">Booked</span>
           </div>
         </div>
       </div>
@@ -121,8 +172,9 @@
             <span class="value">{{ totalPrice }} EGP</span>
           </div>
         </div>
-        <button class="confirm-booking-btn" @click="confirmBooking">
-          Confirm Booking
+        <button class="confirm-booking-btn" @click="confirmBooking" :disabled="isSubmitting">
+          <span v-if="isSubmitting">Processing...</span>
+          <span v-else>Confirm Booking</span>
         </button>
       </div>
     </div>
@@ -130,10 +182,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useSportsStore } from 'src/stores/sportsStore';
+import { useProjectStore } from 'src/stores/projectStore';
 import bookingService from 'src/services/bookingService';
+import { getAuth } from 'firebase/auth';
 
 // Component name for ESLint
 defineOptions({
@@ -142,29 +196,31 @@ defineOptions({
 
 const router = useRouter();
 const sportsStore = useSportsStore();
+const projectStore = useProjectStore();
 
 // Reactive data
 const selectedSport = ref(null);
 const selectedCourt = ref(null);
 const selectedDay = ref(null);
 const selectedSlots = ref([]);
+const loading = ref(false);
+const error = ref(null);
+const isSubmitting = ref(false);
 
 // Computed properties
+const projectId = computed(() => projectStore.selectedProject?.id);
+const projectName = computed(() => projectStore.selectedProject?.name);
 const sportsOptions = computed(() => sportsStore.sportsOptions);
-const availableCourts = computed(() => {
-  if (!selectedSport.value) return [];
-  return sportsStore.courtsBySport[selectedSport.value] || [];
-});
-
 const availableDays = computed(() => bookingService.generateAvailableDays());
+
 const availableTimeSlots = computed(() => {
-  if (!selectedDay.value) return [];
+  if (!selectedDay.value || !selectedCourt.value || !projectId.value) return [];
   return bookingService.generateTimeSlots();
 });
 
 const totalPrice = computed(() => {
   if (!selectedCourt.value || selectedSlots.value.length === 0) return 0;
-  return bookingService.calculatePrice(selectedCourt.value.price, selectedSlots.value);
+  return bookingService.calculatePrice(selectedCourt.value.hourlyRate, selectedSlots.value);
 });
 
 // Methods
@@ -181,9 +237,24 @@ const selectCourt = (court) => {
   selectedSlots.value = [];
 };
 
-const selectDay = (day) => {
+const selectDay = async (day) => {
   selectedDay.value = day;
   selectedSlots.value = [];
+  
+  // Fetch available time slots for the selected court and date
+  if (selectedCourt.value && projectId.value) {
+    try {
+      await bookingService.getAvailableTimeSlots(
+        projectId.value,
+        selectedCourt.value.id,
+        day.toISOString().split('T')[0]
+      );
+      // Update the time slots with availability information
+      // This would need to be handled in the store or component state
+    } catch (error) {
+      console.error('Error fetching available time slots:', error);
+    }
+  }
 };
 
 const toggleSlotSelection = (time) => {
@@ -199,25 +270,59 @@ const formatDate = (date) => {
   return bookingService.formatDate(date);
 };
 
+const formatSurface = (surface) => {
+  if (!surface) return 'Unknown';
+  return surface.charAt(0).toUpperCase() + surface.slice(1).replace(/([A-Z])/g, ' $1');
+};
+
+const getCourtsForSport = (sportName) => {
+  return sportsStore.getCourtsForSport(sportName);
+};
+
+const retryFetch = async () => {
+  await fetchSports();
+};
+
 const confirmBooking = async () => {
+  if (!projectId.value) {
+    alert('No project selected. Please select a project first.');
+    return;
+  }
+
+  // Check if user is authenticated
+  const auth = getAuth();
+  if (!auth.currentUser) {
+    alert('Please log in to book a court.');
+    return;
+  }
+
   try {
     if (!selectedSport.value || !selectedCourt.value || !selectedDay.value || selectedSlots.value.length === 0) {
       alert('Please complete all selections before confirming');
       return;
     }
 
+    isSubmitting.value = true;
+
     const bookingData = {
-      userId: 'current-user-id', // This should come from auth store
+      userId: auth.currentUser.uid,
       sport: selectedSport.value,
       courtId: selectedCourt.value.id,
       courtName: selectedCourt.value.name,
       date: selectedDay.value.toISOString().split('T')[0],
       timeSlots: selectedSlots.value,
       totalPrice: totalPrice.value,
-      sportType: selectedSport.value
+      sportType: selectedSport.value,
+      courtLocation: selectedCourt.value.location,
+      courtType: selectedCourt.value.type,
+      courtSurface: selectedCourt.value.surface
     };
 
-    const result = await bookingService.createCourtBooking(bookingData);
+    console.log('Creating booking with data:', bookingData);
+    console.log('User ID:', auth.currentUser.uid);
+    console.log('Project ID:', projectId.value);
+
+    const result = await bookingService.createCourtBooking(projectId.value, bookingData);
     
     if (result.success) {
       alert('Booking confirmed successfully!');
@@ -226,12 +331,70 @@ const confirmBooking = async () => {
   } catch (error) {
     console.error('Error confirming booking:', error);
     alert('Failed to confirm booking. Please try again.');
+  } finally {
+    isSubmitting.value = false;
   }
 };
 
+const fetchSports = async () => {
+  if (!projectId.value) {
+    error.value = 'No project selected. Please select a project first.';
+    return;
+  }
+
+  try {
+    loading.value = true;
+    error.value = null;
+    await sportsStore.fetchSports(projectId.value);
+  } catch (err) {
+    error.value = 'Failed to load sports and courts. Please try again.';
+    console.error('Error fetching sports:', err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const debugSportsData = () => {
+  console.log('=== COURT BOOKING DEBUG ===');
+  console.log('Current Sports Options:', sportsStore.sportsOptions);
+  console.log('Current Project ID:', projectId.value);
+  console.log('Current Selected Sport:', selectedSport.value);
+  console.log('Current Selected Court:', selectedCourt.value);
+  console.log('Current Selected Day:', selectedDay.value);
+  console.log('Current Selected Slots:', selectedSlots.value);
+  
+  // Also call the store's debug method
+  sportsStore.debugSportsData();
+  
+  // Try to fetch sports again
+  console.log('Attempting to fetch sports again...');
+  fetchSports();
+};
+
+// Watch for project changes
+watch(projectId, (newProjectId) => {
+  if (newProjectId) {
+    // Clear previous selections when project changes
+    selectedSport.value = null;
+    selectedCourt.value = null;
+    selectedDay.value = null;
+    selectedSlots.value = [];
+    
+    // Fetch sports for the new project
+    fetchSports();
+  } else {
+    // Clear sports data when no project is selected
+    sportsStore.resetForNewProject();
+  }
+});
+
 // Lifecycle
 onMounted(async () => {
-  await sportsStore.fetchSports();
+  if (projectId.value) {
+    await fetchSports();
+  } else {
+    error.value = 'No project selected. Please select a project first.';
+  }
 });
 </script>
 
@@ -302,6 +465,12 @@ onMounted(async () => {
   margin: 0 0 20px 0;
 }
 
+.section-subtitle {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0 0 16px 0;
+}
+
 .sport-options {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -318,6 +487,10 @@ onMounted(async () => {
   transition: all 0.2s ease;
   font-weight: 500;
   color: #666;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 .sport-option:hover {
@@ -329,6 +502,24 @@ onMounted(async () => {
   background: #ff6b35;
   border-color: #ff6b35;
   color: white;
+}
+
+.sport-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sport-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.court-count {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 4px;
 }
 
 .court-options {
@@ -370,6 +561,43 @@ onMounted(async () => {
   margin: 0;
   font-size: 0.9rem;
   opacity: 0.8;
+}
+
+.court-location {
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.court-details {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 4px;
+}
+
+.court-type {
+  font-weight: 500;
+}
+
+.court-surface {
+  margin-left: 8px;
+}
+
+.court-capacity {
+  margin-left: 8px;
+}
+
+.court-pricing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.price {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #ff6b35;
 }
 
 .status-badge {
@@ -444,6 +672,10 @@ onMounted(async () => {
   transition: all 0.2s ease;
   font-weight: 500;
   color: #666;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .time-slot:hover:not(.reserved) {
@@ -463,6 +695,12 @@ onMounted(async () => {
   color: #721c24;
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+.reserved-label {
+  font-size: 0.75rem;
+  color: #dc3545;
+  font-weight: 500;
 }
 
 .booking-summary {
@@ -537,6 +775,123 @@ onMounted(async () => {
   transform: translateY(-1px);
 }
 
+.confirm-booking-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  color: #888;
+}
+
+.loading-state, .error-state, .no-sports-state {
+  text-align: center;
+  padding: 40px 20px;
+  background: #f8f9fa;
+  border-radius: 16px;
+  border: 1px solid #e1e5e9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #ff6b35;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+.error-icon {
+  font-size: 4rem;
+  color: #dc3545;
+  margin-bottom: 16px;
+}
+
+.retry-btn {
+  background: #ff6b35;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.retry-btn:hover {
+  background: #e55a2b;
+}
+
+.no-sports-icon {
+  font-size: 4rem;
+  color: #ff6b35;
+  margin-bottom: 16px;
+}
+
+.no-project-state, .no-sports-state {
+  text-align: center;
+  padding: 40px 20px;
+  background: #f8f9fa;
+  border-radius: 16px;
+  border: 1px solid #e1e5e9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.no-project-icon, .no-sports-icon {
+  font-size: 4rem;
+  color: #ff6b35;
+  margin-bottom: 16px;
+}
+
+.no-project-state h3, .no-sports-state h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.no-project-state p, .no-sports-state p {
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.select-project-btn {
+  background: #ff6b35;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 16px;
+}
+
+.select-project-btn:hover {
+  background: #e55a2b;
+  transform: translateY(-2px);
+}
+
+.debug-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 16px;
+}
+
+.debug-btn:hover {
+  background: #0056b3;
+  transform: translateY(-2px);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .court-booking-page {
@@ -578,5 +933,10 @@ onMounted(async () => {
     gap: 12px;
     text-align: center;
   }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>

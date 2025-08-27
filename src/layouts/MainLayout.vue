@@ -20,6 +20,16 @@
             <span>Loading projects...</span>
           </div>
           
+          <!-- Restoring Project State -->
+          <div v-else-if="!projectStore.loading && !currentProject && projectStore.userProjects.length > 0" class="restoring-project">
+            <div class="loading-dots">
+              <div class="dot"></div>
+              <div class="dot"></div>
+              <div class="dot"></div>
+            </div>
+            <span>Restoring project...</span>
+          </div>
+          
           <!-- Current Project Display -->
           <div v-else-if="currentProject" class="current-project">
             <span class="project-label">Project:</span>
@@ -184,9 +194,11 @@ onMounted(async () => {
   const auth = getAuth()
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
     if (user) {
-      // Only fetch if we don't have projects or if cache is expired
-      if (projectStore.userProjects.length === 0) {
-        await projectStore.fetchUserProjects(user.uid)
+      // Rehydrate the store (fetch projects and restore selection)
+      const restored = await projectStore.rehydrateStore(user.uid)
+      
+      if (!restored) {
+        console.log('No project restored, user needs to select a project')
       }
     }
   })
@@ -252,6 +264,18 @@ onMounted(async () => {
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+}
+
+.restoring-project {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 193, 7, 0.1);
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 193, 7, 0.2);
+  color: rgba(255, 193, 7, 0.8);
   font-size: 0.875rem;
 }
 
