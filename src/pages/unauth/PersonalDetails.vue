@@ -212,21 +212,6 @@
           <span v-else>Continue</span>
         </button>
       </form>
-
-      <!-- Navigation Options -->
-      <div class="step-navigation">
-        <div class="nav-divider">
-          <span>or</span>
-        </div>
-        <div class="nav-options">
-          <button @click="goToSignIn" class="nav-btn secondary">
-            Already have an account? Sign In
-          </button>
-          <button @click="goToOnboarding" class="nav-btn secondary">
-            Back to Onboarding
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
