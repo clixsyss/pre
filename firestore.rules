@@ -43,6 +43,172 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
     
+    // PROJECT-SPECIFIC COLLECTIONS - New Architecture
+    // These rules allow authenticated users to access data within specific projects
+    
+    // Project Users - users can access user data within their project
+    match /projects/{projectId}/users/{userId} {
+      allow read, write: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    
+    // Allow listing project users
+    match /projects/{projectId}/users {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Sports - allow authenticated users to read/write within project
+    match /projects/{projectId}/sports/{sportId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project sports
+    match /projects/{projectId}/sports {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Courts - allow authenticated users to read/write within project
+    match /projects/{projectId}/courts/{courtId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project courts
+    match /projects/{projectId}/courts {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Academies - allow authenticated users to read/write within project
+    match /projects/{projectId}/academies/{academyId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project academies
+    match /projects/{projectId}/academies {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Bookings - users can read/write their own bookings within project
+    match /projects/{projectId}/bookings/{bookingId} {
+      allow read, write: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    
+    // Allow listing project bookings
+    match /projects/{projectId}/bookings {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Events - allow authenticated users to read/write within project
+    match /projects/{projectId}/events/{eventId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project events
+    match /projects/{projectId}/events {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Store Management - allow authenticated users to read/write within project
+    match /projects/{projectId}/stores/{storeId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project stores
+    match /projects/{projectId}/stores {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Products - allow authenticated users to read/write within project
+    match /projects/{projectId}/products/{productId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project products
+    match /projects/{projectId}/products {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Product Categories - allow authenticated users to read/write within project
+    match /projects/{projectId}/productCategories/{categoryId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project product categories
+    match /projects/{projectId}/productCategories {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Orders - users can read/write their own orders within project
+    match /projects/{projectId}/orders/{orderId} {
+      allow read, write: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    
+    // Allow listing project orders
+    match /projects/{projectId}/orders {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Gate Passes - users can read/write their own gate passes within project
+    match /projects/{projectId}/gatePasses/{gatePassId} {
+      allow read, write: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    
+    // Allow listing project gate passes
+    match /projects/{projectId}/gatePasses {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Notifications - users can read/write their own notifications within project
+    match /projects/{projectId}/notifications/{notificationId} {
+      allow read, write: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    
+    // Allow listing project notifications
+    match /projects/{projectId}/notifications {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Dining/Shops - allow authenticated users to read/write within project
+    match /projects/{projectId}/shops/{shopId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project shops
+    match /projects/{projectId}/shops {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Dining Categories - allow authenticated users to read/write within project
+    match /projects/{projectId}/categories/{categoryId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project dining categories
+    match /projects/{projectId}/categories {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Dining Products - allow authenticated users to read/write within project
+    match /projects/{projectId}/shops/{shopId}/products/{productId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project dining products
+    match /projects/{projectId}/shops/{shopId}/products {
+      allow list: if request.auth != null;
+    }
+    
+    // LEGACY COLLECTIONS - Keep for backward compatibility
+    // These are the old global collections that might still exist
+    
     // Academies collection - allow authenticated users to read
     match /academies/{academyId} {
       allow read: if request.auth != null;
@@ -138,7 +304,5 @@ service cloud.firestore {
     match /courtBookings {
       allow list: if request.auth != null;
     }
-    
-
   }
 }
