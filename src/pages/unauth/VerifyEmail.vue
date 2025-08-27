@@ -14,6 +14,9 @@
       </div>
     </div>
 
+    <!-- Orange Separator Line -->
+    <div class="separator-line"></div>
+
     <!-- Progress Indicator -->
     <div class="progress-indicator">
       <div class="progress-line"></div>
@@ -40,7 +43,7 @@
 
       <!-- Property Step -->
       <div class="progress-step"
-        :class="{ active: activeTab === 'property', completed: false, disabled: !isEmailVerified }"
+        :class="{ active: activeTab === 'property', completed: isEmailVerified && isPersonalDetailsCompleted(), disabled: !isEmailVerified || !isPersonalDetailsCompleted() }"
         @click="handlePropertyTabClick">
         <div class="step-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -179,13 +182,14 @@
         <div class="verification-instructions">
           <h3>Property Information</h3>
           <p v-if="!isEmailVerified">You need to verify your email address first before you can add properties.</p>
-          <p v-else>You need to complete your personal information before you can add properties.</p>
+          <p v-else-if="!isPersonalDetailsCompleted()">You need to complete your personal information before you can add properties.</p>
+          <p v-else>Great! You can now add your properties.</p>
           <div class="verification-tips">
             <p><strong>Next steps:</strong></p>
             <ul>
               <li v-if="!isEmailVerified">Verify your email address (Personal tab)</li>
-              <li v-else>Complete your personal details</li>
-              <li>Then return here to add your properties</li>
+              <li v-else-if="!isPersonalDetailsCompleted()">Complete your personal details (Personal tab)</li>
+              <li v-else>Add your properties below</li>
             </ul>
           </div>
         </div>
@@ -201,11 +205,59 @@
               <h3>Ready to Add Properties?</h3>
             </div>
             <p v-if="!isEmailVerified">Switch to the Personal tab to verify your email first.</p>
-            <p v-else>Switch to the Personal tab to complete your personal information first.</p>
-            <button @click="activeTab = 'personal'" class="action-btn primary">
+            <p v-else-if="!isPersonalDetailsCompleted()">Switch to the Personal tab to complete your personal information first.</p>
+            <p v-else>You're all set! Add your properties below.</p>
+            <button v-if="!isEmailVerified || !isPersonalDetailsCompleted()" @click="activeTab = 'personal'" class="action-btn primary">
               Go to Personal Tab
             </button>
           </div>
+        </div>
+
+        <!-- Property Form (shown when email is verified AND personal details are completed) -->
+        <div v-if="isEmailVerified && isPersonalDetailsCompleted()" class="property-form">
+          <h3>Add Your Properties</h3>
+          <p>Great! Now you can add your properties. This information will be used to determine your access to different projects.</p>
+          
+          <form @submit.prevent="savePropertyDetails" class="form-grid">
+            <div class="form-group">
+              <label for="compound">Compound *</label>
+              <input 
+                id="compound" 
+                v-model="propertyForm.compound" 
+                type="text" 
+                required 
+                placeholder="Enter compound name"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="unit">Unit *</label>
+              <input 
+                id="unit" 
+                v-model="propertyForm.unit" 
+                type="text" 
+                required 
+                placeholder="Enter unit number"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="role">Role *</label>
+              <select id="role" v-model="propertyForm.role" required>
+                <option value="">Select your role</option>
+                <option value="owner">Owner</option>
+                <option value="tenant">Tenant</option>
+                <option value="resident">Resident</option>
+              </select>
+            </div>
+            
+            <div class="form-actions">
+              <button type="submit" class="action-btn primary" :disabled="savingProperty">
+                <span v-if="savingProperty">Saving...</span>
+                <span v-else>Save Property Details</span>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -240,6 +292,14 @@ const formData = reactive({
   email: '',
   verificationCode: ''
 })
+
+const propertyForm = reactive({
+  compound: '',
+  unit: '',
+  role: ''
+})
+
+const savingProperty = ref(false)
 
 // Function to update user data in Firestore when email is verified
 const updateEmailVerificationInFirestore = async (userId) => {
@@ -392,11 +452,11 @@ const handleEmailVerified = async (userId) => {
   isEmailVerified.value = true
   
   // Show success message
-  notificationStore.showSuccess('Email verified! You can now complete your personal information.')
+  notificationStore.showSuccess('Email verified! Redirecting to personal details...')
   
-  // Navigate to next step after a short delay to show the success message
+  // Redirect to PersonalDetails.vue to complete personal information
   setTimeout(() => {
-    router.push('/register')
+    router.push('/personal-details')
   }, 1500)
 }
 
@@ -427,10 +487,68 @@ const goToPersonalDetails = () => {
   router.push('/register')
 }
 
+// Check if personal details are completed
+const isPersonalDetailsCompleted = () => {
+  const userDetails = registrationStore.userDetails
+  return userDetails.firstName && userDetails.lastName && userDetails.mobile && 
+         userDetails.dateOfBirth && userDetails.nationalId
+}
+
 // Function to manually check verification status (useful for testing)
 const manualCheckVerification = async () => {
   console.log('Manual verification check triggered')
   await checkVerificationStatus()
+}
+
+// Function to save property details
+const savePropertyDetails = async () => {
+  if (savingProperty.value) return
+  
+  // Validate required fields
+  if (!propertyForm.compound || !propertyForm.unit || !propertyForm.role) {
+    notificationStore.showError('Please fill in all required property fields')
+    return
+  }
+  
+  savingProperty.value = true
+  
+  try {
+    // Save property data to store
+    registrationStore.setPropertyData({
+      compound: propertyForm.compound,
+      unit: propertyForm.unit,
+      role: propertyForm.role
+    })
+    
+    // Update Firestore with property information
+    if (auth.currentUser) {
+      const userDocRef = doc(db, 'users', auth.currentUser.uid)
+      
+      const updateDocument = {
+        propertyDetails: {
+          compound: propertyForm.compound,
+          unit: propertyForm.unit,
+          role: propertyForm.role
+        },
+        registrationStep: 'property_completed',
+        updatedAt: serverTimestamp()
+      }
+      
+      await setDoc(userDocRef, updateDocument, { merge: true })
+      
+      notificationStore.showSuccess('Property details saved successfully!')
+      
+      // Navigate to onboarding or next step
+      setTimeout(() => {
+        router.push('/onboarding')
+      }, 1500)
+    }
+  } catch (error) {
+    console.error('Error saving property details:', error)
+    notificationStore.showError('Failed to save property details. Please try again.')
+  } finally {
+    savingProperty.value = false
+  }
 }
 
 const handlePropertyTabClick = () => {
@@ -447,6 +565,13 @@ const handlePropertyTabClick = () => {
     }
     return
   }
+  
+  if (!isPersonalDetailsCompleted()) {
+    notificationStore.showInfo('Please complete your personal information first before accessing the Property tab.')
+    activeTab.value = 'personal'
+    return
+  }
+  
   activeTab.value = 'property'
 }
 
@@ -546,6 +671,14 @@ const resendCode = async () => {
   margin-right: auto;
 }
 
+.separator-line {
+  height: 3px;
+  background-color: #ff6b35;
+  margin: 0;
+  width: 100%;
+  margin-bottom: 0;
+}
+
 .progress-line {
   position: absolute;
   height: 2px;
@@ -587,13 +720,13 @@ const resendCode = async () => {
 .progress-step.completed .step-icon {
   background-color: #e1e5e9;
   border-color: #e1e5e9;
-  color: #ff6b35;
+  color: #2196F3;
   width: 48px;
   height: 48px;
 }
 
 .progress-step.completed .step-label {
-  color: #ff6b35;
+  color: #2196F3;
   font-weight: 600;
   font-size: 1rem;
   margin-top: 12px;
@@ -726,6 +859,62 @@ const resendCode = async () => {
   margin: 8px 0;
   font-size: 0.8rem;
   color: #856404;
+}
+
+.property-form {
+  margin-top: 30px;
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid #e1e5e9;
+}
+
+.property-form h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.property-form p {
+  margin: 0 0 20px 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.form-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group select {
+  padding: 12px;
+  border: 2px solid #e1e5e9;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #ff6b35;
+}
+
+.form-actions {
+  margin-top: 20px;
 }
 
 .note {

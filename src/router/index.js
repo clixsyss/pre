@@ -53,6 +53,7 @@ const routes = [
     component: PersonalDetails,
     meta: { requiresAuth: false }
   },
+
   {
     path: '/support',
     name: 'Support',

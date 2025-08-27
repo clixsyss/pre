@@ -19,6 +19,38 @@
       <button class="tab-btn">Property</button>
     </div>
 
+    <!-- Orange Separator Line -->
+    <div class="separator-line"></div>
+
+    <!-- Progress Indicator -->
+    <div class="progress-indicator">
+      <div class="progress-line"></div>
+
+      <!-- Personal Step -->
+      <div class="progress-step" :class="{ active: true, completed: true }">
+        <div class="step-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 6L9 17L4 12" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <span class="step-label">Personal</span>
+      </div>
+
+      <!-- Property Step -->
+      <div class="progress-step" :class="{ active: false, completed: false }">
+        <div class="step-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+        </div>
+        <span class="step-label">Property</span>
+      </div>
+    </div>
+
     <!-- Completion Info -->
     <div class="completion-info">
       <div class="info-icon">
@@ -226,7 +258,6 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../../boot/firebase'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
-import { signOut } from 'firebase/auth'
 
 // Component name for ESLint
 defineOptions({
@@ -392,18 +423,18 @@ const handleSubmit = async () => {
       await updateUserDetailsInFirestore(userId, userDetails)
       
       // Show success notification
-      notificationStore.showSuccess('Registration completed successfully! Please sign in with your new account.')
+      notificationStore.showSuccess('Personal details saved successfully! Now let\'s complete your property information.')
       
       // TODO: Upload ID images to Firebase Storage
       
-      // Clear registration store
-      registrationStore.resetRegistration()
+      // Don't clear registration store or sign out yet - user needs to complete property details
+      // registrationStore.resetRegistration()
+      // await signOut(auth)
       
-      // Sign out the user since they need to log in with their new account
-      await signOut(auth)
-      
-      // Redirect to sign in page after successful registration
-      router.push('/signin')
+              // Redirect to Register.vue to complete property details
+        // The Register.vue will automatically detect that personal details are completed
+        // and show the property step
+        router.push('/register')
     } else {
       throw new Error('No authenticated user found. Please try again.')
     }
@@ -431,6 +462,130 @@ const handleSubmit = async () => {
 .personal-details-page {
   min-height: 100vh;
   background-color: #f8f9fa;
+}
+
+.separator-line {
+  height: 3px;
+  background-color: #ff6b35;
+  margin: 0;
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.progress-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 30px;
+  padding: 0 40px;
+  position: relative;
+  gap: 120px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.progress-line {
+  position: absolute;
+  height: 2px;
+  background-color: #e1e5e9;
+  width: 70%;
+  margin-left: 15%;
+  top: 30%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  border-radius: 8px;
+  min-width: 80px;
+}
+
+.progress-step.active .step-icon {
+  background-color: #000000;
+  border-color: #000000;
+  color: white;
+  width: 48px;
+  height: 48px;
+}
+
+.progress-step.active .step-label {
+  color: #000000;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 12px;
+}
+
+.progress-step.completed .step-icon {
+  background-color: #e1e5e9;
+  border-color: #e1e5e9;
+  color: #2196F3;
+  width: 48px;
+  height: 48px;
+}
+
+.progress-step.completed .step-label {
+  color: #2196F3;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 12px;
+}
+
+.progress-step:not(.active):not(.completed) .step-icon {
+  background-color: #e1e5e9;
+  border-color: #e1e5e9;
+  color: #999;
+  width: 48px;
+  height: 48px;
+}
+
+.progress-step:not(.active):not(.completed) .step-label {
+  color: #999;
+  font-weight: 500;
+  font-size: 1rem;
+  margin-top: 12px;
+}
+
+.step-icon {
+  border: 2px solid #e1e5e9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.step-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.progress-step.active .step-icon svg {
+  stroke: white;
+}
+
+.progress-step.completed .step-icon svg {
+  stroke: #2196F3;
+}
+
+.progress-step:not(.active):not(.completed) .step-icon svg {
+  stroke: #999;
+}
+
+.step-label {
+  font-weight: 500;
+  transition: all 0.3s ease;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .header {
