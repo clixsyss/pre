@@ -203,6 +203,39 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
         userBookings.value = [];
     };
 
+    const fetchAcademies = async (projectId) => {
+        try {
+            console.log('Fetching academies for project:', projectId);
+            
+            // Query academies for the specific project
+            const academiesRef = collection(db, `projects/${projectId}/academies`);
+            const academiesSnapshot = await getDocs(academiesRef);
+            
+            const academies = [];
+            academiesSnapshot.forEach((doc) => {
+                academies.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            console.log('Fetched academies:', academies);
+            academyOptions.value = academies;
+            
+            // Also populate programsByAcademy
+            academies.forEach(academy => {
+                if (academy.programs) {
+                    programsByAcademy.value[academy.id] = academy.programs;
+                }
+            });
+            
+            return academies;
+        } catch (error) {
+            console.error("Error fetching academies:", error);
+            throw error;
+        }
+    };
+
     return {
         academyOptions,
         programsByAcademy,
@@ -219,5 +252,6 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
         fetchUserBookings,
         clearUserBookings,
         createTestBooking,
+        fetchAcademies,
     };
 });

@@ -99,6 +99,24 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/academy-programs',
+    name: 'AcademyPrograms',
+    component: () => import('../pages/auth/AcademyPrograms.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/academy-details/:id',
+    name: 'AcademyDetails',
+    component: () => import('../pages/auth/AcademyDetails.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/academy-registration/:academyId/:programId',
+    name: 'AcademyRegistration',
+    component: () => import('../pages/auth/AcademyRegistration.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/my-bookings',
     name: 'MyBookings',
     component: () => import('../pages/auth/MyBookings.vue'),

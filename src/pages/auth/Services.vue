@@ -36,8 +36,8 @@
             </div>
           </div>
 
-          <!-- Academy Booking Service -->
-          <div class="service-card" @click="navigateToAcademyBooking">
+          <!-- Academy Programs Service -->
+          <div class="service-card" @click="navigateToAcademyPrograms">
             <div class="service-icon">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15C10.9391 15 9.92172 15.4214 9.17157 16.1716C8.42143 16.9217 8 17.9391 8 19V21" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -145,8 +145,8 @@ const navigateToCourtBooking = () => {
   router.push('/court-booking');
 };
 
-const navigateToAcademyBooking = () => {
-  router.push('/academy-booking');
+const navigateToAcademyPrograms = () => {
+  router.push('/academy-programs');
 };
 
 const navigateToMyBookings = () => {

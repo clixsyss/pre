@@ -35,6 +35,9 @@ const authenticatedRoutes = [
   '/services',
   '/court-booking',
   '/academy-booking',
+  '/academy-programs',
+  '/academy-details',
+  '/academy-registration',
   '/my-bookings',
   '/calendar',
   '/analytics',
@@ -43,7 +46,21 @@ const authenticatedRoutes = [
 
 // Check if current route should show main layout
 const isAuthenticatedPage = computed(() => {
-  return authenticatedRoutes.includes(route.path)
+  // Check exact matches first
+  if (authenticatedRoutes.includes(route.path)) {
+    return true
+  }
+  
+  // Check dynamic routes
+  if (route.path.startsWith('/academy-details/')) {
+    return true
+  }
+  
+  if (route.path.startsWith('/academy-registration/')) {
+    return true
+  }
+  
+  return false
 })
 </script>
 
