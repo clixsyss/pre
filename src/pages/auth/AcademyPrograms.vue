@@ -109,13 +109,13 @@
                     <span class="info-value">{{ programData.program.ageGroup }}</span>
                   </div>
                   
-                  <div class="info-item" v-if="programData.program.duration">
+                  <div class="info-item" v-if="programData.program.duration && (programData.program.pricingType === 'per-month' || programData.program.pricingType === 'per-week' || programData.program.pricingType === 'per-term')">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <circle cx="12" cy="12" r="10" stroke="#666" stroke-width="2"/>
                       <polyline points="12,6 12,12 16,14" stroke="#666" stroke-width="2"/>
                     </svg>
                     <span class="info-label">Duration:</span>
-                    <span class="info-value">{{ programData.program.duration }} months</span>
+                    <span class="info-value">{{ programData.program.duration }} {{ getDurationUnit(programData.program.pricingType) }}</span>
                   </div>
 
                   <div class="info-item" v-if="programData.program.maxCapacity">
@@ -176,8 +176,13 @@
                 <!-- Pricing and Registration -->
                 <div class="program-pricing">
                   <div class="pricing-info">
-                    <span class="monthly-price" v-if="programData.program.price">${{ programData.program.price }}/month</span>
-                    <span class="total-price" v-if="programData.program.price && programData.program.duration">
+                    <span class="price" v-if="programData.program.price">
+                      ${{ programData.program.price }}
+                      <span class="pricing-type">
+                        {{ getPricingTypeLabel(programData.program.pricingType) }}
+                      </span>
+                    </span>
+                    <span class="total-price" v-if="programData.program.price && programData.program.duration && (programData.program.pricingType === 'per-month' || programData.program.pricingType === 'per-week' || programData.program.pricingType === 'per-term')">
                       Total: ${{ programData.program.price * programData.program.duration }}
                     </span>
                   </div>
@@ -276,6 +281,26 @@ const toggleProgram = (programData) => {
 const registerForProgram = (programData) => {
   // Navigate to program registration page
   router.push(`/academy-registration/${programData.academyId}/${programData.program.id || programData.program.name}`);
+};
+
+const getPricingTypeLabel = (pricingType) => {
+  const labels = {
+    'per-session': '/session',
+    'per-week': '/week',
+    'per-month': '/month',
+    'per-term': '/term',
+    'one-time': 'one-time'
+  };
+  return labels[pricingType] || '/month';
+};
+
+const getDurationUnit = (pricingType) => {
+  const units = {
+    'per-week': 'weeks',
+    'per-month': 'months',
+    'per-term': 'terms'
+  };
+  return units[pricingType] || 'months';
 };
 
 // Lifecycle

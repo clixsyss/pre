@@ -46,17 +46,17 @@
               <span class="label">Age Group:</span>
               <span class="value">{{ program.ageGroup }}</span>
             </div>
-            <div class="detail-row" v-if="program.duration">
+            <div class="detail-row" v-if="program.duration && (program.pricingType === 'per-month' || program.pricingType === 'per-week' || program.pricingType === 'per-term')">
               <span class="label">Duration:</span>
-              <span class="value">{{ program.duration }} months</span>
+              <span class="value">{{ program.duration }} {{ getDurationUnit(program.pricingType) }}</span>
             </div>
             <div class="detail-row" v-if="program.maxCapacity">
               <span class="label">Max Capacity:</span>
               <span class="value">{{ program.maxCapacity }} students</span>
             </div>
             <div class="detail-row" v-if="program.price">
-              <span class="label">Monthly Fee:</span>
-              <span class="value">${{ program.price }}</span>
+              <span class="label">Price:</span>
+              <span class="value">${{ program.price }}{{ getPricingTypeLabel(program.pricingType) }}</span>
             </div>
             <div class="detail-row total">
               <span class="label">Total Cost:</span>
@@ -196,8 +196,25 @@ const academyId = computed(() => route.params.academyId);
 const programId = computed(() => route.params.programId);
 
 const totalCost = computed(() => {
-  if (!program.value?.price || !program.value?.duration) return 0;
-  return program.value.price * program.value.duration;
+  if (!program.value?.price) return 0;
+  
+  // For one-time pricing, total is just the price
+  if (program.value.pricingType === 'one-time') {
+    return program.value.price;
+  }
+  
+  // For per-session pricing, total is just the price (single session)
+  if (program.value.pricingType === 'per-session') {
+    return program.value.price;
+  }
+  
+  // For recurring pricing (weekly, monthly, term), calculate total if duration exists
+  if (program.value.duration && (program.value.pricingType === 'per-week' || program.value.pricingType === 'per-month' || program.value.pricingType === 'per-term')) {
+    return program.value.price * program.value.duration;
+  }
+  
+  // Default case: just show the price
+  return program.value.price;
 });
 
 // Methods
@@ -267,6 +284,26 @@ const submitRegistration = async () => {
   } finally {
     isSubmitting.value = false;
   }
+};
+
+const getPricingTypeLabel = (pricingType) => {
+  const labels = {
+    'per-session': '/session',
+    'per-week': '/week',
+    'per-month': '/month',
+    'per-term': '/term',
+    'one-time': ' one-time'
+  };
+  return labels[pricingType] || '/month';
+};
+
+const getDurationUnit = (pricingType) => {
+  const units = {
+    'per-week': 'weeks',
+    'per-month': 'months',
+    'per-term': 'terms'
+  };
+  return units[pricingType] || 'months';
 };
 
 // Lifecycle

@@ -166,7 +166,7 @@
               </div>
               <div class="program-price" v-if="program.price">
                 <span class="price-amount">${{ program.price }}</span>
-                <span class="price-period">/month</span>
+                <span class="price-period">{{ getPricingTypeLabel(program.pricingType) }}</span>
               </div>
             </div>
 
@@ -180,12 +180,12 @@
                   <span>{{ program.ageGroup }}</span>
                 </div>
                 
-                <div class="detail-item" v-if="program.duration">
+                <div class="detail-item" v-if="program.duration && (program.pricingType === 'per-month' || program.pricingType === 'per-week' || program.pricingType === 'per-term')">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="12" r="10" stroke="#666" stroke-width="2"/>
                     <polyline points="12,6 12,12 16,14" stroke="#666" stroke-width="2"/>
                   </svg>
-                  <span>{{ program.duration }} months</span>
+                  <span>{{ program.duration }} {{ getDurationUnit(program.pricingType) }}</span>
                 </div>
 
                 <div class="detail-item" v-if="program.maxCapacity">
@@ -320,6 +320,26 @@ const viewProgram = (program) => {
 const registerForProgram = (program) => {
   // Navigate to program registration page
   router.push(`/program-registration/${academyId.value}/${program.id || program.name}`);
+};
+
+const getPricingTypeLabel = (pricingType) => {
+  const labels = {
+    'per-session': '/session',
+    'per-week': '/week',
+    'per-month': '/month',
+    'per-term': '/term',
+    'one-time': 'one-time'
+  };
+  return labels[pricingType] || '/month';
+};
+
+const getDurationUnit = (pricingType) => {
+  const units = {
+    'per-week': 'weeks',
+    'per-month': 'months',
+    'per-term': 'terms'
+  };
+  return units[pricingType] || 'months';
 };
 
 // Lifecycle
