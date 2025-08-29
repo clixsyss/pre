@@ -205,7 +205,7 @@ const program = ref(null);
 
 // Get current user ID - this should be replaced with proper auth when available
 const getCurrentUserId = () => {
-  // Try to get from localStorage first (temporary solution)
+  // First, try to get from localStorage
   const userId = localStorage.getItem('currentUserId');
   if (userId) return userId;
   

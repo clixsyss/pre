@@ -55,6 +55,65 @@
         </button>
       </div>
 
+      <!-- Debug Info - Remove in production -->
+      <div v-if="projectId" class="debug-info">
+        <details open>
+          <summary>Debug: Raw Booking Data ({{ academiesStore.userBookings.length }} bookings)</summary>
+          <div class="debug-content">
+            <div v-if="academiesStore.userBookings.length === 0">
+              <p><strong>⚠️ No bookings found in store</strong></p>
+              <p>This means either:</p>
+              <ul>
+                <li>Data fetching failed</li>
+                <li>No bookings exist for this user</li>
+                <li>Store is not being updated</li>
+              </ul>
+            </div>
+            <div v-else>
+              <div v-for="(booking, index) in academiesStore.userBookings" :key="index" class="debug-booking">
+                <strong>Booking {{ index + 1 }}:</strong>
+                <pre>{{ JSON.stringify(booking, null, 2) }}</pre>
+              </div>
+            </div>
+            <div class="debug-stats">
+              <p><strong>Stats:</strong></p>
+              <p>• Total bookings: {{ academiesStore.userBookings.length }}</p>
+              <p>• Court bookings: {{ academiesStore.userBookings.filter(b => isCourtBooking(b)).length }}</p>
+              <p>• Academy bookings: {{ academiesStore.userBookings.filter(b => isAcademyBooking(b)).length }}</p>
+              <p>• Other types: {{ academiesStore.userBookings.filter(b => !isCourtBooking(b) && !isAcademyBooking(b)).length }}</p>
+              <p><strong>User Info:</strong></p>
+              <p>• Current User ID: {{ getCurrentUserId() }}</p>
+              <p>• Project ID: {{ projectId }}</p>
+              <p><strong>Store State:</strong></p>
+              <p>• Loading: {{ loading }}</p>
+              <p>• Error: {{ error }}</p>
+              <p>• Active Filter: {{ activeFilter }}</p>
+              <p>• Filtered Count: {{ filteredBookings.length }}</p>
+              <p><strong>Actions:</strong></p>
+              <button @click="refreshWithCorrectUserId" class="debug-btn">
+                🔄 Refresh with Correct User ID
+              </button>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- TEMPORARY: Direct Data Display for Testing -->
+      <div v-if="projectId && academiesStore.userBookings.length > 0" class="temp-data-display">
+        <h3>🔄 TEMPORARY: Direct Data Display (Testing)</h3>
+        <p>This section shows the raw data directly to test if the issue is with display logic:</p>
+        <div v-for="(booking, index) in academiesStore.userBookings" :key="index" class="temp-booking">
+          <h4>Raw Booking {{ index + 1 }}</h4>
+          <p><strong>ID:</strong> {{ booking.id }}</p>
+          <p><strong>Type:</strong> {{ booking.type || 'No type' }}</p>
+          <p><strong>Court Type:</strong> {{ booking.courtType || 'No court type' }}</p>
+          <p><strong>Program Name:</strong> {{ booking.programName || 'No program name' }}</p>
+          <p><strong>Student Name:</strong> {{ booking.studentName || 'No student name' }}</p>
+          <p><strong>Status:</strong> {{ booking.status || 'No status' }}</p>
+          <p><strong>Created:</strong> {{ formatDate(booking.createdAt) }}</p>
+        </div>
+      </div>
+
       <!-- Empty State -->
       <div v-else-if="filteredBookings.length === 0" class="empty-state">
         <div class="empty-icon">
@@ -112,6 +171,24 @@
                 <span class="detail-label">Price:</span>
                 <span class="detail-value">{{ booking.totalPrice || booking.price }} EGP</span>
               </div>
+              <!-- Academy-specific details -->
+              <div v-if="isAcademyBooking(booking) && booking.studentName" class="detail-item">
+                <span class="detail-label">Student:</span>
+                <span class="detail-value">{{ booking.studentName }}</span>
+              </div>
+              <div v-if="isAcademyBooking(booking) && booking.category" class="detail-item">
+                <span class="detail-label">Category:</span>
+                <span class="detail-value">{{ booking.category }}</span>
+              </div>
+              <!-- Court-specific details -->
+              <div v-if="isCourtBooking(booking) && booking.courtLocation" class="detail-item">
+                <span class="detail-label">Location:</span>
+                <span class="detail-value">{{ booking.courtLocation }}</span>
+              </div>
+              <div v-if="isCourtBooking(booking) && booking.courtType" class="detail-item">
+                <span class="detail-label">Type:</span>
+                <span class="detail-value">{{ booking.courtType }}</span>
+              </div>
             </div>
 
             <div class="booking-actions">
@@ -166,15 +243,15 @@
           </div>
 
           <div class="detail-section">
-            <h3>{{ selectedBooking.type === 'court' ? 'Court Details' : 'Program Details' }}</h3>
+            <h3>{{ isCourtBooking(selectedBooking) ? 'Court Details' : 'Program Details' }}</h3>
             <div class="detail-grid">
               <div class="detail-item">
-                <span class="label">{{ selectedBooking.type === 'court' ? 'Sport:' : 'Program:' }}</span>
-                <span class="value">{{ selectedBooking.type === 'court' ? selectedBooking.sport : selectedBooking.programName }}</span>
+                <span class="label">{{ isCourtBooking(selectedBooking) ? 'Sport:' : 'Program:' }}</span>
+                <span class="value">{{ isCourtBooking(selectedBooking) ? (selectedBooking.sport || 'Court Sport') : selectedBooking.programName }}</span>
               </div>
               <div class="detail-item">
-                <span class="label">{{ selectedBooking.type === 'court' ? 'Court:' : 'Academy:' }}</span>
-                <span class="value">{{ selectedBooking.type === 'court' ? selectedBooking.courtName : selectedBooking.academyName }}</span>
+                <span class="label">{{ isCourtBooking(selectedBooking) ? 'Court:' : 'Academy:' }}</span>
+                <span class="value">{{ isCourtBooking(selectedBooking) ? (selectedBooking.courtName || `${selectedBooking.courtType} Court`) : selectedBooking.academyName }}</span>
               </div>
               <div class="detail-item">
                 <span class="label">Date:</span>
@@ -188,27 +265,52 @@
                 <span class="label">Price:</span>
                 <span class="value">{{ selectedBooking.totalPrice || selectedBooking.price }} EGP</span>
               </div>
+              <!-- Additional academy-specific details -->
+              <div v-if="selectedBooking.type === 'academy' && selectedBooking.category" class="detail-item">
+                <span class="label">Category:</span>
+                <span class="value">{{ selectedBooking.category }}</span>
+              </div>
+              <div v-if="selectedBooking.type === 'academy' && selectedBooking.ageGroup" class="detail-item">
+                <span class="label">Age Group:</span>
+                <span class="value">{{ selectedBooking.ageGroup }}</span>
+              </div>
+              <div v-if="selectedBooking.type === 'academy' && selectedBooking.duration" class="detail-item">
+                <span class="label">Duration:</span>
+                <span class="value">{{ selectedBooking.duration }} {{ getDurationUnit(selectedBooking.pricingType) }}</span>
+              </div>
+              <div v-if="selectedBooking.type === 'academy' && selectedBooking.pricingType" class="detail-item">
+                <span class="label">Pricing:</span>
+                <span class="value">{{ getPricingTypeLabel(selectedBooking.pricingType) }}</span>
+              </div>
             </div>
           </div>
 
-          <div v-if="selectedBooking.type === 'academy' && selectedBooking.participant" class="detail-section">
-            <h3>Participant Information</h3>
+          <div v-if="isAcademyBooking(selectedBooking)" class="detail-section">
+            <h3>Student Information</h3>
             <div class="detail-grid">
               <div class="detail-item">
-                <span class="label">Name:</span>
-                <span class="value">{{ selectedBooking.participant.fullName }}</span>
+                <span class="label">Student Name:</span>
+                <span class="value">{{ selectedBooking.studentName || 'N/A' }}</span>
               </div>
               <div class="detail-item">
-                <span class="label">Email:</span>
-                <span class="value">{{ selectedBooking.participant.email }}</span>
+                <span class="label">Student Age:</span>
+                <span class="value">{{ selectedBooking.studentAge || 'N/A' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Parent/Guardian:</span>
+                <span class="value">{{ selectedBooking.parentName || 'N/A' }}</span>
               </div>
               <div class="detail-item">
                 <span class="label">Phone:</span>
-                <span class="value">{{ selectedBooking.participant.phone }}</span>
+                <span class="value">{{ selectedBooking.phone || 'N/A' }}</span>
               </div>
               <div class="detail-item">
-                <span class="label">Age:</span>
-                <span class="value">{{ selectedBooking.participant.age }}</span>
+                <span class="label">Email:</span>
+                <span class="value">{{ selectedBooking.email || 'N/A' }}</span>
+              </div>
+              <div v-if="selectedBooking.notes" class="detail-item">
+                <span class="label">Notes:</span>
+                <span class="value">{{ selectedBooking.notes }}</span>
               </div>
             </div>
           </div>
@@ -253,15 +355,51 @@ const error = ref(null);
 const activeFilter = ref('all');
 const selectedBooking = ref(null);
 
+// Get current user ID - this should be replaced with proper auth when available
+const getCurrentUserId = () => {
+  // First, try to get from existing bookings (most reliable)
+  if (academiesStore.userBookings.length > 0) {
+    const existingUserId = academiesStore.userBookings[0].userId;
+    if (existingUserId) {
+      console.log('Using existing user ID from bookings:', existingUserId);
+      return existingUserId;
+    }
+  }
+  
+  // Try to get from localStorage
+  const userId = localStorage.getItem('currentUserId');
+  if (userId) return userId;
+  
+  // If no user ID found, generate a temporary one (this should be replaced with proper auth)
+  const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  localStorage.setItem('currentUserId', tempUserId);
+  return tempUserId;
+};
+
 // Computed properties
 const projectId = computed(() => projectStore.selectedProject?.id);
 const projectName = computed(() => projectStore.selectedProject?.name);
 
 const filteredBookings = computed(() => {
+  console.log('=== filteredBookings computed ===');
+  console.log('Active filter:', activeFilter.value);
+  console.log('Total bookings in store:', academiesStore.userBookings.length);
+  console.log('Raw bookings:', academiesStore.userBookings);
+  
+  let result;
   if (activeFilter.value === 'all') {
-    return academiesStore.userBookings;
+    result = academiesStore.userBookings;
+  } else if (activeFilter.value === 'court') {
+    result = academiesStore.userBookings.filter(booking => isCourtBooking(booking));
+  } else if (activeFilter.value === 'academy') {
+    result = academiesStore.userBookings.filter(booking => isAcademyBooking(booking));
+  } else {
+    result = academiesStore.userBookings;
   }
-  return academiesStore.userBookings.filter(booking => booking.type === activeFilter.value);
+  
+  console.log('Filtered result:', result);
+  console.log('Result count:', result.length);
+  return result;
 });
 
 // Methods
@@ -270,11 +408,43 @@ const setFilter = (filter) => {
 };
 
 const getTypeLabel = (type) => {
-  return type === 'court' ? 'Court' : 'Academy';
+  if (type === 'court') return 'Court';
+  if (type === 'academy') return 'Academy';
+  return 'Service';
 };
 
 const getTypeClass = (type) => {
-  return type === 'court' ? 'court-type' : 'academy-type';
+  if (type === 'court') return 'court-type';
+  if (type === 'academy') return 'academy-type';
+  return 'other-type';
+};
+
+// Helper function to detect court bookings by their data structure
+const isCourtBooking = (booking) => {
+  const result = booking.type === 'court' || 
+         (booking.courtType && (booking.courtLocation || booking.bookingTime));
+  console.log('isCourtBooking check:', { 
+    id: booking.id, 
+    type: booking.type, 
+    courtType: booking.courtType, 
+    courtLocation: booking.courtLocation, 
+    result 
+  });
+  return result;
+};
+
+// Helper function to detect academy bookings by their data structure
+const isAcademyBooking = (booking) => {
+  const result = booking.type === 'academy' || 
+         (booking.programName && (booking.studentName || booking.academyName));
+  console.log('isAcademyBooking check:', { 
+    id: booking.id, 
+    type: booking.type, 
+    programName: booking.programName, 
+    studentName: booking.studentName, 
+    result 
+  });
+  return result;
 };
 
 const getStatusLabel = (status) => {
@@ -282,6 +452,7 @@ const getStatusLabel = (status) => {
     'confirmed': 'Confirmed',
     'pending': 'Pending',
     'cancelled': 'Cancelled',
+    'completed': 'Completed',
     'enrolled': 'Enrolled'
   };
   return statusMap[status] || status;
@@ -292,24 +463,32 @@ const getStatusClass = (status) => {
     'confirmed': 'confirmed',
     'pending': 'pending',
     'cancelled': 'cancelled',
-    'enrolled': 'enrolled'
+    'enrolled': 'enrolled',
+    'completed': 'completed'
   };
   return statusMap[status] || 'pending';
 };
 
 const getBookingTitle = (booking) => {
-  if (booking.type === 'court') {
-    return `${booking.sport} - ${booking.courtName}`;
+  if (isCourtBooking(booking)) {
+    const sport = booking.sport || 'Court';
+    const courtName = booking.courtName || `${booking.courtType} Court`;
+    return `${sport} - ${courtName}`;
+  } else if (isAcademyBooking(booking)) {
+    return booking.programName || 'Academy Program';
   } else {
-    return booking.programName;
+    return 'Service Booking';
   }
 };
 
 const getBookingSubtitle = (booking) => {
-  if (booking.type === 'court') {
+  if (isCourtBooking(booking)) {
     return `Court Booking`;
+  } else if (isAcademyBooking(booking)) {
+    const academy = booking.academyName || 'Academy';
+    return `${academy} Program`;
   } else {
-    return `${booking.academyName} Academy`;
+    return 'Service';
   }
 };
 
@@ -332,17 +511,58 @@ const formatBookingDate = (booking) => {
       month: 'long',
       day: 'numeric'
     });
+  } else if (booking.bookingDate) {
+    const d = new Date(booking.bookingDate);
+    return d.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } else if (booking.createdAt) {
+    const d = new Date(booking.createdAt);
+    return d.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   }
   return 'N/A';
 };
 
 const getBookingTime = (booking) => {
-  if (booking.type === 'court' && booking.timeSlots) {
-    return booking.timeSlots.join(', ');
-  } else if (booking.type === 'academy') {
+  if (isCourtBooking(booking)) {
+    if (booking.timeSlots && Array.isArray(booking.timeSlots)) {
+      return booking.timeSlots.join(', ');
+    } else if (booking.bookingTime) {
+      return booking.bookingTime;
+    }
+    return 'Time not specified';
+  } else if (isAcademyBooking(booking)) {
     return 'Program Schedule';
   }
   return 'N/A';
+};
+
+const getPricingTypeLabel = (pricingType) => {
+  const labels = {
+    'per-session': '/session',
+    'per-week': '/week',
+    'per-month': '/month',
+    'per-term': '/term',
+    'one-time': ' one-time'
+  };
+  return labels[pricingType] || '/month';
+};
+
+const getDurationUnit = (pricingType) => {
+  const units = {
+    'per-week': 'weeks',
+    'per-month': 'months',
+    'per-term': 'terms'
+  };
+  return units[pricingType] || 'months';
 };
 
 const canCancel = (booking) => {
@@ -375,6 +595,25 @@ const navigateToServices = () => {
   router.push('/services');
 };
 
+const refreshWithCorrectUserId = async () => {
+  console.log('=== Manual refresh with correct user ID ===');
+  
+  // Get the user ID from the existing court booking
+  if (academiesStore.userBookings.length > 0) {
+    const correctUserId = academiesStore.userBookings[0].userId;
+    console.log('Correct user ID from existing booking:', correctUserId);
+    
+    // Update localStorage to use this ID
+    localStorage.setItem('currentUserId', correctUserId);
+    console.log('Updated localStorage with correct user ID');
+    
+    // Refresh the data
+    await fetchUserBookings();
+  } else {
+    console.log('No existing bookings to get user ID from');
+  }
+};
+
 
 
 
@@ -383,9 +622,16 @@ const navigateToServices = () => {
 
 // Lifecycle
 onMounted(async () => {
+  console.log('=== MyBookings Component Mounted ===');
+  console.log('Project ID:', projectId.value);
+  console.log('Project Name:', projectName.value);
+  console.log('Current user ID:', getCurrentUserId());
+  
   if (projectId.value) {
+    console.log('Project found, fetching bookings...');
     await fetchUserBookings();
   } else {
+    console.log('No project selected');
     error.value = 'No project selected. Please select a project first.';
     loading.value = false;
   }
@@ -410,21 +656,51 @@ const fetchUserBookings = async () => {
   }
   
   try {
-    console.log('Fetching user bookings for project:', projectId.value);
+    console.log('=== fetchUserBookings START ===');
+    console.log('Project ID:', projectId.value);
+    console.log('Loading state before:', loading.value);
     loading.value = true;
+    
     const auth = getAuth();
+    console.log('Auth state:', auth.currentUser ? 'Authenticated' : 'Not authenticated');
+    
+    let userId;
     if (auth.currentUser) {
-      console.log('User authenticated:', auth.currentUser.uid);
-      await academiesStore.fetchUserBookings(auth.currentUser.uid, projectId.value);
-      console.log('User bookings fetched:', academiesStore.userBookings);
+      userId = auth.currentUser.uid;
+      console.log('Using authenticated user ID:', userId);
     } else {
-      console.log('No authenticated user found');
+      // Try to get user ID from existing bookings first
+      if (academiesStore.userBookings.length > 0) {
+        userId = academiesStore.userBookings[0].userId;
+        console.log('Using user ID from existing bookings:', userId);
+      } else {
+        // Fall back to localStorage
+        userId = localStorage.getItem('currentUserId');
+        console.log('Using user ID from localStorage:', userId);
+      }
+      
+      if (!userId) {
+        console.log('No user ID found anywhere');
+        error.value = 'No user ID found. Please try registering for an academy first.';
+        return;
+      }
     }
+    
+    console.log('Final user ID to use:', userId);
+    await academiesStore.fetchUserBookings(userId, projectId.value);
+    console.log('User bookings fetched:', academiesStore.userBookings);
+    console.log('Bookings count:', academiesStore.userBookings.length);
+    
+    console.log('Final loading state:', loading.value);
+    console.log('Final error state:', error.value);
+    console.log('=== fetchUserBookings END ===');
+    
   } catch (error) {
     console.error('Error fetching user bookings:', error);
     error.value = 'Failed to fetch bookings: ' + error.message;
   } finally {
     loading.value = false;
+    console.log('Loading set to false in finally block');
   }
 };
 </script>
@@ -911,6 +1187,91 @@ const fetchUserBookings = async () => {
 
 .close-modal-btn:hover {
   background: #5a6268;
+}
+
+/* Debug Info */
+.debug-info {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.debug-info summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #856404;
+}
+
+.debug-content {
+  margin-top: 16px;
+}
+
+.debug-booking {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #ffeaa7;
+}
+
+.debug-booking pre {
+  margin: 8px 0 0 0;
+  font-size: 0.75rem;
+  color: #666;
+  background: #f8f9fa;
+  padding: 8px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+/* Temporary Data Display */
+.temp-data-display {
+  background: #e3f2fd;
+  border: 1px solid #2196f3;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.temp-data-display h3 {
+  color: #1976d2;
+  margin-top: 0;
+}
+
+.temp-booking {
+  background: white;
+  border: 1px solid #2196f3;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+}
+
+.temp-booking h4 {
+  color: #1976d2;
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.temp-booking p {
+  margin: 4px 0;
+  font-size: 0.9rem;
+}
+
+.debug-btn {
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.debug-btn:hover {
+  background: #1976d2;
 }
 
 /* Responsive Design */
