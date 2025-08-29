@@ -143,15 +143,34 @@
           </div>
 
           <div class="form-actions">
-            <button type="button" @click="$router.go(-1)" class="cancel-btn">
+            <button type="button" @click="$router.go(-1)" class="cancel-btn" :disabled="isSubmitting">
               Cancel
             </button>
             <button type="submit" class="submit-btn" :disabled="isSubmitting">
-              <span v-if="isSubmitting">Processing...</span>
+              <span v-if="isSubmitting">
+                <div class="button-loading">
+                  <div class="spinner"></div>
+                  Processing...
+                </div>
+              </span>
               <span v-else>Complete Registration</span>
             </button>
           </div>
         </form>
+      </div>
+
+      <!-- Success Message -->
+      <div v-if="success" class="success-message">
+        <div class="success-icon">✅</div>
+        <h3>Registration Successful!</h3>
+        <p>Your academy registration has been submitted successfully.</p>
+        <div class="registration-details">
+          <p><strong>Registration ID:</strong> {{ registrationId }}</p>
+          <p><strong>Program:</strong> {{ program.name }}</p>
+          <p><strong>Academy:</strong> {{ academy.name }}</p>
+          <p><strong>Student:</strong> {{ formData.studentName }}</p>
+        </div>
+        <p class="redirect-notice">You will be redirected to academy programs in a few seconds...</p>
       </div>
     </div>
   </div>
@@ -162,6 +181,8 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAcademiesStore } from 'src/stores/academyStore';
 import { useProjectStore } from 'src/stores/projectStore';
+import { db } from 'boot/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // Component name for ESLint
 defineOptions({
@@ -177,8 +198,22 @@ const projectStore = useProjectStore();
 const loading = ref(false);
 const error = ref(null);
 const isSubmitting = ref(false);
+const success = ref(false);
+const registrationId = ref(null);
 const academy = ref(null);
 const program = ref(null);
+
+// Get current user ID - this should be replaced with proper auth when available
+const getCurrentUserId = () => {
+  // Try to get from localStorage first (temporary solution)
+  const userId = localStorage.getItem('currentUserId');
+  if (userId) return userId;
+  
+  // If no user ID found, generate a temporary one (this should be replaced with proper auth)
+  const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  localStorage.setItem('currentUserId', tempUserId);
+  return tempUserId;
+};
 
 // Form data
 const formData = ref({
@@ -259,28 +294,96 @@ const loadProgramDetails = async () => {
 };
 
 const submitRegistration = async () => {
-  if (!academy.value || !program.value) return;
+  if (!academy.value || !program.value || !currentProject.value?.id) {
+    error.value = 'Missing required information';
+    return;
+  }
+  
+  // Validate required form fields
+  if (!formData.value.studentName.trim()) {
+    error.value = 'Student name is required';
+    return;
+  }
+  
+  if (!formData.value.studentAge || formData.value.studentAge < 3 || formData.value.studentAge > 100) {
+    error.value = 'Please enter a valid student age (3-100)';
+    return;
+  }
+  
+  if (!formData.value.parentName.trim()) {
+    error.value = 'Parent/Guardian name is required';
+    return;
+  }
+  
+  if (!formData.value.phone.trim()) {
+    error.value = 'Phone number is required';
+    return;
+  }
   
   isSubmitting.value = true;
+  error.value = null;
   
   try {
-    // Here you would typically submit the registration to your backend
-    // For now, we'll just show a success message and redirect
+    const userId = getCurrentUserId();
     
-    console.log('Registration submitted:', {
-      academy: academy.value.name,
-      program: program.value.name,
-      formData: formData.value,
-      projectId: currentProject.value.id
+    // Create the registration data
+    const registrationData = {
+      userId: userId,
+      projectId: currentProject.value.id,
+      academyId: academy.value.id,
+      academyName: academy.value.name,
+      programId: program.value.id,
+      programName: program.value.name,
+      type: 'academy',
+      status: 'pending', // pending, confirmed, cancelled, completed
+      
+      // Student information
+      studentName: formData.value.studentName,
+      studentAge: parseInt(formData.value.studentAge),
+      parentName: formData.value.parentName,
+      phone: formData.value.phone,
+      email: formData.value.email,
+      notes: formData.value.notes,
+      
+      // Program details
+      category: program.value.category || 'Sports',
+      ageGroup: program.value.ageGroup,
+      duration: program.value.duration,
+      pricingType: program.value.pricingType,
+      price: program.value.price,
+      totalCost: totalCost.value,
+      
+      // Timestamps
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+    
+    console.log('Submitting registration:', registrationData);
+    
+    // Save to the project's bookings collection
+    const bookingsRef = collection(db, `projects/${currentProject.value.id}/bookings`);
+    const docRef = await addDoc(bookingsRef, registrationData);
+    
+    console.log('Registration saved successfully with ID:', docRef.id);
+    
+    // Also save to the academy store for local state management
+    await academiesStore.addUserBooking({
+      ...registrationData,
+      id: docRef.id
     });
     
-    // Redirect to success page or show success message
-    alert('Registration submitted successfully!');
-    router.push('/academy-programs');
+    // Set success state
+    registrationId.value = docRef.id;
+    success.value = true;
+    
+    // Don't redirect immediately, show success message first
+    setTimeout(() => {
+      router.push('/academy-programs');
+    }, 3000);
     
   } catch (err) {
     console.error('Error submitting registration:', err);
-    error.value = 'Failed to submit registration. Please try again.';
+    error.value = 'Failed to submit registration. Please try again. Error: ' + err.message;
   } finally {
     isSubmitting.value = false;
   }
@@ -520,6 +623,22 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
+.button-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
 /* Loading and Error States */
 .loading-state,
 .error-state {
@@ -577,6 +696,54 @@ onMounted(() => {
 
 .retry-btn:hover {
   background: #e55a2b;
+}
+
+/* Success Message */
+.success-message {
+  background: white;
+  border: 1px solid #28a745;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  text-align: center;
+  margin-top: 32px;
+}
+
+.success-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.success-message h3 {
+  color: #28a745;
+  margin: 0 0 16px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.success-message p {
+  color: #666;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.registration-details {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.registration-details p {
+  margin: 8px 0;
+  color: #333;
+}
+
+.redirect-notice {
+  color: #28a745;
+  font-style: italic;
+  font-size: 0.9rem;
 }
 
 /* Responsive Design */
