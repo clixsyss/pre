@@ -474,11 +474,11 @@ watch(currentProject, (newProject) => {
 }
 
 .program-details {
-  padding: 0 20px 20px 20px;
+  padding: 20px;
   border-top: 1px solid #e9ecef;
   background: white;
-  margin: 0 20px;
-  border-radius: 0 0 12px 12px;
+  margin: 0 20px 20px 20px;
+  border-radius: 12px;
 }
 
 .academy-info {
@@ -824,8 +824,8 @@ watch(currentProject, (newProject) => {
   }
   
   .program-details {
-    padding: 0 16px 16px 16px;
-    margin: 0 16px;
+    padding: 16px;
+    margin: 16px;
   }
   
   .day-schedule {

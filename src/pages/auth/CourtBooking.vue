@@ -499,7 +499,7 @@ onMounted(async () => {
 }
 
 .sport-option.active {
-  background: #ff6b35;
+  background: #fff5f2;
   border-color: #ff6b35;
   color: white;
 }
@@ -546,9 +546,9 @@ onMounted(async () => {
 }
 
 .court-option.active {
-  background: #ff6b35;
+  background: #fff5f2;
   border-color: #ff6b35;
-  color: white;
+  color: #ff6b35;
 }
 
 .court-info h3 {
