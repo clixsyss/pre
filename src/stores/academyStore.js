@@ -168,31 +168,21 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
                 return;
             }
 
-            console.log('=== ACADEMY STORE: fetchUserBookings ===');
-            console.log('User ID:', userId);
-            console.log('Project ID:', projectId);
-            console.log('Collection path:', `projects/${projectId}/bookings`);
-
             const q = query(
                 collection(db, `projects/${projectId}/bookings`),
                 where("userId", "==", userId),
                 orderBy("createdAt", "desc")
             );
             
-            console.log('Query created, executing...');
             const querySnapshot = await getDocs(q);
-            console.log('Query result size:', querySnapshot.size);
             
             const bookings = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                console.log('Document data:', data);
                 bookings.push({ id: doc.id, ...data });
             });
             
-            console.log('Final bookings array:', bookings);
             userBookings.value = bookings;
-            console.log('Updated userBookings.value:', userBookings.value);
         } catch (error) {
             console.error("Error fetching user bookings:", error);
             throw error;
@@ -205,8 +195,6 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
 
     const fetchAcademies = async (projectId) => {
         try {
-            console.log('Fetching academies for project:', projectId);
-            
             // Query academies for the specific project
             const academiesRef = collection(db, `projects/${projectId}/academies`);
             const academiesSnapshot = await getDocs(academiesRef);
@@ -219,7 +207,6 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
                 });
             });
             
-            console.log('Fetched academies:', academies);
             academyOptions.value = academies;
             
             // Also populate programsByAcademy
