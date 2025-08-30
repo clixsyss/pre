@@ -142,7 +142,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAcademiesStore } from 'src/stores/academyStore';
+import { useAcademiesStore } from '../../stores/academyStore';
+import { auth } from '../../boot/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 // Component name for ESLint
 defineOptions({
@@ -155,6 +157,7 @@ const academiesStore = useAcademiesStore();
 // Reactive data
 const currentDate = ref(new Date());
 const selectedDate = ref(null);
+const currentUser = ref(null);
 
 // Computed properties
 const currentMonthYear = computed(() => {
@@ -210,6 +213,8 @@ const selectedDateEvents = computed(() => {
 });
 
 const allUpcomingEvents = computed(() => {
+  if (!currentUser.value) return [];
+  
   const allBookings = academiesStore.userBookings;
   const events = [];
   
@@ -218,12 +223,12 @@ const allUpcomingEvents = computed(() => {
     if (booking.type === 'court' && booking.date) {
       events.push({
         id: booking.id,
-        title: `${booking.sport} - ${booking.courtName}`,
+        title: `${booking.sport || 'Court'} - ${booking.courtName || 'Court'}`,
         date: booking.date,
         type: 'court',
         status: booking.status,
         timeSlots: booking.timeSlots,
-        location: booking.courtName
+        location: booking.courtName || 'Court'
       });
     }
   });
@@ -233,11 +238,11 @@ const allUpcomingEvents = computed(() => {
     if (booking.type === 'academy' && booking.status === 'enrolled') {
       events.push({
         id: booking.id,
-        title: booking.programName,
+        title: booking.programName || 'Academy Program',
         date: new Date().toISOString(), // Ongoing programs
         type: 'academy',
         status: booking.status,
-        location: booking.academyName
+        location: booking.academyName || 'Academy'
       });
     }
   });
@@ -248,6 +253,8 @@ const allUpcomingEvents = computed(() => {
 
 // Methods
 const getEventsForDate = (date) => {
+  if (!currentUser.value) return [];
+  
   const dateString = date.toISOString().split('T')[0];
   return allUpcomingEvents.value.filter(event => {
     if (event.type === 'court') {
@@ -330,11 +337,24 @@ const viewEvent = () => {
 
 // Lifecycle
 onMounted(async () => {
-  try {
-    await academiesStore.fetchUserBookings('current-user-id'); // This should come from auth store
-  } catch (error) {
-    console.error("Error fetching user bookings:", error);
-  }
+  // Listen for auth state changes
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      currentUser.value = user;
+      
+      try {
+        // Fetch user bookings with actual user ID
+        await academiesStore.fetchUserBookings(user.uid);
+        console.log('User bookings fetched:', academiesStore.userBookings);
+      } catch (error) {
+        console.error("Error fetching user bookings:", error);
+      }
+    } else {
+      currentUser.value = null;
+      // Redirect to login if no user
+      router.push('/login');
+    }
+  });
 });
 </script>
 

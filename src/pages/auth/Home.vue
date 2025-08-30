@@ -2,50 +2,67 @@
   <div class="home-page">
     <!-- Content -->
     <div class="content">
-      <div class="greeting">
-        <div class="greeting-header">
-          <h2>Hello {{ user?.displayName?.split(' ')[0] || 'User' }}.</h2>
+      <!-- Enhanced Greeting Section -->
+      <div class="greeting-section">
+        <div class="greeting-content">
+          <div class="greeting-text">
+            <h1 class="greeting-title">Hello {{ user?.displayName?.split(' ')[0] || 'User' }}</h1>
+          </div>
+          <div class="greeting-actions">
+            <button class="project-switcher-btn" @click="showProjectSwitcher = true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Switch Project</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Dashboard Grid -->
+      <!-- Enhanced Dashboard Grid -->
       <div class="dashboard-grid">
-        <!-- Calendar Section -->
         <div class="dashboard-section">
           <HomeCalendar />
         </div>
-
-        <!-- Upcoming Bookings Section -->
         <div class="dashboard-section">
           <UpcomingBookingsCard />
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <div class="quick-actions">
-        <h3>Quick Actions</h3>
+      <!-- Enhanced Quick Actions -->
+      <div class="quick-actions-section">
+        <div class="section-header">
+          <h2>Quick Actions</h2>
+          <p>Access your most used features</p>
+        </div>
         <div class="actions-grid">
-          <button class="action-btn" @click="navigateToServices">
+          <button class="action-card" @click="navigateToServices">
             <div class="action-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <span>Book Services</span>
+            <div class="action-content">
+              <span class="action-title">Book Services</span>
+              <span class="action-description">Schedule court time & programs</span>
+            </div>
           </button>
           
-          <button class="action-btn" @click="navigateToMyBookings">
+          <button class="action-card" @click="navigateToMyBookings">
             <div class="action-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
               </svg>
             </div>
-            <span>My Bookings</span>
+            <div class="action-content">
+              <span class="action-title">My Bookings</span>
+              <span class="action-description">View & manage reservations</span>
+            </div>
           </button>
           
-          <button class="action-btn" @click="navigateToCalendar">
+          <button class="action-card" @click="navigateToCalendar">
             <div class="action-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -54,42 +71,52 @@
                 <path d="M3 10H21" stroke="currentColor" stroke-width="2"/>
               </svg>
             </div>
-            <span>Full Calendar</span>
+            <div class="action-content">
+              <span class="action-title">Full Calendar</span>
+              <span class="action-description">Browse all available slots</span>
+            </div>
           </button>
         </div>
       </div>
 
-      <!-- Tabs -->
-      <div class="tabs">
-        <button 
-          @click="activeTab = 'all'" 
-          :class="['tab-btn', { active: activeTab === 'all' }]"
-        >
-          ALL
-        </button>
-        <button 
-          @click="activeTab = 'emergency'" 
-          :class="['tab-btn', { active: activeTab === 'emergency' }]"
-        >
-          Emergency
-        </button>
-      </div>
-
-      <!-- News Feed -->
-      <div class="news-feed">
-        <div v-for="item in filteredNews" :key="item.id" class="news-item">
-          <div class="news-icon">
-            <span class="pre-logo">P RE</span>
+      <!-- Enhanced News Feed Section -->
+      <div class="news-section">
+        <div class="section-header">
+          <div class="header-content">
+            <h2>Community Updates</h2>
+            <p>Stay informed about what's happening</p>
           </div>
-          <div class="news-content">
-            <div class="news-timestamp">{{ item.timestamp }}</div>
-            <div class="news-text">{{ item.text }}</div>
+          <div class="filter-tabs">
+            <button 
+              @click="activeTab = 'all'" 
+              :class="['filter-tab', { active: activeTab === 'all' }]"
+            >
+              All
+            </button>
+            <button 
+              @click="activeTab = 'emergency'" 
+              :class="['filter-tab', { active: activeTab === 'emergency' }]"
+            >
+              Emergency
+            </button>
+          </div>
+        </div>
+
+        <div class="news-feed">
+          <div v-for="item in filteredNews" :key="item.id" class="news-card">
+            <div class="news-icon">
+              <span class="pre-logo">P RE</span>
+            </div>
+            <div class="news-content">
+              <div class="news-timestamp">{{ item.timestamp }}</div>
+              <div class="news-text">{{ item.text }}</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Project Switcher Modal -->
+    <!-- Enhanced Project Switcher Modal -->
     <div v-if="showProjectSwitcher" class="modal-overlay" @click="showProjectSwitcher = false">
       <div class="modal-content project-switcher-modal" @click.stop>
         <div class="modal-header">
@@ -268,104 +295,94 @@ onMounted(async () => {
 <style scoped>
 .home-page {
   min-height: 100vh;
-  background: #f8f9fa;
+  background: #fafafa;
 }
 
 .content {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px 20px;
 }
 
-.greeting {
+.greeting-section {
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  color: white;
+  border-radius: 20px;
+  padding: 32px;
   margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  box-shadow: 0 8px 32px rgba(255, 107, 53, 0.25);
+  position: relative;
+  overflow: hidden;
 }
 
-.greeting-header {
+.greeting-section::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.greeting-content {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
+  align-items: center;
+  width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
-.project-switcher {
-  flex-shrink: 0;
+.greeting-text {
+  display: flex;
+  flex-direction: column;
 }
 
-.switch-project-btn {
+.greeting-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.greeting-subtitle {
+  font-size: 1.125rem;
+  margin: 0;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+.greeting-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.project-switcher-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #f8f9fa;
-  color: #666;
-  border: 1px solid #e1e5e9;
-  padding: 8px 16px;
-  border-radius: 8px;
+  background: white;
+  color: #ff6b35;
+  border: 2px solid white;
+  padding: 12px 24px;
+  border-radius: 12px;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
-.switch-project-btn:hover {
+.project-switcher-btn:hover {
   background: #fff5f2;
-  border-color: #ff6b35;
-  color: #ff6b35;
+  border-color: #fff5f2;
   transform: translateY(-2px);
-}
-
-.greeting h2 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #333;
-  margin: 0 0 8px 0;
-}
-
-.greeting p {
-  color: #666;
-  font-size: 1.125rem;
-  margin: 0;
-}
-
-.project-info {
-  margin-top: 8px;
-}
-
-.project-name {
-  color: #ff6b35;
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 4px 0;
-}
-
-.project-location {
-  color: #888;
-  font-size: 0.875rem;
-  margin: 0;
-}
-
-.user-details {
-  display: flex;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.user-unit,
-.user-role {
-  font-size: 0.75rem;
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.user-unit {
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-.user-role {
-  background: #f3e5f5;
-  color: #7b1fa2;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .dashboard-grid {
@@ -379,91 +396,138 @@ onMounted(async () => {
   min-height: 300px;
 }
 
-.quick-actions {
+.quick-actions-section {
   background: white;
-  border: 1px solid #e1e5e9;
-  border-radius: 16px;
-  padding: 24px;
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+  padding: 32px;
   margin-bottom: 32px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
-.quick-actions h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 20px 0;
-}
-
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-}
-
-.action-btn {
+.section-header {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  background: #f8f9fa;
-  border: 2px solid #e1e5e9;
-  border-radius: 12px;
-  padding: 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-decoration: none;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.header-content h2 {
+  margin: 0 0 8px 0;
   color: #333;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
 }
 
-.action-btn:hover {
-  background: #fff5f2;
-  border-color: #ff6b35;
-  transform: translateY(-2px);
+.header-content p {
+  color: #666;
+  font-size: 0.95rem;
+  margin: 0;
+  font-weight: 400;
 }
 
-.action-icon {
-  width: 48px;
-  height: 48px;
-  background: #ff6b35;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.action-btn span {
-  font-weight: 500;
-  font-size: 0.9rem;
-}
-
-.tabs {
+.filter-tabs {
   display: flex;
   gap: 12px;
-  margin-bottom: 24px;
 }
 
-.tab-btn {
+.filter-tab {
   background: none;
-  border: 2px solid #e1e5e9;
-  border-radius: 8px;
-  padding: 12px 24px;
+  border: 2px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 10px 20px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 500;
   color: #666;
+  font-size: 0.9rem;
 }
 
-.tab-btn:hover {
+.filter-tab:hover {
   border-color: #ff6b35;
   color: #ff6b35;
+  transform: translateY(-1px);
 }
 
-.tab-btn.active {
+.filter-tab.active {
   background: #ff6b35;
   border-color: #ff6b35;
   color: white;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.action-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #fafafa;
+  border: 2px solid #f0f0f0;
+  border-radius: 16px;
+  padding: 28px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.action-card:hover {
+  background: white;
+  border-color: #ff6b35;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(255, 107, 53, 0.15);
+}
+
+.action-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
+}
+
+.action-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.action-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.action-description {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.news-section {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .news-feed {
@@ -472,14 +536,22 @@ onMounted(async () => {
   gap: 16px;
 }
 
-.news-item {
+.news-card {
   display: flex;
-  gap: 16px;
-  background: white;
-  border: 1px solid #e1e5e9;
-  border-radius: 12px;
-  padding: 20px;
+  gap: 20px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 16px;
+  padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.news-card:hover {
+  background: white;
+  border-color: #e0e0e0;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .news-icon {
@@ -490,13 +562,15 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  background: #ff6b35;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
   color: white;
-  border-radius: 50%;
-  font-weight: 700;
-  font-size: 0.75rem;
+  border-radius: 16px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
 }
 
 .news-content {
@@ -504,15 +578,17 @@ onMounted(async () => {
 }
 
 .news-timestamp {
-  color: #666;
+  color: #888;
   font-size: 0.875rem;
   margin-bottom: 8px;
+  font-weight: 500;
 }
 
 .news-text {
   color: #333;
   font-size: 1rem;
-  line-height: 1.5;
+  line-height: 1.6;
+  font-weight: 400;
 }
 
 /* Responsive Design */
@@ -520,50 +596,149 @@ onMounted(async () => {
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+  
+  .greeting-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .greeting-actions {
+    width: 100%;
+  }
+  
+  .project-switcher-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 768px) {
   .content {
-    padding: 16px;
+    padding: 20px 16px;
   }
   
-  .greeting h2 {
-    font-size: 1.75rem;
+  .greeting-section {
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  
+  .greeting-title {
+    font-size: 2rem;
+  }
+  
+  .greeting-subtitle {
+    font-size: 1rem;
+  }
+  
+  .quick-actions-section,
+  .news-section {
+    padding: 24px;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  
+  .filter-tabs {
+    width: 100%;
+  }
+  
+  .filter-tab {
+    flex: 1;
+    text-align: center;
   }
   
   .actions-grid {
     grid-template-columns: 1fr;
   }
   
-  .tabs {
+  .action-card {
+    padding: 24px;
     flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
   }
   
-  .tab-btn {
+  .action-icon {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .action-content {
     text-align: center;
+  }
+  
+  .action-title {
+    font-size: 1.1rem;
+  }
+  
+  .action-description {
+    font-size: 0.85rem;
+  }
+  
+  .news-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .news-icon {
+    align-self: center;
   }
 }
 
 @media (max-width: 480px) {
   .content {
-    padding: 12px;
+    padding: 16px 12px;
   }
   
-  .greeting h2 {
-    font-size: 1.5rem;
+  .greeting-section {
+    padding: 20px;
+    border-radius: 16px;
   }
   
-  .quick-actions {
+  .greeting-title {
+    font-size: 1.75rem;
+  }
+  
+  .greeting-subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .quick-actions-section,
+  .news-section {
+    padding: 20px;
+    border-radius: 16px;
+  }
+  
+  .action-card {
     padding: 20px;
   }
   
-  .action-btn {
+  .action-icon {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .action-title {
+    font-size: 1rem;
+  }
+  
+  .action-description {
+    font-size: 0.8rem;
+  }
+  
+  .news-card {
     padding: 16px;
   }
   
-  .news-item {
-    flex-direction: column;
-    text-align: center;
+  .pre-logo {
+    width: 48px;
+    height: 48px;
+    font-size: 0.8rem;
   }
 }
 
@@ -574,22 +749,23 @@ onMounted(async () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
 .modal-content {
   background-color: white;
-  border-radius: 16px;
-  padding: 24px;
+  border-radius: 20px;
+  padding: 32px;
   max-width: 600px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 .project-switcher-modal {
@@ -600,15 +776,17 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e1e5e9;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .modal-header h3 {
   margin: 0;
   color: #333;
-  font-size: 1.3rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
 }
 
 .close-btn {
@@ -616,32 +794,34 @@ onMounted(async () => {
   border: none;
   cursor: pointer;
   padding: 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: background-color 0.3s ease;
+  color: #666;
 }
 
 .close-btn:hover {
   background: #f8f9fa;
+  color: #333;
 }
 
 .modal-body {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .projects-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .project-option {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  background: #f8f9fa;
-  border: 1px solid #e1e5e9;
-  border-radius: 12px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -649,13 +829,14 @@ onMounted(async () => {
 .project-option:hover {
   background: white;
   border-color: #ff6b35;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);
+  transform: translateY(-2px);
 }
 
 .project-option.current {
   background: #fff5f2;
   border-color: #ff6b35;
-  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.15);
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.2);
 }
 
 .project-option-info {
@@ -663,16 +844,17 @@ onMounted(async () => {
 }
 
 .project-option-name {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: #333;
-  margin: 0 0 4px 0;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.2px;
 }
 
 .project-option-location {
   color: #666;
-  font-size: 0.9rem;
-  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+  margin: 0 0 12px 0;
 }
 
 .project-option-details {
@@ -682,10 +864,10 @@ onMounted(async () => {
 
 .project-option-unit,
 .project-option-role {
-  font-size: 0.8rem;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-weight: 500;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 600;
 }
 
 .project-option-unit {
@@ -703,17 +885,17 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
 }
 
 .current-badge {
   background: #ff6b35;
   color: white;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .project-option-status svg {
@@ -722,12 +904,12 @@ onMounted(async () => {
 
 .no-projects {
   text-align: center;
-  padding: 40px 20px;
+  padding: 48px 20px;
   color: #666;
 }
 
 .no-projects p {
-  margin: 0 0 20px 0;
+  margin: 0 0 24px 0;
   font-size: 1.1rem;
 }
 
@@ -735,22 +917,24 @@ onMounted(async () => {
   background: #ff6b35;
   color: white;
   border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
+  padding: 14px 28px;
+  border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
 }
 
 .go-to-selection-btn:hover {
   background: #e55a2b;
   transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
 }
 
 .modal-footer {
-  padding-top: 16px;
-  border-top: 1px solid #e1e5e9;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
   text-align: center;
 }
 
@@ -758,13 +942,13 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #f8f9fa;
+  background: #fafafa;
   color: #666;
-  border: 1px solid #e1e5e9;
-  padding: 12px 24px;
-  border-radius: 8px;
+  border: 2px solid #f0f0f0;
+  padding: 14px 28px;
+  border-radius: 10px;
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -773,5 +957,6 @@ onMounted(async () => {
   background: #fff5f2;
   border-color: #ff6b35;
   color: #ff6b35;
+  transform: translateY(-2px);
 }
 </style>

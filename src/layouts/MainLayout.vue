@@ -1,7 +1,7 @@
 <template>
   <div class="main-layout">
-    <!-- Header (Black) -->
-    <header class="app-header">
+    <!-- Header (Black)  padding top-->
+    <header class="app-header" style="padding: 20px;">
       <div class="header-content">
         <div class="logo-section">
           <div class="logo">
