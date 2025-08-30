@@ -1,5 +1,5 @@
 <template>
-  <q-page class="store-details-page">
+  <div class="store-details-page">
     <!-- Store Header -->
     <div class="store-header">
       <div class="store-header-content">
@@ -7,30 +7,42 @@
           <div class="store-image">
             <img v-if="store?.image" :src="store.image" :alt="store?.name" />
             <div v-else class="store-placeholder">
-              <q-icon name="store" size="48px" color="grey-4" />
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </div>
           </div>
           
           <div class="store-details">
             <h1 class="store-name">{{ store?.name }}</h1>
             <p class="store-location">
-              <q-icon name="place" size="16px" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
               {{ store?.location }}
             </p>
             <p class="store-delivery">
-              <q-icon name="schedule" size="16px" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
+              </svg>
               {{ store?.averageDeliveryTime }} delivery
             </p>
             
             <div class="store-rating">
               <div class="stars">
-                <q-icon
+                <svg
                   v-for="star in 5"
                   :key="star"
-                  :name="star <= (store?.rating || 0) ? 'star' : 'star_border'"
                   :class="star <= (store?.rating || 0) ? 'star-filled' : 'star-empty'"
-                  size="20px"
-                />
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
               </div>
               <span class="rating-text">{{ store?.rating || 0 }}/5</span>
             </div>
@@ -38,14 +50,13 @@
         </div>
         
         <div class="store-actions">
-          <q-btn
-            color="primary"
-            icon="shopping_cart"
-            label="View Cart"
-            @click="viewCart"
-            :badge="cartStore.itemCount || undefined"
-            badge-color="red"
-          />
+          <button class="view-cart-btn" @click="viewCart">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            View Cart
+            <span v-if="cartStore.itemCount > 0" class="cart-badge">{{ cartStore.itemCount }}</span>
+          </button>
         </div>
       </div>
     </div>
@@ -55,7 +66,10 @@
       <!-- Working Hours -->
       <div v-if="store?.workingHours" class="section-card">
         <h3 class="section-title">
-          <q-icon name="schedule" size="20px" />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
+          </svg>
           Working Hours
         </h3>
         <div class="working-hours-grid">
@@ -74,43 +88,49 @@
       <div class="section-card">
         <div class="section-header">
           <h3 class="section-title">
-            <q-icon name="inventory_2" size="20px" />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20 7L10 17L5 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
             Products
           </h3>
           
           <!-- Search and Filters -->
           <div class="products-filters">
-            <q-input
-              v-model="searchTerm"
-              placeholder="Search products..."
-              dense
-              outlined
-              class="search-input"
-            >
-              <template v-slot:prepend>
-                <q-icon name="search" />
-              </template>
-            </q-input>
+            <div class="search-input-wrapper">
+              <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2" />
+                <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <input
+                v-model="searchTerm"
+                type="text"
+                placeholder="Search products..."
+                class="search-input"
+              />
+            </div>
             
-            <q-select
-              v-model="categoryFilter"
-              :options="categoryOptions"
-              dense
-              outlined
-              class="category-filter"
-              label="Category"
-            />
+            <select v-model="categoryFilter" class="category-filter">
+              <option value="all">All Categories</option>
+              <option value="food">Food & Beverage</option>
+              <option value="drinks">Drinks</option>
+              <option value="desserts">Desserts</option>
+              <option value="snacks">Snacks</option>
+              <option value="meals">Meals</option>
+              <option value="other">Other</option>
+            </select>
           </div>
         </div>
 
         <!-- Products Grid -->
         <div v-if="loading" class="loading-state">
-          <q-spinner size="40px" color="primary" />
+          <div class="spinner"></div>
           <p>Loading products...</p>
         </div>
 
         <div v-else-if="filteredProducts.length === 0" class="empty-products">
-          <q-icon name="inventory_2" size="64px" color="grey-4" />
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 7L10 17L5 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
           <h3>No products found</h3>
           <p>Try adjusting your search or filters</p>
         </div>
@@ -124,7 +144,9 @@
             <div class="product-image">
               <img v-if="product.image" :src="product.image" :alt="product.name" />
               <div v-else class="product-placeholder">
-                <q-icon name="inventory_2" size="32px" color="grey-4" />
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 7L10 17L5 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </div>
             </div>
             
@@ -137,13 +159,17 @@
             </div>
             
             <div class="product-actions">
-              <q-btn
-                color="primary"
-                icon="add_shopping_cart"
-                size="sm"
+              <button
+                class="add-to-cart-btn"
                 @click="addToCart(product)"
-                :loading="addingToCart === product.id"
-              />
+                :disabled="addingToCart === product.id"
+              >
+                <svg v-if="addingToCart !== product.id" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <div v-else class="spinner-small"></div>
+                Add to Cart
+              </button>
             </div>
           </div>
         </div>
@@ -151,22 +177,21 @@
     </div>
 
     <!-- Add to Cart Success Toast -->
-    <q-dialog v-model="showSuccessToast" position="bottom">
-      <q-card class="success-toast">
-        <q-card-section class="text-center">
-          <q-icon name="check_circle" size="32px" color="positive" />
-          <p class="toast-message">Added to cart successfully!</p>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
-  </q-page>
+    <div v-if="showSuccessToast" class="success-toast">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
+      </svg>
+      <span>Added to cart successfully!</span>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../boot/firebase';
+import { db } from 'src/boot/firebase';
 import { useProjectStore } from 'src/stores/projectStore';
 import { useCartStore } from 'src/stores/cartStore';
 
@@ -190,16 +215,6 @@ const addingToCart = ref(null);
 const showSuccessToast = ref(false);
 
 // Computed properties
-const categoryOptions = computed(() => [
-  { label: 'All Categories', value: 'all' },
-  { label: 'Food & Beverage', value: 'food' },
-  { label: 'Drinks', value: 'drinks' },
-  { label: 'Desserts', value: 'desserts' },
-  { label: 'Snacks', value: 'snacks' },
-  { label: 'Meals', value: 'meals' },
-  { label: 'Other', value: 'other' }
-]);
-
 const filteredProducts = computed(() => {
   let filtered = products.value;
 
@@ -301,6 +316,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
+:root {
+  --q-primary: #1976d2;
+  --q-primary-dark: #1565c0;
+  --q-red: #f44336;
+  --q-green: #4caf50;
+}
+
 .store-details-page {
   background: #fafafa;
   min-height: 100vh;
@@ -402,6 +424,43 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
+.view-cart-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--q-primary);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: relative;
+}
+
+.view-cart-btn:hover {
+  background-color: var(--q-primary-dark);
+}
+
+.cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: var(--q-red);
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+  border: 2px solid white;
+}
+
 .store-content {
   max-width: 1200px;
   margin: 0 auto;
@@ -467,12 +526,49 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.search-input {
+.search-input-wrapper {
+  position: relative;
+  flex: 1;
   min-width: 250px;
 }
 
+.search-input {
+  width: 100%;
+  padding: 10px 10px 10px 40px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 1rem;
+  color: #333;
+  transition: border-color 0.2s ease;
+}
+
+.search-input:focus {
+  border-color: var(--q-primary);
+  outline: none;
+}
+
+.search-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+}
+
 .category-filter {
-  min-width: 150px;
+  padding: 10px 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 1rem;
+  color: #333;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.category-filter:focus {
+  border-color: var(--q-primary);
+  outline: none;
 }
 
 .loading-state,
@@ -491,6 +587,21 @@ onMounted(() => {
   color: #666;
   margin: 16px 0 0 0;
   font-size: 1.5rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid var(--q-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .products-grid {
@@ -565,16 +676,71 @@ onMounted(() => {
   justify-content: center;
 }
 
-.success-toast {
-  background: #4caf50;
+.add-to-cart-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--q-primary);
   color: white;
+  padding: 10px 20px;
   border-radius: 12px;
-  padding: 16px 24px;
+  font-weight: 600;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: relative;
 }
 
-.toast-message {
-  margin: 8px 0 0 0;
+.add-to-cart-btn:hover {
+  background-color: var(--q-primary-dark);
+}
+
+.add-to-cart-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  color: #666;
+}
+
+.spinner-small {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.success-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--q-green);
+  color: white;
+  padding: 15px 25px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  opacity: 0.9;
+}
+
+.success-toast svg {
+  width: 24px;
+  height: 24px;
+}
+
+.success-toast span {
   font-weight: 500;
+  font-size: 1rem;
 }
 
 /* Responsive Design */
@@ -602,7 +768,7 @@ onMounted(() => {
     flex-direction: column;
   }
   
-  .search-input,
+  .search-input-wrapper,
   .category-filter {
     min-width: auto;
   }

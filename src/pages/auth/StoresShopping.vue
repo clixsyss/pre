@@ -116,7 +116,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../../boot/firebase';
+import { db } from 'src/boot/firebase';
 import { useProjectStore } from 'src/stores/projectStore';
 
 // Component name for ESLint
@@ -207,7 +207,6 @@ onMounted(() => {
 .stores-shopping-page {
   padding: 20px 16px;
   background: #fafafa;
-  min-height: 100vh;
 }
 
 .page-header {

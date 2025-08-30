@@ -163,9 +163,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from 'src/config/firebase';
+import { getAuth } from 'firebase/auth';
+import { db } from 'src/boot/firebase';
 import { useProjectStore } from 'src/stores/projectStore';
-import { useAuthStore } from 'src/stores/authStore';
 import { useCartStore } from 'src/stores/cartStore';
 
 // Component name for ESLint
@@ -175,7 +175,7 @@ defineOptions({
 
 const router = useRouter();
 const projectStore = useProjectStore();
-const authStore = useAuthStore();
+const auth = getAuth();
 const cartStore = useCartStore();
 
 // Reactive data
@@ -206,7 +206,7 @@ const removeItem = (item) => {
 };
 
 const placeOrder = async () => {
-  if (!projectStore.selectedProject?.id || !authStore.user) {
+  if (!projectStore.selectedProject?.id || !auth.currentUser) {
     console.error('Missing project or user information');
     return;
   }
@@ -225,8 +225,8 @@ const placeOrder = async () => {
     // Create order in Firestore
     const orderData = {
       orderNumber: orderNumber.value,
-      userId: authStore.user.uid,
-      userEmail: authStore.user.email,
+      userId: auth.currentUser.uid,
+      userEmail: auth.currentUser.email,
       projectId: projectStore.selectedProject.id,
       items: cartStore.items.map(item => ({
         productId: item.id,

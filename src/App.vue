@@ -33,6 +33,8 @@ const authenticatedRoutes = [
   '/home',
   '/access', 
   '/services',
+  '/stores-shopping',
+  '/shopping-cart',
   '/court-booking',
   '/academy-booking',
   '/academy-programs',
@@ -57,6 +59,10 @@ const isAuthenticatedPage = computed(() => {
   }
   
   if (route.path.startsWith('/academy-registration/')) {
+    return true
+  }
+  
+  if (route.path.startsWith('/store/')) {
     return true
   }
   
