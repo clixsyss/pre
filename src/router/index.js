@@ -87,6 +87,24 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/stores-shopping',
+    name: 'StoresShopping',
+    component: () => import('../pages/auth/StoresShopping.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/store/:storeId',
+    name: 'StoreDetails',
+    component: () => import('../pages/auth/StoreDetails.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/shopping-cart',
+    name: 'ShoppingCart',
+    component: () => import('../pages/auth/ShoppingCart.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/court-booking',
     name: 'CourtBooking',
     component: () => import('../pages/auth/CourtBooking.vue'),
