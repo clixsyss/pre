@@ -14,19 +14,26 @@
     </div>
 
     <div class="calendar-content">
-      <!-- Calendar Navigation -->
+      <!-- Minimalist Calendar Navigation -->
       <div class="calendar-navigation">
-        <button class="nav-btn" @click="previousMonth">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <h2 class="current-month">{{ currentMonthYear }}</h2>
-        <button class="nav-btn" @click="nextMonth">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
+        <div class="nav-controls">
+          <button class="nav-btn" @click="previousMonth">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          
+          <div class="month-display">
+            <h2 class="current-month">{{ currentMonthYear }}</h2>
+            <button class="today-btn" @click="goToToday">Today</button>
+          </div>
+          
+          <button class="nav-btn" @click="nextMonth">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- Calendar Grid -->
@@ -143,6 +150,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAcademiesStore } from '../../stores/academyStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { auth } from '../../boot/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
@@ -153,6 +161,55 @@ defineOptions({
 
 const router = useRouter();
 const academiesStore = useAcademiesStore();
+const projectStore = useProjectStore();
+
+// Utility function to normalize dates and avoid timezone issues
+const normalizeDate = (dateInput) => {
+  if (!dateInput) return null;
+  
+  let date;
+  
+  if (typeof dateInput === 'string') {
+    // If it's a string, parse it and create a local date
+    if (dateInput.includes('T')) {
+      // If it has time, extract just the date part
+      const dateOnly = dateInput.split('T')[0];
+      const [year, month, day] = dateOnly.split('-').map(Number);
+      date = new Date(year, month - 1, day); // month is 0-indexed
+    } else {
+      // If it's already just a date, parse it
+      const [year, month, day] = dateInput.split('-').map(Number);
+      date = new Date(year, month - 1, day);
+    }
+  } else if (dateInput instanceof Date) {
+    // If it's a Date object, create a new local date
+    date = new Date(dateInput.getFullYear(), dateInput.getMonth(), dateInput.getDate());
+  } else {
+    return null;
+  }
+  
+  // Ensure it's a valid date
+  if (isNaN(date.getTime())) {
+    console.warn('Invalid date input:', dateInput);
+    return null;
+  }
+  
+  return date;
+};
+
+// Utility function to format date as YYYY-MM-DD string
+const formatDateAsString = (date) => {
+  if (!date) return null;
+  
+  const normalizedDate = normalizeDate(date);
+  if (!normalizedDate) return null;
+  
+  const year = normalizedDate.getFullYear();
+  const month = String(normalizedDate.getMonth() + 1).padStart(2, '0');
+  const day = String(normalizedDate.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+};
 
 // Reactive data
 const currentDate = ref(new Date());
@@ -213,18 +270,34 @@ const selectedDateEvents = computed(() => {
 });
 
 const allUpcomingEvents = computed(() => {
-  if (!currentUser.value) return [];
+  if (!currentUser.value || !projectStore.selectedProject) return [];
   
   const allBookings = academiesStore.userBookings;
+  console.log('Current user bookings:', allBookings);
+  
   const events = [];
   
   // Add court bookings as events
   allBookings.forEach(booking => {
     if (booking.type === 'court' && booking.date) {
+      // Normalize the date to avoid timezone issues
+      const normalizedDate = normalizeDate(booking.date);
+      if (!normalizedDate) {
+        console.warn('Invalid date for booking:', booking);
+        return;
+      }
+      
+      const formattedDate = formatDateAsString(normalizedDate);
+      console.log('Processing court booking:', {
+        originalDate: booking.date,
+        normalizedDate: normalizedDate,
+        formattedDate: formattedDate
+      });
+      
       events.push({
         id: booking.id,
         title: `${booking.sport || 'Court'} - ${booking.courtName || 'Court'}`,
-        date: booking.date,
+        date: formattedDate,
         type: 'court',
         status: booking.status,
         timeSlots: booking.timeSlots,
@@ -239,7 +312,7 @@ const allUpcomingEvents = computed(() => {
       events.push({
         id: booking.id,
         title: booking.programName || 'Academy Program',
-        date: new Date().toISOString(), // Ongoing programs
+        date: formatDateAsString(new Date()), // Ongoing programs - use today's date
         type: 'academy',
         status: booking.status,
         location: booking.academyName || 'Academy'
@@ -247,18 +320,29 @@ const allUpcomingEvents = computed(() => {
     }
   });
   
+  console.log('Processed events:', events);
+  
   // Sort by date
   return events.sort((a, b) => new Date(a.date) - new Date(b.date));
 });
 
 // Methods
 const getEventsForDate = (date) => {
-  if (!currentUser.value) return [];
+  if (!currentUser.value || !projectStore.selectedProject) return [];
   
-  const dateString = date.toISOString().split('T')[0];
+  // Normalize the selected date to avoid timezone issues
+  const normalizedDate = normalizeDate(date);
+  if (!normalizedDate) return [];
+  
+  const localDateString = formatDateAsString(normalizedDate);
+  console.log('Checking for events on date:', localDateString, 'Original date:', date);
+  
   return allUpcomingEvents.value.filter(event => {
     if (event.type === 'court') {
-      return event.date === dateString;
+      // Normalize the event date
+      const eventDateString = formatDateAsString(event.date);
+      console.log('Comparing event date:', eventDateString, 'with selected date:', localDateString);
+      return eventDateString === localDateString;
     }
     return false;
   });
@@ -274,6 +358,10 @@ const previousMonth = () => {
 
 const nextMonth = () => {
   currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + 1, 1);
+};
+
+const goToToday = () => {
+  currentDate.value = new Date();
 };
 
 const formatSelectedDate = (date) => {
@@ -342,10 +430,23 @@ onMounted(async () => {
     if (user) {
       currentUser.value = user;
       
+      // Check if project is selected, if not redirect to project selection
+      if (!projectStore.hasSelectedProject) {
+        // Try to load the selected project from localStorage
+        projectStore.loadSelectedProject();
+        
+        // If still no project selected, redirect to project selection
+        if (!projectStore.hasSelectedProject) {
+          router.push('/project-selection');
+          return;
+        }
+      }
+      
       try {
-        // Fetch user bookings with actual user ID
-        await academiesStore.fetchUserBookings(user.uid);
+        // Fetch user bookings with both user ID and project ID
+        await academiesStore.fetchUserBookings(user.uid, projectStore.selectedProject.id);
         console.log('User bookings fetched:', academiesStore.userBookings);
+        console.log('Current project:', projectStore.selectedProject);
       } catch (error) {
         console.error("Error fetching user bookings:", error);
       }
@@ -360,29 +461,29 @@ onMounted(async () => {
 
 <style scoped>
 .calendar-page {
-  padding: 20px 0;
-  max-width: 1000px;
+  padding: 16px 0;
+  max-width: 900px;
   margin: 0 auto;
 }
 
 .page-header {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .header-content {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin-bottom: 6px;
 }
 
 .back-button {
   background: none;
   border: none;
-  color: #666;
+  color: #888;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
+  padding: 6px;
+  border-radius: 6px;
   transition: all 0.2s ease;
 }
 
@@ -392,87 +493,163 @@ onMounted(async () => {
 }
 
 .page-header h1 {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #333;
   margin: 0;
+  letter-spacing: -0.3px;
 }
 
 .header-subtitle {
   color: #666;
-  font-size: 1rem;
+  font-size: 0.9rem;
   margin: 0;
 }
 
 .calendar-content {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
 }
 
 .calendar-navigation {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
   background: white;
-  border: 1px solid #e1e5e9;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
+}
+
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
 .nav-btn {
-  background: none;
-  border: none;
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
   color: #666;
   cursor: pointer;
   padding: 8px;
   border-radius: 8px;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
 }
 
 .nav-btn:hover {
-  background: #f5f5f5;
+  background: #f0f0f0;
+  border-color: #d0d0d0;
   color: #333;
+  transform: translateY(-1px);
+}
+
+.month-display {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .current-month {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #333;
   margin: 0;
-  min-width: 200px;
-  text-align: center;
+  letter-spacing: -0.3px;
+}
+
+.today-btn {
+  background: #ff6b35;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.today-btn:hover {
+  background: #ff5722;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+.view-options {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.view-btn {
+  background: none;
+  border: 2px solid #e8e8e8;
+  color: #666;
+  cursor: pointer;
+  padding: 12px 24px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.view-btn.active {
+  background: #ff6b35;
+  border-color: #ff6b35;
+  color: white;
+}
+
+.view-btn:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+.view-btn.active:hover {
+  background: #ff6b35;
+  border-color: #ff6b35;
+  color: white;
 }
 
 .calendar-container {
   background: white;
-  border: 1px solid #e1e5e9;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
 }
 
 .calendar-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 4px;
+  margin-bottom: 12px;
 }
 
 .day-header {
   text-align: center;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: #666;
-  padding: 12px 8px;
+  color: #888;
+  padding: 8px 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
+  gap: 4px;
 }
 
 .date-cell {
@@ -481,17 +658,18 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
-  padding: 8px;
-  border: 2px solid transparent;
+  padding: 4px;
+  border: 1px solid transparent;
+  min-height: 40px;
 }
 
 .date-cell:hover {
-  background: #fff5f2;
-  border-color: #ff6b35;
+  background: #fafafa;
+  border-color: #e0e0e0;
 }
 
 .date-cell.other-month {
@@ -516,49 +694,50 @@ onMounted(async () => {
 }
 
 .date-number {
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 
 .event-indicator {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
   background: #1976d2;
   border-radius: 50%;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .event-count {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 2px;
+  right: 2px;
   background: #ff6b35;
   color: white;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 10px;
-  min-width: 18px;
+  padding: 1px 4px;
+  border-radius: 8px;
+  min-width: 16px;
   text-align: center;
 }
 
 .events-section {
   background: white;
-  border: 1px solid #e1e5e9;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .section-header h3 {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: #333;
   margin: 0;
@@ -567,10 +746,10 @@ onMounted(async () => {
 .clear-selection {
   background: none;
   border: none;
-  color: #666;
+  color: #888;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
+  padding: 6px;
+  border-radius: 6px;
   transition: all 0.2s ease;
 }
 
@@ -582,28 +761,31 @@ onMounted(async () => {
 .events-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .event-card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 12px;
+  gap: 12px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+  border: 1px solid #f0f0f0;
 }
 
 .event-card:hover {
-  background: #fff5f2;
+  background: #f5f5f5;
+  border-color: #e0e0e0;
+  transform: translateY(-1px);
 }
 
 .event-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -627,15 +809,15 @@ onMounted(async () => {
 .event-title {
   font-weight: 600;
   color: #333;
-  font-size: 1rem;
-  margin-bottom: 4px;
+  font-size: 0.9rem;
+  margin-bottom: 2px;
 }
 
 .event-details {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   color: #666;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
 }
 
 .event-location {
@@ -645,9 +827,9 @@ onMounted(async () => {
 }
 
 .status-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
   font-weight: 500;
 }
 
@@ -674,68 +856,72 @@ onMounted(async () => {
 .no-events {
   text-align: center;
   color: #999;
-  padding: 40px 20px;
+  padding: 32px 20px;
 }
 
 .no-events p {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .upcoming-events-section {
   background: white;
-  border: 1px solid #e1e5e9;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .upcoming-events-section h3 {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: #333;
-  margin: 0 0 20px 0;
+  margin: 0 0 16px 0;
 }
 
 .upcoming-events-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .upcoming-event-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 12px;
+  gap: 12px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+  border: 1px solid #f0f0f0;
 }
 
 .upcoming-event-item:hover {
-  background: #fff5f2;
+  background: #f5f5f5;
+  border-color: #e0e0e0;
+  transform: translateY(-1px);
 }
 
 .event-date {
   text-align: center;
   flex-shrink: 0;
-  min-width: 60px;
+  min-width: 50px;
 }
 
 .date-day {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #ff6b35;
   line-height: 1;
 }
 
 .date-month {
-  font-size: 0.75rem;
-  color: #666;
+  font-size: 0.7rem;
+  color: #888;
   text-transform: uppercase;
   font-weight: 500;
+  letter-spacing: 0.5px;
 }
 
 .event-content {
@@ -743,34 +929,35 @@ onMounted(async () => {
 }
 
 .event-content .event-title {
-  font-size: 1rem;
-  margin-bottom: 4px;
+  font-size: 0.9rem;
+  margin-bottom: 2px;
 }
 
 .event-content .event-type {
   color: #666;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
 }
 
 .event-arrow {
-  color: #666;
-  opacity: 0.5;
+  color: #ccc;
+  opacity: 0.7;
   transition: opacity 0.2s ease;
 }
 
 .upcoming-event-item:hover .event-arrow {
   opacity: 1;
+  color: #999;
 }
 
 .no-upcoming-events {
   text-align: center;
   color: #999;
-  padding: 40px 20px;
+  padding: 32px 20px;
 }
 
 .no-upcoming-events p {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 /* Responsive Design */
