@@ -1,122 +1,160 @@
 <template>
   <div class="home-page">
-    <!-- Content -->
-    <div class="content">
-      <!-- Enhanced Greeting Section -->
-      <div class="greeting-section">
-        <div class="greeting-content">
-          <div class="greeting-text">
-            <h1 class="greeting-title">Hello {{ user?.displayName?.split(' ')[0] || 'User' }}</h1>
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">Welcome back, {{ user?.displayName?.split(' ')[0] || 'User' }}</h1>
+        </div>
+        <div class="hero-actions">
+          <button class="project-switcher-btn" @click="showProjectSwitcher = true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Switch Project
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-section">
+      <div class="stat-card clickable" :class="{ 'loading': isStatsLoading }" @click="navigateToCalendar">
+        <div class="stat-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+            <path d="M3 10H21" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <span class="stat-number">{{ isStatsLoading ? '...' : upcomingEventsCount }}</span>
+          <span class="stat-label">Upcoming Events</span>
+        </div>
+      </div>
+      
+      <div class="stat-card clickable" :class="{ 'loading': isStatsLoading }" @click="navigateToMyBookings">
+        <div class="stat-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <span class="stat-number">{{ isStatsLoading ? '...' : activeBookingsCount }}</span>
+          <span class="stat-label">Upcoming Bookings</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="main-grid">
+      <!-- Left Column -->
+      <div class="left-column">
+        <!-- Quick Actions -->
+        <div class="quick-actions-card">
+          <div class="card-header">
+            <h2>Quick Actions</h2>
+            <p>Access your most used features</p>
           </div>
-          <div class="greeting-actions">
-            <button class="project-switcher-btn" @click="showProjectSwitcher = true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <div class="actions-list">
+            <button class="action-item" @click="navigateToServices">
+              <div class="action-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="action-details">
+                <span class="action-title">Book Services</span>
+                <span class="action-subtitle">Schedule court time & programs</span>
+              </div>
+              <svg class="action-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <span>Switch Project</span>
+            </button>
+            
+            <button class="action-item" @click="navigateToMyBookings">
+              <div class="action-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="action-details">
+                <span class="action-title">My Bookings</span>
+                <span class="action-subtitle">View & manage reservations</span>
+              </div>
+              <svg class="action-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            
+            <button class="action-item" @click="navigateToCalendar">
+              <div class="action-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                  <path d="M3 10H21" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="action-details">
+                <span class="action-title">Full Calendar</span>
+                <span class="action-subtitle">Browse all available slots</span>
+              </div>
+              <svg class="action-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Enhanced Dashboard Grid -->
-      <div class="dashboard-grid">
-        <div class="dashboard-section">
-          <HomeCalendar />
-        </div>
-        <div class="dashboard-section">
+      <!-- Right Column -->
+      <div class="right-column">
+        <!-- Upcoming Bookings -->
+        <div class="upcoming-bookings-card">
           <UpcomingBookingsCard />
         </div>
-      </div>
 
-      <!-- Enhanced Quick Actions -->
-      <div class="quick-actions-section">
-        <div class="section-header">
-          <h2>Quick Actions</h2>
-          <p>Access your most used features</p>
-        </div>
-        <div class="actions-grid">
-          <button class="action-card" @click="navigateToServices">
-            <div class="action-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <div class="action-content">
-              <span class="action-title">Book Services</span>
-              <span class="action-description">Schedule court time & programs</span>
-            </div>
-          </button>
-          
-          <button class="action-card" @click="navigateToMyBookings">
-            <div class="action-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
-              </svg>
-            </div>
-            <div class="action-content">
-              <span class="action-title">My Bookings</span>
-              <span class="action-description">View & manage reservations</span>
-            </div>
-          </button>
-          
-          <button class="action-card" @click="navigateToCalendar">
-            <div class="action-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-                <path d="M3 10H21" stroke="currentColor" stroke-width="2"/>
-              </svg>
-            </div>
-            <div class="action-content">
-              <span class="action-title">Full Calendar</span>
-              <span class="action-description">Browse all available slots</span>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <!-- Enhanced News Feed Section -->
-      <div class="news-section">
-        <div class="section-header">
-          <div class="header-content">
+        <!-- News Feed -->
+        <div class="news-feed-card">
+          <div class="card-header">
             <h2>Community Updates</h2>
-            <p>Stay informed about what's happening</p>
-          </div>
-          <div class="filter-tabs">
-            <button 
-              @click="activeTab = 'all'" 
-              :class="['filter-tab', { active: activeTab === 'all' }]"
-            >
-              All
-            </button>
-            <button 
-              @click="activeTab = 'emergency'" 
-              :class="['filter-tab', { active: activeTab === 'emergency' }]"
-            >
-              Emergency
-            </button>
-          </div>
-        </div>
-
-        <div class="news-feed">
-          <div v-for="item in filteredNews" :key="item.id" class="news-card">
-            <div class="news-icon">
-              <span class="pre-logo">P RE</span>
+            <div class="filter-tabs">
+              <button 
+                @click="activeTab = 'all'" 
+                :class="['filter-tab', { active: activeTab === 'all' }]"
+              >
+                All
+              </button>
+              <button 
+                @click="activeTab = 'emergency'" 
+                :class="['filter-tab', { active: activeTab === 'emergency' }]"
+              >
+                Emergency
+              </button>
             </div>
-            <div class="news-content">
-              <div class="news-timestamp">{{ item.timestamp }}</div>
-              <div class="news-text">{{ item.text }}</div>
+          </div>
+
+          <div class="news-list">
+            <div v-for="item in filteredNews" :key="item.id" class="news-item">
+              <div class="news-icon">
+                <span class="pre-logo">P RE</span>
+              </div>
+              <div class="news-content">
+                <div class="news-text">{{ item.text }}</div>
+                <div class="news-timestamp">{{ item.timestamp }}</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Enhanced Project Switcher Modal -->
+    <!-- Project Switcher Modal -->
     <div v-if="showProjectSwitcher" class="modal-overlay" @click="showProjectSwitcher = false">
       <div class="modal-content project-switcher-modal" @click.stop>
         <div class="modal-header">
@@ -178,7 +216,7 @@ import { useRouter } from 'vue-router'
 import { auth } from '../../boot/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useProjectStore } from '../../stores/projectStore'
-import HomeCalendar from '../../components/HomeCalendar.vue'
+import { useAcademiesStore } from '../../stores/academyStore'
 import UpcomingBookingsCard from '../../components/UpcomingBookingsCard.vue'
 import sampleDataService from '../../services/sampleDataService.js'
 
@@ -189,11 +227,61 @@ defineOptions({
 
 const router = useRouter()
 const projectStore = useProjectStore()
+const academiesStore = useAcademiesStore()
 const user = ref(null)
 const activeTab = ref('all')
 const showProjectSwitcher = ref(false)
 const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => projectStore.selectedProject?.id)
+
+// Computed properties for dynamic stats
+const upcomingEventsCount = computed(() => {
+  if (!academiesStore.userBookings || academiesStore.userBookings.length === 0) return 0
+  
+  try {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0) // Reset time to start of day
+    
+    const upcomingBookings = academiesStore.userBookings.filter(booking => {
+      if (booking.type === 'court' && booking.date) {
+        const bookingDate = new Date(booking.date)
+        bookingDate.setHours(0, 0, 0, 0) // Reset time to start of day
+        return bookingDate >= today && booking.status !== 'cancelled'
+      }
+      return false
+    })
+    
+    return upcomingBookings.length
+  } catch (error) {
+    console.error('Error calculating upcoming events:', error)
+    return 0
+  }
+})
+
+const activeBookingsCount = computed(() => {
+  if (!academiesStore.userBookings || academiesStore.userBookings.length === 0) return 0
+  
+  try {
+    const activeBookings = academiesStore.userBookings.filter(booking => {
+      return booking.status === 'confirmed' || booking.status === 'enrolled'
+    })
+    
+    return activeBookings.length
+  } catch (error) {
+    console.error('Error calculating active bookings:', error)
+    return 0
+  }
+})
+
+// Check if stats are loading - only show loading when we're actively fetching data
+const isStatsLoading = computed(() => {
+  // If we have no bookings array yet, we're still loading
+  if (!academiesStore.userBookings) return true
+  
+  // If we have an empty array, it means we've fetched data but found nothing
+  // This is not loading, it's just no data
+  return false
+})
 
 // Sample news data
 const newsItems = ref([
@@ -263,32 +351,42 @@ const goToProjectSelection = () => {
 
 onMounted(async () => {
   // Listen for auth state changes
-  onAuthStateChanged(auth, (currentUser) => {
+  onAuthStateChanged(auth, async (currentUser) => {
     if (currentUser) {
       user.value = currentUser
+      
+      // Check if project is selected, if not redirect to project selection
+      if (!projectStore.hasSelectedProject) {
+        // Try to load the selected project from localStorage
+        projectStore.loadSelectedProject()
+        
+        // If still no project selected, redirect to project selection
+        if (!projectStore.hasSelectedProject) {
+          router.push('/project-selection')
+          return
+        }
+      }
+      
+      // Fetch user bookings for the selected project
+      try {
+        if (projectStore.selectedProject?.id) {
+          await academiesStore.fetchUserBookings(currentUser.uid, projectStore.selectedProject.id)
+          console.log('User bookings fetched:', academiesStore.userBookings)
+        }
+      } catch (error) {
+        console.error('Error fetching user bookings:', error)
+      }
+      
+      // Initialize sample data for testing
+      try {
+        if (projectStore.selectedProject?.id) {
+          await sampleDataService.initializeAllSampleData(projectStore.selectedProject.id)
+        }
+      } catch (error) {
+        console.error('Error initializing sample data:', error)
+      }
     }
   })
-
-  // Check if project is selected, if not redirect to project selection
-  if (!projectStore.hasSelectedProject) {
-    // Try to load the selected project from localStorage
-    projectStore.loadSelectedProject()
-    
-    // If still no project selected, redirect to project selection
-    if (!projectStore.hasSelectedProject) {
-      router.push('/project-selection')
-      return
-    }
-  }
-
-  // Initialize sample data for testing
-  try {
-    if (projectStore.selectedProject?.id) {
-      await sampleDataService.initializeAllSampleData(projectStore.selectedProject.id)
-    }
-  } catch (error) {
-    console.error('Error initializing sample data:', error)
-  }
 })
 </script>
 
@@ -298,13 +396,7 @@ onMounted(async () => {
   background: #fafafa;
 }
 
-.content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px 20px;
-}
-
-.greeting-section {
+.hero-section {
   background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
   color: white;
   border-radius: 20px;
@@ -318,7 +410,7 @@ onMounted(async () => {
   overflow: hidden;
 }
 
-.greeting-section::before {
+.hero-section::before {
   content: '';
   position: absolute;
   top: -50%;
@@ -329,7 +421,7 @@ onMounted(async () => {
   pointer-events: none;
 }
 
-.greeting-content {
+.hero-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -338,26 +430,26 @@ onMounted(async () => {
   z-index: 1;
 }
 
-.greeting-text {
+.hero-text {
   display: flex;
   flex-direction: column;
 }
 
-.greeting-title {
+.hero-title {
   font-size: 2.5rem;
   font-weight: 800;
   margin: 0;
   letter-spacing: -0.5px;
 }
 
-.greeting-subtitle {
+.hero-subtitle {
   font-size: 1.125rem;
   margin: 0;
   opacity: 0.9;
   font-weight: 400;
 }
 
-.greeting-actions {
+.hero-actions {
   display: flex;
   gap: 16px;
 }
@@ -385,109 +477,71 @@ onMounted(async () => {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
-.dashboard-grid {
+.stats-section {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 24px;
   margin-bottom: 32px;
 }
 
-.dashboard-section {
-  min-height: 300px;
-}
-
-.quick-actions-section {
-  background: white;
-  border: 1px solid #e8e8e8;
-  border-radius: 20px;
-  padding: 32px;
-  margin-bottom: 32px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 28px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.header-content h2 {
-  margin: 0 0 8px 0;
-  color: #333;
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-}
-
-.header-content p {
-  color: #666;
-  font-size: 0.95rem;
-  margin: 0;
-  font-weight: 400;
-}
-
-.filter-tabs {
-  display: flex;
-  gap: 12px;
-}
-
-.filter-tab {
-  background: none;
-  border: 2px solid #e8e8e8;
-  border-radius: 10px;
-  padding: 10px 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: 500;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.filter-tab:hover {
-  border-color: #ff6b35;
-  color: #ff6b35;
-  transform: translateY(-1px);
-}
-
-.filter-tab.active {
-  background: #ff6b35;
-  border-color: #ff6b35;
-  color: white;
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-}
-
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
-}
-
-.action-card {
+.stat-card {
   display: flex;
   align-items: center;
   gap: 20px;
-  background: #fafafa;
-  border: 2px solid #f0f0f0;
+  background: white;
+  border: 1px solid #e8e8e8;
   border-radius: 16px;
   padding: 28px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-decoration: none;
-  color: #333;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.action-card:hover {
-  background: white;
-  border-color: #ff6b35;
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(255, 107, 53, 0.15);
+.stat-card.loading {
+  opacity: 0.7;
+  pointer-events: none;
+  background: #f0f0f0;
+  border-color: #e0e0e0;
+  box-shadow: none;
 }
 
-.action-icon {
+.stat-card.loading .stat-number {
+  color: #999;
+}
+
+.stat-card:not(.loading) .stat-number {
+  color: #333;
+}
+
+.stat-card:not(.loading) .stat-number:empty::before {
+  content: "0";
+}
+
+.stat-card.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.stat-card.clickable:hover {
+  border-color: #ff6b35;
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);
+  transform: translateY(-2px);
+}
+
+.stat-card.clickable:active {
+  transform: translateY(0);
+}
+
+.stat-card.loading.clickable {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.stat-card.loading.clickable:hover {
+  border-color: #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transform: none;
+}
+
+.stat-icon {
   width: 64px;
   height: 64px;
   background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
@@ -500,25 +554,158 @@ onMounted(async () => {
   box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
 }
 
-.action-content {
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stat-number {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #333;
+  margin: 0;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.quick-actions-card {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.card-header h2 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.card-header p {
+  color: #666;
+  font-size: 0.95rem;
+  margin: 0;
+  font-weight: 400;
+}
+
+.actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fafafa;
+  border: 2px solid #f0f0f0;
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.action-item:hover {
+  background: white;
+  border-color: #ff6b35;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(255, 107, 53, 0.15);
+}
+
+.action-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
+}
+
+.action-details {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
 .action-title {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #333;
   margin: 0;
   letter-spacing: -0.2px;
 }
 
-.action-description {
-  font-size: 0.9rem;
+.action-subtitle {
+  font-size: 0.85rem;
   color: #666;
   margin: 0;
   line-height: 1.4;
+}
+
+.action-arrow {
+  flex-shrink: 0;
+  color: #ff6b35;
+}
+
+.calendar-widget {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.upcoming-bookings-card {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.news-feed-card {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .news-section {
@@ -562,47 +749,53 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
+  width: 40px;
+  height: 40px;
   background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
   color: white;
-  border-radius: 16px;
-  font-weight: 800;
-  font-size: 0.9rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.8rem;
   letter-spacing: 0.5px;
-  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
 }
 
 .news-content {
   flex: 1;
 }
 
+.news-text {
+  color: #333;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-weight: 400;
+  margin-bottom: 6px;
+}
+
 .news-timestamp {
   color: #888;
-  font-size: 0.875rem;
-  margin-bottom: 8px;
+  font-size: 0.8rem;
   font-weight: 500;
 }
 
-.news-text {
-  color: #333;
-  font-size: 1rem;
-  line-height: 1.6;
-  font-weight: 400;
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-  .dashboard-grid {
+  .main-grid {
     grid-template-columns: 1fr;
   }
   
-  .greeting-content {
+  .hero-content {
     flex-direction: column;
     align-items: flex-start;
   }
   
-  .greeting-actions {
+  .hero-actions {
     width: 100%;
   }
   
@@ -613,29 +806,35 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
-  .content {
+  .home-page {
     padding: 20px 16px;
   }
   
-  .greeting-section {
+  .hero-section {
     padding: 24px;
     margin-bottom: 24px;
   }
   
-  .greeting-title {
+  .hero-title {
     font-size: 2rem;
   }
   
-  .greeting-subtitle {
+  .hero-subtitle {
     font-size: 1rem;
   }
   
-  .quick-actions-section,
-  .news-section {
+  .stats-section {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-actions-card,
+  .calendar-widget,
+  .upcoming-bookings-card,
+  .news-feed-card {
     padding: 24px;
   }
   
-  .section-header {
+  .card-header {
     flex-direction: column;
     gap: 16px;
     align-items: flex-start;
@@ -650,12 +849,12 @@ onMounted(async () => {
     text-align: center;
   }
   
-  .actions-grid {
+  .actions-list {
     grid-template-columns: 1fr;
   }
   
-  .action-card {
-    padding: 24px;
+  .action-item {
+    padding: 20px;
     flex-direction: column;
     align-items: center;
     text-align: center;
@@ -667,7 +866,7 @@ onMounted(async () => {
     height: 56px;
   }
   
-  .action-content {
+  .action-details {
     text-align: center;
   }
   
@@ -675,7 +874,7 @@ onMounted(async () => {
     font-size: 1.1rem;
   }
   
-  .action-description {
+  .action-subtitle {
     font-size: 0.85rem;
   }
   
@@ -691,30 +890,32 @@ onMounted(async () => {
 }
 
 @media (max-width: 480px) {
-  .content {
+  .home-page {
     padding: 16px 12px;
   }
   
-  .greeting-section {
+  .hero-section {
     padding: 20px;
     border-radius: 16px;
   }
   
-  .greeting-title {
+  .hero-title {
     font-size: 1.75rem;
   }
   
-  .greeting-subtitle {
+  .hero-subtitle {
     font-size: 0.9rem;
   }
   
-  .quick-actions-section,
-  .news-section {
+  .quick-actions-card,
+  .calendar-widget,
+  .upcoming-bookings-card,
+  .news-feed-card {
     padding: 20px;
     border-radius: 16px;
   }
   
-  .action-card {
+  .action-item {
     padding: 20px;
   }
   
@@ -727,7 +928,7 @@ onMounted(async () => {
     font-size: 1rem;
   }
   
-  .action-description {
+  .action-subtitle {
     font-size: 0.8rem;
   }
   
@@ -958,5 +1159,94 @@ onMounted(async () => {
   border-color: #ff6b35;
   color: #ff6b35;
   transform: translateY(-2px);
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-tab {
+  background: none;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.filter-tab:hover {
+  border-color: #ff6b35;
+  color: #ff6b35;
+}
+
+.filter-tab.active {
+  background: #ff6b35;
+  border-color: #ff6b35;
+  color: white;
+}
+
+.news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.news-item {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
+}
+
+.news-item:hover {
+  background: white;
+  border-color: #e0e0e0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.news-icon {
+  flex-shrink: 0;
+}
+
+.pre-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  color: white;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+.news-content {
+  flex: 1;
+}
+
+.news-text {
+  color: #333;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-weight: 400;
+  margin-bottom: 6px;
+}
+
+.news-timestamp {
+  color: #888;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 </style>
