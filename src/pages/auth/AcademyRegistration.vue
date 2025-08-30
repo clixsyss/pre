@@ -358,16 +358,9 @@ const submitRegistration = async () => {
       updatedAt: serverTimestamp()
     };
     
-    console.log('Submitting registration:', registrationData);
-    console.log('Project ID being used:', currentProject.value.id);
-    console.log('Collection path:', `projects/${currentProject.value.id}/bookings`);
-    
     // Save to the project's bookings collection
     const bookingsRef = collection(db, `projects/${currentProject.value.id}/bookings`);
     const docRef = await addDoc(bookingsRef, registrationData);
-    
-    console.log('Registration saved successfully with ID:', docRef.id);
-    console.log('Full saved data:', { id: docRef.id, ...registrationData });
     
     // Also save to the academy store for local state management
     await academiesStore.addUserBooking({
