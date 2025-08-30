@@ -110,7 +110,6 @@ const navigateToMyBookings = () => {
 <style scoped>
 .services-page {
   padding: 20px 16px;
-  min-height: 100vh;
   background: #fafafa;
 }
 
@@ -129,8 +128,8 @@ const navigateToMyBookings = () => {
 
 .services-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
   max-width: 400px;
   margin: 0 auto;
 }
