@@ -236,14 +236,14 @@ onMounted(() => {
 
 <style scoped>
 .store-details-page {
-  background: #fafafa;
+  background: #f8f9fa;
   min-height: 100vh;
 }
 
 .store-header {
   background: white;
   padding: 24px 20px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e5e7eb;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -279,10 +279,11 @@ onMounted(() => {
 .store-placeholder {
   width: 100%;
   height: 100%;
-  background: #f5f5f5;
+  background: #f3f4f6;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #9ca3af;
 }
 
 .store-info {
@@ -291,8 +292,8 @@ onMounted(() => {
 
 .store-name {
   font-size: 2rem;
-  font-weight: 300;
-  color: #333;
+  font-weight: 700;
+  color: #111827;
   margin: 0 0 16px 0;
   letter-spacing: -0.5px;
 }
@@ -300,7 +301,7 @@ onMounted(() => {
 .store-meta {
   display: flex;
   gap: 12px;
-  color: #666;
+  color: #6b7280;
   font-size: 1rem;
 }
 
@@ -315,27 +316,29 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #1976d2;
+  background-color: #000000;
   color: white;
-  padding: 10px 20px;
+  padding: 12px 20px;
   border-radius: 12px;
   font-weight: 600;
   font-size: 1rem;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
   position: relative;
 }
 
 .cart-button:hover {
-  background-color: #1565c0;
+  background-color: #1a1a1a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .cart-count {
   position: absolute;
   top: -8px;
   right: -8px;
-  background-color: #f44336;
+  background-color: #F37C4E;
   color: white;
   border-radius: 50%;
   width: 24px;
@@ -351,7 +354,7 @@ onMounted(() => {
 .search-section {
   background: white;
   padding: 20px 20px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e5e7eb;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -361,10 +364,16 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 15px;
-  border: 1px solid #e0e0e0;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
   border-radius: 12px;
-  background-color: #f8f9fa;
+  background-color: white;
+  transition: all 0.2s ease;
+}
+
+.search-container:focus-within {
+  border-color: #F37C4E;
+  box-shadow: 0 0 0 3px rgba(243, 124, 78, 0.1);
 }
 
 .search-input {
@@ -372,17 +381,17 @@ onMounted(() => {
   padding: 0;
   border: none;
   font-size: 1rem;
-  color: #333;
+  color: #111827;
   background-color: transparent;
   outline: none;
 }
 
 .search-input::placeholder {
-  color: #999;
+  color: #9ca3af;
 }
 
 .search-icon {
-  color: #999;
+  color: #9ca3af;
 }
 
 .products-container {
@@ -399,15 +408,16 @@ onMounted(() => {
 
 .loading-state p,
 .empty-state p {
-  color: #666;
+  color: #6b7280;
   margin: 16px 0 0 0;
+  font-size: 1rem;
 }
 
 .loading-state .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #1976d2;
+  border: 3px solid #f3f4f6;
+  border-top: 3px solid #F37C4E;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 16px;
@@ -419,12 +429,12 @@ onMounted(() => {
 }
 
 .empty-state svg {
-  color: #666;
+  color: #9ca3af;
   margin-bottom: 16px;
 }
 
 .empty-state h3 {
-  color: #666;
+  color: #6b7280;
   margin: 16px 0 0 0;
   font-size: 1.5rem;
 }
@@ -436,23 +446,23 @@ onMounted(() => {
 }
 
 .product-card {
-  background: #f8f9fa;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 16px;
   padding: 20px;
   transition: all 0.2s ease;
 }
 
 .product-card:hover {
-  border-color: #1976d2;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border-color: #F37C4E;
+  box-shadow: 0 8px 25px rgba(243, 124, 78, 0.15);
   transform: translateY(-2px);
 }
 
 .product-image {
   width: 100%;
   height: 200px;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   margin-bottom: 16px;
 }
@@ -466,10 +476,11 @@ onMounted(() => {
 .product-placeholder {
   width: 100%;
   height: 100%;
-  background: #f0f0f0;
+  background: #f3f4f6;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #9ca3af;
 }
 
 .product-content {
@@ -481,16 +492,14 @@ onMounted(() => {
 .product-name {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #333;
+  color: #111827;
   margin: 0 0 8px 0;
 }
 
 .product-description {
-  color: #666;
+  color: #6b7280;
   font-size: 0.9rem;
   margin: 0 0 16px 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -504,34 +513,38 @@ onMounted(() => {
 
 .product-price {
   font-size: 1.3rem;
-  font-weight: 600;
-  color: #1976d2;
+  font-weight: 700;
+  color: #F37C4E;
 }
 
 .add-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #1976d2;
+  background-color: #000000;
   color: white;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-radius: 12px;
   font-weight: 600;
   font-size: 0.9rem;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
   position: relative;
 }
 
 .add-btn:hover {
-  background-color: #1565c0;
+  background-color: #1a1a1a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .add-btn:disabled {
-  background-color: #ccc;
+  background-color: #9ca3af;
   cursor: not-allowed;
-  color: #666;
+  color: white;
+  transform: none;
+  box-shadow: none;
 }
 
 .mini-spinner {
@@ -543,26 +556,33 @@ onMounted(() => {
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
 .toast {
   position: fixed;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #4caf50;
+  background-color: #21ba45;
   color: white;
-  padding: 15px 25px;
+  padding: 16px 24px;
   border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  gap: 12px;
+  box-shadow: 0 8px 25px rgba(33, 186, 69, 0.3);
   z-index: 1000;
-  opacity: 0.9;
+  opacity: 0.95;
+  animation: toast-slide-up 0.3s ease-out;
+}
+
+@keyframes toast-slide-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 0.95;
+    transform: translate(-50%, 0);
+  }
 }
 
 .toast svg {
@@ -571,7 +591,7 @@ onMounted(() => {
 }
 
 .toast span {
-  font-weight: 500;
+  font-weight: 600;
   font-size: 1rem;
 }
 
