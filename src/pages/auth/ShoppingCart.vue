@@ -91,6 +91,9 @@
           <span>Delivery Fee</span>
           <span>${{ deliveryFee.toFixed(2) }}</span>
         </div>
+        <div v-if="cartStore.items.length > 0 && cartStore.items[0].storeDeliveryFee" class="summary-note">
+          <small>Store delivery fee</small>
+        </div>
         
         <div class="summary-row total">
           <span>Total</span>
@@ -525,6 +528,17 @@ onMounted(() => {
   border-top: 2px solid #e0e0e0;
   margin-top: 16px;
   padding-top: 20px;
+}
+
+.summary-note {
+  text-align: center;
+  margin: -8px 0 16px 0;
+}
+
+.summary-note small {
+  color: #666;
+  font-size: 0.85rem;
+  font-style: italic;
 }
 
 .place-order-btn {

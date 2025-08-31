@@ -389,7 +389,8 @@ onMounted(() => {
 
 .store-meta {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
 }
 
@@ -399,6 +400,15 @@ onMounted(() => {
   gap: 4px;
   color: #666;
   font-size: 0.85rem;
+}
+
+.delivery-fee {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #ff6b35;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .rating {

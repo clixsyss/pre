@@ -18,6 +18,7 @@
             <div class="store-meta">
               <span class="location">{{ store?.location }}</span>
               <span class="delivery">{{ store?.averageDeliveryTime }} delivery</span>
+              <span v-if="store?.deliveryFee" class="delivery-fee">${{ store.deliveryFee }} delivery fee</span>
             </div>
           </div>
         </div>
@@ -207,7 +208,7 @@ const addToCart = async (product) => {
     addingToCart.value = product.id;
     
     // Add to cart store
-    cartStore.addItem(product, store.value.id, store.value.name);
+    cartStore.addItem(product, store.value.id, store.value.name, store.value.deliveryFee || 0);
     
     // Show success toast
     showSuccessToast.value = true;
@@ -306,10 +307,16 @@ onMounted(() => {
 }
 
 .location,
-.delivery {
+.delivery,
+.delivery-fee {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.delivery-fee {
+  color: #ff6b35;
+  font-weight: 500;
 }
 
 .cart-button {

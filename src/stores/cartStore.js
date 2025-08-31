@@ -16,6 +16,11 @@ export const useCartStore = defineStore('cart', {
     },
     
     deliveryFee: (state) => {
+      // Get delivery fee from the first item's store (assuming all items are from same store)
+      if (state.items.length > 0 && state.items[0].storeDeliveryFee) {
+        return state.items[0].storeDeliveryFee;
+      }
+      // Fallback to default delivery fee
       return state.subtotal > 50 ? 0 : 5.99;
     },
     
@@ -25,7 +30,7 @@ export const useCartStore = defineStore('cart', {
   },
 
   actions: {
-    addItem(product, storeId, storeName) {
+    addItem(product, storeId, storeName, storeDeliveryFee = 0) {
       const existingItem = this.items.find(item => 
         item.id === product.id && item.storeId === storeId
       );
@@ -37,7 +42,8 @@ export const useCartStore = defineStore('cart', {
           ...product,
           quantity: 1,
           storeId,
-          storeName
+          storeName,
+          storeDeliveryFee
         });
       }
       
