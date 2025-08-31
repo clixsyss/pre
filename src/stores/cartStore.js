@@ -24,8 +24,8 @@ export const useCartStore = defineStore('cart', {
       return state.subtotal > 50 ? 0 : 5.99;
     },
     
-    total: (state) => {
-      return state.subtotal + state.deliveryFee;
+    total: (state, getters) => {
+      return getters.subtotal + getters.deliveryFee;
     }
   },
 
