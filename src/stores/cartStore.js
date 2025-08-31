@@ -8,11 +8,11 @@ export const useCartStore = defineStore('cart', {
 
   getters: {
     itemCount: (state) => {
-      return state.items.reduce((total, item) => total + item.quantity, 0);
+      return state.items.reduce((total, item) => total + (item.quantity || 0), 0);
     },
     
     subtotal: (state) => {
-      return state.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+      return state.items.reduce((total, item) => total + ((item.price || 0) * (item.quantity || 0)), 0);
     },
     
     deliveryFee: (state) => {
@@ -20,12 +20,22 @@ export const useCartStore = defineStore('cart', {
       if (state.items.length > 0 && state.items[0].storeDeliveryFee) {
         return state.items[0].storeDeliveryFee;
       }
-      // Fallback to default delivery fee
-      return state.subtotal > 50 ? 0 : 5.99;
+      // Fallback to default delivery fee - calculate subtotal manually here
+      const subtotal = state.items.reduce((total, item) => total + ((item.price || 0) * (item.quantity || 0)), 0);
+      return subtotal > 50 ? 0 : 5.99;
     },
     
-    total: (state, getters) => {
-      return getters.subtotal + getters.deliveryFee;
+    total: (state) => {
+      const subtotal = state.items.reduce((total, item) => total + ((item.price || 0) * (item.quantity || 0)), 0);
+      let deliveryFee = 0;
+      
+      if (state.items.length > 0 && state.items[0].storeDeliveryFee) {
+        deliveryFee = state.items[0].storeDeliveryFee;
+      } else {
+        deliveryFee = subtotal > 50 ? 0 : 5.99;
+      }
+      
+      return subtotal + deliveryFee;
     }
   },
 

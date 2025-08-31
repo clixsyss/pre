@@ -303,6 +303,131 @@
         </div>
       </div>
     </div>
+
+    <!-- Order Details Modal -->
+    <div v-if="showOrderModal" class="modal-overlay" @click="closeOrderModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>Order Details</h2>
+          <button class="close-btn" @click="closeOrderModal">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div v-if="selectedOrder" class="modal-body">
+          <!-- Order Summary -->
+          <div class="order-summary-section">
+            <div class="order-header-info">
+              <div class="order-number-large">#{{ selectedOrder.orderNumber || selectedOrder.id.slice(-6) }}</div>
+              <span :class="['status-badge-large', getStatusClass(selectedOrder.status)]">
+                {{ getStatusText(selectedOrder.status) }}
+              </span>
+            </div>
+            <div class="order-date-large">{{ formatOrderDate(selectedOrder.createdAt) }}</div>
+          </div>
+
+          <!-- Order Stats -->
+          <div class="order-stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Total Items</span>
+              <span class="stat-value">{{ selectedOrder.items?.length || 0 }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Subtotal</span>
+              <span class="stat-value">${{ (selectedOrder.subtotal || 0).toFixed(2) }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Delivery Fee</span>
+              <span class="stat-value">${{ (selectedOrder.deliveryFee || 0).toFixed(2) }}</span>
+            </div>
+            <div class="stat-item total">
+              <span class="stat-label">Total</span>
+              <span class="stat-value">${{ (selectedOrder.total || 0).toFixed(2) }}</span>
+            </div>
+          </div>
+
+          <!-- Store Information -->
+          <div v-if="selectedOrder.storeName" class="store-info-section">
+            <h3>Store Information</h3>
+            <div class="store-details">
+              <div class="store-detail-item">
+                <span class="detail-label">Store Name</span>
+                <span class="detail-value">{{ selectedOrder.storeName }}</span>
+              </div>
+              <div class="store-detail-item" v-if="selectedOrder.location">
+                <span class="detail-label">Location</span>
+                <span class="detail-value">{{ selectedOrder.location }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Order Items -->
+          <div class="order-items-section">
+            <h3>Order Items</h3>
+            <div class="items-list">
+              <div 
+                v-for="item in selectedOrder.items" 
+                :key="item.productId" 
+                class="item-row"
+              >
+                <div class="item-info">
+                  <span class="item-name">{{ item.productName }}</span>
+                  <span class="item-price">${{ (item.price || 0).toFixed(2) }}</span>
+                </div>
+                <div class="item-quantity">
+                  <span class="quantity-badge">Qty: {{ item.quantity }}</span>
+                  <span class="item-total">${{ ((item.price || 0) * (item.quantity || 0)).toFixed(2) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Order Timeline -->
+          <div class="order-timeline-section">
+            <h3>Order Timeline</h3>
+            <div class="timeline">
+              <div class="timeline-item completed">
+                <div class="timeline-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="timeline-content">
+                  <div class="timeline-title">Order Placed</div>
+                  <div class="timeline-time">{{ formatOrderDate(selectedOrder.createdAt) }}</div>
+                </div>
+              </div>
+              
+              <div class="timeline-item" :class="{ completed: isStepCompleted(selectedOrder.status, 'processing') }">
+                <div class="timeline-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="timeline-content">
+                  <div class="timeline-title">Processing</div>
+                  <div class="timeline-time">In progress</div>
+                </div>
+              </div>
+              
+              <div class="timeline-item" :class="{ completed: isStepCompleted(selectedOrder.status, 'delivered') }">
+                <div class="timeline-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 7L10 17L5 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="timeline-content">
+                  <div class="timeline-title">Delivered</div>
+                  <div class="timeline-time">Estimated: {{ selectedOrder.estimatedDelivery || 'TBD' }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -332,6 +457,8 @@ const searchTerm = ref('');
 const categoryFilter = ref('all');
 const sortBy = ref('rating');
 const activeTab = ref('stores');
+const showOrderModal = ref(false);
+const selectedOrder = ref(null);
 
 // Computed properties
 const filteredStores = computed(() => {
@@ -456,9 +583,13 @@ const navigateToStore = (store) => {
 };
 
 const viewOrderDetails = (order) => {
-  // For now, we'll just log the order
-  // This can be enhanced to show a modal or navigate to order details page
-  console.log('Viewing order details:', order);
+  selectedOrder.value = order;
+  showOrderModal.value = true;
+};
+
+const closeOrderModal = () => {
+  showOrderModal.value = false;
+  selectedOrder.value = null;
 };
 
 const getOrdersByStatus = (status) => {
@@ -525,40 +656,47 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
 
 <style scoped>
 .stores-shopping-page {
-  padding: 20px 16px;
-  background: #fafafa;
+  min-height: 100vh;
 }
 
 .page-header {
   text-align: center;
   margin-bottom: 32px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 32px 24px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .header-content h1 {
-  font-size: 2rem;
-  font-weight: 300;
-  color: #333;
-  margin: 0 0 8px 0;
-  letter-spacing: -0.5px;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #000000;
+  margin: 0 0 12px 0;
+  letter-spacing: -1px;
 }
 
 .subtitle {
-  color: #666;
+  color: #6f6f6f;
   font-size: 1rem;
   margin: 0;
+  font-weight: 500;
 }
 
 .tab-container {
-  background: #fff;
-  border-radius: 16px;
-  padding: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 20px;
   margin-bottom: 32px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .tab-buttons {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   position: relative;
 }
 
@@ -567,30 +705,31 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  font-weight: 500;
+  gap: 10px;
+  padding: 16px 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 16px;
+  font-size: 1rem;
+  font-weight: 600;
   color: #666;
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 }
 
 .tab-btn:hover {
   border-color: var(--q-secondary);
-  background: #f0f0f0;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  transform: translateY(-2px);
 }
 
 .tab-btn.active {
   border-color: var(--q-secondary);
-  background: var(--q-secondary);
   color: white;
-  font-weight: 600;
+  font-weight: 700;
+  transform: translateY(-2px);
 }
 
 .tab-btn.active .tab-indicator {
@@ -601,7 +740,7 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
   position: absolute;
   bottom: 0;
   left: 0;
-  height: 3px;
+  height: 4px;
   width: 100%;
   background: var(--q-secondary);
   transition: transform 0.3s ease;
@@ -732,27 +871,34 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
 }
 
 .store-card {
-  background: white;
-  border: 1px solid #e8e8e8;
-  border-radius: 16px;
-  padding: 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  padding: 24px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
 }
 
 .store-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-8px) scale(1.02);
   border-color: var(--q-secondary);
-  box-shadow: 0 8px 24px rgba(0, 122, 255, 0.12);
+}
+
+.store-card:hover::before {
+  transform: scaleX(1);
 }
 
 .store-image {
-  width: 80px;
-  height: 80px;
-  border-radius: 12px;
+  width: 90px;
+  height: 90px;
+  border-radius: 16px;
   overflow: hidden;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
 .store-image img {
@@ -772,46 +918,61 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
 }
 
 .store-name {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.4rem;
+  font-weight: 700;
   color: #333;
-  margin: 0 0 8px 0;
+  margin: 0 0 10px 0;
+  background: linear-gradient(135deg, #333 0%, #666 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .store-location {
   color: #666;
-  font-size: 0.9rem;
-  margin: 0 0 16px 0;
+  font-size: 1rem;
+  margin: 0 0 20px 0;
+  font-weight: 500;
 }
 
 .store-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
   align-items: center;
 }
 
 .delivery-time {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   color: #666;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 8px 12px;
+  background: rgba(0, 122, 255, 0.1);
+  border-radius: 20px;
 }
 
 .delivery-fee {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   color: #ff6b35;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  background: rgba(255, 107, 53, 0.1);
+  border-radius: 20px;
 }
 
 .rating {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 215, 0, 0.1);
+  border-radius: 20px;
 }
 
 .stars {
@@ -821,16 +982,18 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
 
 .star {
   color: #ddd;
+  transition: color 0.2s ease;
 }
 
 .star.filled {
   color: #ffd700;
+  filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.3));
 }
 
 .rating-text {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: #666;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* Responsive Design */
@@ -919,17 +1082,18 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
   position: absolute;
   top: -8px;
   right: -8px;
-  background: #ff6b35;
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
   color: white;
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border: 2px solid white;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 3px solid white;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
 
 /* Orders Section Styles */
@@ -1261,5 +1425,310 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
   border-color: var(--q-secondary);
   color: var(--q-secondary);
   background: #f8f9fa;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #eee;
+  background: var(--q-secondary);
+  color: white;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+  transition: transform 0.2s ease;
+}
+
+.close-btn:hover {
+  transform: rotate(90deg);
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.order-summary-section {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.order-header-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.order-number-large {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.status-badge-large {
+  padding: 8px 16px;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.order-date-large {
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.order-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.store-info-section {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+}
+
+.store-info-section h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.store-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.store-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-label {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.detail-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.order-items-section {
+  margin-bottom: 24px;
+}
+
+.order-items-section h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px dashed #eee;
+}
+
+.item-row:last-child {
+  border-bottom: none;
+}
+
+.item-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 70%;
+}
+
+.item-name {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+  flex-grow: 1;
+  margin-right: 10px;
+}
+
+.item-price {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.item-quantity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.quantity-badge {
+  background: #e0e0e0;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.item-total {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.order-timeline-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.order-timeline-section h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.timeline {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #e0e0e0;
+  z-index: 0;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  width: 33%; /* Equal width for three steps */
+}
+
+.timeline-item.completed .timeline-icon {
+  background: var(--q-secondary);
+  border-color: var(--q-secondary);
+  color: white;
+}
+
+.timeline-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: 2px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+}
+
+.timeline-content {
+  text-align: center;
+}
+
+.timeline-title {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.timeline-time {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.timeline-item.completed .timeline-time {
+  color: #666;
+  font-weight: 500;
 }
 </style>

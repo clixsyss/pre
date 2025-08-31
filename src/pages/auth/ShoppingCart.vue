@@ -3,19 +3,28 @@
     <!-- Header -->
     <div class="page-header">
       <div class="header-content">
+        <div class="header-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
         <h1>Shopping Cart</h1>
         <p class="subtitle">Review your items and place your order</p>
       </div>
     </div>
-
     <!-- Cart Items -->
     <div v-if="cartStore.items.length === 0" class="empty-cart">
-      <svg class="empty-cart-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+      <div class="empty-cart-icon">
+        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <h2>Your cart is empty</h2>
       <p>Add some products from our stores to get started</p>
       <button class="browse-stores-btn" @click="browseStores">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
         Browse Stores
       </button>
     </div>
@@ -23,81 +32,100 @@
     <div v-else class="cart-content">
       <!-- Cart Items List -->
       <div class="cart-items">
-        <div
-          v-for="item in cartStore.items"
-          :key="item.id"
-          class="cart-item"
-        >
-          <div class="item-image">
-            <img v-if="item.image" :src="item.image" :alt="item.name" />
-            <div v-else class="item-placeholder">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 7L10 17L5 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-          </div>
-          
-          <div class="item-details">
-            <h3 class="item-name">{{ item.name }}</h3>
-            <p class="item-store">{{ item.storeName }}</p>
-            <p class="item-description">{{ item.description }}</p>
-            
-            <div class="item-price">${{ item.price }}</div>
-          </div>
-          
-          <div class="item-actions">
-            <div class="quantity-controls">
-              <button 
-                class="quantity-btn"
-                @click="decreaseQuantity(item)"
-                :disabled="item.quantity <= 1"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
+        <div class="cart-items-header">
+          <h2>Cart Items ({{ totalItems }})</h2>
+        </div>
+        
+        <div class="cart-items-list">
+          <div
+            v-for="item in cartStore.items"
+            :key="item.id"
+            class="cart-item"
+          >
+            <div class="item-main">
+              <div class="item-image">
+                <img v-if="item.image" :src="item.image" :alt="item.name" />
+                <div v-else class="item-placeholder">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 7L10 17L5 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
               
-              <span class="quantity">{{ item.quantity }}</span>
-              
-              <button 
-                class="quantity-btn"
-                @click="increaseQuantity(item)"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
+              <div class="item-details">
+                <h3 class="item-name">{{ item.name }}</h3>
+                <div class="item-meta">
+                  <span class="item-store">{{ item.storeName }}</span>
+                  <span class="item-price">${{ item.price }}</span>
+                </div>
+                <p class="item-description">{{ item.description }}</p>
+              </div>
             </div>
             
-            <button class="remove-btn" @click="removeItem(item)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
+            <div class="item-actions">
+              <div class="quantity-controls">
+                <button 
+                  class="quantity-btn"
+                  @click="decreaseQuantity(item)"
+                  :disabled="item.quantity <= 1"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                
+                <span class="quantity">{{ item.quantity }}</span>
+                
+                <button 
+                  class="quantity-btn"
+                  @click="increaseQuantity(item)"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+              
+              <div class="item-total">
+                <span class="total-label">Total</span>
+                <span class="total-amount">${{ (item.price * item.quantity).toFixed(2) }}</span>
+              </div>
+              
+              <button class="remove-btn" @click="removeItem(item)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Order Summary -->
       <div class="order-summary">
-        <h2>Order Summary</h2>
-        
-        <div class="summary-row">
-          <span>Subtotal</span>
-          <span>${{ subtotal.toFixed(2) }}</span>
+        <div class="summary-header">
+          <h2>Order Summary</h2>
         </div>
         
-        <div class="summary-row">
-          <span>Delivery Fee</span>
-          <span>${{ deliveryFee.toFixed(2) }}</span>
-        </div>
-        <div v-if="cartStore.items.length > 0 && cartStore.items[0].storeDeliveryFee" class="summary-note">
-          <small>Store delivery fee</small>
-        </div>
-        
-        <div class="summary-row total">
-          <span>Total</span>
-          <span>${{ total.toFixed(2) }}</span>
+        <div class="summary-content">
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <span>${{ subtotal.toFixed(2) }}</span>
+          </div>
+          
+          <div class="summary-row">
+            <span>Delivery Fee</span>
+            <span>${{ deliveryFee.toFixed(2) }}</span>
+          </div>
+          
+          <div v-if="cartStore.items.length > 0 && cartStore.items[0].storeDeliveryFee" class="summary-note">
+            <small>Store delivery fee</small>
+          </div>
+          
+          <div class="summary-row total">
+            <span>Total</span>
+            <span>${{ total.toFixed(2) }}</span>
+          </div>
         </div>
         
         <button 
@@ -105,6 +133,9 @@
           @click="placeOrder"
           :disabled="placingOrder"
         >
+          <svg v-if="!placingOrder" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
           <span v-if="placingOrder">Placing Order...</span>
           <span v-else>Place Order</span>
         </button>
@@ -188,10 +219,41 @@ const orderNumber = ref('');
 const estimatedDelivery = ref('');
 
 // Computed properties
-const subtotal = computed(() => cartStore.subtotal);
-const deliveryFee = computed(() => cartStore.deliveryFee);
-const total = computed(() => cartStore.total);
-const totalItems = computed(() => cartStore.itemCount);
+const subtotal = computed(() => {
+  try {
+    return cartStore?.subtotal || 0;
+  } catch (error) {
+    console.error('Error computing subtotal:', error);
+    return 0;
+  }
+});
+
+const deliveryFee = computed(() => {
+  try {
+    return cartStore?.deliveryFee || 0;
+  } catch (error) {
+    console.error('Error computing delivery fee:', error);
+    return 0;
+  }
+});
+
+const total = computed(() => {
+  try {
+    return cartStore?.total || 0;
+  } catch (error) {
+    console.error('Error computing total:', error);
+    return 0;
+  }
+});
+
+const totalItems = computed(() => {
+  try {
+    return cartStore?.itemCount || 0;
+  } catch (error) {
+    console.error('Error computing total items:', error);
+    return 0;
+  }
+});
 
 // Methods
 const increaseQuantity = (item) => {
@@ -278,8 +340,30 @@ const browseStores = () => {
 
 // Lifecycle
 onMounted(() => {
-  // Load cart from localStorage
-  cartStore.loadCart();
+  try {
+    console.log('ShoppingCart component mounted');
+    console.log('Cart store before loading:', cartStore);
+    
+    // Check if cart store is properly initialized
+    if (!cartStore) {
+      console.error('Cart store is not initialized!');
+      return;
+    }
+    
+    // Load cart from localStorage
+    cartStore.loadCart();
+    console.log('Cart loaded successfully');
+    console.log('Cart store after loading:', cartStore);
+    console.log('Cart items after loading:', cartStore.items);
+    console.log('Cart itemCount after loading:', cartStore.itemCount);
+    
+  } catch (error) {
+    console.error('Error loading cart:', error);
+    // Initialize empty cart if there's an error
+    if (cartStore) {
+      cartStore.items = [];
+    }
+  }
 });
 </script>
 
@@ -307,6 +391,14 @@ onMounted(() => {
   color: #666;
   font-size: 1rem;
   margin: 0;
+}
+
+.header-icon {
+  margin-bottom: 16px;
+}
+
+.header-icon svg {
+  color: var(--q-secondary);
 }
 
 .empty-cart {
@@ -340,6 +432,9 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .browse-stores-btn:hover {
@@ -361,15 +456,42 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+.cart-items-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.cart-items-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.cart-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .cart-item {
   display: flex;
-  gap: 20px;
+  justify-content: space-between;
+  align-items: center;
   padding: 20px 0;
   border-bottom: 1px solid #f0f0f0;
 }
 
 .cart-item:last-child {
   border-bottom: none;
+}
+
+.item-main {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
 .item-image {
@@ -407,10 +529,22 @@ onMounted(() => {
   margin: 0 0 8px 0;
 }
 
+.item-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
 .item-store {
   color: #666;
   font-size: 0.9rem;
-  margin: 0 0 8px 0;
+}
+
+.item-price {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--q-secondary);
 }
 
 .item-description {
@@ -421,12 +555,6 @@ onMounted(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.item-price {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: var(--q-secondary);
 }
 
 .item-actions {
@@ -476,6 +604,25 @@ onMounted(() => {
   text-align: center;
 }
 
+.item-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  margin-top: 16px;
+}
+
+.total-label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.total-amount {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--q-secondary);
+}
+
 .remove-btn {
   background: #ff4757;
   color: white;
@@ -502,11 +649,24 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.order-summary h2 {
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.summary-header h2 {
   font-size: 1.5rem;
   font-weight: 600;
   color: #333;
-  margin: 0 0 24px 0;
+  margin: 0;
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .summary-row {
@@ -552,7 +712,10 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .place-order-btn:hover:not(:disabled) {
@@ -699,32 +862,232 @@ onMounted(() => {
 }
 
 /* Responsive Design */
-@media (min-width: 768px) {
+@media (max-width: 768px) {
   .shopping-cart-page {
-    padding: 32px 24px;
+    padding: 12px;
   }
   
-  .cart-content {
-    grid-template-columns: 2fr 1fr;
-    gap: 32px;
-  }
-  
-  .modal-content {
-    max-width: 600px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .shopping-cart-page {
-    padding: 40px 32px;
+  .page-header {
+    padding: 20px 16px;
+    margin-bottom: 20px;
   }
   
   .header-content h1 {
-    font-size: 2.5rem;
+    font-size: 1.6rem;
   }
   
-  .modal-content {
-    max-width: 700px;
+  .cart-content {
+    gap: 16px;
+  }
+  
+  .cart-items,
+  .order-summary {
+    padding: 16px;
+    border-radius: 12px;
+  }
+  
+  .cart-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    padding: 16px 0;
+  }
+  
+  .item-main {
+    gap: 12px;
+  }
+  
+  .item-image {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .item-actions {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    min-width: auto;
+    gap: 12px;
+  }
+  
+  .quantity-controls {
+    gap: 8px;
+    padding: 6px 10px;
+  }
+  
+  .quantity-btn {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .item-total {
+    text-align: center;
+    align-items: center;
+  }
+  
+  .remove-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .summary-row {
+    font-size: 0.95rem;
+    padding: 10px 0;
+  }
+  
+  .place-order-btn {
+    padding: 16px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .shopping-cart-page {
+    padding: 8px;
+  }
+  
+  .page-header {
+    padding: 16px 12px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.4rem;
+  }
+  
+  .cart-items,
+  .order-summary {
+    padding: 12px;
+  }
+  
+  .cart-items-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .item-name {
+    font-size: 1rem;
+  }
+  
+  .item-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .item-store {
+    font-size: 0.8rem;
+    padding: 3px 6px;
+  }
+  
+  .item-price {
+    font-size: 1rem;
+  }
+  
+  .item-description {
+    font-size: 0.8rem;
+  }
+  
+  .quantity-controls {
+    padding: 4px 8px;
+  }
+  
+  .quantity-btn {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .quantity {
+    font-size: 0.85rem;
+    min-width: 18px;
+  }
+  
+  .total-label {
+    font-size: 0.75rem;
+  }
+  
+  .total-amount {
+    font-size: 1rem;
+  }
+  
+  .summary-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .summary-row {
+    font-size: 0.9rem;
+  }
+  
+  .summary-row.total {
+    font-size: 1.1rem;
+  }
+  
+  .place-order-btn {
+    padding: 14px;
+    font-size: 0.95rem;
+  }
+}
+
+/* Enhanced Mobile Interactions */
+@media (hover: none) and (pointer: coarse) {
+  .quantity-btn,
+  .remove-btn,
+  .place-order-btn,
+  .browse-stores-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .quantity-btn {
+    min-width: 32px;
+  }
+  
+  .cart-item {
+    padding: 20px 0;
+  }
+  
+  .item-actions {
+    gap: 20px;
+  }
+}
+
+/* Dark mode support for better accessibility */
+@media (prefers-color-scheme: dark) {
+  .shopping-cart-page {
+    background: #1a1a1a;
+  }
+  
+  .page-header,
+  .cart-items,
+  .order-summary,
+  .empty-cart {
+    background: #2d2d2d;
+    color: #ffffff;
+  }
+  
+  .header-content h1,
+  .cart-items-header h2,
+  .summary-header h2,
+  .item-name,
+  .total-amount {
+    color: #ffffff;
+  }
+  
+  .subtitle,
+  .item-store,
+  .item-description,
+  .total-label {
+    color: #cccccc;
+  }
+  
+  .item-price {
+    color: var(--q-secondary);
+  }
+  
+  .cart-item {
+    border-bottom-color: #404040;
+  }
+  
+  .summary-row.total {
+    border-top-color: #404040;
   }
 }
 </style>
