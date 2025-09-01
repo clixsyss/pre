@@ -146,6 +146,7 @@ const routes = [
     component: () => import('../pages/auth/Calendar.vue'),
     meta: { requiresAuth: true }
   },
+  
   {
     path: '/analytics',
     name: 'Analytics',

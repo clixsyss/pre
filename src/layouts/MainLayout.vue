@@ -141,6 +141,8 @@
         <span class="nav-label">Services</span>
       </router-link>
 
+      
+
       <router-link to="/profile" class="nav-item" active-class="active">
         <div class="nav-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

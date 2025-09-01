@@ -108,6 +108,8 @@
                 <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
+
+
           </div>
         </div>
       </div>
@@ -140,14 +142,42 @@
           </div>
 
           <div class="news-list">
-            <div v-for="item in filteredNews" :key="item.id" class="news-item">
-              <div class="news-icon">
-                <span class="pre-logo">P RE</span>
+            <!-- Loading State -->
+            <div v-if="isLoadingNotifications" class="loading-state">
+              <div class="loading-item" v-for="n in 3" :key="n">
+                <div class="loading-icon"></div>
+                <div class="loading-content">
+                  <div class="loading-text"></div>
+                  <div class="loading-timestamp"></div>
+                </div>
               </div>
-              <div class="news-content">
-                <div class="news-text">{{ item.text }}</div>
-                <div class="news-timestamp">{{ item.timestamp }}</div>
+            </div>
+            
+            <!-- Notifications List -->
+            <div v-else-if="filteredNews.length > 0">
+              <div v-for="item in filteredNews" :key="item.id" class="news-item" :class="{ 'emergency': item.type === 'emergency' || item.priority === 'high' }">
+                <div class="news-icon" :class="{ 'emergency': item.type === 'emergency' || item.priority === 'high' }">
+                  <span v-if="item.type === 'emergency' || item.priority === 'high'" class="emergency-icon">!</span>
+                  <span v-else class="pre-logo">P RE</span>
+                </div>
+                <div class="news-content">
+                  <div class="news-title">{{ item.title || item.message }}</div>
+                  <div v-if="item.title && item.message" class="news-text">{{ item.message }}</div>
+                  <div class="news-timestamp">{{ formatTimestamp(item.createdAt) }}</div>
+                </div>
               </div>
+            </div>
+            
+            <!-- Empty State -->
+            <div v-else class="empty-state">
+              <div class="empty-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <p class="empty-text">No {{ activeTab === 'emergency' ? 'emergency' : '' }} notifications yet</p>
             </div>
           </div>
         </div>
@@ -219,6 +249,7 @@ import { useProjectStore } from '../../stores/projectStore'
 import { useAcademiesStore } from '../../stores/academyStore'
 import UpcomingBookingsCard from '../../components/UpcomingBookingsCard.vue'
 import sampleDataService from '../../services/sampleDataService.js'
+import notificationService from '../../services/notificationService.js'
 
 // Component name for ESLint
 defineOptions({
@@ -231,6 +262,8 @@ const academiesStore = useAcademiesStore()
 const user = ref(null)
 const activeTab = ref('all')
 const showProjectSwitcher = ref(false)
+const notifications = ref([])
+const isLoadingNotifications = ref(false)
 const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => projectStore.selectedProject?.id)
 
@@ -283,33 +316,65 @@ const isStatsLoading = computed(() => {
   return false
 })
 
-// Sample news data
-const newsItems = ref([
-  {
-    id: 1,
-    type: 'community',
-    text: 'Welcome to PRE Group! We\'re excited to have you as part of our community.',
-    timestamp: '40 Minutes ago'
-  },
-  {
-    id: 2,
-    type: 'general',
-    text: 'New community guidelines have been updated. Please review the latest policies.',
-    timestamp: '2 Hours ago'
-  },
-  {
-    id: 3,
-    type: 'emergency',
-    text: 'Emergency maintenance scheduled for tomorrow. Please be prepared for temporary service interruption.',
-    timestamp: '1 Day ago'
+// Fetch notifications from Firestore
+const fetchNotifications = async () => {
+  console.log('🔍 Fetching notifications...')
+  console.log('📋 Current Project ID:', currentProjectId.value)
+  console.log('📋 Selected Project:', projectStore.selectedProject)
+  
+  if (!currentProjectId.value) {
+    console.log('❌ No project ID available, skipping notification fetch')
+    return
   }
-])
+  
+  try {
+    isLoadingNotifications.value = true
+    console.log('🔄 Calling notificationService.fetchNotifications with:', currentProjectId.value, { activeOnly: true })
+    const fetchedNotifications = await notificationService.fetchNotifications(currentProjectId.value, { activeOnly: true })
+    console.log('✅ Fetched notifications:', fetchedNotifications)
+    notifications.value = fetchedNotifications
+  } catch (error) {
+    console.error('❌ Error fetching notifications:', error)
+    // Fallback to sample data if Firestore fails
+    notifications.value = [
+      {
+        id: 'fallback-1',
+        title: 'Welcome to PRE Group!',
+        message: 'We\'re excited to have you as part of our community.',
+        type: 'announcement',
+        priority: 'normal',
+        createdAt: new Date(Date.now() - 40 * 60 * 1000), // 40 minutes ago
+        isActive: true
+      },
+      {
+        id: 'fallback-2',
+        title: 'Community Guidelines Updated',
+        message: 'New community guidelines have been updated. Please review the latest policies.',
+        type: 'announcement',
+        priority: 'normal',
+        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+        isActive: true
+      },
+      {
+        id: 'fallback-3',
+        title: 'Emergency Maintenance',
+        message: 'Emergency maintenance scheduled for tomorrow. Please be prepared for temporary service interruption.',
+        type: 'emergency',
+        priority: 'high',
+        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+        isActive: true
+      }
+    ]
+  } finally {
+    isLoadingNotifications.value = false
+  }
+}
 
 const filteredNews = computed(() => {
   if (activeTab.value === 'emergency') {
-    return newsItems.value.filter(item => item.type === 'emergency')
+    return notifications.value.filter(item => item.type === 'emergency' || item.priority === 'high')
   }
-  return newsItems.value
+  return notifications.value
 })
 
 // Navigation methods
@@ -323,6 +388,31 @@ const navigateToMyBookings = () => {
 
 const navigateToCalendar = () => {
   router.push('/calendar')
+}
+
+// Format timestamp for display
+const formatTimestamp = (timestamp) => {
+  if (!timestamp) return 'Just now'
+  
+  try {
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+    const now = new Date()
+    const diffInSeconds = Math.floor((now - date) / 1000)
+    
+    if (diffInSeconds < 60) return 'Just now'
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`
+    
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch {
+    return 'Recently'
+  }
 }
 
 // Project switching methods
@@ -385,6 +475,9 @@ onMounted(async () => {
       } catch (error) {
         console.error('Error initializing sample data:', error)
       }
+      
+      // Fetch notifications
+      await fetchNotifications()
     }
   })
 })
@@ -1248,5 +1341,127 @@ onMounted(async () => {
   color: #888;
   font-size: 0.8rem;
   font-weight: 500;
+}
+
+.news-title {
+  color: #333;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.news-item.emergency {
+  border-color: #ff4444;
+  background: #fff5f5;
+}
+
+.news-item.emergency:hover {
+  border-color: #ff2222;
+  background: #fff0f0;
+}
+
+.news-icon.emergency {
+  background: linear-gradient(135deg, #ff4444 0%, #ff6666 100%);
+  box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);
+}
+
+.emergency-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #ff4444 0%, #ff6666 100%);
+  color: white;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 1.2rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);
+}
+
+/* Loading States */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loading-item {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+}
+
+.loading-icon {
+  width: 40px;
+  height: 40px;
+  background: #e0e0e0;
+  border-radius: 12px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.loading-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.loading-text {
+  height: 16px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.loading-timestamp {
+  height: 12px;
+  width: 80px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  text-align: center;
+  color: #666;
+}
+
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  background: #f0f0f0;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  color: #999;
+}
+
+.empty-text {
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 0;
 }
 </style>
