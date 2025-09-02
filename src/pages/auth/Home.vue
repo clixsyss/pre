@@ -5,21 +5,24 @@
       <div class="hero-content">
         <div class="hero-text">
           <h1 class="hero-title">Welcome back, {{ user?.displayName?.split(' ')[0] || 'User' }}</h1>
+          <p class="hero-subtitle">Here's what's happening in your community</p>
         </div>
-        <div class="hero-actions">
-          <button class="project-switcher-btn" @click="showProjectSwitcher = true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Switch Project
-          </button>
-        </div>
+        <button class="project-switcher-btn" @click="showProjectSwitcher = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Switch Project
+        </button>
       </div>
     </div>
 
     <!-- Stats Cards -->
     <div class="stats-section">
       <div class="stat-card clickable" :class="{ 'loading': isStatsLoading }" @click="navigateToCalendar">
+        <div class="stat-content">
+          <span class="stat-number">{{ isStatsLoading ? '...' : upcomingEventsCount }}</span>
+          <span class="stat-label">Upcoming Events</span>
+        </div>
         <div class="stat-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -28,22 +31,18 @@
             <path d="M3 10H21" stroke="currentColor" stroke-width="2"/>
           </svg>
         </div>
-        <div class="stat-content">
-          <span class="stat-number">{{ isStatsLoading ? '...' : upcomingEventsCount }}</span>
-          <span class="stat-label">Upcoming Events</span>
-        </div>
       </div>
       
       <div class="stat-card clickable" :class="{ 'loading': isStatsLoading }" @click="navigateToMyBookings">
+        <div class="stat-content">
+          <span class="stat-number">{{ isStatsLoading ? '...' : activeBookingsCount }}</span>
+          <span class="stat-label">My Bookings</span>
+        </div>
         <div class="stat-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
           </svg>
-        </div>
-        <div class="stat-content">
-          <span class="stat-number">{{ isStatsLoading ? '...' : activeBookingsCount }}</span>
-          <span class="stat-label">Upcoming Bookings</span>
         </div>
       </div>
     </div>
@@ -56,9 +55,8 @@
         <div class="quick-actions-card">
           <div class="card-header">
             <h2>Quick Actions</h2>
-            <p>Access your most used features</p>
           </div>
-          <div class="actions-list">
+          <div class="actions-grid">
             <button class="action-item" @click="navigateToServices">
               <div class="action-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -66,13 +64,7 @@
                   <path d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </div>
-              <div class="action-details">
-                <span class="action-title">Book Services</span>
-                <span class="action-subtitle">Schedule court time & programs</span>
-              </div>
-              <svg class="action-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+              <span class="action-title">Book Services</span>
             </button>
             
             <button class="action-item" @click="navigateToMyBookings">
@@ -82,13 +74,7 @@
                   <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
                 </svg>
               </div>
-              <div class="action-details">
-                <span class="action-title">My Bookings</span>
-                <span class="action-subtitle">View & manage reservations</span>
-              </div>
-              <svg class="action-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+              <span class="action-title">My Bookings</span>
             </button>
             
             <button class="action-item" @click="navigateToCalendar">
@@ -100,16 +86,8 @@
                   <path d="M3 10H21" stroke="currentColor" stroke-width="2"/>
                 </svg>
               </div>
-              <div class="action-details">
-                <span class="action-title">Full Calendar</span>
-                <span class="action-subtitle">Browse all available slots</span>
-              </div>
-              <svg class="action-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+              <span class="action-title">Calendar</span>
             </button>
-
-
           </div>
         </div>
       </div>
@@ -121,7 +99,7 @@
           <UpcomingBookingsCard />
         </div>
 
-        <!-- News Feed -->
+        <!-- Community Updates -->
         <div class="news-feed-card">
           <div class="card-header">
             <h2>Community Updates</h2>
@@ -171,7 +149,7 @@
             <!-- Empty State -->
             <div v-else class="empty-state">
               <div class="empty-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -492,26 +470,10 @@ onMounted(async () => {
 .hero-section {
   background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
   color: white;
-  border-radius: 20px;
-  padding: 32px;
-  margin-bottom: 32px;
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  box-shadow: 0 8px 32px rgba(255, 107, 53, 0.25);
-  position: relative;
-  overflow: hidden;
-}
-
-.hero-section::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-  pointer-events: none;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.2);
 }
 
 .hero-content {
@@ -519,73 +481,66 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  position: relative;
-  z-index: 1;
 }
 
 .hero-text {
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
 
 .hero-title {
-  font-size: 2.5rem;
-  font-weight: 800;
+  font-size: 2rem;
+  font-weight: 700;
   margin: 0;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
 }
 
 .hero-subtitle {
-  font-size: 1.125rem;
+  font-size: 1rem;
   margin: 0;
   opacity: 0.9;
   font-weight: 400;
 }
 
-.hero-actions {
-  display: flex;
-  gap: 16px;
-}
-
 .project-switcher-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: white;
   color: #ff6b35;
-  border: 2px solid white;
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-size: 0.9rem;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .project-switcher-btn:hover {
   background: #fff5f2;
-  border-color: #fff5f2;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .stats-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
-  margin-bottom: 32px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .stat-card {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
   background: white;
   border: 1px solid #e8e8e8;
-  border-radius: 16px;
-  padding: 28px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .stat-card.loading {
@@ -635,33 +590,33 @@ onMounted(async () => {
 }
 
 .stat-icon {
-  width: 64px;
-  height: 64px;
+  width: 40px;
+  height: 40px;
   background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
-  border-radius: 16px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   flex-shrink: 0;
-  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
 
 .stat-content {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
 }
 
 .stat-number {
-  font-size: 1.8rem;
-  font-weight: 800;
+  font-size: 1.5rem;
+  font-weight: 700;
   color: #333;
   margin: 0;
 }
 
 .stat-label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #666;
   margin: 0;
 }
@@ -669,112 +624,84 @@ onMounted(async () => {
 .main-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 24px;
+  gap: 20px;
 }
 
 .left-column {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 .quick-actions-card {
   background: white;
   border: 1px solid #e8e8e8;
-  border-radius: 20px;
-  padding: 32px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 28px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 20px;
 }
 
 .card-header h2 {
-  margin: 0 0 8px 0;
-  color: #333;
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-}
-
-.card-header p {
-  color: #666;
-  font-size: 0.95rem;
   margin: 0;
-  font-weight: 400;
+  color: #333;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.2px;
 }
 
-.actions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
 }
 
 .action-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   background: #fafafa;
-  border: 2px solid #f0f0f0;
-  border-radius: 16px;
-  padding: 20px;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  padding: 16px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   text-decoration: none;
   color: #333;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .action-item:hover {
   background: white;
   border-color: #ff6b35;
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(255, 107, 53, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
 }
 
 .action-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
-  border-radius: 12px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   flex-shrink: 0;
-  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
-}
-
-.action-details {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
 
 .action-title {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 0.9rem;
+  font-weight: 600;
   color: #333;
   margin: 0;
-  letter-spacing: -0.2px;
-}
-
-.action-subtitle {
-  font-size: 0.85rem;
-  color: #666;
-  margin: 0;
-  line-height: 1.4;
-}
-
-.action-arrow {
-  flex-shrink: 0;
-  color: #ff6b35;
+  text-align: center;
+  line-height: 1.3;
 }
 
 .calendar-widget {
@@ -788,17 +715,17 @@ onMounted(async () => {
 .upcoming-bookings-card {
   background: white;
   border: 1px solid #e8e8e8;
-  border-radius: 20px;
-  padding: 32px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .news-feed-card {
   background: white;
   border: 1px solid #e8e8e8;
-  border-radius: 20px;
-  padding: 32px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .news-section {
@@ -842,15 +769,15 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
   color: white;
-  border-radius: 12px;
+  border-radius: 8px;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   letter-spacing: 0.5px;
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+  box-shadow: 0 1px 4px rgba(255, 107, 53, 0.2);
 }
 
 .news-content {
@@ -1285,16 +1212,16 @@ onMounted(async () => {
 .news-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 20px;
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .news-item {
   display: flex;
-  gap: 16px;
-  padding: 16px;
+  gap: 12px;
+  padding: 12px;
   background: #fafafa;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid #f0f0f0;
   transition: all 0.2s ease;
 }
@@ -1303,7 +1230,7 @@ onMounted(async () => {
   background: white;
   border-color: #e0e0e0;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .news-icon {
@@ -1314,15 +1241,15 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
   color: white;
-  border-radius: 12px;
+  border-radius: 8px;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   letter-spacing: 0.5px;
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+  box-shadow: 0 1px 4px rgba(255, 107, 53, 0.2);
 }
 
 .news-content {
@@ -1370,15 +1297,15 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   background: linear-gradient(135deg, #ff4444 0%, #ff6666 100%);
   color: white;
-  border-radius: 12px;
+  border-radius: 8px;
   font-weight: 800;
-  font-size: 1.2rem;
+  font-size: 1rem;
   letter-spacing: 0.5px;
-  box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);
+  box-shadow: 0 1px 4px rgba(255, 68, 68, 0.2);
 }
 
 /* Loading States */
@@ -1448,14 +1375,14 @@ onMounted(async () => {
 }
 
 .empty-icon {
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
   background: #f0f0f0;
-  border-radius: 16px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   color: #999;
 }
 

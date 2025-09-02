@@ -10,7 +10,7 @@
     <div class="content">
       <!-- Welcome Section -->
       <div class="welcome-section">
-        <h1>Welcome Back!</h1>
+        <h1>Welcome Back, {{ userDisplayName }}!</h1>
         <p>Select your project to continue</p>
         <div class="welcome-subtitle">Tap any project to get started</div>
       </div>
@@ -142,7 +142,7 @@
 </template>
 
 <script setup>
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../../stores/projectStore'
 import { auth } from '../../boot/firebase'
@@ -156,9 +156,30 @@ defineOptions({
 const router = useRouter()
 const projectStore = useProjectStore()
 
+// Reactive user data
+const currentUser = ref(null)
+
 // Computed properties
 const userProjects = computed(() => projectStore.userProjects)
 const selectedProject = computed(() => projectStore.selectedProject)
+
+// Computed property for user's display name with fallbacks
+const userDisplayName = computed(() => {
+  if (!currentUser.value) return 'User'
+  
+  // Try different name sources in order of preference
+  if (currentUser.value.displayName) {
+    return currentUser.value.displayName.split(' ')[0] // First name only
+  }
+  
+  if (currentUser.value.email) {
+    // Extract name from email if available
+    const emailName = currentUser.value.email.split('@')[0]
+    return emailName.charAt(0).toUpperCase() + emailName.slice(1)
+  }
+  
+  return 'User'
+})
 
 // Methods
 const selectProject = async (project) => {
@@ -191,6 +212,9 @@ onMounted(async () => {
   // Listen for auth state changes
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
     if (user) {
+      // Store current user data
+      currentUser.value = user
+      
       // Fetch user projects from their saved data
       await projectStore.fetchUserProjects(user.uid)
 
@@ -208,6 +232,7 @@ onMounted(async () => {
       }
     } else {
       // User not authenticated, redirect to sign in
+      currentUser.value = null
       router.push('/signin')
     }
   })
