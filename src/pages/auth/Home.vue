@@ -1,21 +1,5 @@
 <template>
   <div class="home-page">
-    <!-- Hero Section -->
-    <div class="hero-section">
-      <div class="hero-content">
-        <div class="hero-text">
-          <h1 class="hero-title">Welcome back, {{ user?.displayName?.split(' ')[0] || 'User' }}</h1>
-          <p class="hero-subtitle">Here's what's happening in your community</p>
-        </div>
-        <button class="project-switcher-btn" @click="showProjectSwitcher = true">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Switch Project
-        </button>
-      </div>
-    </div>
-
     <!-- Stats Cards -->
     <div class="stats-section">
       <div class="stat-card clickable" :class="{ 'loading': isStatsLoading }" @click="navigateToCalendar">
@@ -25,14 +9,14 @@
         </div>
         <div class="stat-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-            <path d="M3 10H21" stroke="currentColor" stroke-width="2"/>
+            <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
+            <path d="M3 10H21" stroke="currentColor" stroke-width="2" />
           </svg>
         </div>
       </div>
-      
+
       <div class="stat-card clickable" :class="{ 'loading': isStatsLoading }" @click="navigateToMyBookings">
         <div class="stat-content">
           <span class="stat-number">{{ isStatsLoading ? '...' : activeBookingsCount }}</span>
@@ -40,8 +24,11 @@
         </div>
         <div class="stat-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
+            <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+            <path
+              d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+              stroke="currentColor" stroke-width="2" />
           </svg>
         </div>
       </div>
@@ -60,30 +47,39 @@
             <button class="action-item" @click="navigateToServices">
               <div class="action-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  <path
+                    d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
               <span class="action-title">Book Services</span>
             </button>
-            
+
             <button class="action-item" @click="navigateToMyBookings">
               <div class="action-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
+                  <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path
+                    d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                    stroke="currentColor" stroke-width="2" />
                 </svg>
               </div>
               <span class="action-title">My Bookings</span>
             </button>
-            
+
             <button class="action-item" @click="navigateToCalendar">
               <div class="action-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-                  <path d="M3 10H21" stroke="currentColor" stroke-width="2"/>
+                  <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
+                  <path d="M3 10H21" stroke="currentColor" stroke-width="2" />
                 </svg>
               </div>
               <span class="action-title">Calendar</span>
@@ -104,16 +100,10 @@
           <div class="card-header">
             <h2>Community Updates</h2>
             <div class="filter-tabs">
-              <button 
-                @click="activeTab = 'all'" 
-                :class="['filter-tab', { active: activeTab === 'all' }]"
-              >
+              <button @click="activeTab = 'all'" :class="['filter-tab', { active: activeTab === 'all' }]">
                 All
               </button>
-              <button 
-                @click="activeTab = 'emergency'" 
-                :class="['filter-tab', { active: activeTab === 'emergency' }]"
-              >
+              <button @click="activeTab = 'emergency'" :class="['filter-tab', { active: activeTab === 'emergency' }]">
                 Emergency
               </button>
             </div>
@@ -130,10 +120,11 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Notifications List -->
             <div v-else-if="filteredNews.length > 0">
-              <div v-for="item in filteredNews" :key="item.id" class="news-item" :class="{ 'emergency': item.type === 'emergency' || item.priority === 'high' }">
+              <div v-for="item in filteredNews" :key="item.id" class="news-item"
+                :class="{ 'emergency': item.type === 'emergency' || item.priority === 'high' }">
                 <div class="news-icon" :class="{ 'emergency': item.type === 'emergency' || item.priority === 'high' }">
                   <span v-if="item.type === 'emergency' || item.priority === 'high'" class="emergency-icon">!</span>
                   <span v-else class="pre-logo">P RE</span>
@@ -145,14 +136,17 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Empty State -->
             <div v-else class="empty-state">
               <div class="empty-icon">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
               </div>
               <p class="empty-text">No {{ activeTab === 'emergency' ? 'emergency' : '' }} notifications yet</p>
@@ -169,18 +163,16 @@
           <h3>Switch Project</h3>
           <button @click="showProjectSwitcher = false" class="close-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </button>
         </div>
         <div class="modal-body">
           <div v-if="userProjects.length > 0" class="projects-list">
-            <div 
-              v-for="project in userProjects" 
-              :key="project.id"
+            <div v-for="project in userProjects" :key="project.id"
               :class="['project-option', { 'current': project.id === currentProjectId }]"
-              @click="switchToProject(project)"
-            >
+              @click="switchToProject(project)">
               <div class="project-option-info">
                 <h4 class="project-option-name">{{ project.name || 'Unnamed Project' }}</h4>
                 <p class="project-option-location">{{ project.location || 'Location not set' }}</p>
@@ -192,12 +184,13 @@
               <div class="project-option-status">
                 <span v-if="project.id === currentProjectId" class="current-badge">Current</span>
                 <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
             </div>
           </div>
-          
+
           <div v-else class="no-projects">
             <p>No projects available</p>
             <button @click="goToProjectSelection" class="go-to-selection-btn">
@@ -208,7 +201,9 @@
         <div class="modal-footer">
           <button @click="goToProjectSelection" class="secondary-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path
+                d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
             Manage Projects
           </button>
@@ -248,11 +243,11 @@ const currentProjectId = computed(() => projectStore.selectedProject?.id)
 // Computed properties for dynamic stats
 const upcomingEventsCount = computed(() => {
   if (!academiesStore.userBookings || academiesStore.userBookings.length === 0) return 0
-  
+
   try {
     const today = new Date()
     today.setHours(0, 0, 0, 0) // Reset time to start of day
-    
+
     const upcomingBookings = academiesStore.userBookings.filter(booking => {
       if (booking.type === 'court' && booking.date) {
         const bookingDate = new Date(booking.date)
@@ -261,7 +256,7 @@ const upcomingEventsCount = computed(() => {
       }
       return false
     })
-    
+
     return upcomingBookings.length
   } catch (error) {
     console.error('Error calculating upcoming events:', error)
@@ -271,12 +266,12 @@ const upcomingEventsCount = computed(() => {
 
 const activeBookingsCount = computed(() => {
   if (!academiesStore.userBookings || academiesStore.userBookings.length === 0) return 0
-  
+
   try {
     const activeBookings = academiesStore.userBookings.filter(booking => {
       return booking.status === 'confirmed' || booking.status === 'enrolled'
     })
-    
+
     return activeBookings.length
   } catch (error) {
     console.error('Error calculating active bookings:', error)
@@ -288,7 +283,7 @@ const activeBookingsCount = computed(() => {
 const isStatsLoading = computed(() => {
   // If we have no bookings array yet, we're still loading
   if (!academiesStore.userBookings) return true
-  
+
   // If we have an empty array, it means we've fetched data but found nothing
   // This is not loading, it's just no data
   return false
@@ -299,12 +294,12 @@ const fetchNotifications = async () => {
   console.log('🔍 Fetching notifications...')
   console.log('📋 Current Project ID:', currentProjectId.value)
   console.log('📋 Selected Project:', projectStore.selectedProject)
-  
+
   if (!currentProjectId.value) {
     console.log('❌ No project ID available, skipping notification fetch')
     return
   }
-  
+
   try {
     isLoadingNotifications.value = true
     console.log('🔄 Calling notificationService.fetchNotifications with:', currentProjectId.value, { activeOnly: true })
@@ -371,17 +366,17 @@ const navigateToCalendar = () => {
 // Format timestamp for display
 const formatTimestamp = (timestamp) => {
   if (!timestamp) return 'Just now'
-  
+
   try {
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
     const now = new Date()
     const diffInSeconds = Math.floor((now - date) / 1000)
-    
+
     if (diffInSeconds < 60) return 'Just now'
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
     if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`
-    
+
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -398,15 +393,15 @@ const switchToProject = async (project) => {
   try {
     projectStore.selectProject(project)
     showProjectSwitcher.value = false
-    
+
     // Show success message
     // You can add a notification system here if you have one
-    
+
     // Refresh the page to show new project data
     setTimeout(() => {
       window.location.reload()
     }, 500)
-    
+
   } catch (err) {
     console.error('Error switching project:', err)
   }
@@ -422,19 +417,19 @@ onMounted(async () => {
   onAuthStateChanged(auth, async (currentUser) => {
     if (currentUser) {
       user.value = currentUser
-      
+
       // Check if project is selected, if not redirect to project selection
       if (!projectStore.hasSelectedProject) {
         // Try to load the selected project from localStorage
         projectStore.loadSelectedProject()
-        
+
         // If still no project selected, redirect to project selection
         if (!projectStore.hasSelectedProject) {
           router.push('/project-selection')
           return
         }
       }
-      
+
       // Fetch user bookings for the selected project
       try {
         if (projectStore.selectedProject?.id) {
@@ -444,7 +439,7 @@ onMounted(async () => {
       } catch (error) {
         console.error('Error fetching user bookings:', error)
       }
-      
+
       // Initialize sample data for testing
       try {
         if (projectStore.selectedProject?.id) {
@@ -453,7 +448,7 @@ onMounted(async () => {
       } catch (error) {
         console.error('Error initializing sample data:', error)
       }
-      
+
       // Fetch notifications
       await fetchNotifications()
     }
@@ -809,16 +804,16 @@ onMounted(async () => {
   .main-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .hero-content {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .hero-actions {
     width: 100%;
   }
-  
+
   .project-switcher-btn {
     width: 100%;
     justify-content: center;
@@ -829,20 +824,20 @@ onMounted(async () => {
   .home-page {
     padding: 20px 16px;
   }
-  
+
   .hero-section {
     padding: 24px;
     margin-bottom: 24px;
   }
-  
+
   .hero-title {
     font-size: 2rem;
   }
-  
+
   .hero-subtitle {
     font-size: 1rem;
   }
-  
+
   .stats-section {
     grid-template-columns: 1fr;
   }
@@ -853,26 +848,26 @@ onMounted(async () => {
   .news-feed-card {
     padding: 24px;
   }
-  
+
   .card-header {
     flex-direction: column;
     gap: 16px;
     align-items: flex-start;
   }
-  
+
   .filter-tabs {
     width: 100%;
   }
-  
+
   .filter-tab {
     flex: 1;
     text-align: center;
   }
-  
+
   .actions-list {
     grid-template-columns: 1fr;
   }
-  
+
   .action-item {
     padding: 20px;
     flex-direction: column;
@@ -880,30 +875,30 @@ onMounted(async () => {
     text-align: center;
     gap: 16px;
   }
-  
+
   .action-icon {
     width: 56px;
     height: 56px;
   }
-  
+
   .action-details {
     text-align: center;
   }
-  
+
   .action-title {
     font-size: 1.1rem;
   }
-  
+
   .action-subtitle {
     font-size: 0.85rem;
   }
-  
+
   .news-card {
     flex-direction: column;
     text-align: center;
     padding: 20px;
   }
-  
+
   .news-icon {
     align-self: center;
   }
@@ -913,20 +908,20 @@ onMounted(async () => {
   .home-page {
     padding: 16px 12px;
   }
-  
+
   .hero-section {
     padding: 20px;
     border-radius: 16px;
   }
-  
+
   .hero-title {
     font-size: 1.75rem;
   }
-  
+
   .hero-subtitle {
     font-size: 0.9rem;
   }
-  
+
   .quick-actions-card,
   .calendar-widget,
   .upcoming-bookings-card,
@@ -934,28 +929,28 @@ onMounted(async () => {
     padding: 20px;
     border-radius: 16px;
   }
-  
+
   .action-item {
     padding: 20px;
   }
-  
+
   .action-icon {
     width: 48px;
     height: 48px;
   }
-  
+
   .action-title {
     font-size: 1rem;
   }
-  
+
   .action-subtitle {
     font-size: 0.8rem;
   }
-  
+
   .news-card {
     padding: 16px;
   }
-  
+
   .pre-logo {
     width: 48px;
     height: 48px;
@@ -1355,9 +1350,12 @@ onMounted(async () => {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
