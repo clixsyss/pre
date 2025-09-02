@@ -51,9 +51,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAcademiesStore } from 'src/stores/academyStore';
+import { useProjectStore } from 'src/stores/projectStore';
 import { getAuth } from 'firebase/auth';
 
 // Component name for ESLint
@@ -63,6 +64,7 @@ defineOptions({
 
 const router = useRouter();
 const academiesStore = useAcademiesStore();
+const projectStore = useProjectStore();
 
 // Reactive data
 const loading = ref(true);
@@ -70,12 +72,32 @@ const loading = ref(true);
 // Computed properties
 const upcomingBookings = computed(() => {
   const allBookings = academiesStore.userBookings;
-  return allBookings.filter(booking => {
+  console.log('All bookings from store:', allBookings);
+  
+  const filtered = allBookings.filter(booking => {
+    console.log('Checking booking:', booking);
+    
     if (booking.type === 'court' && booking.date) {
-      return new Date(booking.date) >= new Date();
+      const bookingDate = new Date(booking.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to start of day
+      
+      const isUpcoming = bookingDate >= today;
+      console.log('Court booking date check:', {
+        bookingDate: bookingDate.toISOString(),
+        today: today.toISOString(),
+        isUpcoming
+      });
+      
+      return isUpcoming && booking.status !== 'cancelled';
     } else if (booking.type === 'academy') {
       // For academy programs, consider them upcoming if enrolled
-      return booking.status === 'enrolled';
+      const isEnrolled = booking.status === 'enrolled';
+      console.log('Academy booking status check:', {
+        status: booking.status,
+        isEnrolled
+      });
+      return isEnrolled;
     }
     return false;
   }).sort((a, b) => {
@@ -84,6 +106,9 @@ const upcomingBookings = computed(() => {
     }
     return 0;
   });
+  
+  console.log('Filtered upcoming bookings:', filtered);
+  return filtered;
 });
 
 // Methods
@@ -108,18 +133,42 @@ const goToBookings = () => {
   router.push('/my-bookings');
 };
 
-// Lifecycle
-onMounted(async () => {
+// Fetch bookings function
+const fetchBookings = async () => {
   try {
+    loading.value = true;
     const auth = getAuth();
-    if (auth.currentUser) {
-      await academiesStore.fetchUserBookings(auth.currentUser.uid);
+    if (auth.currentUser && projectStore.selectedProject?.id) {
+      console.log('Fetching user bookings for:', {
+        userId: auth.currentUser.uid,
+        projectId: projectStore.selectedProject.id
+      });
+      await academiesStore.fetchUserBookings(auth.currentUser.uid, projectStore.selectedProject.id);
+    } else {
+      console.log('Cannot fetch bookings - missing user or project:', {
+        hasUser: !!auth.currentUser,
+        hasProject: !!projectStore.selectedProject?.id,
+        projectId: projectStore.selectedProject?.id
+      });
     }
   } catch (error) {
     console.error("Error fetching user bookings:", error);
   } finally {
     loading.value = false;
   }
+};
+
+// Watch for project changes
+watch(() => projectStore.selectedProject?.id, (newProjectId, oldProjectId) => {
+  if (newProjectId && newProjectId !== oldProjectId) {
+    console.log('Project changed, refetching bookings:', { oldProjectId, newProjectId });
+    fetchBookings();
+  }
+});
+
+// Lifecycle
+onMounted(() => {
+  fetchBookings();
 });
 </script>
 
