@@ -33,7 +33,7 @@
         </div>
       </div>
 
-      <div class="stat-card" :class="{ 'loading': isStatsLoading }" @click="navigateToMyBookings">
+      <!-- <div class="stat-card" :class="{ 'loading': isStatsLoading }" @click="navigateToMyBookings">
         <div class="stat-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -44,52 +44,42 @@
           <div class="stat-number">{{ isStatsLoading ? '...' : activeBookingsCount }}</div>
           <div class="stat-label">My Bookings</div>
         </div>
-      </div>
+      </div> -->
     </div>
 
     <!-- Quick Actions -->
     <div class="quick-actions-section">
       <h2 class="section-title">Quick Actions</h2>
-      <div class="actions-grid">
+      <div class="actions-scroll">
         <button class="action-card" @click="navigateToServices">
           <div class="action-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               <path d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </div>
           <div class="action-content">
             <h3>Book Services</h3>
-            <p>Schedule your next appointment</p>
-          </div>
-          <div class="action-arrow">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+            <p>Schedule appointment</p>
           </div>
         </button>
 
         <button class="action-card" @click="navigateToMyBookings">
           <div class="action-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" />
             </svg>
           </div>
           <div class="action-content">
             <h3>My Bookings</h3>
-            <p>View and manage your bookings</p>
-          </div>
-          <div class="action-arrow">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+            <p>View bookings</p>
           </div>
         </button>
 
         <button class="action-card" @click="navigateToCalendar">
           <div class="action-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               <path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
@@ -98,12 +88,34 @@
           </div>
           <div class="action-content">
             <h3>Calendar</h3>
-            <p>Check your schedule</p>
+            <p>Check schedule</p>
           </div>
-          <div class="action-arrow">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </button>
+
+        <button class="action-card" @click="navigateToServices">
+          <div class="action-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
+          </div>
+          <div class="action-content">
+            <h3>Events</h3>
+            <p>Browse events</p>
+          </div>
+        </button>
+
+        <button class="action-card" @click="navigateToMyBookings">
+          <div class="action-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 21V19A4 4 0 0 0 12 15H8A4 4 0 0 0 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </div>
+          <div class="action-content">
+            <h3>Profile</h3>
+            <p>Manage account</p>
           </div>
         </button>
       </div>
@@ -111,14 +123,14 @@
 
     <!-- Content Grid -->
     <div class="content-grid">
-      <!-- Upcoming Bookings -->
-      <div class="bookings-section">
-        <UpcomingBookingsCard />
-      </div>
-
       <!-- News Feed -->
       <div class="news-section">
         <ModernNewsFeed :project-id="currentProjectId" />
+      </div>
+
+      <!-- Upcoming Bookings -->
+      <div class="bookings-section">
+        <UpcomingBookingsCard />
       </div>
     </div>
 
@@ -231,20 +243,20 @@ const upcomingEventsCount = computed(() => {
   }
 })
 
-const activeBookingsCount = computed(() => {
-  if (!academiesStore.userBookings || academiesStore.userBookings.length === 0) return 0
+// const activeBookingsCount = computed(() => {
+//   if (!academiesStore.userBookings || academiesStore.userBookings.length === 0) return 0
 
-  try {
-    const activeBookings = academiesStore.userBookings.filter(booking => {
-      return booking.status === 'confirmed' || booking.status === 'enrolled'
-    })
+//   try {
+//     const activeBookings = academiesStore.userBookings.filter(booking => {
+//       return booking.status === 'confirmed' || booking.status === 'enrolled'
+//     })
 
-    return activeBookings.length
-  } catch (error) {
-    console.error('Error calculating active bookings:', error)
-    return 0
-  }
-})
+//     return activeBookings.length
+//   } catch (error) {
+//     console.error('Error calculating active bookings:', error)
+//     return 0
+//   }
+// })
 
 // Check if stats are loading - only show loading when we're actively fetching data
 const isStatsLoading = computed(() => {
@@ -505,7 +517,8 @@ onMounted(async () => {
 .stat-card {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 10px;
   background: white;
   border: 1px solid #e8e8e8;
   border-radius: 12px;
@@ -544,8 +557,8 @@ onMounted(async () => {
 
 .stat-content {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 10px;
 }
 
 .stat-number {
@@ -563,21 +576,29 @@ onMounted(async () => {
 
 /* Quick Actions */
 .quick-actions-section {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .section-title {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: #333;
-  margin: 0 0 16px 0;
+  margin: 0 0 12px 0;
   letter-spacing: -0.01em;
 }
 
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+.actions-scroll {
+  display: flex;
   gap: 12px;
+  overflow-x: auto;
+  padding: 4px 0 8px 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.actions-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .action-card {
@@ -593,6 +614,8 @@ onMounted(async () => {
   transition: all 0.2s ease;
   text-align: center;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  min-width: 140px;
+  flex-shrink: 0;
 }
 
 .action-card:hover {
@@ -606,7 +629,7 @@ onMounted(async () => {
   width: 40px;
   height: 40px;
   background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -617,6 +640,7 @@ onMounted(async () => {
 
 .action-content {
   flex: 1;
+  min-width: 0;
 }
 
 .action-content h3 {
@@ -625,6 +649,9 @@ onMounted(async () => {
   color: #333;
   margin: 0;
   line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .action-content p {
@@ -632,10 +659,9 @@ onMounted(async () => {
   color: #666;
   margin: 4px 0 0 0;
   line-height: 1.3;
-}
-
-.action-arrow {
-  display: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Content Grid */
@@ -665,9 +691,13 @@ onMounted(async () => {
     align-items: flex-start;
     gap: 16px;
   }
+
+  .hero-content h1{
+    line-height: normal;
+  }
   
   .project-switcher-btn {
-    align-self: flex-end;
+    align-self: flex-start;
   }
 }
 
@@ -694,20 +724,27 @@ onMounted(async () => {
     gap: 12px;
   }
   
-  .actions-grid {
-    grid-template-columns: repeat(3, 1fr);
+  .actions-scroll {
+    gap: 10px;
+    padding: 2px 0 6px 0;
   }
-  
+
   .action-card {
-    padding: 12px;
+    padding: 14px;
+    min-width: 120px;
   }
-  
+
+  .action-icon {
+    width: 36px;
+    height: 36px;
+  }
+
   .action-content h3 {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
   }
-  
+
   .action-content p {
-    display: none;
+    font-size: 0.75rem;
   }
 }
 
@@ -738,8 +775,27 @@ onMounted(async () => {
     font-size: 1.25rem;
   }
   
-  .actions-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .actions-scroll {
+    gap: 8px;
+    padding: 2px 0 4px 0;
+  }
+
+  .action-card {
+    padding: 12px;
+    min-width: 100px;
+  }
+
+  .action-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .action-content h3 {
+    font-size: 0.8rem;
+  }
+
+  .action-content p {
+    font-size: 0.7rem;
   }
 }
 
