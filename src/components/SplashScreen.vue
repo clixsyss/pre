@@ -28,16 +28,25 @@ import { useSplashStore } from '../stores/splash'
 const splashStore = useSplashStore()
 
 onMounted(() => {
-  // Simulate app initialization
-  splashStore.setLoading(true)
+  // Only show splash screen for first visit or if explicitly needed
+  const hasSeenSplash = localStorage.getItem('hasSeenSplash')
   
-  // Hide splash screen after 3 seconds
-  setTimeout(() => {
-    splashStore.setLoading(false)
+  if (!hasSeenSplash) {
+    // First time user - show splash screen
+    splashStore.setLoading(true)
+    
+    // Hide splash screen after 2 seconds
     setTimeout(() => {
-      splashStore.hideSplash()
-    }, 500)
-  }, 3000)
+      splashStore.setLoading(false)
+      setTimeout(() => {
+        splashStore.hideSplash()
+        localStorage.setItem('hasSeenSplash', 'true')
+      }, 500)
+    }, 2000)
+  } else {
+    // Returning user - hide splash immediately
+    splashStore.hideSplash()
+  }
 })
 </script>
 

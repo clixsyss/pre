@@ -177,10 +177,26 @@ router.beforeEach(async (to, from, next) => {
   console.log('Navigation guard - to:', to.path, 'from:', from.path)
   const requiresAuth = to.meta.requiresAuth
   
-  // Check authentication status
+  // Check authentication status with timeout
   return new Promise((resolve) => {
+    let resolved = false
+    
+    // Set a timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        console.log('Auth check timeout, allowing navigation')
+        resolved = true
+        next()
+        resolve()
+      }
+    }, 5000) // 5 second timeout
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (resolved) return
+      
       unsubscribe()
+      clearTimeout(timeout)
+      resolved = true
       
       console.log('Auth state changed - user:', user ? 'authenticated' : 'not authenticated')
       

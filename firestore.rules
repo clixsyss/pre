@@ -177,6 +177,21 @@ service cloud.firestore {
       allow list: if request.auth != null;
     }
     
+    // Project News - allow authenticated users to read published news within project
+    // Admins can write, users can only read published news
+    match /projects/{projectId}/news/{newsId} {
+      allow read: if request.auth != null && 
+        (resource.data.isPublished == true || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      allow write: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Allow listing project news (only published for users, all for admins)
+    match /projects/{projectId}/news {
+      allow list: if request.auth != null;
+    }
+    
     // Project Dining/Shops - allow authenticated users to read/write within project
     match /projects/{projectId}/shops/{shopId} {
       allow read, write: if request.auth != null;
@@ -328,6 +343,38 @@ service cloud.firestore {
     // Allow listing global notifications collection
     match /notifications {
       allow list: if request.auth != null;
+    }
+  }
+}
+
+// Firebase Storage Rules
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to read all files
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+    }
+    
+    // Allow admins to upload and manage files
+    match /{allPaths=**} {
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Allow news media uploads for admins
+    match /news/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Allow logo and other public assets to be read by anyone
+    match /logo.png {
+      allow read: if true;
+    }
+    
+    match /public/{allPaths=**} {
+      allow read: if true;
     }
   }
 }

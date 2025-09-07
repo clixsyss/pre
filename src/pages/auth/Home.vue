@@ -95,63 +95,9 @@
           <UpcomingBookingsCard />
         </div>
 
-        <!-- Community Updates -->
-        <div class="news-feed-card">
-          <div class="card-header">
-            <h2>Community Updates</h2>
-            <div class="filter-tabs">
-              <button @click="activeTab = 'all'" :class="['filter-tab', { active: activeTab === 'all' }]">
-                All
-              </button>
-              <button @click="activeTab = 'emergency'" :class="['filter-tab', { active: activeTab === 'emergency' }]">
-                Emergency
-              </button>
-            </div>
-          </div>
-
-          <div class="news-list">
-            <!-- Loading State -->
-            <div v-if="isLoadingNotifications" class="loading-state">
-              <div class="loading-item" v-for="n in 3" :key="n">
-                <div class="loading-icon"></div>
-                <div class="loading-content">
-                  <div class="loading-text"></div>
-                  <div class="loading-timestamp"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Notifications List -->
-            <div v-else-if="filteredNews.length > 0">
-              <div v-for="item in filteredNews" :key="item.id" class="news-item"
-                :class="{ 'emergency': item.type === 'emergency' || item.priority === 'high' }">
-                <div class="news-icon" :class="{ 'emergency': item.type === 'emergency' || item.priority === 'high' }">
-                  <span v-if="item.type === 'emergency' || item.priority === 'high'" class="emergency-icon">!</span>
-                  <span v-else class="pre-logo">P RE</span>
-                </div>
-                <div class="news-content">
-                  <div class="news-title">{{ item.title || item.message }}</div>
-                  <div v-if="item.title && item.message" class="news-text">{{ item.message }}</div>
-                  <div class="news-timestamp">{{ formatTimestamp(item.createdAt) }}</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Empty State -->
-            <div v-else class="empty-state">
-              <div class="empty-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" />
-                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" />
-                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" />
-                </svg>
-              </div>
-              <p class="empty-text">No {{ activeTab === 'emergency' ? 'emergency' : '' }} notifications yet</p>
-            </div>
-          </div>
+        <!-- Modern News Feed -->
+        <div class="news-feed-container">
+          <ModernNewsFeed :project-id="currentProjectId" />
         </div>
       </div>
     </div>
@@ -221,6 +167,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { useProjectStore } from '../../stores/projectStore'
 import { useAcademiesStore } from '../../stores/academyStore'
 import UpcomingBookingsCard from '../../components/UpcomingBookingsCard.vue'
+import ModernNewsFeed from '../../components/ModernNewsFeed.vue'
 import sampleDataService from '../../services/sampleDataService.js'
 import notificationService from '../../services/notificationService.js'
 
@@ -233,7 +180,7 @@ const router = useRouter()
 const projectStore = useProjectStore()
 const academiesStore = useAcademiesStore()
 const user = ref(null)
-const activeTab = ref('all')
+// const activeTab = ref('all')
 const showProjectSwitcher = ref(false)
 const notifications = ref([])
 const isLoadingNotifications = ref(false)
@@ -343,12 +290,12 @@ const fetchNotifications = async () => {
   }
 }
 
-const filteredNews = computed(() => {
-  if (activeTab.value === 'emergency') {
-    return notifications.value.filter(item => item.type === 'emergency' || item.priority === 'high')
-  }
-  return notifications.value
-})
+// const filteredNews = computed(() => {
+//   if (activeTab.value === 'emergency') {
+//     return notifications.value.filter(item => item.type === 'emergency' || item.priority === 'high')
+//   }
+//   return notifications.value
+// })
 
 // Navigation methods
 const navigateToServices = () => {
@@ -364,29 +311,29 @@ const navigateToCalendar = () => {
 }
 
 // Format timestamp for display
-const formatTimestamp = (timestamp) => {
-  if (!timestamp) return 'Just now'
+// const formatTimestamp = (timestamp) => {
+//   if (!timestamp) return 'Just now'
 
-  try {
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
-    const now = new Date()
-    const diffInSeconds = Math.floor((now - date) / 1000)
+//   try {
+//     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+//     const now = new Date()
+//     const diffInSeconds = Math.floor((now - date) / 1000)
 
-    if (diffInSeconds < 60) return 'Just now'
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`
+//     if (diffInSeconds < 60) return 'Just now'
+//     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`
+//     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
+//     if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`
 
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  } catch {
-    return 'Recently'
-  }
-}
+//     return date.toLocaleDateString('en-US', {
+//       month: 'short',
+//       day: 'numeric',
+//       hour: '2-digit',
+//       minute: '2-digit'
+//     })
+//   } catch {
+//     return 'Recently'
+//   }
+// }
 
 // Project switching methods
 const switchToProject = async (project) => {
@@ -460,6 +407,11 @@ onMounted(async () => {
 .home-page {
   min-height: 100vh;
   background: #fafafa;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+  box-sizing: border-box;
 }
 
 .hero-section {
@@ -721,6 +673,15 @@ onMounted(async () => {
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.news-feed-container {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 16px;
+  padding: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
 }
 
 .news-section {
