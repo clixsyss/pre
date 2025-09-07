@@ -1,104 +1,124 @@
 <template>
   <div class="home-page">
-    <!-- Stats Cards -->
-    <div class="stats-section">
-      <div class="stat-card clickable" :class="{ 'loading': isStatsLoading }" @click="navigateToCalendar">
-        <div class="stat-content">
-          <span class="stat-number">{{ isStatsLoading ? '...' : upcomingEventsCount }}</span>
-          <span class="stat-label">Upcoming Events</span>
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">Welcome back!</h1>
+          <p class="hero-subtitle">Here's what's happening in your community</p>
         </div>
+        <button @click="showProjectSwitcher = true" class="project-switcher-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Switch Project
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="stats-overview">
+      <div class="stat-card" :class="{ 'loading': isStatsLoading }" @click="navigateToCalendar">
         <div class="stat-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             <path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
             <path d="M3 10H21" stroke="currentColor" stroke-width="2" />
           </svg>
         </div>
+        <div class="stat-content">
+          <div class="stat-number">{{ isStatsLoading ? '...' : upcomingEventsCount }}</div>
+          <div class="stat-label">Upcoming Events</div>
+        </div>
       </div>
 
-      <div class="stat-card clickable" :class="{ 'loading': isStatsLoading }" @click="navigateToMyBookings">
-        <div class="stat-content">
-          <span class="stat-number">{{ isStatsLoading ? '...' : activeBookingsCount }}</span>
-          <span class="stat-label">My Bookings</span>
-        </div>
+      <div class="stat-card" :class="{ 'loading': isStatsLoading }" @click="navigateToMyBookings">
         <div class="stat-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-              stroke-linejoin="round" />
-            <path
-              d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
-              stroke="currentColor" stroke-width="2" />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" />
           </svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">{{ isStatsLoading ? '...' : activeBookingsCount }}</div>
+          <div class="stat-label">My Bookings</div>
         </div>
       </div>
     </div>
 
-    <!-- Main Content Grid -->
-    <div class="main-grid">
-      <!-- Left Column -->
-      <div class="left-column">
-        <!-- Quick Actions -->
-        <div class="quick-actions-card">
-          <div class="card-header">
-            <h2>Quick Actions</h2>
+    <!-- Quick Actions -->
+    <div class="quick-actions-section">
+      <h2 class="section-title">Quick Actions</h2>
+      <div class="actions-grid">
+        <button class="action-card" @click="navigateToServices">
+          <div class="action-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
           </div>
-          <div class="actions-grid">
-            <button class="action-item" @click="navigateToServices">
-              <div class="action-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                  <path
-                    d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </div>
-              <span class="action-title">Book Services</span>
-            </button>
-
-            <button class="action-item" @click="navigateToMyBookings">
-              <div class="action-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" />
-                  <path
-                    d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
-                    stroke="currentColor" stroke-width="2" />
-                </svg>
-              </div>
-              <span class="action-title">My Bookings</span>
-            </button>
-
-            <button class="action-item" @click="navigateToCalendar">
-              <div class="action-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" />
-                  <path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" />
-                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
-                  <path d="M3 10H21" stroke="currentColor" stroke-width="2" />
-                </svg>
-              </div>
-              <span class="action-title">Calendar</span>
-            </button>
+          <div class="action-content">
+            <h3>Book Services</h3>
+            <p>Schedule your next appointment</p>
           </div>
-        </div>
+          <div class="action-arrow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </button>
+
+        <button class="action-card" @click="navigateToMyBookings">
+          <div class="action-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </div>
+          <div class="action-content">
+            <h3>My Bookings</h3>
+            <p>View and manage your bookings</p>
+          </div>
+          <div class="action-arrow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </button>
+
+        <button class="action-card" @click="navigateToCalendar">
+          <div class="action-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
+              <path d="M3 10H21" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </div>
+          <div class="action-content">
+            <h3>Calendar</h3>
+            <p>Check your schedule</p>
+          </div>
+          <div class="action-arrow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Content Grid -->
+    <div class="content-grid">
+      <!-- Upcoming Bookings -->
+      <div class="bookings-section">
+        <UpcomingBookingsCard />
       </div>
 
-      <!-- Right Column -->
-      <div class="right-column">
-        <!-- Upcoming Bookings -->
-        <div class="upcoming-bookings-card">
-          <UpcomingBookingsCard />
-        </div>
-
-        <!-- Modern News Feed -->
-        <div class="news-feed-container">
-          <ModernNewsFeed :project-id="currentProjectId" />
-        </div>
+      <!-- News Feed -->
+      <div class="news-section">
+        <ModernNewsFeed :project-id="currentProjectId" />
       </div>
     </div>
 
@@ -410,10 +430,12 @@ onMounted(async () => {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 20px;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
+/* Hero Section */
 .hero-section {
   background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
   color: white;
@@ -440,7 +462,7 @@ onMounted(async () => {
   font-size: 2rem;
   font-weight: 700;
   margin: 0;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.02em;
 }
 
 .hero-subtitle {
@@ -472,7 +494,8 @@ onMounted(async () => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.stats-section {
+/* Stats Overview */
+.stats-overview {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 16px;
@@ -488,6 +511,14 @@ onMounted(async () => {
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  border-color: #ff6b35;
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);
+  transform: translateY(-2px);
 }
 
 .stat-card.loading {
@@ -496,44 +527,6 @@ onMounted(async () => {
   background: #f0f0f0;
   border-color: #e0e0e0;
   box-shadow: none;
-}
-
-.stat-card.loading .stat-number {
-  color: #999;
-}
-
-.stat-card:not(.loading) .stat-number {
-  color: #333;
-}
-
-.stat-card:not(.loading) .stat-number:empty::before {
-  content: "0";
-}
-
-.stat-card.clickable {
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.stat-card.clickable:hover {
-  border-color: #ff6b35;
-  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);
-  transform: translateY(-2px);
-}
-
-.stat-card.clickable:active {
-  transform: translateY(0);
-}
-
-.stat-card.loading.clickable {
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.stat-card.loading.clickable:hover {
-  border-color: #e0e0e0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transform: none;
 }
 
 .stat-icon {
@@ -568,36 +561,17 @@ onMounted(async () => {
   margin: 0;
 }
 
-.main-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 20px;
+/* Quick Actions */
+.quick-actions-section {
+  margin-bottom: 24px;
 }
 
-.left-column {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.quick-actions-card {
-  background: white;
-  border: 1px solid #e8e8e8;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.card-header {
-  margin-bottom: 20px;
-}
-
-.card-header h2 {
-  margin: 0;
-  color: #333;
+.section-title {
   font-size: 1.25rem;
   font-weight: 600;
-  letter-spacing: -0.2px;
+  color: #333;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.01em;
 }
 
 .actions-grid {
@@ -606,7 +580,7 @@ onMounted(async () => {
   gap: 12px;
 }
 
-.action-item {
+.action-card {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -617,12 +591,11 @@ onMounted(async () => {
   padding: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
-  text-decoration: none;
-  color: #333;
+  text-align: center;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
-.action-item:hover {
+.action-card:hover {
   background: white;
   border-color: #ff6b35;
   transform: translateY(-2px);
@@ -642,280 +615,131 @@ onMounted(async () => {
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
 
-.action-title {
+.action-content {
+  flex: 1;
+}
+
+.action-content h3 {
   font-size: 0.9rem;
   font-weight: 600;
   color: #333;
   margin: 0;
-  text-align: center;
   line-height: 1.3;
 }
 
-.calendar-widget {
-  background: white;
-  border: 1px solid #e8e8e8;
-  border-radius: 20px;
-  padding: 32px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+.action-content p {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 4px 0 0 0;
+  line-height: 1.3;
 }
 
-.upcoming-bookings-card {
-  background: white;
-  border: 1px solid #e8e8e8;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+.action-arrow {
+  display: none;
 }
 
-.news-feed-card {
-  background: white;
-  border: 1px solid #e8e8e8;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+/* Content Grid */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
 }
 
-.news-feed-container {
-  background: white;
-  border: 1px solid #e8e8e8;
-  border-radius: 16px;
-  padding: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
-}
-
+.bookings-section,
 .news-section {
   background: white;
   border: 1px solid #e8e8e8;
-  border-radius: 20px;
-  padding: 32px;
-  margin-bottom: 32px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-}
-
-.news-feed {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.news-card {
-  display: flex;
-  gap: 20px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
   border-radius: 16px;
-  padding: 24px;
+  overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: all 0.2s ease;
-}
-
-.news-card:hover {
-  background: white;
-  border-color: #e0e0e0;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-
-.news-icon {
-  flex-shrink: 0;
-}
-
-.pre-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
-  color: white;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.7rem;
-  letter-spacing: 0.5px;
-  box-shadow: 0 1px 4px rgba(255, 107, 53, 0.2);
-}
-
-.news-content {
-  flex: 1;
-}
-
-.news-text {
-  color: #333;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  font-weight: 400;
-  margin-bottom: 6px;
-}
-
-.news-timestamp {
-  color: #888;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.right-column {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
 }
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-  .main-grid {
+  .content-grid {
     grid-template-columns: 1fr;
   }
-
+  
   .hero-content {
     flex-direction: column;
     align-items: flex-start;
+    gap: 16px;
   }
-
-  .hero-actions {
-    width: 100%;
-  }
-
+  
   .project-switcher-btn {
-    width: 100%;
-    justify-content: center;
+    align-self: flex-end;
   }
 }
 
 @media (max-width: 768px) {
   .home-page {
-    padding: 20px 16px;
+    padding: 16px;
   }
-
+  
   .hero-section {
-    padding: 24px;
-    margin-bottom: 24px;
+    padding: 20px;
+    border-radius: 16px;
   }
-
+  
   .hero-title {
-    font-size: 2rem;
+    font-size: 1.75rem;
   }
-
+  
   .hero-subtitle {
-    font-size: 1rem;
+    font-size: 0.9rem;
   }
-
-  .stats-section {
+  
+  .stats-overview {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
-
-  .quick-actions-card,
-  .calendar-widget,
-  .upcoming-bookings-card,
-  .news-feed-card {
-    padding: 24px;
+  
+  .actions-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
-
-  .card-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
+  
+  .action-card {
+    padding: 12px;
   }
-
-  .filter-tabs {
-    width: 100%;
+  
+  .action-content h3 {
+    font-size: 0.8rem;
   }
-
-  .filter-tab {
-    flex: 1;
-    text-align: center;
-  }
-
-  .actions-list {
-    grid-template-columns: 1fr;
-  }
-
-  .action-item {
-    padding: 20px;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 16px;
-  }
-
-  .action-icon {
-    width: 56px;
-    height: 56px;
-  }
-
-  .action-details {
-    text-align: center;
-  }
-
-  .action-title {
-    font-size: 1.1rem;
-  }
-
-  .action-subtitle {
-    font-size: 0.85rem;
-  }
-
-  .news-card {
-    flex-direction: column;
-    text-align: center;
-    padding: 20px;
-  }
-
-  .news-icon {
-    align-self: center;
+  
+  .action-content p {
+    display: none;
   }
 }
 
 @media (max-width: 480px) {
   .home-page {
-    padding: 16px 12px;
+    padding: 12px;
   }
-
+  
   .hero-section {
-    padding: 20px;
-    border-radius: 16px;
+    padding: 16px;
+    border-radius: 12px;
   }
-
+  
   .hero-title {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
   }
-
-  .hero-subtitle {
-    font-size: 0.9rem;
-  }
-
-  .quick-actions-card,
-  .calendar-widget,
-  .upcoming-bookings-card,
-  .news-feed-card {
-    padding: 20px;
-    border-radius: 16px;
-  }
-
-  .action-item {
-    padding: 20px;
-  }
-
-  .action-icon {
-    width: 48px;
-    height: 48px;
-  }
-
-  .action-title {
-    font-size: 1rem;
-  }
-
-  .action-subtitle {
-    font-size: 0.8rem;
-  }
-
-  .news-card {
+  
+  .stat-card {
     padding: 16px;
   }
-
-  .pre-logo {
-    width: 48px;
-    height: 48px;
-    font-size: 0.8rem;
+  
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .stat-number {
+    font-size: 1.25rem;
+  }
+  
+  .actions-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -926,23 +750,23 @@ onMounted(async () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
 }
 
 .modal-content {
-  background-color: white;
-  border-radius: 20px;
+  background: white;
+  border-radius: 24px;
   padding: 32px;
   max-width: 600px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
 }
 
 .project-switcher-modal {
@@ -955,15 +779,15 @@ onMounted(async () => {
   align-items: center;
   margin-bottom: 28px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .modal-header h3 {
   margin: 0;
-  color: #333;
+  color: #1e293b;
   font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.02em;
 }
 
 .close-btn {
@@ -972,13 +796,13 @@ onMounted(async () => {
   cursor: pointer;
   padding: 8px;
   border-radius: 8px;
-  transition: background-color 0.3s ease;
-  color: #666;
+  transition: all 0.3s ease;
+  color: #64748b;
 }
 
 .close-btn:hover {
-  background: #f8f9fa;
-  color: #333;
+  background: #f1f5f9;
+  color: #1e293b;
 }
 
 .modal-body {
@@ -996,8 +820,8 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1006,14 +830,14 @@ onMounted(async () => {
 .project-option:hover {
   background: white;
   border-color: #ff6b35;
-  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.15);
   transform: translateY(-2px);
 }
 
 .project-option.current {
   background: #fff5f2;
   border-color: #ff6b35;
-  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.2);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.2);
 }
 
 .project-option-info {
@@ -1023,13 +847,13 @@ onMounted(async () => {
 .project-option-name {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #333;
+  color: #1e293b;
   margin: 0 0 6px 0;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.01em;
 }
 
 .project-option-location {
-  color: #666;
+  color: #64748b;
   font-size: 0.95rem;
   margin: 0 0 12px 0;
 }
@@ -1048,13 +872,13 @@ onMounted(async () => {
 }
 
 .project-option-unit {
-  background: #e3f2fd;
-  color: #1565c0;
+  background: #dbeafe;
+  color: #1e40af;
 }
 
 .project-option-role {
-  background: #f3e5f5;
-  color: #7b1fa2;
+  background: #e0e7ff;
+  color: #3730a3;
 }
 
 .project-option-status {
@@ -1082,7 +906,7 @@ onMounted(async () => {
 .no-projects {
   text-align: center;
   padding: 48px 20px;
-  color: #666;
+  color: #64748b;
 }
 
 .no-projects p {
@@ -1106,12 +930,12 @@ onMounted(async () => {
 .go-to-selection-btn:hover {
   background: #e55a2b;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
 }
 
 .modal-footer {
   padding-top: 20px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid #e2e8f0;
   text-align: center;
 }
 
@@ -1119,11 +943,11 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #fafafa;
-  color: #666;
-  border: 2px solid #f0f0f0;
+  background: #f8fafc;
+  color: #64748b;
+  border: 2px solid #e2e8f0;
   padding: 14px 28px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -1137,217 +961,4 @@ onMounted(async () => {
   transform: translateY(-2px);
 }
 
-.filter-tabs {
-  display: flex;
-  gap: 8px;
-}
-
-.filter-tab {
-  background: none;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
-  padding: 6px 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: 500;
-  color: #666;
-  font-size: 0.8rem;
-}
-
-.filter-tab:hover {
-  border-color: #ff6b35;
-  color: #ff6b35;
-}
-
-.filter-tab.active {
-  background: #ff6b35;
-  border-color: #ff6b35;
-  color: white;
-}
-
-.news-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.news-item {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
-  transition: all 0.2s ease;
-}
-
-.news-item:hover {
-  background: white;
-  border-color: #e0e0e0;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.news-icon {
-  flex-shrink: 0;
-}
-
-.pre-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
-  color: white;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.7rem;
-  letter-spacing: 0.5px;
-  box-shadow: 0 1px 4px rgba(255, 107, 53, 0.2);
-}
-
-.news-content {
-  flex: 1;
-}
-
-.news-text {
-  color: #333;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  font-weight: 400;
-  margin-bottom: 6px;
-}
-
-.news-timestamp {
-  color: #888;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.news-title {
-  color: #333;
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin-bottom: 4px;
-  line-height: 1.4;
-}
-
-.news-item.emergency {
-  border-color: #ff4444;
-  background: #fff5f5;
-}
-
-.news-item.emergency:hover {
-  border-color: #ff2222;
-  background: #fff0f0;
-}
-
-.news-icon.emergency {
-  background: linear-gradient(135deg, #ff4444 0%, #ff6666 100%);
-  box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);
-}
-
-.emergency-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #ff4444 0%, #ff6666 100%);
-  color: white;
-  border-radius: 8px;
-  font-weight: 800;
-  font-size: 1rem;
-  letter-spacing: 0.5px;
-  box-shadow: 0 1px 4px rgba(255, 68, 68, 0.2);
-}
-
-/* Loading States */
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.loading-item {
-  display: flex;
-  gap: 16px;
-  padding: 16px;
-  background: #fafafa;
-  border-radius: 12px;
-  border: 1px solid #f0f0f0;
-}
-
-.loading-icon {
-  width: 40px;
-  height: 40px;
-  background: #e0e0e0;
-  border-radius: 12px;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-.loading-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.loading-text {
-  height: 16px;
-  background: #e0e0e0;
-  border-radius: 4px;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-.loading-timestamp {
-  height: 12px;
-  width: 80px;
-  background: #e0e0e0;
-  border-radius: 4px;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.5;
-  }
-}
-
-/* Empty State */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 20px;
-  text-align: center;
-  color: #666;
-}
-
-.empty-icon {
-  width: 48px;
-  height: 48px;
-  background: #f0f0f0;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 12px;
-  color: #999;
-}
-
-.empty-text {
-  font-size: 1rem;
-  font-weight: 500;
-  margin: 0;
-}
 </style>

@@ -2,11 +2,20 @@
   <div class="modern-news-feed">
     <!-- Header -->
     <div class="news-header">
-      <h2 class="news-title">Latest News</h2>
+      <div class="news-title-section">
+        <h2 class="news-title">Latest News</h2>
+        <div class="news-count">{{ filteredNews.length }} {{ filteredNews.length === 1 ? 'item' : 'items' }}</div>
+      </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-section">
       <div class="filter-tabs">
         <button v-for="tab in tabs" :key="tab.value" @click="activeTab = tab.value"
           :class="['filter-tab', { active: activeTab === tab.value }]">
-          {{ tab.label }}
+          <span class="filter-icon" v-if="tab.iconSvg" v-html="tab.iconSvg"></span>
+          <span class="filter-label">{{ tab.label }}</span>
+          <span v-if="getTabCount(tab.value) > 0" class="filter-count">{{ getTabCount(tab.value) }}</span>
         </button>
       </div>
     </div>
@@ -87,6 +96,49 @@
       <h3>No news yet</h3>
       <p>Check back later for updates from your community!</p>
     </div>
+
+    <!-- Modern News Detail Modal -->
+    <Transition name="modal-fade">
+      <div v-if="showNewsModal && selectedNewsItem" class="modal-overlay" @click="closeNewsModal">
+        <div class="modal-content" @click.stop>
+          <!-- Modal Header -->
+          <div class="modal-header">
+            <div class="modal-meta">
+              <span class="modal-category" :class="getCategoryClass(selectedNewsItem.category)">
+                {{ getCategoryLabel(selectedNewsItem.category) }}
+              </span>
+              <span class="modal-time">{{ formatTime(selectedNewsItem.createdAt) }}</span>
+            </div>
+            <button @click="closeNewsModal" class="close-btn">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Modal Body -->
+          <div class="modal-body">
+            <!-- Media Section -->
+            <div v-if="selectedNewsItem.mediaUrl || selectedNewsItem.mediaType" class="modal-media">
+              <div v-if="selectedNewsItem.mediaType === 'video'" class="modal-video-container">
+                <video :src="selectedNewsItem.mediaUrl" :poster="selectedNewsItem.thumbnailUrl" controls class="modal-video">
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              <div v-else class="modal-image-container">
+                <img :src="selectedNewsItem.mediaUrl || defaultLogoUrl" :alt="selectedNewsItem.title" class="modal-image" />
+              </div>
+            </div>
+
+            <!-- Content Section -->
+            <div class="modal-content-section">
+              <h1 class="modal-title">{{ selectedNewsItem.title }}</h1>
+              <div class="modal-content-text" v-html="selectedNewsItem.message || selectedNewsItem.content"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -113,13 +165,57 @@ const loading = ref(false)
 const newsItems = ref([])
 const activeTab = ref('all')
 const defaultLogoUrl = ref('')
+const showNewsModal = ref(false)
+const selectedNewsItem = ref(null)
 
 const tabs = [
-  { label: 'All', value: 'all' },
-  { label: 'General', value: 'general' },
-  { label: 'Announcements', value: 'announcement' },
-  { label: 'Events', value: 'event' },
-  { label: 'Updates', value: 'update' }
+  { 
+    label: 'All', 
+    value: 'all', 
+    icon: 'svg',
+    iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 6H21M3 12H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`
+  },
+  { 
+    label: 'General', 
+    value: 'general', 
+    icon: 'svg',
+    iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+      <path d="M19.4 15A1.65 1.65 0 0 0 21 13.4A1.65 1.65 0 0 0 19.4 12A1.65 1.65 0 0 0 18 13.4A1.65 1.65 0 0 0 19.4 15Z" stroke="currentColor" stroke-width="2"/>
+      <path d="M4.6 9A1.65 1.65 0 0 1 6 7.4A1.65 1.65 0 0 1 4.6 6A1.65 1.65 0 0 1 3 7.4A1.65 1.65 0 0 1 4.6 9Z" stroke="currentColor" stroke-width="2"/>
+    </svg>`
+  },
+  { 
+    label: 'Announcements', 
+    value: 'announcement', 
+    icon: 'svg',
+    iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 8A6 6 0 0 0 6 8C6 7 6 5 6 3A2 2 0 0 1 8 1H16A2 2 0 0 1 18 3C18 5 18 7 18 8Z" stroke="currentColor" stroke-width="2"/>
+      <path d="M13.73 21A2 2 0 0 1 10.27 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`
+  },
+  { 
+    label: 'Events', 
+    value: 'event', 
+    icon: 'svg',
+    iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+      <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+    </svg>`
+  },
+  { 
+    label: 'Updates', 
+    value: 'update', 
+    icon: 'svg',
+    iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2"/>
+      <path d="M22 6L12 13L2 6" stroke="currentColor" stroke-width="2"/>
+    </svg>`
+  }
 ]
 
 const filteredNews = computed(() => {
@@ -128,6 +224,13 @@ const filteredNews = computed(() => {
   }
   return newsItems.value.filter(item => item.type === activeTab.value)
 })
+
+const getTabCount = (tabValue) => {
+  if (tabValue === 'all') {
+    return newsItems.value.length
+  }
+  return newsItems.value.filter(item => item.type === tabValue).length
+}
 
 const getCategoryClass = (category) => {
   const classes = {
@@ -177,8 +280,13 @@ const handleMediaError = (event) => {
 }
 
 const openNewsDetail = (item) => {
-  // For now, just log. You can implement a modal or navigation here
-  console.log('Opening news detail:', item)
+  selectedNewsItem.value = item
+  showNewsModal.value = true
+}
+
+const closeNewsModal = () => {
+  showNewsModal.value = false
+  selectedNewsItem.value = null
 }
 
 const loadDefaultLogo = async () => {
@@ -240,54 +348,112 @@ onMounted(async () => {
   padding: 24px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid #f0f0f0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden; /* Prevent horizontal overflow */
 }
 
 .news-header {
+  margin-bottom: 16px;
+}
+
+.news-title-section {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 16px;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .news-title {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #1a1a1a;
   margin: 0;
   letter-spacing: -0.02em;
 }
 
+.news-count {
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.filter-section {
+  margin-bottom: 20px;
+}
+
 .filter-tabs {
   display: flex;
   gap: 8px;
-  background: #f8f9fa;
-  padding: 4px;
-  border-radius: 12px;
+  overflow-x: auto;
+  padding: 4px 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.filter-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .filter-tab {
-  background: none;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
   font-weight: 500;
   color: #6b7280;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: fit-content;
 }
 
 .filter-tab:hover {
   color: #374151;
-  background: rgba(255, 255, 255, 0.5);
+  background: #e5e7eb;
+  border-color: #d1d5db;
 }
 
 .filter-tab.active {
   background: #ff6b35;
   color: white;
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+  border-color: #ff6b35;
+  box-shadow: 0 2px 4px rgba(255, 107, 53, 0.2);
+}
+
+.filter-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.filter-label {
+  font-weight: 600;
+}
+
+.filter-count {
+  background: rgba(255, 255, 255, 0.3);
+  color: inherit;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  min-width: 16px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.filter-tab:not(.active) .filter-count {
+  background: #d1d5db;
+  color: #6b7280;
 }
 
 /* Loading States */
@@ -376,6 +542,8 @@ onMounted(async () => {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .news-card:hover {
@@ -604,20 +772,27 @@ onMounted(async () => {
     border-radius: 16px;
   }
 
-  .news-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
+  .news-title {
+    font-size: 1.125rem;
   }
 
-  .filter-tabs {
-    width: 100%;
-    justify-content: space-between;
+  .news-count {
+    font-size: 0.75rem;
   }
 
   .filter-tab {
-    flex: 1;
-    text-align: center;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .filter-icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  .filter-count {
+    font-size: 0.65rem;
+    padding: 1px 4px;
   }
 
   .news-card {
@@ -640,13 +815,16 @@ onMounted(async () => {
   }
 }
 
+/* Very narrow screens (like mobile simulation) */
 @media (max-width: 480px) {
   .modern-news-feed {
     padding: 16px;
+    margin: 0 -4px; /* Compensate for narrow viewport */
   }
 
   .news-card {
     padding: 16px;
+    gap: 16px;
   }
 
   .news-title {
@@ -656,5 +834,340 @@ onMounted(async () => {
   .news-headline {
     font-size: 1.125rem;
   }
+
+  .filter-tab {
+    padding: 6px 8px;
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+
+  .filter-icon {
+    width: 10px;
+    height: 10px;
+  }
+
+  .filter-label {
+    font-size: 0.7rem;
+  }
+
+  .filter-count {
+    font-size: 0.6rem;
+    padding: 1px 3px;
+    min-width: 14px;
+  }
 }
+
+/* Modern Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 32px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.modal-category {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modal-time {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.modal-media {
+  width: 100%;
+  max-height: 300px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-image-container {
+  width: 100%;
+  max-width: 500px;
+  max-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.modal-image {
+  width: 100%;
+  height: 100%;
+  max-width: 500px;
+  max-height: 300px;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.modal-video-container {
+  width: 100%;
+  max-width: 500px;
+  max-height: 300px;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.modal-video {
+  width: 100%;
+  height: 100%;
+  max-width: 500px;
+  max-height: 300px;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.modal-content-section {
+  padding: 32px;
+}
+
+.modal-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0 0 24px 0;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.modal-content-text {
+  font-size: 1.125rem;
+  color: #4b5563;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.modal-content-text h1,
+.modal-content-text h2,
+.modal-content-text h3,
+.modal-content-text h4,
+.modal-content-text h5,
+.modal-content-text h6 {
+  color: #1a1a1a;
+  font-weight: 700;
+  margin: 24px 0 16px 0;
+}
+
+.modal-content-text p {
+  margin: 0 0 16px 0;
+}
+
+.modal-content-text ul,
+.modal-content-text ol {
+  margin: 16px 0;
+  padding-left: 24px;
+}
+
+.modal-content-text li {
+  margin: 8px 0;
+}
+
+.modal-footer {
+  padding: 16px 32px 24px;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.close-modal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.close-modal-btn:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+/* Modal Transitions */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 16px;
+  }
+  
+  .modal-content {
+    border-radius: 20px;
+    max-height: 95vh;
+  }
+  
+  .modal-header {
+    padding: 20px 24px 16px;
+  }
+  
+  .modal-media {
+    max-height: 250px;
+  }
+  
+  .modal-image-container,
+  .modal-video-container {
+    max-width: 100%;
+    max-height: 250px;
+  }
+  
+  .modal-image,
+  .modal-video {
+    max-width: 100%;
+    max-height: 250px;
+  }
+  
+  .modal-content-section {
+    padding: 24px;
+  }
+  
+  .modal-title {
+    font-size: 1.5rem;
+  }
+  
+  .modal-content-text {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 12px;
+  }
+  
+  .modal-content {
+    border-radius: 16px;
+  }
+  
+  .modal-header {
+    padding: 16px 20px 12px;
+  }
+  
+  .modal-media {
+    max-height: 200px;
+  }
+  
+  .modal-image-container,
+  .modal-video-container {
+    max-width: 100%;
+    max-height: 200px;
+  }
+  
+  .modal-image,
+  .modal-video {
+    max-width: 100%;
+    max-height: 200px;
+  }
+  
+  .modal-content-section {
+    padding: 20px;
+  }
+  
+  .modal-title {
+    font-size: 1.25rem;
+  }
+  
+  .modal-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
 </style>

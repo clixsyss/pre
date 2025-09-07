@@ -214,6 +214,8 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   background-color: white;
+  width: 100%;
+  overflow-x: hidden; /* Prevent horizontal overflow */
 }
 
 
@@ -231,6 +233,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  min-width: 0; /* Allow flex item to shrink */
 }
 
 .logo-section {
@@ -378,6 +381,8 @@ onMounted(async () => {
   padding: 20px;
   width: 100%;
   box-sizing: border-box;
+  overflow-x: hidden; /* Prevent horizontal overflow */
+  min-width: 0; /* Allow flex item to shrink below content size */
 }
 
 /* Bottom Navigation */
@@ -751,6 +756,33 @@ onMounted(async () => {
   
   .project-actions {
     justify-content: flex-end;
+  }
+}
+
+/* Very narrow screens (like mobile simulation) */
+@media (max-width: 480px) {
+  .app-header {
+    padding: 12px 16px;
+  }
+  
+  .main-content {
+    padding: 16px;
+  }
+  
+  .project-name {
+    max-width: 80px;
+  }
+  
+  .project-unit {
+    max-width: 60px;
+  }
+  
+  .bottom-navigation {
+    padding: 12px 16px 24px;
+  }
+  
+  .nav-label {
+    font-size: 0.75rem;
   }
 }
 </style>
