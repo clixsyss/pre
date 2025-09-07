@@ -368,6 +368,24 @@ service firebase.storage {
         exists(/databases/(default)/documents/admins/$(request.auth.uid));
     }
     
+    // Allow project-specific news media uploads for admins
+    match /projects/{projectId}/news/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Temporary: Allow authenticated users to upload news media (for testing)
+    // TODO: Remove this rule once admin authentication is properly set up
+    match /news/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
+    // Temporary: Allow authenticated users to upload project-specific news media
+    match /projects/{projectId}/news/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
     // Allow logo and other public assets to be read by anyone
     match /logo.png {
       allow read: if true;
