@@ -39,11 +39,25 @@
         <!-- Media Section -->
         <div class="news-media" v-if="item.mediaUrl || item.mediaType">
           <div v-if="item.mediaType === 'video'" class="video-container">
-            <video :src="item.mediaUrl" :poster="item.thumbnailUrl" controls class="news-video"
-              @error="handleMediaError">
+            <video 
+              :ref="(el) => observeVideo(el, item.id)"
+              :src="item.mediaUrl" 
+              :poster="item.thumbnailUrl" 
+              controls 
+              class="news-video"
+              preload="none"
+              playsinline
+              webkit-playsinline
+              @loadstart="handleVideoLoadStart(item.id)"
+              @loadeddata="handleVideoLoaded(item.id)"
+              @error="handleVideoError(item.id)"
+              @click="handleVideoClick(item)">
               Your browser does not support the video tag.
             </video>
-            <div class="play-overlay">
+            <div v-if="videoLoadingStates[item.id]" class="video-loading">
+              <div class="loading-spinner"></div>
+            </div>
+            <div v-else class="play-overlay">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M8 5V19L19 12L8 5Z" fill="white" />
               </svg>
@@ -97,44 +111,68 @@
       <p>Check back later for updates from your community!</p>
     </div>
 
-    <!-- Modern News Detail Modal -->
-    <Transition name="modal-fade">
-      <div v-if="showNewsModal && selectedNewsItem" class="modal-overlay" @click="closeNewsModal">
-        <div class="modal-content" @click.stop>
-          <!-- Modal Header -->
-          <div class="modal-header">
-            <div class="modal-meta">
-              <span class="modal-category" :class="getCategoryClass(selectedNewsItem.category)">
+    <!-- Modern News Dialog -->
+    <Transition name="dialog-slide">
+      <div v-if="showNewsModal && selectedNewsItem" class="dialog-overlay" @click="closeNewsModal">
+        <div class="dialog-container" @click.stop>
+          <!-- Dialog Header -->
+          <div class="dialog-header">
+            <div class="dialog-meta">
+              <span class="dialog-category" :class="getCategoryClass(selectedNewsItem.category)">
                 {{ getCategoryLabel(selectedNewsItem.category) }}
               </span>
-              <span class="modal-time">{{ formatTime(selectedNewsItem.createdAt) }}</span>
+              <span class="dialog-time">{{ formatTime(selectedNewsItem.createdAt) }}</span>
             </div>
-            <button @click="closeNewsModal" class="close-btn">
+            <button @click="closeNewsModal" class="dialog-close-btn">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
           </div>
 
-          <!-- Modal Body -->
-          <div class="modal-body">
+          <!-- Dialog Content -->
+          <div class="dialog-content">
             <!-- Media Section -->
-            <div v-if="selectedNewsItem.mediaUrl || selectedNewsItem.mediaType" class="modal-media">
-              <div v-if="selectedNewsItem.mediaType === 'video'" class="modal-video-container">
-                <video :src="selectedNewsItem.mediaUrl" :poster="selectedNewsItem.thumbnailUrl" controls class="modal-video">
+            <div v-if="selectedNewsItem.mediaUrl || selectedNewsItem.mediaType" class="dialog-media">
+              <div v-if="selectedNewsItem.mediaType === 'video'" class="dialog-video-container">
+                <video 
+                  :src="selectedNewsItem.mediaUrl" 
+                  :poster="selectedNewsItem.thumbnailUrl" 
+                  controls 
+                  class="dialog-video"
+                  preload="metadata"
+                  playsinline
+                  webkit-playsinline
+                  @loadstart="handleVideoLoadStart(selectedNewsItem.id)"
+                  @loadeddata="handleVideoLoaded(selectedNewsItem.id)"
+                  @error="handleVideoError(selectedNewsItem.id)">
                   Your browser does not support the video tag.
                 </video>
+                <div v-if="videoLoadingStates[selectedNewsItem.id]" class="video-loading">
+                  <div class="loading-spinner"></div>
+                </div>
               </div>
-              <div v-else class="modal-image-container">
-                <img :src="selectedNewsItem.mediaUrl || defaultLogoUrl" :alt="selectedNewsItem.title" class="modal-image" />
+              <div v-else class="dialog-image-container">
+                <img :src="selectedNewsItem.mediaUrl || defaultLogoUrl" :alt="selectedNewsItem.title" class="dialog-image" 
+                  @error="handleMediaError" loading="lazy" />
               </div>
             </div>
 
-            <!-- Content Section -->
-            <div class="modal-content-section">
-              <h1 class="modal-title">{{ selectedNewsItem.title }}</h1>
-              <div class="modal-content-text" v-html="selectedNewsItem.message || selectedNewsItem.content"></div>
+            <!-- Text Content -->
+            <div class="dialog-text">
+              <h1 class="dialog-title">{{ selectedNewsItem.title }}</h1>
+              <div class="dialog-message" v-html="selectedNewsItem.message || selectedNewsItem.content"></div>
             </div>
+          </div>
+
+          <!-- Dialog Actions -->
+          <div class="dialog-actions">
+            <button @click="closeNewsModal" class="dialog-action-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              Got it
+            </button>
           </div>
         </div>
       </div>
@@ -143,7 +181,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 // import { useProjectStore } from '../stores/projectStore'
 import { getDownloadURL, ref as storageRef } from 'firebase/storage'
 import { storage } from '../boot/firebase'
@@ -167,6 +205,9 @@ const activeTab = ref('all')
 const defaultLogoUrl = ref('')
 const showNewsModal = ref(false)
 const selectedNewsItem = ref(null)
+const videoLoadingStates = ref({})
+const videoIntersectionObserver = ref(null)
+const videoElements = ref(new Map())
 
 const tabs = [
   { 
@@ -279,6 +320,24 @@ const handleMediaError = (event) => {
   event.target.src = defaultLogoUrl.value
 }
 
+const handleVideoLoadStart = (itemId) => {
+  videoLoadingStates.value[itemId] = true
+}
+
+const handleVideoLoaded = (itemId) => {
+  videoLoadingStates.value[itemId] = false
+}
+
+const handleVideoError = (itemId) => {
+  videoLoadingStates.value[itemId] = false
+  console.log('Video error for item:', itemId)
+}
+
+const handleVideoClick = (item) => {
+  // Open video in dialog for better viewing
+  openNewsDetail(item)
+}
+
 const openNewsDetail = (item) => {
   selectedNewsItem.value = item
   showNewsModal.value = true
@@ -335,9 +394,49 @@ const fetchNews = async () => {
   }
 }
 
+// Setup intersection observer for video lazy loading
+const setupVideoLazyLoading = () => {
+  if (videoIntersectionObserver.value) {
+    videoIntersectionObserver.value.disconnect()
+  }
+
+  videoIntersectionObserver.value = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const video = entry.target
+        
+        // Only load video when it comes into view
+        if (video.dataset.loaded !== 'true') {
+          video.dataset.loaded = 'true'
+          video.load() // Trigger video loading
+        }
+      }
+    })
+  }, {
+    rootMargin: '50px 0px', // Start loading 50px before video comes into view
+    threshold: 0.1
+  })
+}
+
+const observeVideo = (videoElement, itemId) => {
+  if (videoElement && videoIntersectionObserver.value) {
+    videoElement.dataset.itemId = itemId
+    videoElements.value.set(itemId, videoElement)
+    videoIntersectionObserver.value.observe(videoElement)
+  }
+}
+
 onMounted(async () => {
   await loadDefaultLogo()
   await fetchNews()
+  setupVideoLazyLoading()
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (videoIntersectionObserver.value) {
+    videoIntersectionObserver.value.disconnect()
+  }
 })
 </script>
 
@@ -602,6 +701,11 @@ onMounted(async () => {
   height: 100%;
   object-fit: cover;
   border-radius: 12px;
+  background: #000;
+  /* Performance optimizations */
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 .play-overlay {
@@ -617,6 +721,35 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(4px);
+}
+
+.video-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .featured-badge {
@@ -857,44 +990,225 @@ onMounted(async () => {
   }
 }
 
-/* Modern Modal Styles */
-.modal-overlay {
+/* Modern Dialog Styles */
+.dialog-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  padding: 0;
 }
 
-.modal-content {
+.dialog-container {
   background: white;
-  border-radius: 24px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  max-width: 800px;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 100%;
   width: 100%;
-  max-height: 90vh;
+  max-height: 85vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  animation: modalSlideIn 0.3s ease-out;
+  animation: dialogSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes modalSlideIn {
+@keyframes dialogSlideUp {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(20px);
+    transform: translateY(100%);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translateY(0);
   }
+}
+
+/* Dialog Styles */
+.dialog-header {
+  padding: 20px 24px 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fafbfc;
+}
+
+.dialog-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dialog-category {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dialog-time {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.dialog-close-btn {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 12px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dialog-close-btn:hover {
+  background: #e2e8f0;
+  color: #334155;
+  transform: scale(1.05);
+}
+
+.dialog-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog-media {
+  width: 100%;
+  height: auto;
+  border-radius: 0;
+  overflow: hidden;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.dialog-image-container,
+.dialog-video-container {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  overflow: hidden;
+  position: relative;
+  padding: 10px;
+}
+
+.dialog-image {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 0;
+  background: #f8f9fa;
+}
+
+.dialog-video {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: cover;
+  border-radius: 0;
+  background: #000;
+  /* Performance optimizations */
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.dialog-text {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dialog-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.dialog-message {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #475569;
+  margin: 0;
+}
+
+.dialog-actions {
+  padding: 16px 24px 24px 24px;
+  border-top: 1px solid #f1f5f9;
+  background: #fafbfc;
+}
+
+.dialog-action-btn {
+  width: 100%;
+  background: #ff6b35;
+  color: white;
+  border: none;
+  border-radius: 16px;
+  padding: 14px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.dialog-action-btn:hover {
+  background: #e55a2b;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
+}
+
+.dialog-action-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+/* Dialog Transitions */
+.dialog-slide-enter-active,
+.dialog-slide-leave-active {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dialog-slide-enter-from,
+.dialog-slide-leave-to {
+  opacity: 0;
+}
+
+.dialog-slide-enter-from .dialog-container,
+.dialog-slide-leave-to .dialog-container {
+  transform: translateY(100%);
 }
 
 .modal-header {
@@ -1017,6 +1331,7 @@ onMounted(async () => {
   color: #4b5563;
   line-height: 1.7;
   margin: 0;
+  text-align: justify;
 }
 
 .modal-content-text h1,
@@ -1170,4 +1485,122 @@ onMounted(async () => {
   }
 }
 
+/* Responsive Dialog */
+@media (max-width: 768px) {
+  .dialog-container {
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
+  }
+  
+  .dialog-header {
+    padding: 18px 20px 14px 20px;
+  }
+  
+  .dialog-text {
+    padding: 20px;
+    gap: 14px;
+  }
+  
+  .dialog-title {
+    font-size: 1.375rem;
+  }
+  
+  .dialog-message {
+    font-size: 0.9rem;
+  }
+  
+  .dialog-actions {
+    padding: 14px 20px 20px 20px;
+  }
+  
+  .dialog-action-btn {
+    padding: 12px 18px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dialog-container {
+    border-radius: 16px 16px 0 0;
+    max-height: 95vh;
+  }
+  
+  .dialog-header {
+    padding: 16px 18px 12px 18px;
+  }
+  
+  .dialog-text {
+    padding: 18px;
+    gap: 12px;
+  }
+  
+  .dialog-title {
+    font-size: 1.25rem;
+  }
+  
+  .dialog-message {
+    font-size: 0.85rem;
+  }
+  
+  .dialog-actions {
+    padding: 12px 18px 18px 18px;
+  }
+  
+  .dialog-action-btn {
+    padding: 12px 16px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Desktop Dialog (larger screens) */
+@media (min-width: 1024px) {
+  .dialog-overlay {
+    align-items: center;
+    padding: 20px;
+  }
+  
+  .dialog-container {
+    border-radius: 24px;
+    max-width: 600px;
+    max-height: 80vh;
+  }
+  
+  .dialog-media {
+    max-height: 400px;
+    border-radius: 16px;
+    margin: 24px 24px 0 24px;
+  }
+  
+  .dialog-image-container,
+  .dialog-video-container {
+    border-radius: 16px;
+    height: auto;
+    max-height: 400px;
+    padding: 10px;
+  }
+  
+  .dialog-image {
+    border-radius: 16px;
+    height: auto;
+    max-height: 400px;
+    object-fit: contain;
+  }
+  
+  .dialog-video {
+    border-radius: 16px;
+    height: auto;
+    max-height: 400px;
+    object-fit: cover;
+  }
+  
+  .dialog-text {
+    padding: 24px;
+  }
+  
+  .dialog-actions {
+    padding: 16px 24px 24px 24px;
+  }
+}
+
 </style>
+
