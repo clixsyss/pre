@@ -383,6 +383,7 @@ onMounted(async () => {
   box-sizing: border-box;
   overflow-x: hidden; /* Prevent horizontal overflow */
   min-width: 0; /* Allow flex item to shrink below content size */
+  margin-bottom: 80px;
 }
 
 /* Bottom Navigation */
@@ -394,9 +395,10 @@ onMounted(async () => {
   display: flex;
   justify-content: space-around;
   align-items: flex-end;
-  position: sticky;
+  position: fixed;
   bottom: 0;
   z-index: 100;
+  width: 100%;
 }
 
 .nav-item {
