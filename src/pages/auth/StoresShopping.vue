@@ -98,51 +98,100 @@
             class="store-card"
             @click="navigateToStore(store)"
           >
-            <div class="store-image">
-              <img v-if="store.image" :src="store.image" :alt="store.name" />
-              <div v-else class="store-placeholder">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+            <!-- Store Image with Status Badge -->
+            <div class="store-image-container">
+              <div class="store-image">
+                <img v-if="store.image" :src="store.image" :alt="store.name" />
+                <div v-else class="store-placeholder">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- Status Badge -->
+              <div class="status-badge" :class="store.status || 'active'">
+                <div class="status-dot"></div>
+                <span>{{ (store.status || 'active').toUpperCase() }}</span>
+              </div>
+              
+              <!-- Quick Actions -->
+              <div class="quick-actions">
+                <button class="action-btn" @click.stop="toggleFavorite(store)" :class="{ active: isFavorite(store.id) }">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                </button>
               </div>
             </div>
             
+            <!-- Store Info -->
             <div class="store-info">
-              <h3 class="store-name">{{ store.name }}</h3>
-              <p class="store-location">{{ store.location }}</p>
-              
-              <div class="store-meta">
-                <div class="delivery-time">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                    <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
-                  </svg>
-                  {{ store.averageDeliveryTime }}
-                </div>
-                
-                <div class="delivery-fee" v-if="store.deliveryFee">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  ${{ store.deliveryFee }} delivery
-                </div>
-                
+              <div class="store-header">
+                <h3 class="store-name">{{ store.name }}</h3>
                 <div class="rating">
                   <div class="stars">
                     <svg
                       v-for="star in 5"
                       :key="star"
                       :class="['star', { 'filled': star <= (store.rating || 0) }]"
-                      width="16"
-                      height="16"
+                      width="14"
+                      height="14"
                       viewBox="0 0 24 24"
                       fill="currentColor"
                     >
                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
                     </svg>
                   </div>
-                  <span class="rating-text">{{ store.rating || 0 }}/5</span>
+                  <span class="rating-text">{{ (store.rating || 0).toFixed(1) }}</span>
                 </div>
+              </div>
+              
+              <p class="store-location">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                {{ store.location }}
+              </p>
+              
+              <!-- Store Meta Info -->
+              <div class="store-meta">
+                <div class="meta-item delivery-time">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  <span>{{ store.averageDeliveryTime }}</span>
+                </div>
+                
+                <div class="meta-item delivery-fee" v-if="store.deliveryFee">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span>${{ store.deliveryFee }}</span>
+                </div>
+                
+                <div class="meta-item free-delivery" v-else>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span>Free delivery</span>
+                </div>
+              </div>
+              
+              <!-- Store Categories/Tags -->
+              <div class="store-tags" v-if="store.categories && store.categories.length > 0">
+                <span 
+                  v-for="category in store.categories.slice(0, 3)" 
+                  :key="category" 
+                  class="tag"
+                >
+                  {{ category }}
+                </span>
+                <span v-if="store.categories.length > 3" class="tag more">
+                  +{{ store.categories.length - 3 }}
+                </span>
               </div>
             </div>
           </div>
@@ -459,6 +508,7 @@ const sortBy = ref('rating');
 const activeTab = ref('stores');
 const showOrderModal = ref(false);
 const selectedOrder = ref(null);
+const favoriteStores = ref(new Set());
 
 // Computed properties
 const filteredStores = computed(() => {
@@ -640,8 +690,36 @@ const formatOrderDate = (timestamp) => {
   }
 };
 
+// Favorite methods
+const toggleFavorite = (store) => {
+  if (favoriteStores.value.has(store.id)) {
+    favoriteStores.value.delete(store.id);
+  } else {
+    favoriteStores.value.add(store.id);
+  }
+  // Save to localStorage
+  localStorage.setItem('favoriteStores', JSON.stringify(Array.from(favoriteStores.value)));
+};
+
+const isFavorite = (storeId) => {
+  return favoriteStores.value.has(storeId);
+};
+
+// Load favorites from localStorage on mount
+const loadFavorites = () => {
+  const saved = localStorage.getItem('favoriteStores');
+  if (saved) {
+    try {
+      favoriteStores.value = new Set(JSON.parse(saved));
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
+  }
+};
+
 // Lifecycle
 onMounted(() => {
+  loadFavorites();
   fetchStores();
   fetchUserOrders();
 });
@@ -867,133 +945,266 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
 
 .stores-grid {
   display: grid;
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
 }
 
 .store-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border: 1px solid #e0e0e0;
+  background: white;
+  border: 1px solid #e5e7eb;
   border-radius: 20px;
-  padding: 24px;
+  padding: 0;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .store-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  border-color: var(--q-secondary);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-color: #F37C4E;
 }
 
-.store-card:hover::before {
-  transform: scaleX(1);
+.store-image-container {
+  position: relative;
+  height: 200px;
+  width: 100%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .store-image {
-  width: 90px;
-  height: 90px;
-  border-radius: 16px;
-  overflow: hidden;
-  margin-bottom: 20px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-}
-
-.store-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0;
+}
+
+.store-card:hover .store-image {
+  transform: scale(1.08);
+  filter: brightness(1.05);
 }
 
 .store-placeholder {
   width: 100%;
   height: 100%;
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ccc;
+  color: #cbd5e1;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.store-placeholder svg {
+  opacity: 0.6;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.status-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(8px);
+}
+
+.status-badge.active {
+  background: rgba(34, 197, 94, 0.9);
+  color: white;
+}
+
+.status-badge.inactive {
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.quick-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  color: #6b7280;
+}
+
+.action-btn:hover {
+  background: white;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.action-btn.active {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.store-info {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.store-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
 }
 
 .store-name {
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  color: #333;
-  margin: 0 0 10px 0;
-  background: linear-gradient(135deg, #333 0%, #666 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #111827;
+  margin: 0;
+  line-height: 1.3;
+  flex: 1;
 }
 
 .store-location {
-  color: #666;
-  font-size: 1rem;
-  margin: 0 0 20px 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0 0 16px 0;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .store-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
-.delivery-time {
+.meta-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #666;
-  font-size: 0.9rem;
+  color: #6b7280;
+  font-size: 0.8rem;
   font-weight: 500;
-  padding: 8px 12px;
-  background: rgba(0, 122, 255, 0.1);
-  border-radius: 20px;
+  padding: 6px 10px;
+  background: #f3f4f6;
+  border-radius: 12px;
 }
 
-.delivery-fee {
+.meta-item.delivery-time {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.meta-item.delivery-fee {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.meta-item.free-delivery {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.store-tags {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
-  color: #ff6b35;
-  font-size: 0.9rem;
-  font-weight: 600;
-  padding: 8px 12px;
-  background: rgba(255, 107, 53, 0.1);
-  border-radius: 20px;
+  margin-top: auto;
+}
+
+.tag {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 4px 8px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 8px;
+  text-transform: capitalize;
+}
+
+.tag.more {
+  background: #e5e7eb;
+  color: #9ca3af;
 }
 
 .rating {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: rgba(255, 215, 0, 0.1);
-  border-radius: 20px;
+  gap: 6px;
+  margin-left: auto;
 }
 
 .stars {
   display: flex;
-  gap: 2px;
+  gap: 1px;
 }
 
 .star {
-  color: #ddd;
+  color: #d1d5db;
   transition: color 0.2s ease;
 }
 
 .star.filled {
-  color: #ffd700;
-  filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.3));
+  color: #fbbf24;
 }
 
 .rating-text {
-  font-size: 0.9rem;
-  color: #666;
+  font-size: 0.8rem;
+  color: #6b7280;
   font-weight: 600;
+}
+
+/* Image Quality Improvements */
+.store-image img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: optimize-contrast;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 /* Responsive Design */
@@ -1003,7 +1214,7 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
   }
   
   .stores-grid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   }
 }
 

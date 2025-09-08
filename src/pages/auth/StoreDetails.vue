@@ -7,7 +7,7 @@
           <div class="store-image">
             <img v-if="store?.image" :src="store.image" :alt="store?.name" />
             <div v-else class="store-placeholder">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
@@ -65,22 +65,76 @@
         <div
           v-for="product in filteredProducts"
           :key="product.id"
+          :data-product-id="product.id"
           class="product-card"
         >
-          <div class="product-image">
-            <img v-if="product.image" :src="product.image" :alt="product.name" />
-            <div v-else class="product-placeholder">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 7L10 17L5 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+          <!-- Product Image with Category Badge -->
+          <div class="product-image-container">
+            <div class="product-image">
+              <img 
+                v-if="product.image" 
+                :src="product.image" 
+                :alt="product.name"
+                @load="handleImageLoad"
+                @error="handleImageError"
+                class="product-img"
+              />
+              <div 
+                class="product-placeholder"
+                :class="{ 'show': shouldShowPlaceholder(product) }"
+                v-show="shouldShowPlaceholder(product)"
+              >
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 7L10 17L5 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+            
+            <!-- Category Badge -->
+            <div class="category-badge" v-if="product.category">
+              <span>{{ product.category.toUpperCase() }}</span>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="product-actions">
+              <button class="action-btn" @click.stop="toggleProductFavorite(product)" :class="{ active: isProductFavorite(product.id) }">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+              </button>
             </div>
           </div>
           
+          <!-- Product Content -->
           <div class="product-content">
-            <h3 class="product-name">{{ product.name }}</h3>
+            <div class="product-header">
+              <h3 class="product-name">{{ product.name }}</h3>
+              <div class="product-rating" v-if="product.rating">
+                <div class="stars">
+                  <svg
+                    v-for="star in 5"
+                    :key="star"
+                    :class="['star', { 'filled': star <= (product.rating || 0) }]"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                  </svg>
+                </div>
+                <span class="rating-text">{{ (product.rating || 0).toFixed(1) }}</span>
+              </div>
+            </div>
+            
             <p v-if="product.description" class="product-description">{{ product.description }}</p>
+            
             <div class="product-footer">
-              <span class="product-price">${{ product.price }}</span>
+              <div class="price-section">
+                <span class="product-price">${{ product.price }}</span>
+                <span v-if="product.originalPrice && product.originalPrice > product.price" class="original-price">${{ product.originalPrice }}</span>
+              </div>
+              
               <button
                 class="add-btn"
                 @click="addToCart(product)"
@@ -133,6 +187,8 @@ const searchTerm = ref('');
 const categoryFilter = ref('all');
 const addingToCart = ref(null);
 const showSuccessToast = ref(false);
+const favoriteProducts = ref(new Set());
+const imageLoadError = ref({});
 
 // Computed properties
 const filteredProducts = computed(() => {
@@ -154,6 +210,11 @@ const filteredProducts = computed(() => {
 
   return filtered;
 });
+
+// Helper function to check if we should show placeholder
+const shouldShowPlaceholder = (product) => {
+  return !product.image || imageLoadError.value[product.id];
+};
 
 // Methods
 const fetchStore = async () => {
@@ -196,6 +257,12 @@ const fetchStoreProducts = async (storeId) => {
       id: doc.id,
       ...doc.data()
     }));
+    
+    // Debug: Log product data to see what we're getting
+    console.log('Fetched products:', products.value);
+    products.value.forEach(product => {
+      console.log(`Product: ${product.name}, Image: ${product.image}`);
+    });
   } catch (error) {
     console.error('Error fetching store products:', error);
   }
@@ -229,8 +296,50 @@ const viewCart = () => {
   router.push('/shopping-cart');
 };
 
+// Product favorite methods
+const toggleProductFavorite = (product) => {
+  if (favoriteProducts.value.has(product.id)) {
+    favoriteProducts.value.delete(product.id);
+  } else {
+    favoriteProducts.value.add(product.id);
+  }
+  // Save to localStorage
+  localStorage.setItem('favoriteProducts', JSON.stringify(Array.from(favoriteProducts.value)));
+};
+
+const isProductFavorite = (productId) => {
+  return favoriteProducts.value.has(productId);
+};
+
+// Load favorites from localStorage on mount
+const loadProductFavorites = () => {
+  const saved = localStorage.getItem('favoriteProducts');
+  if (saved) {
+    try {
+      favoriteProducts.value = new Set(JSON.parse(saved));
+    } catch (error) {
+      console.error('Error loading product favorites:', error);
+    }
+  }
+};
+
+// Image handling methods
+const handleImageLoad = (event) => {
+  console.log('Image loaded successfully:', event.target.src);
+  event.target.style.display = 'block';
+};
+
+const handleImageError = (event) => {
+  console.error('Image failed to load:', event.target.src);
+  const productId = event.target.closest('.product-card')?.getAttribute('data-product-id') || 
+                   event.target.alt || 'unknown';
+  imageLoadError.value[productId] = true;
+  event.target.style.display = 'none';
+};
+
 // Lifecycle
 onMounted(() => {
+  loadProductFavorites();
   fetchStore();
 });
 </script>
@@ -269,22 +378,42 @@ onMounted(() => {
   border-radius: 16px;
   overflow: hidden;
   flex-shrink: 0;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
 .store-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
+  transition: all 0.3s ease;
+}
+
+.store-image:hover img {
+  transform: scale(1.05);
+  filter: brightness(1.05);
 }
 
 .store-placeholder {
   width: 100%;
   height: 100%;
-  background: #f3f4f6;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
+  color: #cbd5e1;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.store-placeholder svg {
+  opacity: 0.6;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .store-info {
@@ -448,65 +577,194 @@ onMounted(() => {
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
 }
 
 .product-card {
   background: white;
-  border: 2px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 20px;
-  transition: all 0.2s ease;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   border-color: #F37C4E;
-  box-shadow: 0 8px 25px rgba(243, 124, 78, 0.15);
-  transform: translateY(-2px);
+}
+
+.product-image-container {
+  position: relative;
+  height: auto;
+  min-height: 200px;
+  width: 100%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .product-image {
   width: 100%;
-  height: 200px;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 16px;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0;
+  position: relative;
 }
 
-.product-image img {
+.product-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
+  display: block;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.product-card:hover .product-img {
+  transform: scale(1.08);
+  filter: brightness(1.05);
 }
 
 .product-placeholder {
   width: 100%;
   height: 100%;
-  background: #f3f4f6;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: #cbd5e1;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.product-placeholder.show {
+  display: flex;
+}
+
+.product-placeholder svg {
+  opacity: 0.6;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.category-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 6px 12px;
+  background: rgba(243, 124, 78, 0.9);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(8px);
+}
+
+.product-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  color: #6b7280;
+}
+
+.action-btn:hover {
+  background: white;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.action-btn.active {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .product-content {
+  padding: 20px;
+  flex: 1;
   display: flex;
   flex-direction: column;
+}
+
+.product-header {
+  display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
 }
 
 .product-name {
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #111827;
-  margin: 0 0 8px 0;
+  margin: 0;
+  line-height: 1.3;
+  flex: 1;
+}
+
+.product-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.stars {
+  display: flex;
+  gap: 1px;
+}
+
+.star {
+  color: #d1d5db;
+  transition: color 0.2s ease;
+}
+
+.star.filled {
+  color: #fbbf24;
+}
+
+.rating-text {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 600;
 }
 
 .product-description {
   color: #6b7280;
   font-size: 0.9rem;
   margin: 0 0 16px 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -515,13 +773,25 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 16px;
+  margin-top: auto;
+}
+
+.price-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .product-price {
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #F37C4E;
+}
+
+.original-price {
+  font-size: 0.9rem;
+  color: #9ca3af;
+  text-decoration: line-through;
 }
 
 .add-btn {
@@ -600,6 +870,18 @@ onMounted(() => {
 .toast span {
   font-weight: 600;
   font-size: 1rem;
+}
+
+/* Image Quality Improvements */
+.product-image img,
+.store-image img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: optimize-contrast;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 /* Responsive Design */
