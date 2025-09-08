@@ -972,8 +972,10 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
 
 .store-image-container {
   position: relative;
-  height: 200px;
+  min-height: 200px;
+  height: auto;
   width: 100%;
+  padding: 10px;
   overflow: hidden;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   display: flex;
@@ -982,7 +984,6 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
 }
 
 .store-image {
-  width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center;
