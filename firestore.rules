@@ -375,6 +375,20 @@ service firebase.storage {
         exists(/databases/(default)/documents/admins/$(request.auth.uid));
     }
     
+    // Allow store image uploads for admins
+    match /projects/{projectId}/stores/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Allow product image uploads for admins
+    match /projects/{projectId}/stores/{storeId}/products/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
     // Temporary: Allow authenticated users to upload news media (for testing)
     // TODO: Remove this rule once admin authentication is properly set up
     match /news/{fileName} {
@@ -383,6 +397,16 @@ service firebase.storage {
     
     // Temporary: Allow authenticated users to upload project-specific news media
     match /projects/{projectId}/news/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
+    // Temporary: Allow authenticated users to upload store images (for testing)
+    match /projects/{projectId}/stores/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
+    // Temporary: Allow authenticated users to upload product images (for testing)
+    match /projects/{projectId}/stores/{storeId}/products/{fileName} {
       allow write: if request.auth != null;
     }
     
