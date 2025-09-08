@@ -190,13 +190,115 @@
         </div>
       </div>
     </div>
+
+    <!-- Rating Modal -->
+    <div v-if="showRatingModal" class="rating-modal-overlay" @click="skipRating">
+      <div class="rating-modal-content" @click.stop>
+        <!-- Header with Store Info -->
+        <div class="rating-header">
+          <div class="store-info-card">
+            <div class="store-avatar">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="store-details">
+              <h3>{{ storesToRate[currentStoreIndex]?.name }}</h3>
+              <p>How was your experience?</p>
+            </div>
+          </div>
+          
+          <!-- Progress Indicator -->
+          <div class="progress-indicator">
+            <span class="progress-text">{{ currentStoreIndex + 1 }} of {{ storesToRate.length }}</span>
+            <div class="progress-bar">
+              <div 
+                class="progress-fill" 
+                :style="{ width: `${((currentStoreIndex + 1) / storesToRate.length) * 100}%` }"
+              ></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Rating Section -->
+        <div class="rating-section">
+          <!-- Star Rating -->
+          <div class="star-rating-container">
+            <div class="stars-wrapper">
+              <button
+                v-for="star in 5"
+                :key="star"
+                class="star-button"
+                :class="{ 
+                  'filled': star <= currentRating,
+                  'hover': star <= (hoverRating || currentRating)
+                }"
+                @click="currentRating = star"
+                @mouseenter="hoverRating = star"
+                @mouseleave="hoverRating = 0"
+              >
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Rating Text -->
+            <div class="rating-feedback">
+              <h4 class="rating-title">{{ getRatingText(currentRating) }}</h4>
+              <p class="rating-subtitle">{{ getRatingDescription(currentRating) }}</p>
+            </div>
+          </div>
+          
+          <!-- Comment Section -->
+          <div class="comment-container">
+            <label for="rating-comment" class="comment-label">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Share your experience (optional)
+            </label>
+            <textarea
+              id="rating-comment"
+              v-model="ratingComment"
+              placeholder="What made your experience great? Any suggestions for improvement?"
+              class="comment-textarea"
+              rows="3"
+              maxlength="200"
+            ></textarea>
+            <div class="character-count">{{ ratingComment.length }}/200</div>
+          </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="rating-actions">
+          <button class="skip-button" @click="skipRating">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 14l-7-7m0 0l-7 7m7-7v18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Skip
+          </button>
+          <button 
+            class="submit-button" 
+            @click="submitRating"
+            :disabled="currentRating === 0"
+            :class="{ 'disabled': currentRating === 0 }"
+          >
+            <span>{{ currentStoreIndex === storesToRate.length - 1 ? 'Finish Rating' : 'Rate Next Store' }}</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from 'src/boot/firebase';
 import { useProjectStore } from 'src/stores/projectStore';
@@ -215,8 +317,14 @@ const cartStore = useCartStore();
 // Reactive data
 const placingOrder = ref(false);
 const showOrderConfirmation = ref(false);
+const showRatingModal = ref(false);
 const orderNumber = ref('');
 const estimatedDelivery = ref('');
+const storesToRate = ref([]);
+const currentStoreIndex = ref(0);
+const currentRating = ref(0);
+const hoverRating = ref(0);
+const ratingComment = ref('');
 
 // Computed properties
 const subtotal = computed(() => {
@@ -276,6 +384,31 @@ const placeOrder = async () => {
     return;
   }
 
+  // Validate that all stores are active
+  if (cartStore.items.length > 0) {
+    const storeIds = [...new Set(cartStore.items.map(item => item.storeId))];
+    
+    for (const storeId of storeIds) {
+      try {
+        const storeRef = collection(db, `projects/${projectStore.selectedProject.id}/stores`);
+        const storeQuery = query(storeRef, where('__name__', '==', storeId));
+        const storeSnapshot = await getDocs(storeQuery);
+        
+        if (!storeSnapshot.empty) {
+          const storeData = storeSnapshot.docs[0].data();
+          if (storeData.status && storeData.status !== 'active') {
+            alert(`Cannot place order: ${storeData.name} is currently inactive and not accepting orders.`);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking store status:', error);
+        alert('Error validating store status. Please try again.');
+        return;
+      }
+    }
+  }
+
   try {
     placingOrder.value = true;
     
@@ -311,8 +444,17 @@ const placeOrder = async () => {
 
     await addDoc(collection(db, `projects/${projectStore.selectedProject.id}/orders`), orderData);
     
+    // Store the order data for rating before clearing cart
+    const orderStores = [...new Set(cartStore.items.map(item => ({
+      id: item.storeId,
+      name: item.storeName
+    })))];
+    
     // Clear cart
     cartStore.clearCart();
+    
+    // Store the order stores for rating
+    storesToRate.value = orderStores;
     
     // Show confirmation
     showOrderConfirmation.value = true;
@@ -331,7 +473,122 @@ const closeOrderConfirmation = () => {
 
 const continueShopping = () => {
   showOrderConfirmation.value = false;
+  // Start rating process
+  startRatingProcess();
+};
+
+const startRatingProcess = () => {
+  // Use the stored order stores (already set during order placement)
+  console.log('Starting rating process for stores:', storesToRate.value);
+  currentStoreIndex.value = 0;
+  currentRating.value = 0;
+  ratingComment.value = '';
+  
+  if (storesToRate.value.length > 0) {
+    console.log('Showing rating modal');
+    showRatingModal.value = true;
+  } else {
+    console.log('No stores to rate, navigating to stores');
+    router.push('/stores-shopping');
+  }
+};
+
+const getRatingText = (rating) => {
+  const texts = {
+    0: 'Select a rating',
+    1: 'Poor',
+    2: 'Fair', 
+    3: 'Good',
+    4: 'Very Good',
+    5: 'Excellent'
+  };
+  return texts[rating] || 'Select a rating';
+};
+
+const getRatingDescription = (rating) => {
+  const descriptions = {
+    0: 'Tap a star to rate your experience',
+    1: 'We\'re sorry to hear that. We\'ll work to improve!',
+    2: 'Thanks for the feedback. We\'re always improving!',
+    3: 'Glad you had a good experience!',
+    4: 'Wonderful! We\'re thrilled you enjoyed it!',
+    5: 'Amazing! Thank you for the perfect rating!'
+  };
+  return descriptions[rating] || 'Tap a star to rate your experience';
+};
+
+const submitRating = async () => {
+  if (currentRating.value === 0) return;
+  
+  try {
+    const store = storesToRate.value[currentStoreIndex.value];
+    
+    // Add rating to Firestore
+    const ratingData = {
+      storeId: store.id,
+      storeName: store.name,
+      userId: auth.currentUser.uid,
+      userEmail: auth.currentUser.email,
+      rating: currentRating.value,
+      comment: ratingComment.value,
+      orderNumber: orderNumber.value,
+      createdAt: serverTimestamp()
+    };
+    
+    await addDoc(collection(db, `projects/${projectStore.selectedProject.id}/ratings`), ratingData);
+    
+    // Update store's average rating
+    await updateStoreRating(store.id);
+    
+    // Move to next store or finish
+    if (currentStoreIndex.value < storesToRate.value.length - 1) {
+      currentStoreIndex.value++;
+      currentRating.value = 0;
+      ratingComment.value = '';
+    } else {
+      // All stores rated, go to stores page
+      showRatingModal.value = false;
+      router.push('/stores-shopping');
+    }
+  } catch (error) {
+    console.error('Error submitting rating:', error);
+    alert('Error submitting rating. Please try again.');
+  }
+};
+
+const skipRating = () => {
+  showRatingModal.value = false;
   router.push('/stores-shopping');
+};
+
+const updateStoreRating = async (storeId) => {
+  try {
+    // Get current store data
+    const storeRef = collection(db, `projects/${projectStore.selectedProject.id}/stores`);
+    const storeQuery = query(storeRef, where('__name__', '==', storeId));
+    const storeSnapshot = await getDocs(storeQuery);
+    
+    if (!storeSnapshot.empty) {
+      const storeDoc = storeSnapshot.docs[0];
+      
+      // Get all ratings for this store
+      const ratingsRef = collection(db, `projects/${projectStore.selectedProject.id}/ratings`);
+      const ratingsQuery = query(ratingsRef, where('storeId', '==', storeId));
+      const ratingsSnapshot = await getDocs(ratingsQuery);
+      
+      const ratings = ratingsSnapshot.docs.map(doc => doc.data().rating);
+      const averageRating = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+      
+      // Update store with new average rating
+      await updateDoc(storeDoc.ref, {
+        rating: parseFloat(averageRating.toFixed(1)),
+        reviewCount: ratings.length,
+        updatedAt: serverTimestamp()
+      });
+    }
+  } catch (error) {
+    console.error('Error updating store rating:', error);
+  }
 };
 
 const browseStores = () => {
@@ -1088,6 +1345,324 @@ onMounted(() => {
   
   .summary-row.total {
     border-top-color: #404040;
+  }
+}
+
+/* Rating Modal Styles */
+.rating-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.rating-modal-content {
+  background: white;
+  border-radius: 24px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header */
+.rating-header {
+  padding: 24px 24px 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.store-info-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.store-avatar {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #F37C4E 0%, #e55a2b 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 12px rgba(243, 124, 78, 0.3);
+}
+
+.store-details h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+}
+
+.store-details p {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.progress-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-text {
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-weight: 500;
+  min-width: 60px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #F37C4E 0%, #e55a2b 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Rating Section */
+.rating-section {
+  padding: 24px;
+}
+
+.star-rating-container {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.stars-wrapper {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.star-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #d1d5db;
+  position: relative;
+}
+
+.star-button:hover {
+  transform: scale(1.1);
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.star-button.filled {
+  color: #fbbf24;
+  transform: scale(1.05);
+}
+
+.star-button.hover {
+  color: #fbbf24;
+  transform: scale(1.1);
+}
+
+.rating-feedback {
+  text-align: center;
+}
+
+.rating-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+  transition: all 0.3s ease;
+}
+
+.rating-subtitle {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Comment Section */
+.comment-container {
+  text-align: left;
+}
+
+.comment-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+  font-weight: 600;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.comment-textarea {
+  width: 100%;
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 100px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  background: #fafbfc;
+}
+
+.comment-textarea:focus {
+  outline: none;
+  border-color: #F37C4E;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(243, 124, 78, 0.1);
+}
+
+.comment-textarea::placeholder {
+  color: #9ca3af;
+}
+
+.character-count {
+  text-align: right;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+/* Action Buttons */
+.rating-actions {
+  padding: 20px 24px 24px;
+  display: flex;
+  gap: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.skip-button {
+  flex: 1;
+  padding: 14px 20px;
+  border: 2px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  border-radius: 16px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.skip-button:hover {
+  border-color: #d1d5db;
+  color: #374151;
+  background: #f9fafb;
+}
+
+.submit-button {
+  flex: 2;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #F37C4E 0%, #e55a2b 100%);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(243, 124, 78, 0.3);
+}
+
+.submit-button:hover:not(.disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(243, 124, 78, 0.4);
+}
+
+.submit-button.disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.submit-button.disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 640px) {
+  .rating-modal-content {
+    margin: 10px;
+    border-radius: 20px;
+  }
+  
+  .rating-header {
+    padding: 20px 20px 16px;
+  }
+  
+  .rating-section {
+    padding: 20px;
+  }
+  
+  .rating-actions {
+    padding: 16px 20px 20px;
+  }
+  
+  .stars-wrapper {
+    gap: 4px;
+  }
+  
+  .star-button {
+    padding: 6px;
+  }
+  
+  .star-button svg {
+    width: 32px;
+    height: 32px;
   }
 }
 </style>

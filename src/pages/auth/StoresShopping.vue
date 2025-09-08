@@ -96,7 +96,8 @@
             v-for="store in filteredStores"
             :key="store.id"
             class="store-card"
-            @click="navigateToStore(store)"
+            :class="{ 'inactive': store.status && store.status !== 'active' }"
+            @click="handleStoreClick(store)"
           >
             <!-- Store Image with Status Badge -->
             <div class="store-image-container">
@@ -110,9 +111,13 @@
               </div>
               
               <!-- Status Badge -->
-              <div class="status-badge" :class="store.status || 'active'">
+              <div 
+                v-if="store.status && store.status !== 'active'"
+                class="status-badge" 
+                :class="store.status"
+              >
                 <div class="status-dot"></div>
-                <span>{{ (store.status || 'active').toUpperCase() }}</span>
+                <span>{{ store.status === 'inactive' ? 'CLOSED' : 'MAINTENANCE' }}</span>
               </div>
               
               <!-- Quick Actions -->
@@ -143,7 +148,12 @@
                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
                     </svg>
                   </div>
-                  <span class="rating-text">{{ (store.rating || 0).toFixed(1) }}</span>
+                  <div class="rating-info">
+                    <span class="rating-text">{{ (store.rating || 0).toFixed(1) }}</span>
+                    <span class="review-count">
+                      {{ (store.reviewCount || 0) === 0 ? 'No reviews yet' : `(${store.reviewCount} reviews)` }}
+                    </span>
+                  </div>
                 </div>
               </div>
               
@@ -514,6 +524,9 @@ const favoriteStores = ref(new Set());
 const filteredStores = computed(() => {
   let filtered = stores.value;
 
+  // Show all stores (we'll handle inactive styling in the template)
+  // filtered = filtered.filter(store => !store.status || store.status === 'active');
+
   // Search filter
   if (searchTerm.value) {
     const search = searchTerm.value.toLowerCase();
@@ -569,12 +582,42 @@ const fetchStores = async () => {
     const querySnapshot = await getDocs(storesRef);
     console.log('Stores query result:', querySnapshot.docs.length, 'stores found');
     
-    stores.value = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    // Fetch stores with their rating data
+    const storesWithRatings = await Promise.all(
+      querySnapshot.docs.map(async (doc) => {
+        const storeData = doc.data();
+        
+        // Fetch ratings for this store
+        try {
+          const ratingsRef = collection(db, `projects/${projectStore.selectedProject.id}/ratings`);
+          const ratingsQuery = query(ratingsRef, where('storeId', '==', doc.id));
+          const ratingsSnapshot = await getDocs(ratingsQuery);
+          
+          const ratings = ratingsSnapshot.docs.map(ratingDoc => ratingDoc.data().rating);
+          const averageRating = ratings.length > 0 
+            ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length 
+            : 0;
+          
+          return {
+            id: doc.id,
+            ...storeData,
+            rating: parseFloat(averageRating.toFixed(1)),
+            reviewCount: ratings.length
+          };
+        } catch (ratingError) {
+          console.error('Error fetching ratings for store:', doc.id, ratingError);
+          return {
+            id: doc.id,
+            ...storeData,
+            rating: 0,
+            reviewCount: 0
+          };
+        }
+      })
+    );
     
-    console.log('Stores loaded:', stores.value);
+    stores.value = storesWithRatings;
+    console.log('Stores loaded with ratings:', stores.value);
   } catch (error) {
     console.error('Error fetching stores:', error);
   } finally {
@@ -630,6 +673,14 @@ const refreshOrders = () => {
 
 const navigateToStore = (store) => {
   router.push(`/store/${store.id}`);
+};
+
+const handleStoreClick = (store) => {
+  // Only allow navigation for active stores
+  if (!store.status || store.status === 'active') {
+    navigateToStore(store);
+  }
+  // For inactive stores, do nothing (no navigation)
 };
 
 const viewOrderDetails = (order) => {
@@ -970,6 +1021,19 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
   border-color: #F37C4E;
 }
 
+/* Inactive store styling */
+.store-card.inactive {
+  opacity: 0.6;
+  filter: grayscale(0.3);
+  cursor: not-allowed;
+}
+
+.store-card.inactive:hover {
+  transform: none;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-color: #e5e7eb;
+}
+
 .store-image-container {
   position: relative;
   min-height: 200px;
@@ -1037,6 +1101,11 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
 
 .status-badge.inactive {
   background: rgba(239, 68, 68, 0.9);
+  color: white;
+}
+
+.status-badge.maintenance {
+  background: rgba(245, 158, 11, 0.9);
   color: white;
 }
 
@@ -1191,10 +1260,23 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
   color: #fbbf24;
 }
 
+.rating-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
 .rating-text {
   font-size: 0.8rem;
   color: #6b7280;
   font-weight: 600;
+}
+
+.review-count {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  font-weight: 400;
 }
 
 /* Image Quality Improvements */

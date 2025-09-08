@@ -14,11 +14,41 @@
           </div>
           
           <div class="store-info">
-            <h1 class="store-name">{{ store?.name }}</h1>
+            <div class="store-name-container">
+              <h1 class="store-name">{{ store?.name }}</h1>
+              <div 
+                v-if="store?.status && store.status !== 'active'"
+                class="store-status-badge"
+                :class="store.status"
+              >
+                {{ store.status === 'inactive' ? 'CLOSED' : 'MAINTENANCE' }}
+              </div>
+            </div>
             <div class="store-meta">
               <span class="location">{{ store?.location }}</span>
               <span class="delivery">{{ store?.averageDeliveryTime }} delivery</span>
               <span v-if="store?.deliveryFee" class="delivery-fee">${{ store.deliveryFee }} delivery fee</span>
+            </div>
+            
+            <!-- Store Rating -->
+            <div v-if="store?.rating" class="store-rating">
+              <div class="rating-stars">
+                <svg
+                  v-for="star in 5"
+                  :key="star"
+                  :class="['star', { 'filled': star <= (store.rating || 0) }]"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
+              </div>
+              <span class="rating-value">{{ (store.rating || 0).toFixed(1) }}</span>
+              <span class="rating-count">
+                {{ (store.reviewCount || 0) === 0 ? 'No reviews yet' : `(${store.reviewCount} reviews)` }}
+              </span>
             </div>
           </div>
         </div>
@@ -152,11 +182,19 @@
     </div>
 
     <!-- Success Toast -->
-    <div v-if="showSuccessToast" class="toast">
+    <div v-if="showSuccessToast" class="toast success">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <span>Added to cart</span>
+    </div>
+
+    <!-- Error Toast -->
+    <div v-if="showErrorToast" class="toast error">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>This store is currently inactive and not accepting orders</span>
     </div>
   </div>
 </template>
@@ -187,6 +225,7 @@ const searchTerm = ref('');
 const categoryFilter = ref('all');
 const addingToCart = ref(null);
 const showSuccessToast = ref(false);
+const showErrorToast = ref(false);
 const favoriteProducts = ref(new Set());
 const imageLoadError = ref({});
 
@@ -228,10 +267,34 @@ const fetchStore = async () => {
     
     if (!storeSnapshot.empty) {
       const storeDoc = storeSnapshot.docs[0];
-      store.value = {
-        id: storeDoc.id,
-        ...storeDoc.data()
-      };
+      const storeData = storeDoc.data();
+      
+      // Fetch ratings for this store
+      try {
+        const ratingsRef = collection(db, `projects/${projectStore.selectedProject.id}/ratings`);
+        const ratingsQuery = query(ratingsRef, where('storeId', '==', storeDoc.id));
+        const ratingsSnapshot = await getDocs(ratingsQuery);
+        
+        const ratings = ratingsSnapshot.docs.map(ratingDoc => ratingDoc.data().rating);
+        const averageRating = ratings.length > 0 
+          ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length 
+          : 0;
+        
+        store.value = {
+          id: storeDoc.id,
+          ...storeData,
+          rating: parseFloat(averageRating.toFixed(1)),
+          reviewCount: ratings.length
+        };
+      } catch (ratingError) {
+        console.error('Error fetching ratings for store:', storeDoc.id, ratingError);
+        store.value = {
+          id: storeDoc.id,
+          ...storeData,
+          rating: 0,
+          reviewCount: 0
+        };
+      }
       
       // Fetch products for this store
       await fetchStoreProducts(storeDoc.id);
@@ -270,6 +333,16 @@ const fetchStoreProducts = async (storeId) => {
 
 const addToCart = async (product) => {
   if (!store.value) return;
+  
+  // Check if store is active (default to active if status is not set)
+  if (store.value.status && store.value.status !== 'active') {
+    // Show error message for inactive stores
+    showErrorToast.value = true;
+    setTimeout(() => {
+      showErrorToast.value = false;
+    }, 3000);
+    return;
+  }
   
   try {
     addingToCart.value = product.id;
@@ -420,12 +493,74 @@ onMounted(() => {
   flex: 1;
 }
 
+.store-name-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
 .store-name {
   font-size: 2rem;
   font-weight: 700;
   color: #111827;
-  margin: 0 0 16px 0;
+  margin: 0;
   letter-spacing: -0.5px;
+}
+
+.store-status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.store-status-badge.inactive {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.store-status-badge.maintenance {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.store-rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.rating-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.rating-stars .star {
+  color: #d1d5db;
+  transition: color 0.2s;
+}
+
+.rating-stars .star.filled {
+  color: #fbbf24;
+}
+
+.rating-value {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.rating-count {
+  font-size: 0.8rem;
+  color: #6b7280;
 }
 
 .store-meta {
@@ -838,17 +973,28 @@ onMounted(() => {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #21ba45;
-  color: white;
   padding: 16px 24px;
   border-radius: 12px;
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 8px 25px rgba(33, 186, 69, 0.3);
   z-index: 1000;
   opacity: 0.95;
   animation: toast-slide-up 0.3s ease-out;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.toast.success {
+  background-color: #21ba45;
+  color: white;
+  box-shadow: 0 8px 25px rgba(33, 186, 69, 0.3);
+}
+
+.toast.error {
+  background-color: #e53e3e;
+  color: white;
+  box-shadow: 0 8px 25px rgba(229, 62, 62, 0.3);
 }
 
 @keyframes toast-slide-up {
