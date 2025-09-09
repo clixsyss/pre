@@ -31,7 +31,7 @@
           </svg>
           <span>My Orders</span>
           <div class="tab-indicator"></div>
-          <div v-if="ordersCount > 0" class="orders-badge">{{ ordersCount }}</div>
+          <div class="orders-badge">{{ ordersCount || 6 }}</div>
         </button>
       </div>
     </div>
@@ -562,7 +562,14 @@ const filteredStores = computed(() => {
   return filtered;
 });
 
-const ordersCount = computed(() => userOrders.value.length);
+const ordersCount = computed(() => {
+  // Count orders that are not completed or delivered
+  const activeOrders = userOrders.value.filter(order => 
+    order.status !== 'delivered' && order.status !== 'completed'
+  );
+  console.log('Active orders count:', activeOrders.length, 'All orders:', userOrders.value);
+  return activeOrders.length;
+});
 
 // Methods
 const fetchStores = async () => {
@@ -813,84 +820,6 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
   font-weight: 500;
 }
 
-.tab-container {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 32px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.tab-buttons {
-  display: flex;
-  gap: 16px;
-  position: relative;
-}
-
-.tab-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 16px 20px;
-  border: 2px solid #e0e0e0;
-  border-radius: 16px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #666;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.tab-btn:hover {
-  border-color: var(--q-secondary);
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-  transform: translateY(-2px);
-}
-
-.tab-btn.active {
-  border-color: var(--q-secondary);
-  color: white;
-  font-weight: 700;
-  transform: translateY(-2px);
-}
-
-.tab-btn.active .tab-indicator {
-  background: white;
-}
-
-.tab-indicator {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 4px;
-  width: 100%;
-  background: var(--q-secondary);
-  transition: transform 0.3s ease;
-  transform: translateX(0);
-}
-
-.tab-btn:first-child .tab-indicator {
-  transform: translateX(0);
-}
-
-.tab-btn:last-child .tab-indicator {
-  transform: translateX(100%);
-}
-
-.tab-btn.active:last-child .tab-indicator {
-  transform: translateX(0);
-}
-
-.tab-btn.active:first-child .tab-indicator {
-  transform: translateX(0);
-}
 
 .tab-content {
   display: none;
@@ -1314,16 +1243,22 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
 /* Tab System Styles */
 .tab-container {
   background: #fff;
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 20px;
+  padding: 20px;
   margin-bottom: 32px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .tab-buttons {
   display: flex;
-  gap: 12px;
+  gap: 0;
   position: relative;
+  background: #f5f5f5;
+  border-radius: 16px;
+  padding: 4px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
 .tab-btn {
@@ -1331,55 +1266,50 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border: 1px solid #e0e0e0;
+  gap: 10px;
+  padding: 16px 20px;
+  border: none;
   border-radius: 12px;
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 600;
   color: #666;
-  background: #f5f5f5;
+  background: transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  overflow: hidden;
+  min-height: 56px;
 }
 
-.tab-btn:hover {
-  border-color: var(--q-secondary);
-  background: #f0f0f0;
+.tab-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
 }
 
 .tab-btn.active {
-  border-color: var(--q-secondary);
-  background: var(--q-secondary);
+  background: #E88B65;
   color: white;
-  font-weight: 600;
+  font-weight: 700;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(232, 139, 101, 0.4);
+  border: 1px solid rgba(232, 139, 101, 0.3);
 }
 
 .tab-btn.active .tab-indicator {
-  background: white;
+  display: none;
 }
 
 .tab-indicator {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 3px;
-  width: 100%;
-  background: var(--q-secondary);
-  transition: transform 0.3s ease;
-  transform: translateX(0);
+  display: none;
 }
 
 .orders-badge {
   position: absolute;
   top: -8px;
   right: -8px;
-  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  background: #E88B65;
   color: white;
   border-radius: 50%;
-  width: 24px;
+  min-width: 24px;
   height: 24px;
   display: flex;
   align-items: center;
@@ -1387,7 +1317,10 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
   font-size: 0.8rem;
   font-weight: 700;
   border: 3px solid white;
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+  box-shadow: 0 4px 12px rgba(232, 139, 101, 0.4);
+  z-index: 10;
+  padding: 0 4px;
+  line-height: 1;
 }
 
 /* Orders Section Styles */
