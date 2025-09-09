@@ -735,11 +735,12 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { collection, getDocs, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from 'src/boot/firebase';
 import { useProjectStore } from 'src/stores/projectStore';
+import { useNotificationStore } from 'src/stores/notifications';
 
 // Component name for ESLint
 defineOptions({
@@ -747,7 +748,9 @@ defineOptions({
 });
 
 const router = useRouter();
+const route = useRoute();
 const projectStore = useProjectStore();
+const notificationStore = useNotificationStore();
 const auth = getAuth();
 
 // Reactive data
@@ -758,7 +761,7 @@ const ordersLoading = ref(false);
 const searchTerm = ref('');
 const categoryFilter = ref('all');
 const sortBy = ref('rating');
-const activeTab = ref('stores');
+const activeTab = ref(route.query.tab || 'stores');
 const showOrderModal = ref(false);
 const selectedOrder = ref(null);
 const favoriteStores = ref(new Set());
@@ -1267,13 +1270,13 @@ const confirmCancellation = async () => {
     
     console.log('Order cancelled successfully and saved to database');
     
-    // Show success message (you could add a toast notification here)
-    alert('Order cancelled successfully!');
+    // Show success message
+    notificationStore.showSuccess('Order cancelled successfully!');
     
     closeCancelModal();
   } catch (error) {
     console.error('Error cancelling order:', error);
-    alert('Failed to cancel order. Please try again.');
+    notificationStore.showError('Failed to cancel order. Please try again.');
   }
 };
 
@@ -1365,6 +1368,13 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
     fetchUserOrders();
   }
 }, { immediate: true });
+
+// Watch for route query changes to handle tab switching from URL
+watch(() => route.query.tab, (newTab) => {
+  if (newTab && (newTab === 'stores' || newTab === 'orders')) {
+    activeTab.value = newTab;
+  }
+});
 </script>
 
 <style scoped>

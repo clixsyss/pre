@@ -210,6 +210,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAcademiesStore } from 'src/stores/academyStore';
+import { useNotificationStore } from 'src/stores/notifications';
 import bookingService from 'src/services/bookingService';
 
 // Component name for ESLint
@@ -219,6 +220,7 @@ defineOptions({
 
 const router = useRouter();
 const academiesStore = useAcademiesStore();
+const notificationStore = useNotificationStore();
 
 // Reactive data
 const selectedAcademy = ref(null);
@@ -271,7 +273,7 @@ const formatDuration = (program) => {
 const confirmEnrollment = async () => {
   try {
     if (!canConfirmBooking.value) {
-      alert('Please complete all required fields before confirming enrollment');
+      notificationStore.showWarning('Please complete all required fields before confirming enrollment');
       return;
     }
 
@@ -290,12 +292,12 @@ const confirmEnrollment = async () => {
     const result = await bookingService.createAcademyBooking(enrollmentData);
     
     if (result.success) {
-      alert('Enrollment confirmed successfully!');
+      notificationStore.showSuccess('Enrollment confirmed successfully!');
       router.push('/my-bookings');
     }
   } catch (error) {
     console.error('Error confirming enrollment:', error);
-    alert('Failed to confirm enrollment. Please try again.');
+    notificationStore.showError('Failed to confirm enrollment. Please try again.');
   }
 };
 

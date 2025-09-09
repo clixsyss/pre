@@ -106,6 +106,30 @@
           </div>
         </button>
 
+        <button class="action-card" @click="navigateToMyOrders">
+          <div class="action-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="action-content">
+            <h3>My Orders</h3>
+            <p>View order history</p>
+          </div>
+        </button>
+
+        <button class="action-card" @click="navigateToStores">
+          <div class="action-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="action-content">
+            <h3>Stores</h3>
+            <p>Browse stores</p>
+          </div>
+        </button>
+
         <button class="action-card" @click="navigateToMyBookings">
           <div class="action-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -340,6 +364,14 @@ const navigateToMyBookings = () => {
 
 const navigateToCalendar = () => {
   router.push('/calendar')
+}
+
+const navigateToMyOrders = () => {
+  router.push('/stores-shopping?tab=orders')
+}
+
+const navigateToStores = () => {
+  router.push('/stores-shopping?tab=stores')
 }
 
 // Format timestamp for display

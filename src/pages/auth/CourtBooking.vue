@@ -186,6 +186,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useSportsStore } from 'src/stores/sportsStore';
 import { useProjectStore } from 'src/stores/projectStore';
+import { useNotificationStore } from 'src/stores/notifications';
 import bookingService from 'src/services/bookingService';
 import { getAuth } from 'firebase/auth';
 
@@ -197,6 +198,7 @@ defineOptions({
 const router = useRouter();
 const sportsStore = useSportsStore();
 const projectStore = useProjectStore();
+const notificationStore = useNotificationStore();
 
 // Reactive data
 const selectedSport = ref(null);
@@ -285,20 +287,20 @@ const retryFetch = async () => {
 
 const confirmBooking = async () => {
   if (!projectId.value) {
-    alert('No project selected. Please select a project first.');
+    notificationStore.showWarning('No project selected. Please select a project first.');
     return;
   }
 
   // Check if user is authenticated
   const auth = getAuth();
   if (!auth.currentUser) {
-    alert('Please log in to book a court.');
+    notificationStore.showWarning('Please log in to book a court.');
     return;
   }
 
   try {
     if (!selectedSport.value || !selectedCourt.value || !selectedDay.value || selectedSlots.value.length === 0) {
-      alert('Please complete all selections before confirming');
+      notificationStore.showWarning('Please complete all selections before confirming');
       return;
     }
 
@@ -325,12 +327,12 @@ const confirmBooking = async () => {
     const result = await bookingService.createCourtBooking(projectId.value, bookingData);
     
     if (result.success) {
-      alert('Booking confirmed successfully!');
+      notificationStore.showSuccess('Booking confirmed successfully!');
       router.push('/my-bookings');
     }
   } catch (error) {
     console.error('Error confirming booking:', error);
-    alert('Failed to confirm booking. Please try again.');
+    notificationStore.showError('Failed to confirm booking. Please try again.');
   } finally {
     isSubmitting.value = false;
   }

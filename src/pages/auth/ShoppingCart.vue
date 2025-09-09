@@ -155,30 +155,85 @@
         </div>
 
         <div class="modal-body">
-          <div class="success-icon">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
-            </svg>
+          <!-- Success Header -->
+          <div class="success-header">
+            <div class="success-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </div>
+            <h3>Order Confirmed!</h3>
+            <p class="order-number">#{{ orderNumber }}</p>
+            <div class="order-status-badge">
+              <span class="status-dot"></span>
+              <span>Pending</span>
+            </div>
           </div>
           
-          <h3>Thank you for your order!</h3>
-          <p>Order #{{ orderNumber }}</p>
-          <p>We'll notify you when your order is ready for pickup or delivery.</p>
+          <!-- Order Summary Card -->
+          <div class="order-summary-card">
+            <div class="summary-header">
+              <h4>Order Summary</h4>
+              <div class="order-meta">
+                <span class="order-time">{{ orderTime }}</span>
+                <span class="order-items-count">{{ orderItemCount }} items</span>
+              </div>
+            </div>
+            
+            <!-- Order Items -->
+            <div class="order-items-section">
+              <div 
+                v-for="item in orderItems" 
+                :key="item.id" 
+                class="order-item-card"
+              >
+                <div class="item-main">
+                  <div class="item-details">
+                    <h5 class="item-name">{{ item.name }}</h5>
+                    <p class="item-store">{{ item.storeName }}</p>
+                  </div>
+                  <div class="item-quantity-badge">
+                    {{ item.quantity }}
+                  </div>
+                </div>
+                <div class="item-price">${{ (item.price * item.quantity).toFixed(2) }}</div>
+              </div>
+            </div>
+            
+            <!-- Order Totals -->
+            <div class="order-totals-section">
+              <div class="total-row">
+                <span>Subtotal</span>
+                <span>${{ orderSubtotal.toFixed(2) }}</span>
+              </div>
+              <div class="total-row">
+                <span>Delivery Fee</span>
+                <span>${{ orderDeliveryFee.toFixed(2) }}</span>
+              </div>
+              <div class="total-row total-amount">
+                <span>Total</span>
+                <span>${{ orderTotal.toFixed(2) }}</span>
+              </div>
+            </div>
+          </div>
           
-          <div class="order-details">
-            <h4>Order Details</h4>
-            <div class="detail-row">
-              <span>Total Items:</span>
-              <span>{{ totalItems }}</span>
+          <!-- Delivery Info Card -->
+          <div class="delivery-info-card">
+            <div class="delivery-header">
+              <div class="delivery-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16 3h5v5M21 3l-7 7M8 21l-5-5v-5h5l5 5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <h4>Delivery Information</h4>
             </div>
-            <div class="detail-row">
-              <span>Total Amount:</span>
-              <span>${{ total.toFixed(2) }}</span>
-            </div>
-            <div class="detail-row">
-              <span>Estimated Delivery:</span>
-              <span>{{ estimatedDelivery }}</span>
+            <div class="delivery-details">
+              <div class="delivery-time">
+                <span class="delivery-label">Estimated Delivery</span>
+                <span class="delivery-value">{{ estimatedDelivery }}</span>
+              </div>
+              <p class="delivery-message">We'll notify you when your order is ready for pickup or delivery.</p>
             </div>
           </div>
         </div>
@@ -303,6 +358,7 @@ import { getAuth } from 'firebase/auth';
 import { db } from 'src/boot/firebase';
 import { useProjectStore } from 'src/stores/projectStore';
 import { useCartStore } from 'src/stores/cartStore';
+import { useNotificationStore } from 'src/stores/notifications';
 
 // Component name for ESLint
 defineOptions({
@@ -311,6 +367,7 @@ defineOptions({
 
 const router = useRouter();
 const projectStore = useProjectStore();
+const notificationStore = useNotificationStore();
 const auth = getAuth();
 const cartStore = useCartStore();
 
@@ -320,6 +377,12 @@ const showOrderConfirmation = ref(false);
 const showRatingModal = ref(false);
 const orderNumber = ref('');
 const estimatedDelivery = ref('');
+const orderTime = ref('');
+const orderItems = ref([]);
+const orderSubtotal = ref(0);
+const orderDeliveryFee = ref(0);
+const orderTotal = ref(0);
+const orderItemCount = ref(0);
 const storesToRate = ref([]);
 const currentStoreIndex = ref(0);
 const currentRating = ref(0);
@@ -397,13 +460,13 @@ const placeOrder = async () => {
         if (!storeSnapshot.empty) {
           const storeData = storeSnapshot.docs[0].data();
           if (storeData.status && storeData.status !== 'active') {
-            alert(`Cannot place order: ${storeData.name} is currently inactive and not accepting orders.`);
+            notificationStore.showError(`Cannot place order: ${storeData.name} is currently inactive and not accepting orders.`);
             return;
           }
         }
       } catch (error) {
         console.error('Error checking store status:', error);
-        alert('Error validating store status. Please try again.');
+        notificationStore.showError('Error validating store status. Please try again.');
         return;
       }
     }
@@ -419,6 +482,14 @@ const placeOrder = async () => {
     const now = new Date();
     const deliveryTime = new Date(now.getTime() + 45 * 60000); // 45 minutes from now
     estimatedDelivery.value = deliveryTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    orderTime.value = now.toLocaleString();
+    
+    // Store order data for confirmation modal before clearing cart
+    orderItems.value = [...cartStore.items];
+    orderSubtotal.value = subtotal.value;
+    orderDeliveryFee.value = deliveryFee.value;
+    orderTotal.value = total.value;
+    orderItemCount.value = totalItems.value;
     
     // Create order in Firestore
     const orderData = {
@@ -552,7 +623,7 @@ const submitRating = async () => {
     }
   } catch (error) {
     console.error('Error submitting rating:', error);
-    alert('Error submitting rating. Please try again.');
+    notificationStore.showError('Error submitting rating. Please try again.');
   }
 };
 
@@ -695,7 +766,8 @@ onMounted(() => {
 }
 
 .browse-stores-btn:hover {
-  background: #0056b3;
+  background: #c6c6c6;
+  color: #000000;
   transform: translateY(-2px);
 }
 
@@ -1040,38 +1112,122 @@ onMounted(() => {
 }
 
 .modal-body {
-  padding: 24px;
+  padding: 0;
+  background: #fafbfc;
+}
+
+/* Success Header */
+.success-header {
   text-align: center;
+  padding: 32px 24px;
+  background: linear-gradient(135deg, #E88B65 0%, #F37C4E 100%);
+  color: white;
+  position: relative;
+}
+
+.success-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
 }
 
 .success-icon {
-  color: #28a745;
-  margin-bottom: 24px;
+  color: white;
+  margin-bottom: 16px;
+  opacity: 0.9;
 }
 
-.modal-body h3 {
-  color: #333;
+.success-header h3 {
+  color: white;
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.order-number {
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
   margin: 0 0 16px 0;
-  font-size: 1.3rem;
+  font-family: 'Monaco', 'Menlo', monospace;
 }
 
-.modal-body p {
-  color: #666;
-  margin: 0 0 12px 0;
+.order-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
 }
 
-.order-details {
-  background: #f8f9fa;
-  border-radius: 12px;
-  padding: 20px;
-  margin-top: 24px;
-  text-align: left;
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: #fbbf24;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
 }
 
-.order-details h4 {
-  color: #333;
-  margin: 0 0 16px 0;
-  font-size: 1.1rem;
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Order Summary Card */
+.order-summary-card {
+  background: white;
+  margin: 24px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.summary-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.summary-header h4 {
+  color: #111827;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.order-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.order-time {
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.order-items-count {
+  font-size: 0.85rem;
+  color: #E88B65;
+  font-weight: 600;
+  background: #fef7f0;
+  padding: 4px 8px;
+  border-radius: 8px;
 }
 
 .detail-row {
@@ -1096,6 +1252,167 @@ onMounted(() => {
   font-weight: 600;
 }
 
+/* Order Items Section */
+.order-items-section {
+  padding: 0 24px 20px;
+}
+
+.order-item-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.order-item-card:last-child {
+  border-bottom: none;
+}
+
+.item-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.item-details {
+  flex: 1;
+}
+
+.item-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+}
+
+.item-store {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.item-quantity-badge {
+  background: #E88B65;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  min-width: 32px;
+  text-align: center;
+}
+
+.item-price {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Order Totals Section */
+.order-totals-section {
+  padding: 20px 24px;
+  background: #f8f9fa;
+  border-top: 1px solid #f1f5f9;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+.total-row:not(.total-amount) {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.total-amount {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111827;
+  border-top: 2px solid #e5e7eb;
+  margin-top: 12px;
+  padding-top: 16px;
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Delivery Info Card */
+.delivery-info-card {
+  background: white;
+  margin: 0 24px 24px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.delivery-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.delivery-icon {
+  width: 40px;
+  height: 40px;
+  background: #fef7f0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #E88B65;
+}
+
+.delivery-header h4 {
+  color: #111827;
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.delivery-details {
+  padding: 20px 24px;
+}
+
+.delivery-time {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.delivery-label {
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.delivery-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #E88B65;
+  background: #fef7f0;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.delivery-message {
+  color: #6b7280;
+  font-size: 0.85rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
 .modal-footer {
   padding: 16px 24px 24px;
   border-top: 1px solid #f0f0f0;
@@ -1115,7 +1432,9 @@ onMounted(() => {
 }
 
 .continue-shopping-btn:hover {
-  background: #0056b3;
+  background: #c6c6c6;
+  color: #000000;
+  transform: translateY(-2px);
 }
 
 /* Responsive Design */
@@ -1195,6 +1514,66 @@ onMounted(() => {
   .place-order-btn {
     padding: 16px;
     font-size: 1rem;
+  }
+  
+  /* Modal responsive adjustments */
+  .success-header {
+    padding: 24px 20px;
+  }
+  
+  .success-header h3 {
+    font-size: 1.3rem;
+  }
+  
+  .order-summary-card,
+  .delivery-info-card {
+    margin: 16px;
+    border-radius: 16px;
+  }
+  
+  .summary-header,
+  .delivery-header {
+    padding: 16px 20px 12px;
+  }
+  
+  .order-items-section,
+  .delivery-details {
+    padding: 0 20px 16px;
+  }
+  
+  .order-totals-section {
+    padding: 16px 20px;
+  }
+  
+  .order-item-card {
+    padding: 12px 0;
+  }
+  
+  .item-main {
+    gap: 8px;
+  }
+  
+  .item-name {
+    font-size: 0.9rem;
+  }
+  
+  .item-store {
+    font-size: 0.8rem;
+  }
+  
+  .item-quantity-badge {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    min-width: 28px;
+  }
+  
+  .item-price {
+    font-size: 1rem;
+  }
+  
+  .total-amount {
+    font-size: 1.1rem;
+    padding: 12px;
   }
 }
 
@@ -1307,7 +1686,7 @@ onMounted(() => {
 }
 
 /* Dark mode support for better accessibility */
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   .shopping-cart-page {
     background: #1a1a1a;
   }
@@ -1346,7 +1725,7 @@ onMounted(() => {
   .summary-row.total {
     border-top-color: #404040;
   }
-}
+} */
 
 /* Rating Modal Styles */
 .rating-modal-overlay {

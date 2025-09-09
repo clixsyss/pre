@@ -280,6 +280,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAcademiesStore } from 'src/stores/academyStore';
 import { useProjectStore } from 'src/stores/projectStore';
+import { useNotificationStore } from 'src/stores/notifications';
 import bookingService from 'src/services/bookingService';
 import { getAuth } from 'firebase/auth';
 
@@ -291,6 +292,7 @@ defineOptions({
 const router = useRouter();
 const academiesStore = useAcademiesStore();
 const projectStore = useProjectStore();
+const notificationStore = useNotificationStore();
 
 // Reactive data
 const loading = ref(true);
@@ -479,12 +481,12 @@ const cancelBooking = async (booking) => {
     if (confirm('Are you sure you want to cancel this booking?')) {
       await bookingService.cancelBooking(booking.id);
       await academiesStore.fetchUserBookings('current-user-id'); // This should come from auth store
-      alert('Booking cancelled successfully');
+      notificationStore.showSuccess('Booking cancelled successfully');
       closeModal();
     }
   } catch (error) {
     console.error('Error cancelling booking:', error);
-    alert('Failed to cancel booking. Please try again.');
+    notificationStore.showError('Failed to cancel booking. Please try again.');
   }
 };
 

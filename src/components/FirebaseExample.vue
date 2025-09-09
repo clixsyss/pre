@@ -62,8 +62,10 @@ import {
   getDownloadURL 
 } from 'firebase/storage'
 import { auth, db, storage } from '../boot/firebase'
+import { useNotificationStore } from '../stores/notifications'
 
 // Reactive data
+const notificationStore = useNotificationStore()
 const user = ref(null)
 const email = ref('')
 const password = ref('')
@@ -79,7 +81,7 @@ const signIn = async () => {
     password.value = ''
   } catch (error) {
     console.error('Sign in error:', error)
-    alert('Sign in failed: ' + error.message)
+    notificationStore.showError('Sign in failed: ' + error.message)
   }
 }
 
@@ -90,7 +92,7 @@ const signUp = async () => {
     password.value = ''
   } catch (error) {
     console.error('Sign up error:', error)
-    alert('Sign up failed: ' + error.message)
+    notificationStore.showError('Sign up failed: ' + error.message)
   }
 }
 
@@ -116,7 +118,7 @@ const saveMessage = async () => {
     loadMessages()
   } catch (error) {
     console.error('Save message error:', error)
-    alert('Failed to save message: ' + error.message)
+    notificationStore.showError('Failed to save message: ' + error.message)
   }
 }
 
@@ -145,11 +147,11 @@ const uploadFile = async () => {
     const fileRef = storageRef(storage, `uploads/${user.value.uid}/${selectedFile.value.name}`)
     await uploadBytes(fileRef, selectedFile.value)
     const downloadURL = await getDownloadURL(fileRef)
-    alert(`File uploaded successfully! Download URL: ${downloadURL}`)
+    notificationStore.showSuccess(`File uploaded successfully! Download URL: ${downloadURL}`)
     selectedFile.value = null
   } catch (error) {
     console.error('Upload error:', error)
-    alert('Upload failed: ' + error.message)
+    notificationStore.showError('Upload failed: ' + error.message)
   }
 }
 
