@@ -3,62 +3,72 @@
     <!-- Minimal Header -->
     <div class="store-header">
       <div class="header-content">
-        <div class="store-basic-info">
-          <div class="store-image">
-            <img v-if="store?.image" :src="store.image" :alt="store?.name" />
-            <div v-else class="store-placeholder">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+        <!-- Back Button -->
+        <button class="back-button" @click="goBack">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Back
+        </button>
+        
+        <div class="store-main-content">
+          <div class="store-basic-info">
+            <div class="store-image">
+              <img v-if="store?.image" :src="store.image" :alt="store?.name" />
+              <div v-else class="store-placeholder">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+            
+            <div class="store-info">
+              <div class="store-name-container">
+                <h1 class="store-name">{{ store?.name }}</h1>
+                <div 
+                  v-if="store?.status && store.status !== 'active'"
+                  class="store-status-badge"
+                  :class="store.status"
+                >
+                  {{ store.status === 'inactive' ? 'CLOSED' : 'MAINTENANCE' }}
+                </div>
+              </div>
+              <div class="store-meta">
+                <span class="location">{{ store?.location }}</span>
+                <span class="delivery">{{ store?.averageDeliveryTime }} delivery</span>
+                <span v-if="store?.deliveryFee" class="delivery-fee">${{ store.deliveryFee }} delivery fee</span>
+              </div>
+              
+              <!-- Store Rating -->
+              <div v-if="store?.rating" class="store-rating">
+                <div class="rating-stars">
+                  <svg
+                    v-for="star in 5"
+                    :key="star"
+                    :class="['star', { 'filled': star <= (store.rating || 0) }]"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                  </svg>
+                </div>
+                <span class="rating-value">{{ (store.rating || 0).toFixed(1) }}</span>
+                <span class="rating-count">
+                  {{ (store.reviewCount || 0) === 0 ? 'No reviews yet' : `(${store.reviewCount} reviews)` }}
+                </span>
+              </div>
             </div>
           </div>
           
-          <div class="store-info">
-            <div class="store-name-container">
-              <h1 class="store-name">{{ store?.name }}</h1>
-              <div 
-                v-if="store?.status && store.status !== 'active'"
-                class="store-status-badge"
-                :class="store.status"
-              >
-                {{ store.status === 'inactive' ? 'CLOSED' : 'MAINTENANCE' }}
-              </div>
-            </div>
-            <div class="store-meta">
-              <span class="location">{{ store?.location }}</span>
-              <span class="delivery">{{ store?.averageDeliveryTime }} delivery</span>
-              <span v-if="store?.deliveryFee" class="delivery-fee">${{ store.deliveryFee }} delivery fee</span>
-            </div>
-            
-            <!-- Store Rating -->
-            <div v-if="store?.rating" class="store-rating">
-              <div class="rating-stars">
-                <svg
-                  v-for="star in 5"
-                  :key="star"
-                  :class="['star', { 'filled': star <= (store.rating || 0) }]"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                </svg>
-              </div>
-              <span class="rating-value">{{ (store.rating || 0).toFixed(1) }}</span>
-              <span class="rating-count">
-                {{ (store.reviewCount || 0) === 0 ? 'No reviews yet' : `(${store.reviewCount} reviews)` }}
-              </span>
-            </div>
-          </div>
+          <button class="cart-button" @click="viewCart">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span v-if="cartStore.itemCount > 0" class="cart-count">{{ cartStore.itemCount }}</span>
+          </button>
         </div>
-        
-        <button class="cart-button" @click="viewCart">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span v-if="cartStore.itemCount > 0" class="cart-count">{{ cartStore.itemCount }}</span>
-        </button>
       </div>
     </div>
 
@@ -369,6 +379,10 @@ const viewCart = () => {
   router.push('/shopping-cart');
 };
 
+const goBack = () => {
+  router.back();
+};
+
 // Product favorite methods
 const toggleProductFavorite = (product) => {
   if (favoriteProducts.value.has(product.id)) {
@@ -434,9 +448,39 @@ onMounted(() => {
   max-width: 1200px;
   margin: 0 auto;
   display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+}
+
+.back-button:hover {
+  background: #f8f9fa;
+  border-color: #d1d5db;
+  color: #374151;
+  transform: translateX(-2px);
+}
+
+.store-main-content {
+  display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 24px;
+  width: 100%;
 }
 
 .store-basic-info {
@@ -900,6 +944,7 @@ onMounted(() => {
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -1033,8 +1078,13 @@ onMounted(() => {
 /* Responsive Design */
 @media (max-width: 768px) {
   .header-content {
+    gap: 16px;
+  }
+  
+  .store-main-content {
     flex-direction: column;
     align-items: stretch;
+    gap: 20px;
   }
   
   .store-basic-info {
@@ -1049,6 +1099,10 @@ onMounted(() => {
   .cart-button {
     width: 100%;
     justify-content: center;
+  }
+  
+  .back-button {
+    align-self: flex-start;
   }
 
   .search-container {

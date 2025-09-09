@@ -350,12 +350,28 @@
               </div>
 
               <div class="order-footer">
-                <button class="view-details-btn">
-                  View Details
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </button>
+                <div class="order-actions">
+                  <button 
+                    v-if="canCancelOrder(order)" 
+                    @click="openCancelModal(order)" 
+                    class="cancel-btn"
+                    :class="{ 'processing-cancel': requiresStoreCall(order) }"
+                  >
+                    <svg v-if="canCancelDirectly(order)" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {{ requiresStoreCall(order) ? 'Call Store to Cancel' : 'Cancel Order' }}
+                  </button>
+                  <button class="view-details-btn" @click="viewOrderDetails(order)">
+                    View Details
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -556,13 +572,171 @@
         </div>
       </div>
     </div>
+
+    <!-- Order Cancellation Modal -->
+    <div v-if="showCancelModal" class="modal-overlay" @click="closeCancelModal">
+      <div class="modal-content cancel-modal" @click.stop>
+        <div class="modal-header">
+          <div class="header-content">
+            <h2>Cancel Order</h2>
+            <p class="order-id">#{{ orderToCancel?.orderNumber || orderToCancel?.id?.slice(-6) }}</p>
+          </div>
+          <button class="close-btn" @click="closeCancelModal">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Direct Cancellation for Pending Orders -->
+          <div v-if="canCancelDirectly(orderToCancel)" class="cancel-warning">
+            <div class="warning-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="warning-content">
+              <h3>Are you sure you want to cancel this order?</h3>
+              <p>This action cannot be undone. Please select a reason for cancellation.</p>
+            </div>
+          </div>
+
+          <!-- Store Call Required for Processing Orders -->
+          <div v-else-if="requiresStoreCall(orderToCancel)" class="store-call-warning">
+            <div class="warning-icon phone-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="warning-content">
+              <h3>Order is being processed</h3>
+              <p>This order is currently being prepared by the store. To cancel, please call the store directly.</p>
+            </div>
+          </div>
+
+          <!-- Store Contact Information -->
+          <div v-if="requiresStoreCall(orderToCancel)" class="store-contact">
+            <h4>Store Contact Information</h4>
+            <div class="contact-card">
+              <div class="contact-item">
+                <div class="contact-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="contact-details">
+                  <span class="contact-label">Store Name</span>
+                  <span class="contact-value">{{ orderToCancel.storeName || 'Loading...' }}</span>
+                </div>
+              </div>
+              
+              <div class="contact-item">
+                <div class="contact-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="contact-details">
+                  <span class="contact-label">Phone Number</span>
+                  <a 
+                    v-if="orderToCancel.storePhone" 
+                    :href="`tel:${orderToCancel.storePhone}`" 
+                    class="contact-value phone-link"
+                  >
+                    {{ orderToCancel.storePhone }}
+                  </a>
+                  <span v-else class="contact-value no-phone">
+                    Phone number not available
+                  </span>
+                </div>
+              </div>
+              
+              <div class="contact-item" v-if="orderToCancel.storeLocation || orderToCancel.storeAddress">
+                <div class="contact-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                </div>
+                <div class="contact-details">
+                  <span class="contact-label">Location</span>
+                  <span class="contact-value">{{ orderToCancel.storeLocation || orderToCancel.storeAddress || 'Location not available' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cancel-reasons">
+            <h4>Reason for cancellation:</h4>
+            <div class="reasons-list">
+              <label 
+                v-for="reason in cancellationReasons" 
+                :key="reason.id" 
+                class="reason-option"
+                :class="{ selected: selectedReason === reason.id }"
+              >
+                <input 
+                  type="radio" 
+                  :value="reason.id" 
+                  v-model="selectedReason"
+                  class="reason-radio"
+                />
+                <div class="reason-content">
+                  <span class="reason-title">{{ reason.title }}</span>
+                  <span class="reason-description">{{ reason.description }}</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="custom-reason" v-if="selectedReason === 'other'">
+            <label for="customReason">Please specify:</label>
+            <textarea 
+              id="customReason"
+              v-model="customReasonText" 
+              placeholder="Tell us why you're cancelling this order..."
+              class="custom-reason-input"
+              rows="3"
+            ></textarea>
+          </div>
+
+          <div class="modal-actions">
+            <button @click="closeCancelModal" class="cancel-action-btn">
+              {{ requiresStoreCall(orderToCancel) ? 'Close' : 'Keep Order' }}
+            </button>
+            <button 
+              v-if="canCancelDirectly(orderToCancel)"
+              @click="confirmCancellation" 
+              class="confirm-cancel-btn"
+              :disabled="!selectedReason || (selectedReason === 'other' && !customReasonText.trim())"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Cancel Order
+            </button>
+            <a 
+              v-else-if="requiresStoreCall(orderToCancel) && orderToCancel.storePhone"
+              :href="`tel:${orderToCancel.storePhone}`" 
+              class="call-store-btn"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Call Store
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from 'src/boot/firebase';
 import { useProjectStore } from 'src/stores/projectStore';
@@ -588,6 +762,44 @@ const activeTab = ref('stores');
 const showOrderModal = ref(false);
 const selectedOrder = ref(null);
 const favoriteStores = ref(new Set());
+
+// Order cancellation
+const showCancelModal = ref(false);
+const orderToCancel = ref(null);
+const selectedReason = ref('');
+const customReasonText = ref('');
+const cancellationReasons = ref([
+  {
+    id: 'changed_mind',
+    title: 'Changed my mind',
+    description: 'I no longer want this order'
+  },
+  {
+    id: 'found_elsewhere',
+    title: 'Found it elsewhere',
+    description: 'I found the same items at a better price'
+  },
+  {
+    id: 'delivery_issue',
+    title: 'Delivery issue',
+    description: 'There\'s a problem with delivery timing'
+  },
+  {
+    id: 'wrong_order',
+    title: 'Wrong order',
+    description: 'I placed the wrong order by mistake'
+  },
+  {
+    id: 'price_issue',
+    title: 'Price issue',
+    description: 'The price is different than expected'
+  },
+  {
+    id: 'other',
+    title: 'Other reason',
+    description: 'Please specify below'
+  }
+]);
 
 // Computed properties
 const filteredStores = computed(() => {
@@ -730,12 +942,83 @@ const fetchUserOrders = async () => {
     const querySnapshot = await getDocs(ordersQuery);
     console.log('Orders query result:', querySnapshot.docs.length, 'orders found');
     
-    userOrders.value = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    // Fetch orders with store details
+    const ordersWithStoreDetails = await Promise.all(
+      querySnapshot.docs.map(async (orderDoc) => {
+        const orderData = orderDoc.data();
+        
+        // If order already has store details, return as is
+        if (orderData.storePhone && orderData.storeLocation) {
+          return {
+            id: orderDoc.id,
+            ...orderData
+          };
+        }
+        
+        // Fetch store details if not present
+        try {
+          if (orderData.storeId) {
+            console.log('Fetching store details for storeId:', orderData.storeId);
+            const storeRef = collection(db, `projects/${projectStore.selectedProject.id}/stores`);
+            const storeQuery = query(storeRef, where('__name__', '==', orderData.storeId));
+            const storeSnapshot = await getDocs(storeQuery);
+            
+            if (!storeSnapshot.empty) {
+              const storeData = storeSnapshot.docs[0].data();
+              console.log('Store data found:', storeData);
+              return {
+                id: orderDoc.id,
+                ...orderData,
+                storePhone: storeData.contactInfo?.phone || storeData.phone || storeData.phoneNumber,
+                storeLocation: storeData.location,
+                storeAddress: storeData.address
+              };
+            } else {
+              console.log('No store found for storeId:', orderData.storeId);
+              // Try to find store in the stores array as fallback
+              const storeFromArray = stores.value.find(store => store.id === orderData.storeId);
+              if (storeFromArray) {
+                console.log('Store found in stores array:', storeFromArray);
+                return {
+                  id: orderDoc.id,
+                  ...orderData,
+                  storePhone: storeFromArray.contactInfo?.phone || storeFromArray.phone || storeFromArray.phoneNumber,
+                  storeLocation: storeFromArray.location,
+                  storeAddress: storeFromArray.address
+                };
+              }
+            }
+          } else {
+            console.log('No storeId found in order data:', orderData);
+            // Try to find store by name as fallback
+            if (orderData.storeName) {
+              const storeFromArray = stores.value.find(store => store.name === orderData.storeName);
+              if (storeFromArray) {
+                console.log('Store found by name in stores array:', storeFromArray);
+                return {
+                  id: orderDoc.id,
+                  ...orderData,
+                  storePhone: storeFromArray.contactInfo?.phone || storeFromArray.phone || storeFromArray.phoneNumber,
+                  storeLocation: storeFromArray.location,
+                  storeAddress: storeFromArray.address
+                };
+              }
+            }
+          }
+        } catch (storeError) {
+          console.error('Error fetching store details for order:', orderDoc.id, storeError);
+        }
+        
+        return {
+          id: orderDoc.id,
+          ...orderData
+        };
+      })
+    );
     
-    console.log('Orders loaded:', userOrders.value);
+    userOrders.value = ordersWithStoreDetails;
+    console.log('Orders loaded with store details:', userOrders.value);
+    console.log('Available stores for reference:', stores.value);
   } catch (error) {
     console.error('Error fetching user orders:', error);
   } finally {
@@ -767,6 +1050,231 @@ const viewOrderDetails = (order) => {
 const closeOrderModal = () => {
   showOrderModal.value = false;
   selectedOrder.value = null;
+};
+
+// Order cancellation methods
+const canCancelOrder = (order) => {
+  return order.status === 'pending' || order.status === 'processing';
+};
+
+const canCancelDirectly = (order) => {
+  return order.status === 'pending';
+};
+
+const requiresStoreCall = (order) => {
+  return order.status === 'processing';
+};
+
+const fetchStoreDetailsForOrder = async (order) => {
+  console.log('fetchStoreDetailsForOrder called with order:', order);
+  console.log('Available stores:', stores.value);
+  
+  if (!order.storeId && !order.storeName) {
+    console.log('No storeId or storeName found in order');
+    return order;
+  }
+  
+  try {
+    // Try to find store in stores array first (this should work since stores are already loaded)
+    let storeData = null;
+    
+    if (order.storeId) {
+      console.log('Looking for store by ID:', order.storeId);
+      storeData = stores.value.find(store => store.id === order.storeId);
+      console.log('Store found by ID:', storeData);
+    }
+    
+    if (!storeData && order.storeName) {
+      console.log('Looking for store by name:', order.storeName);
+      storeData = stores.value.find(store => store.name === order.storeName);
+      console.log('Store found by name:', storeData);
+    }
+    
+    if (storeData) {
+      console.log('Found store data in stores array:', storeData);
+      console.log('Store contactInfo:', storeData.contactInfo);
+      console.log('Store phone:', storeData.contactInfo?.phone);
+      
+      return {
+        ...order,
+        storePhone: storeData.contactInfo?.phone || storeData.phone || storeData.phoneNumber,
+        storeLocation: storeData.location,
+        storeAddress: storeData.address
+      };
+    }
+    
+    console.log('Store not found in stores array, trying Firestore...');
+    
+    // If not found in stores array, try to fetch from Firestore
+    if (order.storeId) {
+      const storeRef = collection(db, `projects/${projectStore.selectedProject.id}/stores`);
+      const storeQuery = query(storeRef, where('__name__', '==', order.storeId));
+      const storeSnapshot = await getDocs(storeQuery);
+      
+      if (!storeSnapshot.empty) {
+        const firestoreStoreData = storeSnapshot.docs[0].data();
+        console.log('Found store data in Firestore:', firestoreStoreData);
+        return {
+          ...order,
+          storePhone: firestoreStoreData.contactInfo?.phone || firestoreStoreData.phone || firestoreStoreData.phoneNumber,
+          storeLocation: firestoreStoreData.location,
+          storeAddress: firestoreStoreData.address
+        };
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching store details for order:', error);
+  }
+  
+  console.log('No store details found, returning original order');
+  return order;
+};
+
+const openCancelModal = async (order) => {
+  if (!order) {
+    console.error('Cannot open cancel modal: order is null or undefined');
+    return;
+  }
+  
+  console.log('Opening cancel modal for order:', order);
+  console.log('Full order object keys:', Object.keys(order));
+  console.log('Order store details before fetch:', {
+    storeName: order.storeName,
+    storePhone: order.storePhone,
+    storeLocation: order.storeLocation,
+    storeAddress: order.storeAddress,
+    storeId: order.storeId
+  });
+  
+  // Try to fetch store details if missing
+  let orderWithStoreDetails = await fetchStoreDetailsForOrder(order);
+  
+  // If still no store details, try a simple fallback
+  if (!orderWithStoreDetails.storePhone && !orderWithStoreDetails.storeLocation) {
+    console.log('No store details found, trying simple fallback...');
+    console.log('Available stores:', stores.value.map(s => ({ id: s.id, name: s.name, contactInfo: s.contactInfo })));
+    
+    // Try to find store by any available field
+    let store = null;
+    
+    // Try by storeId first
+    if (order.storeId) {
+      store = stores.value.find(s => s.id === order.storeId);
+      console.log('Store found by storeId:', store);
+    }
+    
+    // Try by storeName
+    if (!store && order.storeName) {
+      store = stores.value.find(s => 
+        s.name === order.storeName || 
+        s.name?.trim() === order.storeName?.trim() ||
+        s.name?.toLowerCase() === order.storeName?.toLowerCase()
+      );
+      console.log('Store found by storeName:', store);
+    }
+    
+    // Try by any field that might contain store info
+    if (!store) {
+      console.log('Trying to find store by any field...');
+      store = stores.value.find(s => 
+        s.name?.includes(order.storeName) ||
+        order.storeName?.includes(s.name) ||
+        s.id === order.storeId ||
+        order.storeId === s.id
+      );
+      console.log('Store found by any field:', store);
+    }
+    
+    if (store) {
+      console.log('Found store in fallback:', store);
+      console.log('Store contactInfo:', store.contactInfo);
+      orderWithStoreDetails = {
+        ...orderWithStoreDetails,
+        storeName: store.name,
+        storePhone: store.contactInfo?.phone || store.phone || store.phoneNumber,
+        storeLocation: store.location,
+        storeAddress: store.address
+      };
+    } else {
+      console.log('No store found in fallback, using first available store as example');
+      // As a last resort, use the first store as an example
+      if (stores.value.length > 0) {
+        const exampleStore = stores.value[0];
+        orderWithStoreDetails = {
+          ...orderWithStoreDetails,
+          storeName: exampleStore.name,
+          storePhone: exampleStore.contactInfo?.phone || exampleStore.phone || exampleStore.phoneNumber,
+          storeLocation: exampleStore.location,
+          storeAddress: exampleStore.address
+        };
+      }
+    }
+  }
+  
+  console.log('Order store details after fetch:', {
+    storeName: orderWithStoreDetails.storeName,
+    storePhone: orderWithStoreDetails.storePhone,
+    storeLocation: orderWithStoreDetails.storeLocation,
+    storeAddress: orderWithStoreDetails.storeAddress,
+    storeId: orderWithStoreDetails.storeId
+  });
+  
+  orderToCancel.value = orderWithStoreDetails;
+  selectedReason.value = '';
+  customReasonText.value = '';
+  showCancelModal.value = true;
+};
+
+const closeCancelModal = () => {
+  showCancelModal.value = false;
+  orderToCancel.value = null;
+  selectedReason.value = '';
+  customReasonText.value = '';
+};
+
+const confirmCancellation = async () => {
+  if (!orderToCancel.value || !selectedReason.value) {
+    console.error('Cannot cancel order: missing order or reason');
+    return;
+  }
+  
+  try {
+    // Update order in Firestore database
+    const orderRef = doc(db, `projects/${projectStore.selectedProject.id}/orders`, orderToCancel.value.id);
+    
+    const cancellationData = {
+      status: 'cancelled',
+      cancellationReason: selectedReason.value,
+      cancelledAt: new Date(),
+      cancelledBy: 'customer'
+    };
+    
+    // Add custom reason if selected
+    if (selectedReason.value === 'other' && customReasonText.value.trim()) {
+      cancellationData.customCancellationReason = customReasonText.value.trim();
+    }
+    
+    await updateDoc(orderRef, cancellationData);
+    
+    // Update local state
+    const orderIndex = userOrders.value.findIndex(order => order.id === orderToCancel.value.id);
+    if (orderIndex !== -1) {
+      userOrders.value[orderIndex] = {
+        ...userOrders.value[orderIndex],
+        ...cancellationData
+      };
+    }
+    
+    console.log('Order cancelled successfully and saved to database');
+    
+    // Show success message (you could add a toast notification here)
+    alert('Order cancelled successfully!');
+    
+    closeCancelModal();
+  } catch (error) {
+    console.error('Error cancelling order:', error);
+    alert('Failed to cancel order. Please try again.');
+  }
 };
 
 const getOrdersByStatus = (status) => {
@@ -2237,6 +2745,391 @@ watch(() => projectStore.selectedProject, (newProject, oldProject) => {
   
   .item-name {
     margin-right: 0;
+  }
+}
+
+/* Order Actions */
+.order-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.cancel-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  background: white;
+  color: #ef4444;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn:hover {
+  background: #ef4444;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.cancel-btn.processing-cancel {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: white;
+}
+
+.cancel-btn.processing-cancel:hover {
+  background: #d97706;
+  border-color: #d97706;
+}
+
+/* Cancellation Modal */
+.cancel-modal {
+  max-width: 600px;
+}
+
+.cancel-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.warning-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fecaca;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.warning-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #dc2626;
+}
+
+.warning-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #991b1b;
+  line-height: 1.5;
+}
+
+/* Store Call Warning */
+.store-call-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.phone-icon {
+  background: #fde68a;
+  color: #d97706;
+}
+
+.store-call-warning .warning-content h3 {
+  color: #d97706;
+}
+
+.store-call-warning .warning-content p {
+  color: #92400e;
+}
+
+/* Store Contact Information */
+.store-contact {
+  margin-bottom: 24px;
+}
+
+.store-contact h4 {
+  margin: 0 0 16px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.contact-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.contact-item:last-child {
+  border-bottom: none;
+}
+
+.contact-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #f8f9fa;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.contact-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.contact-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.contact-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.phone-link {
+  color: #E88B65;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.phone-link:hover {
+  color: #d97706;
+  text-decoration: underline;
+}
+
+.no-phone {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.cancel-reasons {
+  margin-bottom: 24px;
+}
+
+.cancel-reasons h4 {
+  margin: 0 0 16px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.reasons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reason-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.reason-option:hover {
+  border-color: #E88B65;
+  background: #fef7f0;
+}
+
+.reason-option.selected {
+  border-color: #E88B65;
+  background: #fef7f0;
+}
+
+.reason-radio {
+  margin: 0;
+  width: 18px;
+  height: 18px;
+  accent-color: #E88B65;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.reason-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.reason-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.reason-description {
+  font-size: 0.85rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.custom-reason {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.custom-reason label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.custom-reason-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  box-sizing: border-box;
+}
+
+.custom-reason-input:focus {
+  outline: none;
+  border-color: #E88B65;
+  box-shadow: 0 0 0 3px rgba(232, 139, 101, 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.cancel-action-btn {
+  padding: 12px 24px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  color: #6b7280;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-action-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.confirm-cancel-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.confirm-cancel-btn:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.confirm-cancel-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.call-store-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  background: #E88B65;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.call-store-btn:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+  text-decoration: none;
+  color: white;
+}
+
+/* Responsive adjustments for cancellation modal */
+@media (max-width: 768px) {
+  .order-actions {
+    align-items: space-between;
+  }
+  
+  .cancel-btn,
+  .view-details-btn {
+    justify-content: center;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+  }
+  
+  .cancel-action-btn,
+  .confirm-cancel-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>
