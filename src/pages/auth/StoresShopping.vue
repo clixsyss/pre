@@ -31,7 +31,7 @@
           </svg>
           <span>My Orders</span>
           <div class="tab-indicator"></div>
-          <div class="orders-badge">{{ ordersCount || 6 }}</div>
+          <div v-if="ordersCount > 0" class="orders-badge">{{ ordersCount }}</div>
         </button>
       </div>
     </div>
