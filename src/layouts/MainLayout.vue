@@ -103,7 +103,7 @@
 
     <!-- Bottom Navigation -->
     <nav class="bottom-navigation">
-      <router-link to="/home" class="nav-item" active-class="active">
+      <router-link to="/home" class="nav-item" :class="{ active: isActiveTab('home') }">
         <div class="nav-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -113,7 +113,7 @@
         <span class="nav-label">Home</span>
       </router-link>
 
-      <router-link to="/access" class="nav-item" active-class="active">
+      <router-link to="/access" class="nav-item" :class="{ active: isActiveTab('access') }">
         <div class="nav-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 3H7V7H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -131,7 +131,7 @@
         <span class="nav-label">Access</span>
       </router-link>
 
-      <router-link to="/services" class="nav-item" active-class="active">
+      <router-link to="/services" class="nav-item" :class="{ active: isActiveTab('services') }">
         <div class="nav-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -141,9 +141,7 @@
         <span class="nav-label">Services</span>
       </router-link>
 
-      
-
-      <router-link to="/profile" class="nav-item" active-class="active">
+      <router-link to="/profile" class="nav-item" :class="{ active: isActiveTab('profile') }">
         <div class="nav-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -158,7 +156,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 
@@ -168,6 +166,7 @@ defineOptions({
 })
 
 const router = useRouter()
+const route = useRoute()
 const projectStore = useProjectStore()
 
 // Reactive state
@@ -189,6 +188,31 @@ const switchToProject = async (project) => {
 const goToProjectSelection = () => {
   showProjectSwitcher.value = false
   router.push('/profile')
+}
+
+// Method to determine which tab should be active
+const isActiveTab = (tabName) => {
+  const currentPath = route.path
+  
+  switch (tabName) {
+    case 'home':
+      return currentPath === '/home'
+    
+    case 'access':
+      return currentPath === '/access'
+    
+    case 'profile':
+      return currentPath === '/profile'
+    
+    case 'services':
+      // Services tab is active for all other pages (shopping, stores, cart, etc.)
+      return currentPath !== '/home' && 
+             currentPath !== '/access' && 
+             currentPath !== '/profile'
+    
+    default:
+      return false
+  }
 }
 
 // Load user projects when component mounts
