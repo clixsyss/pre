@@ -81,65 +81,92 @@
           class="booking-card"
           :class="getStatusClass(booking.status)"
         >
-          <div class="booking-header">
-            <div class="booking-type">
-              <span class="type-badge" :class="getTypeClass(booking.type)">
-                {{ getTypeLabel(booking.type) }}
-              </span>
+          <!-- Compact Header -->
+          <div class="card-header">
+            <div class="booking-icon" :class="getTypeClass(booking.type)">
+              <svg v-if="isCourtBooking(booking)" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 3H7V7H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 17H7V21H3V17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M17 3H21V7H17V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M17 17H21V21H17V17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 9H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M17 9H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 3V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 17V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 9H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 15H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="booking-info">
+              <h3 class="booking-title">{{ getBookingTitle(booking) }}</h3>
+              <p class="booking-subtitle">{{ getBookingSubtitle(booking) }}</p>
+            </div>
+            <div class="header-right">
               <span class="status-badge" :class="getStatusClass(booking.status)">
                 {{ getStatusLabel(booking.status) }}
               </span>
             </div>
-            <div class="booking-date">
-              {{ formatDate(booking.createdAt) }}
+          </div>
+
+          <!-- Compact Content -->
+          <div class="card-content">
+            <div class="details-row">
+              <div class="detail-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
+                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/>
+                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <span class="detail-text">{{ formatBookingDate(booking) }}</span>
+              </div>
+              <div class="detail-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <span class="detail-text">{{ getBookingTime(booking) }}</span>
+              </div>
+              <div class="detail-item price-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="12" y1="1" x2="12" y2="23" stroke="currentColor" stroke-width="2"/>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <span class="detail-text price-text">{{ booking.totalPrice || booking.price }} EGP</span>
+              </div>
+            </div>
+
+            <!-- Additional Info (if any) -->
+            <div v-if="(isAcademyBooking(booking) && booking.studentName) || (isCourtBooking(booking) && booking.courtLocation)" class="additional-info">
+              <span v-if="isAcademyBooking(booking) && booking.studentName" class="info-tag">
+                Student: {{ booking.studentName }}
+              </span>
+              <span v-if="isCourtBooking(booking) && booking.courtLocation" class="info-tag">
+                {{ booking.courtLocation }}
+              </span>
             </div>
           </div>
 
-          <div class="booking-content">
-            <div class="booking-title">
-              <h3>{{ getBookingTitle(booking) }}</h3>
-              <p class="booking-subtitle">{{ getBookingSubtitle(booking) }}</p>
+          <!-- Compact Footer -->
+          <div class="card-footer">
+            <div class="booking-date">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <span>{{ formatCreationDate(booking) }}</span>
             </div>
-
-            <div class="booking-details">
-              <div class="detail-item">
-                <span class="detail-label">Date:</span>
-                <span class="detail-value">{{ formatBookingDate(booking) }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">Time:</span>
-                <span class="detail-value">{{ getBookingTime(booking) }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">Price:</span>
-                <span class="detail-value">{{ booking.totalPrice || booking.price }} EGP</span>
-              </div>
-              <!-- Academy-specific details -->
-              <div v-if="isAcademyBooking(booking) && booking.studentName" class="detail-item">
-                <span class="detail-label">Student:</span>
-                <span class="detail-value">{{ booking.studentName }}</span>
-              </div>
-              <div v-if="isAcademyBooking(booking) && booking.category" class="detail-item">
-                <span class="detail-label">Category:</span>
-                <span class="detail-value">{{ booking.category }}</span>
-              </div>
-              <!-- Court-specific details -->
-              <div v-if="isCourtBooking(booking) && booking.courtLocation" class="detail-item">
-                <span class="detail-label">Location:</span>
-                <span class="detail-value">{{ booking.courtLocation }}</span>
-              </div>
-              <div v-if="isCourtBooking(booking) && booking.courtType" class="detail-item">
-                <span class="detail-label">Type:</span>
-                <span class="detail-value">{{ booking.courtType }}</span>
-              </div>
-            </div>
-
-            <div class="booking-actions">
+            <div class="card-actions">
               <button 
                 class="action-btn view-btn"
                 @click="viewBookingDetails(booking)"
               >
-                View Details
+                View
               </button>
               <button 
                 v-if="canCancel(booking)"
@@ -180,7 +207,7 @@
               </div>
               <div class="detail-item">
                 <span class="label">Created:</span>
-                <span class="value">{{ formatDate(selectedBooking.createdAt) }}</span>
+                <span class="value">{{ formatBookingDate(selectedBooking) }}</span>
               </div>
             </div>
           </div>
@@ -391,43 +418,69 @@ const getBookingSubtitle = (booking) => {
   }
 };
 
-const formatDate = (date) => {
-  if (!date) return 'N/A';
-  const d = new Date(date);
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-};
 
 const formatBookingDate = (booking) => {
-  if (booking.date) {
-    const d = new Date(booking.date);
-    return d.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  } else if (booking.bookingDate) {
-    const d = new Date(booking.bookingDate);
-    return d.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  } else if (booking.createdAt) {
-    const d = new Date(booking.createdAt);
-    return d.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  // Try different date fields in order of preference
+  const dateFields = [booking.date, booking.bookingDate, booking.createdAt];
+  
+  for (const dateField of dateFields) {
+    if (dateField) {
+      try {
+        let d;
+        
+        // Handle Firestore timestamp
+        if (dateField && typeof dateField === 'object' && dateField.seconds) {
+          d = new Date(dateField.seconds * 1000);
+        } else {
+          d = new Date(dateField);
+        }
+        
+        // Check if the date is valid
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+        }
+      } catch (error) {
+        console.error('Error formatting booking date:', error, 'Date value:', dateField);
+        continue;
+      }
+    }
   }
+  
   return 'N/A';
+};
+
+const formatCreationDate = (booking) => {
+  if (!booking.createdAt) return 'N/A';
+  
+  try {
+    let d;
+    
+    // Handle Firestore timestamp
+    if (booking.createdAt && typeof booking.createdAt === 'object' && booking.createdAt.seconds) {
+      d = new Date(booking.createdAt.seconds * 1000);
+    } else {
+      d = new Date(booking.createdAt);
+    }
+    
+    // Check if the date is valid
+    if (isNaN(d.getTime())) {
+      return 'N/A';
+    }
+    
+    return d.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formatting creation date:', error, 'Date value:', booking.createdAt);
+    return 'N/A';
+  }
 };
 
 const getBookingTime = (booking) => {
@@ -743,73 +796,102 @@ const fetchUserBookings = async () => {
 .bookings-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .booking-card {
   background: white;
-  border: 1px solid #e1e5e9;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: all 0.2s ease;
+  overflow: hidden;
+  border: 1px solid #f0f0f0;
 }
 
 .booking-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border-color: #e0e0e0;
 }
 
 .booking-card.confirmed {
-  border-left: 4px solid #28a745;
+  border-left: 3px solid #28a745;
 }
 
 .booking-card.pending {
-  border-left: 4px solid #ffc107;
+  border-left: 3px solid #ffc107;
 }
 
 .booking-card.cancelled {
-  border-left: 4px solid #dc3545;
-  opacity: 0.7;
+  border-left: 3px solid #dc3545;
+  opacity: 0.8;
 }
 
 .booking-card.enrolled {
-  border-left: 4px solid #17a2b8;
+  border-left: 3px solid #17a2b8;
 }
 
-.booking-header {
+/* Compact Header */
+.card-header {
+  padding: 16px 20px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  gap: 12px;
+  border-bottom: 1px solid #f5f5f5;
 }
 
-.booking-type {
+.booking-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   display: flex;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.type-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.type-badge.court-type {
+.booking-icon.court-type {
   background: #e3f2fd;
   color: #1976d2;
 }
 
-.type-badge.academy-type {
+.booking-icon.academy-type {
   background: #f3e5f5;
   color: #7b1fa2;
 }
 
+.booking-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.booking-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 2px 0;
+  line-height: 1.3;
+}
+
+.booking-subtitle {
+  color: #666;
+  font-size: 0.85rem;
+  margin: 0;
+  font-weight: 400;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
 .status-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
+  padding: 4px 10px;
+  border-radius: 12px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .status-badge.confirmed {
@@ -832,75 +914,99 @@ const fetchUserBookings = async () => {
   color: #0c5460;
 }
 
-.booking-date {
-  font-size: 0.875rem;
-  color: #666;
+/* Compact Content */
+.card-content {
+  padding: 16px 20px;
 }
 
-.booking-content {
+.details-row {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.booking-title h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 4px 0;
-}
-
-.booking-subtitle {
-  color: #666;
-  font-size: 0.9rem;
-  margin: 0;
-}
-
-.booking-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  gap: 20px;
+  margin-bottom: 12px;
 }
 
 .detail-item {
   display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.detail-item.price-item {
+  margin-left: auto;
+}
+
+.detail-text {
+  font-weight: 500;
+}
+
+.detail-text.price-text {
+  color: #ff6b35;
+  font-weight: 600;
+}
+
+.additional-info {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.info-tag {
+  background: #f8f9fa;
+  color: #666;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid #e9ecef;
+}
+
+/* Compact Footer */
+.card-footer {
+  background: #f8f9fa;
+  padding: 12px 20px;
+  display: flex;
   justify-content: space-between;
   align-items: center;
+  border-top: 1px solid #f0f0f0;
 }
 
-.detail-label {
-  color: #666;
-  font-size: 0.875rem;
-}
-
-.detail-value {
-  color: #333;
-  font-weight: 500;
-  font-size: 0.875rem;
-}
-
-.booking-actions {
+.booking-date {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 6px;
+  color: #999;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .action-btn {
-  padding: 8px 16px;
+  padding: 6px 12px;
   border: none;
-  border-radius: 8px;
-  font-size: 0.875rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .view-btn {
   background: #f8f9fa;
-  color: #333;
+  color: #666;
+  border: 1px solid #e9ecef;
 }
 
 .view-btn:hover {
   background: #e9ecef;
+  color: #333;
 }
 
 .cancel-btn {
@@ -1059,14 +1165,24 @@ const fetchUserBookings = async () => {
     flex-direction: column;
   }
   
-  .booking-header {
+  .details-row {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    gap: 8px;
   }
   
-  .booking-actions {
+  .detail-item.price-item {
+    margin-left: 0;
+  }
+  
+  .card-footer {
     flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .card-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
   
   .modal-content {
@@ -1080,8 +1196,42 @@ const fetchUserBookings = async () => {
     font-size: 1.5rem;
   }
   
-  .booking-card {
-    padding: 20px;
+  .card-header {
+    padding: 12px 16px;
+  }
+  
+  .card-content {
+    padding: 12px 16px;
+  }
+  
+  .card-footer {
+    padding: 10px 16px;
+  }
+  
+  .booking-icon {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .booking-title {
+    font-size: 0.95rem;
+  }
+  
+  .booking-subtitle {
+    font-size: 0.8rem;
+  }
+  
+  .details-row {
+    gap: 6px;
+  }
+  
+  .detail-item {
+    font-size: 0.8rem;
+  }
+  
+  .action-btn {
+    padding: 8px 12px;
+    font-size: 0.75rem;
   }
   
   .modal-header,

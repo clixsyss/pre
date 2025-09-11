@@ -490,7 +490,8 @@ watch(currentProject, (newProject) => {
 
 .academy-header {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 12px;
   margin-bottom: 8px;
 }

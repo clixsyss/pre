@@ -123,7 +123,15 @@
       <div v-if="selectedDay && selectedCourt" class="booking-section">
         <h2 class="section-title">Select Time Slots</h2>
         <p class="section-subtitle">Available time slots for {{ formatDate(selectedDay) }}</p>
-        <div class="time-options">
+        
+        <!-- Loading State -->
+        <div v-if="loading" class="time-slots-loading">
+          <div class="loading-spinner"></div>
+          <span>Loading available slots...</span>
+        </div>
+        
+        <!-- Time Slots Grid -->
+        <div v-else class="time-options">
           <div 
             v-for="slot in availableTimeSlots" 
             :key="slot.time"
@@ -208,6 +216,7 @@ const selectedSlots = ref([]);
 const loading = ref(false);
 const error = ref(null);
 const isSubmitting = ref(false);
+const timeSlotsData = ref([]);
 
 // Computed properties
 const projectId = computed(() => projectStore.selectedProject?.id);
@@ -217,7 +226,7 @@ const availableDays = computed(() => bookingService.generateAvailableDays());
 
 const availableTimeSlots = computed(() => {
   if (!selectedDay.value || !selectedCourt.value || !projectId.value) return [];
-  return bookingService.generateTimeSlots();
+  return timeSlotsData.value.length > 0 ? timeSlotsData.value : bookingService.generateTimeSlots();
 });
 
 const totalPrice = computed(() => {
@@ -237,6 +246,7 @@ const selectCourt = (court) => {
   selectedCourt.value = court;
   selectedDay.value = null;
   selectedSlots.value = [];
+  timeSlotsData.value = [];
 };
 
 const selectDay = async (day) => {
@@ -246,15 +256,20 @@ const selectDay = async (day) => {
   // Fetch available time slots for the selected court and date
   if (selectedCourt.value && projectId.value) {
     try {
-      await bookingService.getAvailableTimeSlots(
+      loading.value = true;
+      const slots = await bookingService.getAvailableTimeSlots(
         projectId.value,
         selectedCourt.value.id,
         day.toISOString().split('T')[0]
       );
-      // Update the time slots with availability information
-      // This would need to be handled in the store or component state
+      timeSlotsData.value = slots;
+      console.log('Fetched time slots with availability:', slots);
     } catch (error) {
       console.error('Error fetching available time slots:', error);
+      // Fallback to basic time slots if there's an error
+      timeSlotsData.value = bookingService.generateTimeSlots();
+    } finally {
+      loading.value = false;
     }
   }
 };
@@ -692,17 +707,45 @@ onMounted(async () => {
 }
 
 .time-slot.reserved {
-  background: #f8d7da;
-  border-color: #dc3545;
-  color: #721c24;
+  background: #f8f9fa;
+  border-color: #dee2e6;
+  color: #6c757d;
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.5;
+  position: relative;
+  text-decoration: line-through;
 }
 
 .reserved-label {
-  font-size: 0.75rem;
-  color: #dc3545;
-  font-weight: 500;
+  font-size: 0.7rem;
+  color: #6c757d;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.time-slots-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 16px;
+  color: #666;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #ff6b35;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .booking-summary {
