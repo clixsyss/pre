@@ -466,6 +466,14 @@ onMounted(async () => {
         console.error('Error fetching user bookings:', error)
       }
 
+      // Initialize Smart Mirror app to restore authentication and project connections
+      try {
+        await smartMirrorStore.initializeApp()
+        console.log('Smart Mirror app initialized')
+      } catch (error) {
+        console.error('Error initializing Smart Mirror app:', error)
+      }
+
       // Initialize sample data for testing
       try {
         if (projectStore.selectedProject?.id) {

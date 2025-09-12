@@ -6,14 +6,14 @@
         <div class="title-section">
           <div class="icon-wrapper">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 21C9 21.5523 9.44772 22 10 22H14C14.5523 22 15 21.5523 15 21V20H9V21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
           <div class="title-text">
             <h3>Smart Home</h3>
-            <p v-if="smartMirrorStore.isConnected">{{ totalDevices }} devices connected</p>
+            <p v-if="smartMirrorStore.isConnected">{{ selectedTotalDevices }} devices selected</p>
             <p v-else>Connect to control your devices</p>
           </div>
         </div>
@@ -51,7 +51,7 @@
       <!-- Device Grid -->
       <div class="device-grid">
         <!-- Lights -->
-        <div v-if="smartMirrorStore.lights.length > 0" class="device-category">
+        <div v-if="selectedLights.length > 0" class="device-category">
           <div class="category-header">
             <div class="category-icon lights">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -68,12 +68,12 @@
             </div>
             <div class="category-info">
               <h4>Lights</h4>
-              <span class="device-count">{{ smartMirrorStore.lights.length }}</span>
+              <span class="device-count">{{ selectedLights.length }}</span>
             </div>
           </div>
           <div class="device-list">
             <div 
-              v-for="light in smartMirrorStore.lights.slice(0, 2)" 
+              v-for="light in selectedLights" 
               :key="light.id"
               class="device-card"
             >
@@ -96,7 +96,7 @@
         </div>
 
         <!-- Climate -->
-        <div v-if="smartMirrorStore.climateDevices.length > 0" class="device-category">
+        <div v-if="selectedClimateDevices.length > 0" class="device-category">
           <div class="category-header">
             <div class="category-icon climate">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -109,12 +109,12 @@
             </div>
             <div class="category-info">
               <h4>Climate</h4>
-              <span class="device-count">{{ smartMirrorStore.climateDevices.length }}</span>
+              <span class="device-count">{{ selectedClimateDevices.length }}</span>
             </div>
           </div>
           <div class="device-list">
             <div 
-              v-for="climate in smartMirrorStore.climateDevices.slice(0, 2)" 
+              v-for="climate in selectedClimateDevices" 
               :key="climate.id"
               class="device-card"
             >
@@ -137,7 +137,7 @@
         </div>
 
         <!-- Plugs -->
-        <div v-if="smartMirrorStore.plugs.length > 0" class="device-category">
+        <div v-if="selectedPlugs.length > 0" class="device-category">
           <div class="category-header">
             <div class="category-icon plugs">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -147,12 +147,12 @@
             </div>
             <div class="category-info">
               <h4>Smart Plugs</h4>
-              <span class="device-count">{{ smartMirrorStore.plugs.length }}</span>
+              <span class="device-count">{{ selectedPlugs.length }}</span>
             </div>
           </div>
           <div class="device-list">
             <div 
-              v-for="plug in smartMirrorStore.plugs.slice(0, 2)" 
+              v-for="plug in selectedPlugs" 
               :key="plug.id"
               class="device-card"
             >
@@ -174,6 +174,17 @@
           </div>
         </div>
 
+        <!-- Many Devices Message -->
+        <div v-if="hasManyDevices" class="many-devices-message">
+          <div class="message-content">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Showing {{ selectedTotalDevices }} selected devices</span>
+          </div>
+          <p class="message-subtitle">Use "View All" to see all your devices</p>
+        </div>
+
         <!-- No Devices State -->
         <div v-if="totalDevices === 0" class="no-devices">
           <div class="no-devices-icon">
@@ -192,7 +203,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSmartMirrorStore } from '../stores/smartMirrorStore'
 import { useNotificationStore } from '../stores/notifications'
@@ -206,10 +217,7 @@ const router = useRouter()
 const smartMirrorStore = useSmartMirrorStore()
 const notificationStore = useNotificationStore()
 
-// Initialize Smart Mirror app on component mount
-onMounted(async () => {
-  await smartMirrorStore.initializeApp()
-})
+// Smart Mirror app is initialized in the Home page
 
 // Reactive state
 const lightLoading = ref(null)
@@ -219,6 +227,65 @@ const plugLoading = ref(null)
 // Computed properties
 const totalDevices = computed(() => {
   return smartMirrorStore.lights.length + smartMirrorStore.climateDevices.length + smartMirrorStore.plugs.length
+})
+
+// Get only selected devices for home page display
+const selectedLights = computed(() => {
+  const selectedDevices = smartMirrorStore.selectedHomepageDevices
+  console.log('Selected devices object:', selectedDevices)
+  console.log('All devices:', smartMirrorStore.devices)
+  if (!selectedDevices || !selectedDevices.lights) return []
+  
+  // Filter from all devices using the new categorization
+  const filtered = smartMirrorStore.devices.filter(device => 
+    selectedDevices.lights.includes(device.id) && 
+    device.type === 'light'
+  )
+  console.log('Selected lights:', filtered)
+  return filtered
+})
+
+const selectedClimateDevices = computed(() => {
+  const selectedDevices = smartMirrorStore.selectedHomepageDevices
+  console.log('Selected climate devices:', selectedDevices?.climate)
+  console.log('All climate devices:', smartMirrorStore.climateDevices)
+  console.log('All devices:', smartMirrorStore.devices)
+  
+  if (!selectedDevices || !selectedDevices.climate) return []
+  
+  // Filter from all devices since climateDevices might be empty
+  const filtered = smartMirrorStore.devices.filter(device => 
+    selectedDevices.climate.includes(device.id) && 
+    (device.type === 'thermostat' || device.type === 'climate' || device.type === 'fan' || device.type === 'heater' || device.type === 'ac' || device.type === 'air_conditioner')
+  )
+  console.log('Filtered climate devices:', filtered)
+  return filtered
+})
+
+const selectedPlugs = computed(() => {
+  const selectedDevices = smartMirrorStore.selectedHomepageDevices
+  console.log('Selected plugs:', selectedDevices?.plugs)
+  console.log('All plugs:', smartMirrorStore.plugs)
+  console.log('All devices:', smartMirrorStore.devices)
+  
+  if (!selectedDevices || !selectedDevices.plugs) return []
+  
+  // Filter from all devices since plugs might be empty
+  const filtered = smartMirrorStore.devices.filter(device => 
+    selectedDevices.plugs.includes(device.id) && 
+    (device.type === 'plug' || device.type === 'outlet' || device.type === 'switch' || device.type === 'sensor' || device.type === 'camera' || device.type === 'door' || device.type === 'window')
+  )
+  console.log('Filtered plugs:', filtered)
+  return filtered
+})
+
+const selectedTotalDevices = computed(() => {
+  return selectedLights.value.length + selectedClimateDevices.value.length + selectedPlugs.value.length
+})
+
+// Check if there are many devices (more than 6 total)
+const hasManyDevices = computed(() => {
+  return selectedTotalDevices.value > 6
 })
 
 
@@ -282,16 +349,12 @@ const togglePlug = async (plug) => {
 
 <style scoped>
 .smart-device-widget {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 24px;
+  border-radius: 16px;
   padding: 0;
-  box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   margin-bottom: 24px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.2);
 }
 
 /* Header */
@@ -299,12 +362,34 @@ const togglePlug = async (plug) => {
   background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
   padding: 24px;
   color: white;
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.widget-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(180deg); }
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  z-index: 1;
 }
 
 .title-section {
@@ -317,11 +402,12 @@ const togglePlug = async (plug) => {
   width: 48px;
   height: 48px;
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .title-text h3 {
@@ -329,128 +415,133 @@ const togglePlug = async (plug) => {
   font-weight: 700;
   margin: 0 0 4px 0;
   color: white;
+  letter-spacing: -0.02em;
 }
 
 .title-text p {
   font-size: 0.9rem;
   margin: 0;
   opacity: 0.9;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .view-all-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  padding: 12px 20px;
-  border-radius: 12px;
-  font-size: 0.9rem;
+  gap: 6px;
+  background: white;
+  color: #ff6b35;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .view-all-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  background: #fff5f2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Not Connected State */
 .not-connected-state {
-  padding: 48px 24px;
+  padding: 40px 20px;
   text-align: center;
 }
 
 .not-connected-content {
-  max-width: 300px;
+  max-width: 280px;
   margin: 0 auto;
 }
 
 .not-connected-icon {
-  width: 80px;
-  height: 80px;
+  width: 60px;
+  height: 60px;
   background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
-  border-radius: 20px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 24px;
+  margin: 0 auto 20px;
   color: white;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
 
 .not-connected-content h4 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #333;
   margin: 0 0 8px 0;
+  letter-spacing: -0.01em;
 }
 
 .not-connected-content p {
-  color: #6b7280;
-  margin: 0 0 24px 0;
-  font-size: 0.95rem;
-  line-height: 1.5;
+  color: #666;
+  margin: 0 0 20px 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 .connect-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  gap: 6px;
+  background: #ff6b35;
   color: white;
   border: none;
-  padding: 14px 28px;
-  border-radius: 12px;
-  font-size: 0.95rem;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
 
 .connect-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.6);
+  background: #e55a2b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
 
 /* Connected State */
 .connected-state {
-  padding: 24px;
+  padding: 20px;
 }
 
 .device-grid {
   display: grid;
-  gap: 20px;
+  gap: 16px;
 }
 
 .device-category {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid #f1f5f9;
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .category-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .category-icon {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
 
 .category-icon.lights {
@@ -473,42 +564,97 @@ const togglePlug = async (plug) => {
 }
 
 .category-info h4 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
   margin: 0;
 }
 
 .device-count {
   background: #f3f4f6;
-  color: #6b7280;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  color: #666;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .device-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.device-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.device-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 2px;
+}
+
+.device-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 2px;
+}
+
+.device-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.many-devices-message {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 16px;
+  text-align: center;
+}
+
+.message-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.message-content svg {
+  color: #ff6b35;
+}
+
+.message-content span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.message-subtitle {
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin: 0;
 }
 
 .device-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .device-card:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  transform: translateY(-1px);
+  border-color: #ff6b35;
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);
+  transform: translateY(-2px);
 }
 
 .device-content {
@@ -516,35 +662,33 @@ const togglePlug = async (plug) => {
 }
 
 .device-name {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 4px;
+  color: #333;
+  margin-bottom: 2px;
 }
 
 .device-status {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .status-indicator {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   transition: all 0.2s ease;
 }
 
 .device-status.on .status-indicator {
   background: #10b981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 .device-status.off .status-indicator {
   background: #ef4444;
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
 }
 
 .device-status.on span {
@@ -557,13 +701,13 @@ const togglePlug = async (plug) => {
 
 .device-toggle {
   position: relative;
-  width: 48px;
-  height: 28px;
-  background: #e5e7eb;
+  width: 44px;
+  height: 24px;
+  background: #d1d5db;
   border: none;
-  border-radius: 14px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   outline: none;
 }
 
@@ -573,23 +717,23 @@ const togglePlug = async (plug) => {
 }
 
 .device-toggle.on {
-  background: #10b981;
+  background: #ff6b35;
 }
 
 .device-toggle.off {
-  background: #e5e7eb;
+  background: #d1d5db;
 }
 
 .toggle-slider {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   background: white;
   border-radius: 50%;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .device-toggle.on .toggle-slider {
@@ -635,62 +779,66 @@ const togglePlug = async (plug) => {
 /* Responsive Design */
 @media (max-width: 768px) {
   .smart-device-widget {
-    margin: 0 -16px 24px;
     border-radius: 0;
   }
   
   .widget-header {
-    padding: 20px 16px;
+    padding: 16px;
   }
   
   .connected-state {
-    padding: 20px 16px;
+    padding: 16px;
   }
   
   .header-content {
     flex-direction: column;
     align-items: flex-start;
-    gap: 16px;
-  }
-  
-  .title-section {
     gap: 12px;
   }
   
+  .title-section {
+    gap: 8px;
+  }
+  
   .icon-wrapper {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
   }
   
   .title-text h3 {
-    font-size: 1.25rem;
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+  
+  .device-category {
+    padding: 14px;
   }
   
   .device-card {
-    padding: 12px;
+    padding: 10px;
   }
   
   .device-name {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
   }
   
   .device-status {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
   }
 }
 
 @media (max-width: 480px) {
   .device-grid {
-    gap: 16px;
+    gap: 12px;
   }
   
   .device-category {
-    padding: 16px;
+    padding: 12px;
   }
   
   .category-header {
-    gap: 10px;
-    margin-bottom: 12px;
+    gap: 8px;
+    margin-bottom: 10px;
   }
   
   .category-icon {
@@ -699,7 +847,7 @@ const togglePlug = async (plug) => {
   }
   
   .category-info h4 {
-    font-size: 1rem;
+    font-size: 0.85rem;
   }
 }
 </style>

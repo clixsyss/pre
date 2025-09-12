@@ -60,7 +60,8 @@ const authenticatedRoutes = [
   '/my-bookings',
   '/calendar',
   '/analytics',
-  '/profile'
+  '/profile',
+  '/smart-devices'
 ]
 
 // Check if current route should show main layout

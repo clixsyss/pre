@@ -208,9 +208,13 @@ class SmartMirrorService {
         await this.fetchDevices()
         this.isConnected = true
         
-        // Set up real-time listeners for current project
-        if (this.currentProjectId) {
-          this.setupRealtimeListeners()
+        // Restore project connections from localStorage
+        await this.restoreProjectConnections()
+        
+        // If we have project connections, set up the first one as current
+        if (this.projectConnections.size > 0) {
+          const firstProjectId = this.projectConnections.keys().next().value
+          this.switchToProject(firstProjectId)
         }
       } else {
         this.currentUser = null
@@ -219,6 +223,7 @@ class SmartMirrorService {
         this.devices = []
         this.isConnected = false
         this.currentProjectId = null
+        this.projectConnections.clear()
         this.cleanup()
       }
     })
@@ -227,7 +232,10 @@ class SmartMirrorService {
   // Initialize app with stored connections
   async initializeApp() {
     try {
-      // Check if user is already authenticated
+      // Set up auth state listener to handle authentication restoration
+      this.setupAuthListener()
+      
+      // Check if user is already authenticated (immediate check)
       if (smartMirrorAuth.currentUser) {
         this.currentUser = smartMirrorAuth.currentUser
         await this.fetchUserProfile()
@@ -362,6 +370,12 @@ class SmartMirrorService {
           id: roomDoc.id,
           devices: []
         }
+        
+        // Debug: Log room data to see what fields are available
+        console.log('Room data:', roomData)
+        console.log('Room name field:', roomData.name)
+        console.log('Room title field:', roomData.title)
+        console.log('Room displayName field:', roomData.displayName)
 
         // Fetch devices for this room
         const devicesQuery = query(
@@ -372,6 +386,7 @@ class SmartMirrorService {
         roomData.devices = devicesSnapshot.docs.map((deviceDoc) => ({
           id: deviceDoc.id,
           roomId: roomDoc.id,
+          roomName: roomData.name || roomData.roomName || roomData.title || roomData.displayName || 'Unknown Room',
           ...deviceDoc.data()
         }))
 
@@ -410,6 +425,9 @@ class SmartMirrorService {
           id: roomDoc.id,
           devices: []
         }
+        
+        // Debug: Log room data in real-time listener
+        console.log('Real-time room data:', roomData)
 
         // Get devices for this room with real-time listener
         const devicesRef = collection(smartMirrorDb, 'users', this.currentUser.uid, 'rooms', roomDoc.id, 'devices')
@@ -420,6 +438,7 @@ class SmartMirrorService {
         roomData.devices = devicesSnapshot.docs.map((deviceDoc) => ({
           id: deviceDoc.id,
           roomId: roomDoc.id,
+          roomName: roomData.name || roomData.roomName || roomData.title || roomData.displayName || 'Unknown Room',
           ...deviceDoc.data()
         }))
 
@@ -429,6 +448,7 @@ class SmartMirrorService {
           const updatedDevices = devicesSnapshot.docs.map((deviceDoc) => ({
             id: deviceDoc.id,
             roomId: roomDoc.id,
+            roomName: roomData.name || roomData.roomName || roomData.title || roomData.displayName || 'Unknown Room',
             ...deviceDoc.data()
           }))
           

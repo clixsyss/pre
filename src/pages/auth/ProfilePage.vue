@@ -226,6 +226,32 @@
         </div>
       </div>
 
+      <!-- Smart Home Settings - Only show if current project has Smart Mirror connection -->
+      <div v-if="smartMirrorStore.isProjectConnected(currentProjectId)" class="info-section">
+        <h3 class="section-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 17L12 22L22 17" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 12L12 17L22 12" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Smart Home Settings
+        </h3>
+        <div class="smart-home-settings">
+          <div class="settings-description">
+            <p>Manage which devices are displayed on your home page dashboard.</p>
+          </div>
+          
+          <button @click="openDeviceManagementModal" class="manage-devices-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Manage Home Page Devices
+          </button>
+        </div>
+      </div>
+
       <!-- Actions -->
       <div class="actions-section">
         <button @click="editProfile" class="edit-btn">
@@ -487,6 +513,91 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Device Management Modal -->
+    <Teleport to="body">
+      <div v-if="showDeviceManagementModal" class="modal-overlay" @click="closeDeviceManagementModal">
+        <div class="modal-content device-management-modal" @click.stop>
+          <div class="modal-header">
+            <h3>Manage Home Page Devices</h3>
+            <p>Select which devices to display on your home page dashboard</p>
+          </div>
+          
+          <div class="modal-body">
+            <!-- Device Categories -->
+            <div class="device-categories">
+              <!-- Dynamic Device Categories -->
+              <div 
+                v-for="(categoryDevices, categoryType) in filteredGroupedDevices" 
+                :key="categoryType"
+                class="device-category"
+              >
+                <div class="category-header">
+                  <div :class="['category-icon', categoryType]">
+                    <svg :width="20" :height="20" :viewBox="getCategoryIcon(categoryType).viewBox" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path v-for="(path, index) in getCategoryIcon(categoryType).paths" :key="index" :d="path.d" :stroke="path.stroke || 'currentColor'" :stroke-width="path.strokeWidth || '2'" :stroke-linecap="path.strokeLinecap || 'round'" :stroke-linejoin="path.strokeLinejoin || 'round'" :fill="path.fill"/>
+                    </svg>
+                  </div>
+                  <div class="category-info">
+                    <h4>{{ getCategoryName(categoryType) }}</h4>
+                    <span class="device-count">{{ categoryDevices.length }} devices</span>
+                  </div>
+                </div>
+                <div class="device-list">
+                  <div 
+                    v-for="device in categoryDevices" 
+                    :key="device.id"
+                    class="device-item"
+                  >
+                    <div class="device-info">
+                      <div class="device-name">{{ device.name }}</div>
+                      <div class="device-room">{{ device.roomName || 'Unknown Room' }}</div>
+                      <div class="device-type">{{ device.type }}</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input 
+                          type="checkbox" 
+                          :checked="selectedDevices[categoryType] && selectedDevices[categoryType].includes(device.id)"
+                          @change="toggleDevice(categoryType, device.id, $event.target.checked)"
+                        >
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- No Devices Message -->
+            <div v-if="totalDevices === 0" class="no-devices-message">
+              <div class="no-devices-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <h4>No Devices Available</h4>
+              <p>No smart home devices are currently connected to this project.</p>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button @click="closeDeviceManagementModal" class="cancel-btn">Cancel</button>
+            <button @click="saveDeviceSettings" class="save-btn" :disabled="savingSettings">
+              <svg v-if="savingSettings" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="spinning">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z" fill="currentColor"/>
+              </svg>
+              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              {{ savingSettings ? 'Saving...' : 'Save Settings' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -541,9 +652,47 @@ const loginForm = ref({
   password: ''
 })
 
+// Device settings state
+const showDeviceManagementModal = ref(false)
+const selectedDevices = ref({
+  lights: [],
+  climate: [],
+  plugs: []
+})
+const savingSettings = ref(false)
+
 // Computed properties
 const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => projectStore.selectedProject?.id)
+
+// Total devices count
+const totalDevices = computed(() => {
+  return smartMirrorStore.devices.length
+})
+
+// Group devices by type dynamically
+const groupedDevices = computed(() => {
+  const groups = {}
+  smartMirrorStore.devices.forEach(device => {
+    const categoryType = getDeviceCategory(device.type)
+    if (!groups[categoryType]) {
+      groups[categoryType] = []
+    }
+    groups[categoryType].push(device)
+  })
+  return groups
+})
+
+// Filtered grouped devices (only categories with devices)
+const filteredGroupedDevices = computed(() => {
+  const filtered = {}
+  Object.entries(groupedDevices.value).forEach(([categoryType, devices]) => {
+    if (devices.length > 0) {
+      filtered[categoryType] = devices
+    }
+  })
+  return filtered
+})
 
 // Load user profile from Firestore
 const loadProfile = async () => {
@@ -835,7 +984,210 @@ const formatGender = (gender) => {
   return genderMap[gender] || gender
 }
 
+// Device management methods
+const getDeviceCategory = (deviceType) => {
+  const categoryMap = {
+    'light': 'lights',
+    'thermostat': 'climate',
+    'climate': 'climate',
+    'fan': 'climate', // Map fans to climate for home page display
+    'heater': 'climate',
+    'ac': 'climate',
+    'air_conditioner': 'climate',
+    'plug': 'plugs',
+    'outlet': 'plugs',
+    'switch': 'plugs', // Map switches to plugs for home page display
+    'sensor': 'plugs', // Map sensors to plugs for home page display
+    'camera': 'plugs', // Map cameras to plugs for home page display
+    'door': 'plugs', // Map doors to plugs for home page display
+    'window': 'plugs' // Map windows to plugs for home page display
+  }
+  return categoryMap[deviceType] || 'plugs' // Default to plugs instead of other
+}
 
+const getCategoryName = (categoryType) => {
+  const nameMap = {
+    'lights': 'Lights',
+    'climate': 'Climate Control',
+    'plugs': 'Smart Plugs',
+    'switches': 'Switches',
+    'sensors': 'Sensors',
+    'cameras': 'Cameras',
+    'doors': 'Doors',
+    'windows': 'Windows',
+    'fans': 'Fans',
+    'other': 'Other Devices'
+  }
+  return nameMap[categoryType] || 'Other Devices'
+}
+
+const getCategoryIcon = (categoryType) => {
+  const icons = {
+    'lights': {
+      viewBox: '0 0 24 24',
+      paths: [
+        { d: 'M9 21C9 21.5523 9.44772 22 10 22H14C14.5523 22 15 21.5523 15 21V20H9V21Z' },
+        { d: 'M12 2V4' },
+        { d: 'M12 18V20' },
+        { d: 'M4.22 4.22L5.64 5.64' },
+        { d: 'M18.36 18.36L19.78 19.78' },
+        { d: 'M1 12H3' },
+        { d: 'M21 12H23' },
+        { d: 'M4.22 19.78L5.64 18.36' },
+        { d: 'M18.36 5.64L19.78 4.22' }
+      ]
+    },
+    'climate': {
+      viewBox: '0 0 24 24',
+      paths: [
+        { d: 'M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z' },
+        { d: 'M12 6V18' },
+        { d: 'M8 8L6 6' },
+        { d: 'M16 8L18 6' },
+        { d: 'M8 16L6 18' },
+        { d: 'M16 16L18 18' }
+      ]
+    },
+    'plugs': {
+      viewBox: '0 0 24 24',
+      paths: [
+        { d: 'M2 3H22C22.5523 3 23 3.44772 23 4V18C23 18.5523 22.5523 19 22 19H2C1.44772 19 1 18.5523 1 18V4C1 3.44772 1.44772 3 2 3Z' },
+        { d: 'M8 21H16' },
+        { d: 'M12 17V21' }
+      ]
+    },
+    'switches': {
+      viewBox: '0 0 24 24',
+      paths: [
+        { d: 'M3 7H21' },
+        { d: 'M3 17H21' },
+        { d: 'M8 3L4 7L8 11' },
+        { d: 'M16 13L20 17L16 21' }
+      ]
+    },
+    'sensors': {
+      viewBox: '0 0 24 24',
+      paths: [
+        { d: 'M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z' },
+        { d: 'M12 6V18' },
+        { d: 'M8 8L6 6' },
+        { d: 'M16 8L18 6' },
+        { d: 'M8 16L6 18' },
+        { d: 'M16 16L18 18' }
+      ]
+    },
+    'cameras': {
+      viewBox: '0 0 24 24',
+      paths: [
+        { d: 'M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 4H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z' }
+      ]
+    },
+    'doors': {
+      viewBox: '0 0 24 24',
+      paths: [
+        { d: 'M3 21H21' },
+        { d: 'M3 3H21V21H3V3Z' },
+        { d: 'M9 9H15' }
+      ]
+    },
+    'windows': {
+      viewBox: '0 0 24 24',
+      paths: [
+        { d: 'M3 3H21V21H3V3Z' },
+        { d: 'M3 9H21' },
+        { d: 'M3 15H21' },
+        { d: 'M9 3V21' },
+        { d: 'M15 3V21' }
+      ]
+    },
+    'fans': {
+      viewBox: '0 0 24 24',
+      paths: [
+        { d: 'M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z' },
+        { d: 'M12 6V18' },
+        { d: 'M8 8L6 6' },
+        { d: 'M16 8L18 6' },
+        { d: 'M8 16L6 18' },
+        { d: 'M16 16L18 18' }
+      ]
+    },
+    'other': {
+      viewBox: '0 0 24 24',
+      paths: [
+        { d: 'M12 2L2 7L12 12L22 7L12 2Z' },
+        { d: 'M2 17L12 22L22 17' },
+        { d: 'M2 12L12 17L22 12' }
+      ]
+    }
+  }
+  return icons[categoryType] || icons['other']
+}
+
+const openDeviceManagementModal = () => {
+  showDeviceManagementModal.value = true
+  // Load current device settings when opening
+  loadDeviceSettings()
+}
+
+const closeDeviceManagementModal = () => {
+  showDeviceManagementModal.value = false
+  // Reset to current settings
+  loadDeviceSettings()
+}
+
+const loadDeviceSettings = () => {
+  // Load current device settings from localStorage or default to all devices
+  const savedSettings = localStorage.getItem(`deviceSettings_${currentProjectId.value}`)
+  if (savedSettings) {
+    selectedDevices.value = JSON.parse(savedSettings)
+  } else {
+    // Default to all devices selected
+    selectedDevices.value = {}
+    smartMirrorStore.devices.forEach(device => {
+      const categoryType = getDeviceCategory(device.type)
+      if (!selectedDevices.value[categoryType]) {
+        selectedDevices.value[categoryType] = []
+      }
+      selectedDevices.value[categoryType].push(device.id)
+    })
+  }
+}
+
+const toggleDevice = (category, deviceId, isSelected) => {
+  // Ensure the category array exists
+  if (!selectedDevices.value[category]) {
+    selectedDevices.value[category] = []
+  }
+  
+  if (isSelected) {
+    if (!selectedDevices.value[category].includes(deviceId)) {
+      selectedDevices.value[category].push(deviceId)
+    }
+  } else {
+    selectedDevices.value[category] = selectedDevices.value[category].filter(id => id !== deviceId)
+  }
+}
+
+const saveDeviceSettings = async () => {
+  try {
+    savingSettings.value = true
+    
+    // Save settings to localStorage
+    localStorage.setItem(`deviceSettings_${currentProjectId.value}`, JSON.stringify(selectedDevices.value))
+    
+    // Update Smart Mirror store with selected devices
+    smartMirrorStore.setSelectedDevices(selectedDevices.value)
+    
+    notificationStore.showSuccess('Device settings saved successfully!')
+    closeDeviceManagementModal()
+    
+  } catch (err) {
+    console.error('Error saving device settings:', err)
+    notificationStore.showError('Failed to save device settings. Please try again.')
+  } finally {
+    savingSettings.value = false
+  }
+}
 
 // Load profile on component mount
 onMounted(() => {
@@ -1711,6 +2063,39 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 
+.settings-description {
+  margin-bottom: 16px;
+}
+
+.settings-description p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.manage-devices-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ff6b35;
+  color: white;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
+}
+
+.manage-devices-btn:hover {
+  background: #e55a2b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
 .smart-mirror-header {
   display: flex;
   justify-content: space-between;
@@ -2242,5 +2627,341 @@ onMounted(() => {
     width: 100%;
     justify-content: center;
   }
+}
+
+/* Device Management Modal Styles */
+.device-management-modal {
+  max-width: 700px;
+  max-height: 85vh;
+  width: 95%;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.device-management-modal .modal-header {
+  padding: 32px 32px 24px;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  color: white;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.device-management-modal .modal-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+}
+
+.device-management-modal .modal-header h3 {
+  margin: 0 0 12px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.device-management-modal .modal-header h3::before {
+  content: '⚙️';
+  font-size: 20px;
+}
+
+.device-management-modal .modal-header p {
+  margin: 0;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.device-management-modal .modal-body {
+  padding: 0;
+  flex: 1;
+  overflow-y: auto;
+  background: #fafafa;
+}
+
+.device-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 32px;
+}
+
+.device-category {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.category-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
+}
+
+.category-icon.lights {
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+}
+
+.category-icon.climate {
+  background: linear-gradient(135deg, #ff8a65 0%, #ffab91 100%);
+}
+
+.category-icon.plugs {
+  background: linear-gradient(135deg, #ffab91 0%, #ffccbc 100%);
+}
+
+.category-icon.switches {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+}
+
+.category-icon.sensors {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+}
+
+.category-icon.cameras {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+}
+
+.category-icon.doors {
+  background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%);
+}
+
+.category-icon.windows {
+  background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+}
+
+.category-icon.fans {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+}
+
+.category-icon.other {
+  background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+}
+
+.category-info h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.device-count {
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.device-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.device-item:hover {
+  border-color: #ff6b35;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.1);
+}
+
+.device-info {
+  flex: 1;
+}
+
+.device-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 2px 0;
+}
+
+.device-room {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0 0 2px 0;
+}
+
+.device-type {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #d1d5db;
+  transition: 0.2s;
+  border-radius: 12px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .toggle-slider {
+  background-color: #ff6b35;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.no-devices-message {
+  text-align: center;
+  padding: 60px 32px;
+  background: white;
+  margin: 24px 32px;
+  border-radius: 16px;
+  border: 2px dashed #e5e7eb;
+}
+
+.no-devices-icon {
+  width: 60px;
+  height: 60px;
+  background: #f3f4f6;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  color: #9ca3af;
+}
+
+.no-devices-message h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.no-devices-message p {
+  color: #6b7280;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* Device Management Modal Actions */
+.device-management-modal .modal-actions {
+  display: flex;
+  gap: 16px;
+  padding: 24px 32px;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.device-management-modal .cancel-btn {
+  flex: 1;
+  padding: 14px 24px;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.device-management-modal .cancel-btn:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+}
+
+.device-management-modal .save-btn {
+  flex: 1;
+  padding: 14px 24px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.device-management-modal .save-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
+}
+
+.device-management-modal .save-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.device-management-modal .spinning {
+  animation: spin 1s linear infinite;
 }
 </style>

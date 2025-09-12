@@ -45,6 +45,9 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
     return grouped
   })
 
+  // Selected devices for homepage display
+  const selectedHomepageDevices = ref({})
+
   // Actions
   const connect = async (email, password, projectId) => {
     try {
@@ -106,12 +109,31 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
       // Update project connections map
       projectConnections.value = new Map(smartMirrorService.projectConnections)
       
+      // Load selected homepage devices from localStorage
+      if (currentProjectId.value) {
+        const savedSettings = localStorage.getItem(`deviceSettings_${currentProjectId.value}`)
+        if (savedSettings) {
+          const parsedSettings = JSON.parse(savedSettings)
+          // Check if we need to migrate old categorization
+          if (parsedSettings.fans || parsedSettings.other) {
+            console.log('Migrating old device categorization...')
+            // Clear old settings and let them be recategorized
+            localStorage.removeItem(`deviceSettings_${currentProjectId.value}`)
+            selectedHomepageDevices.value = {}
+          } else {
+            selectedHomepageDevices.value = parsedSettings
+            console.log('Loaded selected homepage devices:', selectedHomepageDevices.value)
+          }
+        }
+      }
+      
       // Debug logging
       console.log('Smart Mirror Store initialized:', {
         isConnected: isConnected.value,
         currentProjectId: currentProjectId.value,
         projectConnections: Array.from(projectConnections.value.keys()),
-        devicesCount: devices.value.length
+        devicesCount: devices.value.length,
+        selectedHomepageDevices: selectedHomepageDevices.value
       })
       
       // Set up real-time update callback with project filtering
@@ -323,6 +345,10 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
     connectionError.value = null
   }
 
+  const setSelectedDevices = (selectedDevices) => {
+    selectedHomepageDevices.value = selectedDevices
+  }
+
   const reset = () => {
     isConnected.value = false
     isConnecting.value = false
@@ -331,6 +357,7 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
     rooms.value = []
     devices.value = []
     selectedRoom.value = null
+    selectedHomepageDevices.value = {}
   }
 
   return {
@@ -351,6 +378,7 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
     climateDevices,
     plugs,
     devicesByRoom,
+    selectedHomepageDevices,
 
     // Actions
     connect,
@@ -368,6 +396,7 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
     setClimateState,
     setClimateTemperature,
     setClimateMode,
+    setSelectedDevices,
     clearError,
     reset
   }
