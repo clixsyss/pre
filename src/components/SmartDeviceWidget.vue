@@ -78,7 +78,7 @@
               class="device-card"
             >
               <div class="device-content">
-                <div class="device-name">{{ light.name }}</div>
+                <div class="device-name">{{ light.name }} - {{ light.roomName }}</div>
                 <div class="device-status" :class="{ on: light.state, off: !light.state }">
                   <div class="status-indicator"></div>
                   <span>{{ light.state ? 'ON' : 'OFF' }}</span>
@@ -119,7 +119,7 @@
               class="device-card"
             >
               <div class="device-content">
-                <div class="device-name">{{ climate.name }}</div>
+                <div class="device-name">{{ climate.name }} - {{ climate.roomName }}</div>
                 <div class="device-status" :class="{ on: climate.state, off: !climate.state }">
                   <div class="status-indicator"></div>
                   <span>{{ climate.state ? `${climate.temperature || 22}°C` : 'OFF' }}</span>
@@ -157,7 +157,7 @@
               class="device-card"
             >
               <div class="device-content">
-                <div class="device-name">{{ plug.name }}</div>
+                <div class="device-name">{{ plug.name }} - {{ plug.roomName }}</div>
                 <div class="device-status" :class="{ on: plug.state, off: !plug.state }">
                   <div class="status-indicator"></div>
                   <span>{{ plug.state ? 'ON' : 'OFF' }}</span>
