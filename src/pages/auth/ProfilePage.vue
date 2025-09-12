@@ -994,6 +994,7 @@ const getDeviceCategory = (deviceType) => {
     'heater': 'climate',
     'ac': 'climate',
     'air_conditioner': 'climate',
+    'air-conditioner': 'climate',
     'plug': 'plugs',
     'outlet': 'plugs',
     'switch': 'plugs', // Map switches to plugs for home page display

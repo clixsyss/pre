@@ -338,9 +338,15 @@ const plugLoading = ref(null)
 // Computed properties
 const roomDevices = computed(() => {
   if (selectedRoomId.value) {
-    return smartMirrorStore.getRoomDevices(selectedRoomId.value)
+    const devices = smartMirrorStore.getRoomDevices(selectedRoomId.value)
+    // Debug: Log all device types to help identify air-conditioner devices
+    console.log('All room devices:', devices.map(d => ({ name: d.name, type: d.type })))
+    return devices
   }
-  return smartMirrorStore.devices
+  const devices = smartMirrorStore.devices
+  // Debug: Log all device types to help identify air-conditioner devices
+  console.log('All devices:', devices.map(d => ({ name: d.name, type: d.type })))
+  return devices
 })
 
 const roomLights = computed(() => 

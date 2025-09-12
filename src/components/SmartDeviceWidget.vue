@@ -256,7 +256,7 @@ const selectedClimateDevices = computed(() => {
   // Filter from all devices since climateDevices might be empty
   const filtered = smartMirrorStore.devices.filter(device => 
     selectedDevices.climate.includes(device.id) && 
-    (device.type === 'thermostat' || device.type === 'climate' || device.type === 'fan' || device.type === 'heater' || device.type === 'ac' || device.type === 'air_conditioner')
+    (device.type === 'thermostat' || device.type === 'climate' || device.type === 'fan' || device.type === 'heater' || device.type === 'ac' || device.type === 'air_conditioner' || device.type === 'air-conditioner')
   )
   console.log('Filtered climate devices:', filtered)
   return filtered
@@ -353,8 +353,7 @@ const togglePlug = async (plug) => {
   padding: 0;
   margin-bottom: 24px;
   overflow: hidden;
-  border: 1px solid #e8e8e8;
-  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.2);
+  border: none;
 }
 
 /* Header */
