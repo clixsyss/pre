@@ -110,10 +110,12 @@ class SmartMirrorService {
   // Switch to a different project's connection
   switchToProject(projectId) {
     const connection = this.projectConnections.get(projectId)
+    
+    // Clean up existing listeners first
+    this.cleanup()
+    
     if (connection) {
-      // Clean up existing listeners
-      this.cleanup()
-      
+      // Project has Smart Mirror connection - restore its data
       this.currentUser = connection.user
       this.userProfile = connection.userProfile
       this.rooms = connection.rooms
@@ -126,7 +128,17 @@ class SmartMirrorService {
       
       return { success: true }
     } else {
-      return { success: false, error: 'No Smart Mirror connection found for this project' }
+      // Project has no Smart Mirror connection - clear all data
+      this.currentUser = null
+      this.userProfile = null
+      this.rooms = []
+      this.devices = []
+      this.isConnected = false
+      this.currentProjectId = projectId
+      
+      console.log(`Switched to project ${projectId} - no Smart Mirror connection, cleared data`)
+      
+      return { success: true }
     }
   }
 
@@ -223,6 +235,12 @@ class SmartMirrorService {
         
         // Restore project connections from localStorage
         await this.restoreProjectConnections()
+        
+        // If we have project connections, set up the first one as current
+        if (this.projectConnections.size > 0) {
+          const firstProjectId = this.projectConnections.keys().next().value
+          this.switchToProject(firstProjectId)
+        }
       }
     } catch (error) {
       console.error('Error initializing Smart Mirror app:', error)
@@ -233,8 +251,11 @@ class SmartMirrorService {
   async restoreProjectConnections() {
     try {
       const storedConnections = localStorage.getItem('smartMirrorProjectConnections')
+      console.log('Restoring project connections from localStorage:', storedConnections)
+      
       if (storedConnections) {
         const connections = JSON.parse(storedConnections)
+        console.log('Parsed connections:', connections)
         
         for (const [projectId, connectionData] of Object.entries(connections)) {
           if (connectionData.isConnected && connectionData.userId === this.currentUser?.uid) {
@@ -246,9 +267,12 @@ class SmartMirrorService {
               devices: connectionData.devices || [],
               isConnected: true
             })
+            console.log(`Restored connection for project ${projectId}`)
           }
         }
       }
+      
+      console.log('Final projectConnections:', Array.from(this.projectConnections.keys()))
     } catch (error) {
       console.error('Error restoring project connections:', error)
     }

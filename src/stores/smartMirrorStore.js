@@ -104,7 +104,15 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
       currentProjectId.value = smartMirrorService.currentProjectId
       
       // Update project connections map
-      projectConnections.value = smartMirrorService.projectConnections
+      projectConnections.value = new Map(smartMirrorService.projectConnections)
+      
+      // Debug logging
+      console.log('Smart Mirror Store initialized:', {
+        isConnected: isConnected.value,
+        currentProjectId: currentProjectId.value,
+        projectConnections: Array.from(projectConnections.value.keys()),
+        devicesCount: devices.value.length
+      })
       
       // Set up real-time update callback with project filtering
       smartMirrorService.setDevicesUpdateCallback((updatedRooms, updatedDevices, updatedProjectId) => {
@@ -169,14 +177,12 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
       const result = smartMirrorService.switchToProject(projectId)
       
       if (result.success) {
-        // Get project-specific devices
-        const projectData = smartMirrorService.getProjectDevices(projectId)
-        
-        isConnected.value = true
-        userProfile.value = projectData.userProfile
-        rooms.value = projectData.rooms
-        devices.value = projectData.devices
-        currentProjectId.value = projectId
+        // Update store state with service state
+        isConnected.value = smartMirrorService.isConnected
+        userProfile.value = smartMirrorService.userProfile
+        rooms.value = smartMirrorService.rooms
+        devices.value = smartMirrorService.devices
+        currentProjectId.value = smartMirrorService.currentProjectId
         
         // Set up real-time update callback with project filtering
         smartMirrorService.setDevicesUpdateCallback((updatedRooms, updatedDevices, updatedProjectId) => {
@@ -185,6 +191,12 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
             rooms.value = updatedRooms
             devices.value = updatedDevices
           }
+        })
+        
+        console.log(`Switched to project ${projectId}:`, {
+          isConnected: isConnected.value,
+          devicesCount: devices.value.length,
+          roomsCount: rooms.value.length
         })
         
         return { success: true }
@@ -198,7 +210,10 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
   }
 
   const isProjectConnected = (projectId) => {
-    return smartMirrorService.isProjectConnected(projectId)
+    // Check both service and store state
+    const serviceConnected = smartMirrorService.isProjectConnected(projectId)
+    const storeConnected = projectConnections.value.has(projectId)
+    return serviceConnected || storeConnected
   }
 
   const getProjectConnectionStatus = (projectId) => {

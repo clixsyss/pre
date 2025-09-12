@@ -158,6 +158,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
+import { useSmartMirrorStore } from '../stores/smartMirrorStore'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 
 // Component name for ESLint
@@ -168,6 +169,7 @@ defineOptions({
 const router = useRouter()
 const route = useRoute()
 const projectStore = useProjectStore()
+const smartMirrorStore = useSmartMirrorStore()
 
 // Reactive state
 const showProjectSwitcher = ref(false)
@@ -180,6 +182,10 @@ const currentProjectId = computed(() => currentProject.value?.id)
 // Methods
 const switchToProject = async (project) => {
   projectStore.selectProject(project)
+  
+  // Switch Smart Mirror data to the new project
+  await smartMirrorStore.switchToProject(project.id)
+  
   showProjectSwitcher.value = false
   // Navigate to home page with the new project selected
   router.push('/home')

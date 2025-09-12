@@ -47,8 +47,8 @@
       </div> -->
     </div>
 
-    <!-- Smart Device Widget -->
-    <SmartDeviceWidget />
+    <!-- Smart Device Widget - Only show if current project has Smart Mirror connection -->
+    <SmartDeviceWidget v-if="hasSmartMirrorConnection" />
 
     <!-- Quick Actions -->
     <div class="quick-actions-section">
@@ -225,6 +225,7 @@ import { auth } from '../../boot/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useProjectStore } from '../../stores/projectStore'
 import { useAcademiesStore } from '../../stores/academyStore'
+import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
 import UpcomingBookingsCard from '../../components/UpcomingBookingsCard.vue'
 import ModernNewsFeed from '../../components/ModernNewsFeed.vue'
 import SmartDeviceWidget from '../../components/SmartDeviceWidget.vue'
@@ -239,6 +240,7 @@ defineOptions({
 const router = useRouter()
 const projectStore = useProjectStore()
 const academiesStore = useAcademiesStore()
+const smartMirrorStore = useSmartMirrorStore()
 const user = ref(null)
 // const activeTab = ref('all')
 const showProjectSwitcher = ref(false)
@@ -246,6 +248,11 @@ const notifications = ref([])
 const isLoadingNotifications = ref(false)
 const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => projectStore.selectedProject?.id)
+
+// Computed property to check if current project has Smart Mirror connection
+const hasSmartMirrorConnection = computed(() => {
+  return currentProjectId.value ? smartMirrorStore.isProjectConnected(currentProjectId.value) : false
+})
 
 // Computed properties for dynamic stats
 const upcomingEventsCount = computed(() => {
@@ -407,6 +414,10 @@ const navigateToStores = () => {
 const switchToProject = async (project) => {
   try {
     projectStore.selectProject(project)
+    
+    // Switch Smart Mirror data to the new project
+    await smartMirrorStore.switchToProject(project.id)
+    
     showProjectSwitcher.value = false
 
     // Show success message

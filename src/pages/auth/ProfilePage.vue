@@ -296,6 +296,7 @@ import { auth } from '../../boot/firebase'
 import { getUserDocument } from '../../utils/firestore'
 import { useNotificationStore } from '../../stores/notifications'
 import { useProjectStore } from '../../stores/projectStore'
+import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
 import { collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { db } from '../../boot/firebase'
 import SmartMirrorConnection from '../../components/SmartMirrorConnection.vue'
@@ -308,6 +309,7 @@ defineOptions({
 const router = useRouter()
 const notificationStore = useNotificationStore()
 const projectStore = useProjectStore()
+const smartMirrorStore = useSmartMirrorStore()
 
 // Reactive state
 const loading = ref(true)
@@ -484,6 +486,10 @@ const onProjectChange = () => {
 const switchToProject = async (project) => {
   try {
     projectStore.selectProject(project)
+    
+    // Switch Smart Mirror data to the new project
+    await smartMirrorStore.switchToProject(project.id)
+    
     notificationStore.showSuccess(`Switched to ${project.name}`)
     
     // Redirect to home page after a short delay
