@@ -80,49 +80,117 @@
           </button>
         </div>
         
-        <!-- Current Projects List -->
-        <div v-if="userProjects.length > 0" class="projects-list">
-          <div 
-            v-for="project in userProjects" 
-            :key="project.id"
-            :class="['project-item', { 'current': project.id === currentProjectId }]"
-          >
-            <div class="project-info">
-              <div class="project-main">
+      <!-- Unified Project Management -->
+      <div v-if="userProjects.length > 0" class="unified-projects-section">
+        <div 
+          v-for="project in userProjects" 
+          :key="project.id"
+          :class="['unified-project-card', { 'current': project.id === currentProjectId }]"
+        >
+          <!-- Project Header -->
+          <div class="project-header">
+            <div class="project-main-info">
+              <div class="project-title-section">
                 <h4 class="project-name">{{ project.name || 'Unnamed Project' }}</h4>
                 <p class="project-location">{{ project.location || 'Location not set' }}</p>
               </div>
-              <div class="project-details">
-                <span class="project-unit">Unit {{ project.userUnit || 'N/A' }}</span>
-                <span class="project-role">{{ project.userRole || 'Member' }}</span>
+              <div class="project-status-badges">
                 <span class="project-status" :class="project.status">{{ project.status || 'active' }}</span>
+                <span v-if="project.id === currentProjectId" class="current-badge">Current</span>
               </div>
             </div>
-            <div class="project-actions">
-              <button 
-                v-if="project.id !== currentProjectId"
-                @click="switchToProject(project)"
-                class="switch-project-btn"
-              >
-                Switch to Project
-              </button>
-              <span v-else class="current-project-badge">Current Project</span>
+            <div class="project-role-info">
+              <span class="project-unit">Unit {{ project.userUnit || 'N/A' }}</span>
+              <span class="project-role">{{ project.userRole || 'Member' }}</span>
             </div>
           </div>
-        </div>
-        
-        <!-- No Projects State -->
-        <div v-else class="no-projects">
-          <div class="no-projects-icon">🏠</div>
-          <p>You don't have any projects yet.</p>
-          <button @click="showAddProjectModal = true" class="add-first-project-btn">
-            Join Your First Project
-          </button>
+
+          <!-- Smart Mirror Integration Section -->
+          <div class="smart-mirror-section">
+            <div class="smart-mirror-header">
+              <div class="smart-mirror-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Smart Home</span>
+              </div>
+              <div class="smart-mirror-status">
+                <span v-if="smartMirrorStore.isProjectConnected(project.id)" class="status-badge connected">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Connected
+                </span>
+                <span v-else class="status-badge disconnected">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Not Connected
+                </span>
+              </div>
+            </div>
+
+            <div v-if="smartMirrorStore.isProjectConnected(project.id)" class="smart-mirror-connected">
+              <div class="device-summary">
+                <span class="device-count">{{ getProjectDeviceCount(project.id) }} devices</span>
+                <span class="device-types">Lights, Climate, Plugs</span>
+              </div>
+              <div class="smart-mirror-actions">
+                <button @click="goToDevices" class="control-devices-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Control Devices
+                </button>
+              </div>
+            </div>
+
+            <div v-else class="smart-mirror-disconnected">
+              <p class="disconnected-message">Connect your smart home devices to control them from this app!</p>
+              <button @click="showLoginModal(project.id)" class="connect-smart-mirror-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Connect Smart Home
+              </button>
+            </div>
+          </div>
+
+          <!-- Project Actions -->
+          <div class="project-actions">
+            <button 
+              v-if="project.id !== currentProjectId"
+              @click="switchToProject(project)"
+              class="switch-project-btn"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 7H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 3L4 7L8 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16 13L20 17L16 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Switch to Project
+            </button>
+          </div>
         </div>
       </div>
-
-      <!-- Smart Mirror Integration -->
-      <SmartMirrorConnection />
+      
+      <!-- No Projects State -->
+      <div v-else class="no-projects">
+        <div class="no-projects-icon">🏠</div>
+        <p>You don't have any projects yet.</p>
+        <button @click="showAddProjectModal = true" class="add-first-project-btn">
+          Join Your First Project
+        </button>
+      </div>
+    </div>
 
       <!-- Account Information -->
       <div class="info-section">
@@ -285,6 +353,140 @@
         </div>
       </div>
     </div>
+
+    <!-- Smart Mirror Login Modal -->
+    <Teleport to="body">
+      <div v-if="showLoginModalFlag" class="modal-overlay" @click="closeLoginModal">
+        <div class="modal-content" @click.stop>
+          <!-- Modal Header with Icon -->
+          <div class="modal-header">
+            <div class="header-content">
+              <div class="header-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 17L12 22L22 17" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="header-text">
+                <h3>Connect Smart Mirror</h3>
+                <p>Link your smart home devices to this project</p>
+              </div>
+            </div>
+            <button class="close-btn" @click="closeLoginModal" :disabled="smartMirrorStore.isConnecting">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Project Selection Card -->
+          <div class="project-selection-card">
+            <div class="project-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 22V12H15V22" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="project-details">
+              <h4>{{ userProjects.find(p => p.id === selectedProjectId)?.name || 'Selected Project' }}</h4>
+              <p>{{ userProjects.find(p => p.id === selectedProjectId)?.location || 'Location not set' }}</p>
+            </div>
+          </div>
+          
+          <!-- Login Form -->
+          <div class="modal-body">
+            <form @submit.prevent="handleLogin" class="login-form">
+              <div class="form-group">
+                <label for="email">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Email Address
+                </label>
+                <div class="input-wrapper">
+                  <input 
+                    id="email"
+                    v-model="loginForm.email" 
+                    type="email" 
+                    placeholder="Enter your Smart Mirror email"
+                    required
+                    :disabled="smartMirrorStore.isConnecting"
+                    autocomplete="email"
+                  />
+                  <div class="input-focus-indicator"></div>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="password">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="16" r="1" fill="currentColor"/>
+                    <path d="M7 11V7A5 5 0 0 1 17 7V11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Password
+                </label>
+                <div class="input-wrapper">
+                  <input 
+                    id="password"
+                    v-model="loginForm.password" 
+                    type="password" 
+                    placeholder="Enter your Smart Mirror password"
+                    required
+                    :disabled="smartMirrorStore.isConnecting"
+                    autocomplete="current-password"
+                  />
+                  <div class="input-focus-indicator"></div>
+                </div>
+              </div>
+              
+              <div v-if="smartMirrorStore.connectionError" class="error-message">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
+                  <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                {{ smartMirrorStore.connectionError }}
+              </div>
+            </form>
+          </div>
+          
+          <!-- Modal Footer -->
+          <div class="modal-footer">
+            <button 
+              @click="closeLoginModal" 
+              class="cancel-btn" 
+              :disabled="smartMirrorStore.isConnecting"
+              type="button"
+            >
+              Cancel
+            </button>
+            <button 
+              @click="handleLogin" 
+              class="connect-btn" 
+              :disabled="smartMirrorStore.isConnecting || !loginForm.email || !loginForm.password"
+              type="submit"
+            >
+              <svg v-if="smartMirrorStore.isConnecting" class="loading-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="31.416" stroke-dashoffset="31.416">
+                  <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                  <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                </circle>
+              </svg>
+              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22 11.08V12A10 10 0 1 1 5.93 5.93" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="22,4 12,14.01 9,11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span v-if="smartMirrorStore.isConnecting">Connecting...</span>
+              <span v-else>Connect Account</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -299,7 +501,6 @@ import { useProjectStore } from '../../stores/projectStore'
 import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
 import { collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { db } from '../../boot/firebase'
-import SmartMirrorConnection from '../../components/SmartMirrorConnection.vue'
 
 // Component name for ESLint
 defineOptions({
@@ -331,6 +532,14 @@ const newProject = ref({
 // Available projects from Firestore
 const availableProjects = ref([])
 const loadingAvailableProjects = ref(false)
+
+// Smart Mirror modal state
+const showLoginModalFlag = ref(false)
+const selectedProjectId = ref(null)
+const loginForm = ref({
+  email: '',
+  password: ''
+})
 
 // Computed properties
 const userProjects = computed(() => projectStore.userProjects)
@@ -500,6 +709,49 @@ const switchToProject = async (project) => {
   } catch (err) {
     console.error('Error switching project:', err)
     notificationStore.showError('Failed to switch project. Please try again.')
+  }
+}
+
+// Smart Mirror related methods
+const getProjectDeviceCount = (projectId) => {
+  const status = smartMirrorStore.getProjectConnectionStatus(projectId)
+  return status.devicesCount
+}
+
+const goToDevices = () => {
+  router.push('/smart-devices')
+}
+
+const showLoginModal = (projectId) => {
+  selectedProjectId.value = projectId
+  showLoginModalFlag.value = true
+  loginForm.value.email = ''
+  loginForm.value.password = ''
+  smartMirrorStore.clearError()
+}
+
+const closeLoginModal = () => {
+  showLoginModalFlag.value = false
+  selectedProjectId.value = null
+  loginForm.value.email = ''
+  loginForm.value.password = ''
+  smartMirrorStore.clearError()
+}
+
+const handleLogin = async () => {
+  if (!loginForm.value.email || !loginForm.value.password || !selectedProjectId.value) {
+    notificationStore.showError('Please enter both email and password')
+    return
+  }
+
+  const result = await smartMirrorStore.connect(loginForm.value.email, loginForm.value.password, selectedProjectId.value)
+  
+  if (result.success) {
+    const project = userProjects.value.find(p => p.id === selectedProjectId.value)
+    notificationStore.showSuccess(`Successfully connected Smart Mirror to ${project?.name}!`)
+    closeLoginModal()
+  } else {
+    notificationStore.showError(result.error || 'Failed to connect to Smart Mirror')
   }
 }
 
@@ -1347,6 +1599,648 @@ onMounted(() => {
   
   .info-section {
     padding: 20px;
+  }
+}
+
+/* Unified Project Cards Styles */
+.unified-projects-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.unified-project-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.unified-project-card:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.unified-project-card.current {
+  border-color: #ff6b35;
+  background: linear-gradient(135deg, #fff7f3 0%, #ffffff 100%);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.1);
+}
+
+/* Project Header */
+.project-header {
+  margin-bottom: 16px;
+}
+
+.project-main-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.project-title-section h4 {
+  margin: 0 0 2px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.3;
+}
+
+.project-title-section p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.project-status-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.project-status {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.project-status.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.current-badge {
+  background: #ff6b35;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.project-role-info {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.project-unit, .project-role {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  background: #f9fafb;
+}
+
+/* Smart Mirror Section */
+.smart-mirror-section {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 16px;
+}
+
+.smart-mirror-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.smart-mirror-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.smart-mirror-title svg {
+  color: #ff6b35;
+  width: 16px;
+  height: 16px;
+}
+
+.smart-mirror-status {
+  display: flex;
+  align-items: center;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.status-badge.connected {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.disconnected {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.smart-mirror-connected {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.device-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.device-count {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ff6b35;
+}
+
+.device-types {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.smart-mirror-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.control-devices-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ff6b35;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.control-devices-btn:hover {
+  background: #e55a2b;
+  transform: translateY(-1px);
+}
+
+.smart-mirror-disconnected {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.disconnected-message {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.connect-smart-mirror-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ff6b35;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+}
+
+.connect-smart-mirror-btn:hover {
+  background: #e55a2b;
+  transform: translateY(-1px);
+}
+
+/* Project Actions */
+.project-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.switch-project-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f9fafb;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.switch-project-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+
+/* Modal Styles (reused from SmartMirrorConnection) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+  border-radius: 24px;
+  padding: 0;
+  max-width: 480px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  margin: auto;
+  transform: none;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 32px 32px 24px 32px;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  color: white;
+  position: relative;
+}
+
+.modal-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+}
+
+.header-text h3 {
+  margin: 0 0 4px 0;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.header-text p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 12px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.close-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.project-selection-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 32px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.project-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  border-radius: 12px;
+  color: white;
+}
+
+.project-details h4 {
+  margin: 0 0 4px 0;
+  color: #1f2937;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.project-details p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.modal-body {
+  padding: 32px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 16px 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 16px;
+  font-size: 1rem;
+  font-weight: 500;
+  background: #ffffff;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #ff6b35;
+  background: #fefefe;
+  transform: translateY(-1px);
+  box-shadow: 
+    0 0 0 4px rgba(255, 107, 53, 0.1),
+    0 4px 12px rgba(255, 107, 53, 0.15);
+}
+
+.form-group input:disabled {
+  background: #f9fafb;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.input-focus-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #ff6b35, #ff8a65);
+  border-radius: 1px;
+  transform: scaleX(0);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.form-group input:focus + .input-focus-indicator {
+  transform: scaleX(1);
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  color: #dc2626;
+  padding: 16px 20px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid #fecaca;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.modal-footer {
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+  padding: 24px 32px 32px 32px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-top: 1px solid #e2e8f0;
+}
+
+.cancel-btn {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 2px solid #e5e7eb;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 100px;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.cancel-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
+.connect-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 140px;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+}
+
+.connect-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.6);
+}
+
+.connect-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .unified-project-card {
+    padding: 16px;
+  }
+  
+  .project-main-info {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .smart-mirror-connected {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .smart-mirror-actions {
+    width: 100%;
+  }
+  
+  .control-devices-btn,
+  .connect-smart-mirror-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .project-actions {
+    justify-content: center;
+  }
+  
+  .switch-project-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>
