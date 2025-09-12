@@ -176,7 +176,7 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior(to, from, savedPosition) {
+  scrollBehavior() {
     // Always scroll to top when navigating between pages
     return { top: 0 }
   }
