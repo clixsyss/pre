@@ -47,6 +47,9 @@
       </div> -->
     </div>
 
+    <!-- Smart Device Widget -->
+    <SmartDeviceWidget />
+
     <!-- Quick Actions -->
     <div class="quick-actions-section">
       <h2 class="section-title">Quick Actions</h2>
@@ -224,6 +227,7 @@ import { useProjectStore } from '../../stores/projectStore'
 import { useAcademiesStore } from '../../stores/academyStore'
 import UpcomingBookingsCard from '../../components/UpcomingBookingsCard.vue'
 import ModernNewsFeed from '../../components/ModernNewsFeed.vue'
+import SmartDeviceWidget from '../../components/SmartDeviceWidget.vue'
 import sampleDataService from '../../services/sampleDataService.js'
 import notificationService from '../../services/notificationService.js'
 

@@ -159,6 +159,12 @@ const routes = [
     component: Profile,
     meta: { requiresAuth: true }
   },
+  {
+    path: '/smart-devices',
+    name: 'SmartDevices',
+    component: () => import('../pages/auth/SmartDevices.vue'),
+    meta: { requiresAuth: true }
+  },
   
   // Catch all route - redirect to onboarding
   {

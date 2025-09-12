@@ -121,6 +121,9 @@
         </div>
       </div>
 
+      <!-- Smart Mirror Integration -->
+      <SmartMirrorConnection />
+
       <!-- Account Information -->
       <div class="info-section">
         <h3 class="section-title">
@@ -295,6 +298,7 @@ import { useNotificationStore } from '../../stores/notifications'
 import { useProjectStore } from '../../stores/projectStore'
 import { collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { db } from '../../boot/firebase'
+import SmartMirrorConnection from '../../components/SmartMirrorConnection.vue'
 
 // Component name for ESLint
 defineOptions({
