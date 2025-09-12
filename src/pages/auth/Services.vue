@@ -64,6 +64,18 @@
         <span class="service-name">My Bookings</span>
       </div>
 
+      <!-- Smart Devices -->
+      <div class="service-card" @click="navigateToSmartDevices">
+        <div class="service-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 21C9 21.5523 9.44772 22 10 22H14C14.5523 22 15 21.5523 15 21V20H9V21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="service-name">Smart Devices</span>
+      </div>
+
       <!-- Equipment Rental -->
       <div class="service-card coming-soon">
         <div class="service-icon">
@@ -136,6 +148,10 @@ const navigateToMyBookings = () => {
 
 const navigateToCalendar = () => {
   router.push('/calendar');
+};
+
+const navigateToSmartDevices = () => {
+  router.push('/smart-devices');
 };
 </script>
 

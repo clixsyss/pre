@@ -905,7 +905,9 @@ onMounted(async () => {
 
 .device-controls {
   display: flex;
-  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-direction: row-reverse;
   gap: 12px;
 }
 
@@ -1062,19 +1064,40 @@ onMounted(async () => {
 }
 
 .mode-select {
-  padding: 8px 12px;
-  border: 1px solid #e1e5e9;
-  border-radius: 6px;
-  font-size: 0.8rem;
+  padding: 10px 16px;
+  border: 2px solid #e8e8e8;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
   background: white;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+  color: #333;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.mode-select:hover {
+  border-color: #ff6b35;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
+  transform: translateY(-1px);
 }
 
 .mode-select:focus {
   outline: none;
   border-color: #ff6b35;
-  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1), 0 4px 12px rgba(255, 107, 53, 0.2);
+  transform: translateY(-1px);
+}
+
+.mode-select:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(255, 107, 53, 0.2);
 }
 
 .climate-controls {

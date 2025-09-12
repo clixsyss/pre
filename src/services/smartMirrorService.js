@@ -108,37 +108,43 @@ class SmartMirrorService {
   }
 
   // Switch to a different project's connection
-  switchToProject(projectId) {
-    const connection = this.projectConnections.get(projectId)
-    
-    // Clean up existing listeners first
-    this.cleanup()
-    
-    if (connection) {
-      // Project has Smart Mirror connection - restore its data
-      this.currentUser = connection.user
-      this.userProfile = connection.userProfile
-      this.rooms = connection.rooms
-      this.devices = connection.devices
-      this.isConnected = connection.isConnected
-      this.currentProjectId = projectId
+  async switchToProject(projectId) {
+    try {
+      const connection = this.projectConnections.get(projectId)
       
-      // Set up real-time listeners for this project
-      this.setupRealtimeListeners()
+      // Clean up existing listeners first
+      this.cleanup()
       
-      return { success: true }
-    } else {
-      // Project has no Smart Mirror connection - clear all data
-      this.currentUser = null
-      this.userProfile = null
-      this.rooms = []
-      this.devices = []
-      this.isConnected = false
-      this.currentProjectId = projectId
-      
-      console.log(`Switched to project ${projectId} - no Smart Mirror connection, cleared data`)
-      
-      return { success: true }
+      if (connection) {
+        // Project has Smart Mirror connection - restore its data
+        this.currentUser = connection.user
+        this.userProfile = connection.userProfile
+        this.rooms = connection.rooms
+        this.devices = connection.devices
+        this.isConnected = connection.isConnected
+        this.currentProjectId = projectId
+        
+        // Set up real-time listeners for this project
+        this.setupRealtimeListeners()
+        
+        console.log(`Switched to project ${projectId} - Smart Mirror connected`)
+        return { success: true }
+      } else {
+        // Project has no Smart Mirror connection - clear all data
+        this.currentUser = null
+        this.userProfile = null
+        this.rooms = []
+        this.devices = []
+        this.isConnected = false
+        this.currentProjectId = projectId
+        
+        console.log(`Switched to project ${projectId} - no Smart Mirror connection, cleared data`)
+        
+        return { success: true }
+      }
+    } catch (error) {
+      console.error('Error switching to project:', error)
+      return { success: false, error: error.message }
     }
   }
 

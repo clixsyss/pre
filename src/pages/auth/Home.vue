@@ -80,6 +80,20 @@
           </div>
         </button>
 
+        <button class="action-card" @click="navigateToSmartDevices">
+          <div class="action-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 21C9 21.5523 9.44772 22 10 22H14C14.5523 22 15 21.5523 15 21V20H9V21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="action-content">
+            <h3>Smart Devices</h3>
+            <p>Control devices</p>
+          </div>
+        </button>
+
         <button class="action-card" @click="navigateToCalendar">
           <div class="action-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -219,7 +233,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth } from '../../boot/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -385,6 +399,10 @@ const navigateToStores = () => {
   router.push('/stores-shopping?tab=stores')
 }
 
+const navigateToSmartDevices = () => {
+  router.push('/smart-devices')
+}
+
 // Format timestamp for display
 // const formatTimestamp = (timestamp) => {
 //   if (!timestamp) return 'Just now'
@@ -413,23 +431,26 @@ const navigateToStores = () => {
 // Project switching methods
 const switchToProject = async (project) => {
   try {
+    // Show loading state
+    projectStore.setLoading(true)
+    
+    // Switch project in store
     projectStore.selectProject(project)
     
     // Switch Smart Mirror data to the new project
     await smartMirrorStore.switchToProject(project.id)
     
+    // Fetch user bookings for the new project
+    if (user.value?.uid) {
+      await academiesStore.fetchUserBookings(user.value.uid, project.id)
+    }
+    
     showProjectSwitcher.value = false
-
-    // Show success message
-    // You can add a notification system here if you have one
-
-    // Refresh the page to show new project data
-    setTimeout(() => {
-      window.location.reload()
-    }, 500)
+    projectStore.setLoading(false)
 
   } catch (err) {
     console.error('Error switching project:', err)
+    projectStore.setLoading(false)
   }
 }
 
@@ -486,6 +507,34 @@ onMounted(async () => {
       // Fetch notifications
       await fetchNotifications()
     }
+  })
+
+  // Listen for project changes from MainLayout
+  const handleProjectChange = async (event) => {
+    const { newProject } = event.detail
+    console.log('Project changed in Home.vue, refreshing data for:', newProject.name)
+    
+    try {
+      // Fetch user bookings for the new project
+      if (user.value?.uid && newProject?.id) {
+        await academiesStore.fetchUserBookings(user.value.uid, newProject.id)
+        console.log('User bookings refreshed for new project')
+      }
+      
+      // Refresh notifications for the new project
+      await fetchNotifications()
+      console.log('Notifications refreshed for new project')
+    } catch (error) {
+      console.error('Error refreshing data for new project:', error)
+    }
+  }
+
+  // Add event listener for project changes
+  window.addEventListener('projectChanged', handleProjectChange)
+  
+  // Cleanup event listener on unmount
+  onUnmounted(() => {
+    window.removeEventListener('projectChanged', handleProjectChange)
   })
 })
 </script>

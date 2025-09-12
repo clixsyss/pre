@@ -270,6 +270,10 @@ export const useProjectStore = defineStore('project', () => {
     localStorage.removeItem('selectedProjectTimestamp')
   }
 
+  const setLoading = (isLoading) => {
+    loading.value = isLoading
+  }
+
   const debugState = () => {
     console.log('=== PROJECT STORE DEBUG ===')
     console.log('User Projects Count:', userProjects.value.length)
@@ -303,6 +307,7 @@ export const useProjectStore = defineStore('project', () => {
     validateSavedProject,
     clearSelectedProject,
     resetStore,
+    setLoading,
     debugState
   }
 })

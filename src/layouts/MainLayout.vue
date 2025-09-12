@@ -77,8 +77,10 @@
                   v-else 
                   @click="switchToProject(project)" 
                   class="switch-btn"
+                  :disabled="projectStore.loading"
                 >
-                  Switch
+                  <div v-if="projectStore.loading" class="loading-spinner"></div>
+                  <span v-else>Switch</span>
                 </button>
               </div>
             </div>
@@ -155,7 +157,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { useSmartMirrorStore } from '../stores/smartMirrorStore'
@@ -181,14 +183,25 @@ const currentProjectId = computed(() => currentProject.value?.id)
 
 // Methods
 const switchToProject = async (project) => {
-  projectStore.selectProject(project)
-  
-  // Switch Smart Mirror data to the new project
-  await smartMirrorStore.switchToProject(project.id)
-  
-  showProjectSwitcher.value = false
-  // Navigate to home page with the new project selected
-  router.push('/home')
+  try {
+    // Show loading state
+    projectStore.setLoading(true)
+    
+    // Switch project in store
+    projectStore.selectProject(project)
+    
+    // Switch Smart Mirror data to the new project
+    await smartMirrorStore.switchToProject(project.id)
+    
+    showProjectSwitcher.value = false
+    projectStore.setLoading(false)
+    
+    // No redirect - stay on current page and let reactive data update
+    console.log('Project switched successfully to:', project.name)
+  } catch (err) {
+    console.error('Error switching project:', err)
+    projectStore.setLoading(false)
+  }
 }
 
 const goToProjectSelection = () => {
@@ -220,6 +233,25 @@ const isActiveTab = (tabName) => {
       return false
   }
 }
+
+// Watch for project changes and trigger data refresh
+watch(
+  () => projectStore.selectedProject,
+  async (newProject, oldProject) => {
+    if (newProject && newProject.id !== oldProject?.id) {
+      console.log('Project changed, triggering data refresh...')
+      
+      // Force a small delay to ensure all stores are updated
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Emit a custom event that child components can listen to
+      window.dispatchEvent(new CustomEvent('projectChanged', {
+        detail: { newProject, oldProject }
+      }))
+    }
+  },
+  { deep: true }
+)
 
 // Load user projects when component mounts
 onMounted(async () => {
@@ -656,10 +688,30 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
-.switch-btn:hover {
+.switch-btn:hover:not(:disabled) {
   background: #e55a2b;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.switch-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .modal-footer {
