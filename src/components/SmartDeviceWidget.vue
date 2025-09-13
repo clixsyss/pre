@@ -637,11 +637,6 @@ const isDeviceLoading = (deviceId) => {
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
 
-/* Connected State */
-.connected-state {
-  padding: 20px;
-}
-
 /* Accordion Content */
 .accordion-content {
   max-height: 0;

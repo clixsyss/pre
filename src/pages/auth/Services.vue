@@ -77,7 +77,7 @@
       </div>
 
       <!-- Equipment Rental -->
-      <div class="service-card coming-soon">
+      <!-- <div class="service-card coming-soon">
         <div class="service-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -85,10 +85,10 @@
         </div>
         <span class="service-name">Equipment Rental</span>
         <span class="coming-soon-badge">Coming Soon</span>
-      </div>
+      </div> -->
 
       <!-- Event Planning -->
-      <div class="service-card coming-soon">
+      <!-- <div class="service-card coming-soon">
         <div class="service-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -101,10 +101,10 @@
         </div>
         <span class="service-name">Event Planning</span>
         <span class="coming-soon-badge">Coming Soon</span>
-      </div>
+      </div> -->
 
       <!-- Membership Plans -->
-      <div class="service-card coming-soon">
+      <!-- <div class="service-card coming-soon">
         <div class="service-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -115,7 +115,7 @@
         </div>
         <span class="service-name">Membership Plans</span>
         <span class="coming-soon-badge">Coming Soon</span>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
