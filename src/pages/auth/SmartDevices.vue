@@ -654,6 +654,9 @@ onActivated(async () => {
 
 .header-content {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   min-width: 0;
 }
 
@@ -663,6 +666,7 @@ onActivated(async () => {
   color: #1a1a1a;
   margin: 0 0 4px 0;
   letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
 .header-status {
