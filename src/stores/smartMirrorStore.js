@@ -80,9 +80,6 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
           }
         })
         
-        // Set up auth state listener
-        smartMirrorService.setupAuthListener()
-        
         return { success: true }
       }
     } catch (error) {
@@ -196,7 +193,7 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
 
   const switchToProject = async (projectId) => {
     try {
-      const result = smartMirrorService.switchToProject(projectId)
+      const result = await smartMirrorService.switchToProject(projectId)
       
       if (result.success) {
         // Update store state with service state
@@ -237,6 +234,11 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
     const storeConnected = projectConnections.value.has(projectId)
     return serviceConnected || storeConnected
   }
+
+  const needsReAuthentication = (projectId) => {
+    return smartMirrorService.needsReAuthentication(projectId)
+  }
+
 
   const getProjectConnectionStatus = (projectId) => {
     return smartMirrorService.getProjectConnectionStatus(projectId)
@@ -386,6 +388,7 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
     disconnect,
     switchToProject,
     isProjectConnected,
+    needsReAuthentication,
     getProjectConnectionStatus,
     getProjectDevices,
     refreshDevices,

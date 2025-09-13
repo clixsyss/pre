@@ -137,6 +137,13 @@
               <div class="device-summary">
                 <span class="device-count">{{ getProjectDeviceCount(project.id) }} devices</span>
                 <span class="device-types">Lights, Climate, Plugs</span>
+                <div v-if="smartMirrorStore.needsReAuthentication(project.id)" class="reauth-indicator">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Stored data
+                </div>
               </div>
               <div class="smart-mirror-actions">
                 <button @click="goToDevices" class="control-devices-btn">
@@ -146,6 +153,16 @@
                     <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                   Control Devices
+                </button>
+                <button @click="disconnectSmartMirror(project.id)" class="disconnect-btn" :disabled="disconnectingProject === project.id">
+                  <svg v-if="disconnectingProject === project.id" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="spinning">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z" fill="currentColor"/>
+                  </svg>
+                  <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ disconnectingProject === project.id ? 'Disconnecting...' : 'Disconnect' }}
                 </button>
               </div>
             </div>
@@ -395,8 +412,8 @@
                 </svg>
               </div>
               <div class="header-text">
-                <h3>Connect Smart Mirror</h3>
-                <p>Link your smart home devices to this project</p>
+                <h3>Connect Smart Home Account</h3>
+                <p>Link your smart home devices to {{ userProjects.find(p => p.id === selectedProjectId)?.name || 'this project' }}</p>
               </div>
             </div>
             <button class="close-btn" @click="closeLoginModal" :disabled="smartMirrorStore.isConnecting">
@@ -418,6 +435,12 @@
             <div class="project-details">
               <h4>{{ userProjects.find(p => p.id === selectedProjectId)?.name || 'Selected Project' }}</h4>
               <p>{{ userProjects.find(p => p.id === selectedProjectId)?.location || 'Location not set' }}</p>
+              <div v-if="smartMirrorStore.isProjectConnected(selectedProjectId)" class="existing-connection">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Already connected to a different account</span>
+              </div>
             </div>
           </div>
           
@@ -661,6 +684,9 @@ const selectedDevices = ref({
 })
 const savingSettings = ref(false)
 
+// Smart Mirror disconnect state
+const disconnectingProject = ref(null)
+
 // Computed properties
 const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => projectStore.selectedProject?.id)
@@ -845,6 +871,13 @@ const switchToProject = async (project) => {
   try {
     projectStore.selectProject(project)
     
+    // Check if we need to re-authenticate for a different smart home account
+    if (smartMirrorStore.needsReAuthentication(project.id)) {
+      // Show login modal for this project
+      showLoginModal(project.id)
+      return
+    }
+    
     // Switch Smart Mirror data to the new project
     await smartMirrorStore.switchToProject(project.id)
     
@@ -901,6 +934,26 @@ const handleLogin = async () => {
     closeLoginModal()
   } else {
     notificationStore.showError(result.error || 'Failed to connect to Smart Mirror')
+  }
+}
+
+const disconnectSmartMirror = async (projectId) => {
+  try {
+    disconnectingProject.value = projectId
+    
+    const result = await smartMirrorStore.disconnect(projectId)
+    
+    if (result.success) {
+      const project = userProjects.value.find(p => p.id === projectId)
+      notificationStore.showSuccess(`Successfully disconnected Smart Mirror from ${project?.name}`)
+    } else {
+      notificationStore.showError(result.error || 'Failed to disconnect from Smart Mirror')
+    }
+  } catch (error) {
+    console.error('Error disconnecting Smart Mirror:', error)
+    notificationStore.showError('Failed to disconnect from Smart Mirror. Please try again.')
+  } finally {
+    disconnectingProject.value = null
   }
 }
 
@@ -1410,8 +1463,13 @@ onMounted(() => {
 
 .project-details {
   display: flex;
-  gap: 12px;
   flex-wrap: wrap;
+  flex-direction: column;
+}
+
+.project-details h4{
+  line-height: 1.2;
+  margin: 0;
 }
 
 .project-unit,
@@ -2195,6 +2253,72 @@ onMounted(() => {
   transform: translateY(-1px);
 }
 
+.disconnect-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.disconnect-btn:hover:not(:disabled) {
+  background: #b91c1c;
+  transform: translateY(-1px);
+}
+
+.disconnect-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+.reauth-warning {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #92400e;
+  font-weight: 500;
+}
+
+.reauth-warning svg {
+  color: #f59e0b;
+}
+
+.reauth-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 3px 6px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.reauth-indicator svg {
+  color: #6b7280;
+}
+
 .smart-mirror-disconnected {
   display: flex;
   flex-direction: column;
@@ -2423,6 +2547,24 @@ onMounted(() => {
   color: #6b7280;
   font-size: 0.9rem;
   font-weight: 500;
+}
+
+.existing-connection {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #92400e;
+  font-weight: 500;
+}
+
+.existing-connection svg {
+  color: #f59e0b;
 }
 
 .modal-body {

@@ -16,13 +16,16 @@ import { smartMirrorAuth, smartMirrorDb } from '../boot/smartMirrorFirebase'
 
 class SmartMirrorService {
   constructor() {
+    // Global state for current session
     this.currentUser = null
     this.userProfile = null
     this.rooms = []
     this.devices = []
-    this.listeners = []
     this.isConnected = false
     this.currentProjectId = null
+    this.listeners = []
+    
+    // Per-project connections
     this.projectConnections = new Map() // Store connections per project
     this.onDevicesUpdate = null // Callback for device updates
   }
@@ -30,34 +33,42 @@ class SmartMirrorService {
   // Authentication methods
   async login(email, password, projectId) {
     try {
+      console.log(`Connecting project ${projectId} to smart home account ${email}`)
+      
+      // Authenticate with Firebase
       const result = await signInWithEmailAndPassword(smartMirrorAuth, email, password)
-      this.currentUser = result.user
-      this.currentProjectId = projectId
       
-      // Fetch user profile
-      await this.fetchUserProfile()
+      // Fetch user profile and devices for this specific project
+      const userProfile = await this.fetchUserProfileForUser(result.user)
+      const { rooms, devices } = await this.fetchDevicesForUser(result.user)
       
-      // Fetch devices
-      await this.fetchDevices()
-      
-  // Store connection for this project with project-specific data
-  this.projectConnections.set(projectId, {
-    user: result.user,
-    userProfile: this.userProfile,
-    rooms: this.rooms,
-    devices: this.devices,
-    isConnected: true,
-    projectId: projectId,
-    lastUpdated: Date.now()
-  })
+      // Store connection for this project with project-specific data
+      this.projectConnections.set(projectId, {
+        user: result.user,
+        userProfile: userProfile,
+        rooms: rooms,
+        devices: devices,
+        isConnected: true,
+        projectId: projectId,
+        email: email,
+        lastUpdated: Date.now()
+      })
       
       // Save to localStorage for persistence
       this.saveProjectConnections()
       
+      // Set current project and update global state
+      this.currentProjectId = projectId
+      this.currentUser = result.user
+      this.userProfile = userProfile
+      this.rooms = rooms
+      this.devices = devices
+      this.isConnected = true
+      
       // Set up real-time listeners for this project
       this.setupRealtimeListeners()
       
-      this.isConnected = true
+      console.log(`Successfully connected project ${projectId} to smart home account ${email}`)
       return { success: true, user: result.user }
     } catch (error) {
       console.error('Smart Mirror login error:', error)
@@ -116,7 +127,16 @@ class SmartMirrorService {
       this.cleanup()
       
       if (connection) {
-        // Project has Smart Mirror connection - restore its data
+        // Check if we need to re-authenticate with a different account
+        const currentUserEmail = smartMirrorAuth.currentUser?.email
+        const connectionEmail = connection.email
+        
+        if (currentUserEmail !== connectionEmail) {
+          console.log(`Switching from ${currentUserEmail} to ${connectionEmail} for project ${projectId}`)
+          // For now, we'll show stored data and let the user re-authenticate if they want fresh data
+        }
+        
+        // Project has Smart Mirror connection - restore its stored data
         this.currentUser = connection.user
         this.userProfile = connection.userProfile
         this.rooms = connection.rooms
@@ -124,10 +144,14 @@ class SmartMirrorService {
         this.isConnected = connection.isConnected
         this.currentProjectId = projectId
         
-        // Set up real-time listeners for this project
-        this.setupRealtimeListeners()
+        // Only set up real-time listeners if we're authenticated with the correct account
+        if (currentUserEmail === connectionEmail) {
+          this.setupRealtimeListeners()
+          console.log(`Switched to project ${projectId} - Smart Mirror connected with real-time updates`)
+        } else {
+          console.log(`Switched to project ${projectId} - Smart Mirror connected (stored data only, no real-time updates)`)
+        }
         
-        console.log(`Switched to project ${projectId} - Smart Mirror connected`)
         return { success: true }
       } else {
         // Project has no Smart Mirror connection - clear all data
@@ -151,6 +175,29 @@ class SmartMirrorService {
   // Check if a project has Smart Mirror connection
   isProjectConnected(projectId) {
     return this.projectConnections.has(projectId)
+  }
+
+  // Check if a project needs re-authentication for real-time updates
+  needsReAuthentication(projectId) {
+    const connection = this.projectConnections.get(projectId)
+    if (!connection || !connection.email) return false
+    
+    const currentUserEmail = smartMirrorAuth.currentUser?.email
+    return currentUserEmail !== connection.email
+  }
+
+
+
+  // Re-authenticate with stored credentials for a project
+  async reAuthenticateForProject(projectId) {
+    const connection = this.projectConnections.get(projectId)
+    if (!connection || !connection.email) {
+      throw new Error('No stored credentials found for this project')
+    }
+
+    // For security reasons, we can't store passwords in localStorage
+    // The user will need to re-enter their password
+    throw new Error('Please re-enter your password to switch to this project')
   }
 
   // Get connection status for a specific project
@@ -272,16 +319,19 @@ class SmartMirrorService {
         console.log('Parsed connections:', connections)
         
         for (const [projectId, connectionData] of Object.entries(connections)) {
-          if (connectionData.isConnected && connectionData.userId === this.currentUser?.uid) {
-            // Restore connection data
+          if (connectionData.isConnected) {
+            // Restore connection data - now we check by email instead of userId
+            // This allows different projects to have different smart home accounts
             this.projectConnections.set(projectId, {
-              user: this.currentUser,
+              user: this.currentUser, // This will be updated when we switch projects
               userProfile: connectionData.userProfile,
               rooms: connectionData.rooms || [],
               devices: connectionData.devices || [],
-              isConnected: true
+              isConnected: true,
+              email: connectionData.email, // Store the email for this project
+              projectId: projectId
             })
-            console.log(`Restored connection for project ${projectId}`)
+            console.log(`Restored connection for project ${projectId} with email ${connectionData.email}`)
           }
         }
       }
@@ -301,10 +351,11 @@ class SmartMirrorService {
         if (connection.isConnected) {
           connectionsToSave[projectId] = {
             isConnected: true,
-            userId: this.currentUser?.uid,
+            userId: connection.user?.uid,
             userProfile: connection.userProfile,
             rooms: connection.rooms,
             devices: connection.devices,
+            email: connection.email, // Store email for this project
             lastUpdated: Date.now()
           }
         }
@@ -358,6 +409,30 @@ class SmartMirrorService {
     }
   }
 
+  // Fetch user profile for a specific user
+  async fetchUserProfileForUser(user) {
+    if (!user) return null
+
+    try {
+      const userDoc = await getDoc(doc(smartMirrorDb, 'users', user.uid))
+      if (userDoc.exists()) {
+        const userProfile = userDoc.data()
+        
+        // Check if user is approved
+        if (!userProfile.approved && userProfile.role !== 'admin') {
+          throw new Error('User account is not approved')
+        }
+        
+        return userProfile
+      } else {
+        throw new Error('User profile not found')
+      }
+    } catch (error) {
+      console.error('Error fetching user profile for user:', error)
+      throw error
+    }
+  }
+
   // Fetch devices from Smart Mirror database
   async fetchDevices() {
     if (!this.currentUser) return []
@@ -403,12 +478,60 @@ class SmartMirrorService {
       this.rooms = fetchedRooms
       this.devices = allDevices
 
-      // Set up real-time listeners
-      this.setupRealtimeListeners()
-
       return { rooms: fetchedRooms, devices: allDevices }
     } catch (error) {
       console.error('Error fetching devices:', error)
+      throw error
+    }
+  }
+
+  // Fetch devices for a specific user
+  async fetchDevicesForUser(user) {
+    if (!user) return { rooms: [], devices: [] }
+
+    try {
+      console.log('Fetching devices for user:', user.uid)
+      
+      // Fetch rooms using hierarchical structure
+      const roomsQuery = query(collection(smartMirrorDb, 'users', user.uid, 'rooms'))
+      const querySnapshot = await getDocs(roomsQuery)
+
+      const fetchedRooms = []
+      const allDevices = []
+
+      for (const roomDoc of querySnapshot.docs) {
+        const roomData = {
+          ...roomDoc.data(),
+          id: roomDoc.id,
+          devices: []
+        }
+        
+        // Debug: Log room data to see what fields are available
+        console.log('Room data for user', user.uid, ':', roomData)
+
+        // Fetch devices for this room
+        const devicesQuery = query(
+          collection(smartMirrorDb, 'users', user.uid, 'rooms', roomDoc.id, 'devices')
+        )
+        const devicesSnapshot = await getDocs(devicesQuery)
+
+        roomData.devices = devicesSnapshot.docs.map((deviceDoc) => ({
+          id: deviceDoc.id,
+          roomId: roomDoc.id,
+          roomName: roomData.name || roomData.roomName || roomData.title || roomData.displayName || 'Unknown Room',
+          ...deviceDoc.data()
+        }))
+
+        allDevices.push(...roomData.devices)
+        fetchedRooms.push(roomData)
+      }
+
+      console.log('Fetched devices for user', user.uid, ':', allDevices.length)
+      console.log('Fetched rooms for user', user.uid, ':', fetchedRooms.length)
+
+      return { rooms: fetchedRooms, devices: allDevices }
+    } catch (error) {
+      console.error('Error fetching devices for user:', error)
       throw error
     }
   }
@@ -433,7 +556,7 @@ class SmartMirrorService {
         }
         
         // Debug: Log room data in real-time listener
-        console.log('Real-time room data:', roomData)
+        console.log('Real-time room data for project', this.currentProjectId, ':', roomData)
 
         // Get devices for this room with real-time listener
         const devicesRef = collection(smartMirrorDb, 'users', this.currentUser.uid, 'rooms', roomDoc.id, 'devices')
@@ -502,6 +625,93 @@ class SmartMirrorService {
       }
     }, (error) => {
       console.error('Firebase listener error for rooms:', error)
+    })
+
+    this.listeners.push(roomsUnsubscribe)
+  }
+
+  // Set up real-time listeners for device updates for a specific project
+  setupRealtimeListenersForProject(projectId) {
+    const connection = this.projectConnections.get(projectId)
+    if (!connection || !connection.user) return
+
+    // Clean up existing listeners
+    this.cleanup()
+
+    // Set up real-time listener for rooms
+    const roomsRef = collection(smartMirrorDb, 'users', connection.user.uid, 'rooms')
+    const roomsUnsubscribe = onSnapshot(roomsRef, async (roomsSnapshot) => {
+      const updatedRooms = []
+      
+      for (const roomDoc of roomsSnapshot.docs) {
+        const roomData = {
+          ...roomDoc.data(),
+          id: roomDoc.id,
+          devices: []
+        }
+        
+        // Debug: Log room data in real-time listener
+        console.log('Real-time room data for project', projectId, ':', roomData)
+
+        // Get devices for this room with real-time listener
+        const devicesRef = collection(smartMirrorDb, 'users', connection.user.uid, 'rooms', roomDoc.id, 'devices')
+        
+        // Immediate fetch for current state
+        const devicesQuery = query(devicesRef)
+        const devicesSnapshot = await getDocs(devicesQuery)
+        roomData.devices = devicesSnapshot.docs.map((deviceDoc) => ({
+          id: deviceDoc.id,
+          roomId: roomDoc.id,
+          roomName: roomData.name || roomData.roomName || roomData.title || roomData.displayName || 'Unknown Room',
+          ...deviceDoc.data()
+        }))
+
+        // Set up real-time listener for devices in this room
+        const devicesUnsubscribe = onSnapshot(devicesRef, (devicesSnapshot) => {
+          // Update devices for this specific room
+          const updatedDevices = devicesSnapshot.docs.map((deviceDoc) => ({
+            id: deviceDoc.id,
+            roomId: roomDoc.id,
+            roomName: roomData.name || roomData.roomName || roomData.title || roomData.displayName || 'Unknown Room',
+            ...deviceDoc.data()
+          }))
+          
+          // Find and update the room in the current rooms array
+          const roomIndex = updatedRooms.findIndex(r => r.id === roomDoc.id)
+          if (roomIndex !== -1) {
+            updatedRooms[roomIndex].devices = updatedDevices
+          }
+          
+          // Update the connection data
+          connection.rooms = updatedRooms
+          connection.devices = updatedRooms.flatMap(room => room.devices || [])
+          connection.lastUpdated = Date.now()
+          
+          // Update the project connections map
+          this.projectConnections.set(projectId, connection)
+
+          // Call the update callback if it exists
+          if (this.onDevicesUpdate) {
+            this.onDevicesUpdate(updatedRooms, connection.devices, projectId)
+          }
+        })
+
+        this.listeners.push(devicesUnsubscribe)
+        updatedRooms.push(roomData)
+      }
+
+      // Update the connection data
+      connection.rooms = updatedRooms
+      connection.devices = updatedRooms.flatMap(room => room.devices || [])
+      connection.lastUpdated = Date.now()
+      
+      // Update the project connections map
+      this.projectConnections.set(projectId, connection)
+
+      // Call the update callback if it exists
+      if (this.onDevicesUpdate) {
+        this.onDevicesUpdate(updatedRooms, connection.devices, projectId)
+      }
     })
 
     this.listeners.push(roomsUnsubscribe)

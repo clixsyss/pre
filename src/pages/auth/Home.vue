@@ -440,6 +440,28 @@ const switchToProject = async (project) => {
     // Switch Smart Mirror data to the new project
     await smartMirrorStore.switchToProject(project.id)
     
+    // Load device settings for the new project
+    if (smartMirrorStore.isProjectConnected(project.id)) {
+      const savedSettings = localStorage.getItem(`deviceSettings_${project.id}`)
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings)
+        // Check if we need to migrate old categorization
+        if (parsedSettings.fans || parsedSettings.other) {
+          console.log('Migrating old device categorization for project:', project.id)
+          // Clear old settings and let them be recategorized
+          localStorage.removeItem(`deviceSettings_${project.id}`)
+          smartMirrorStore.setSelectedDevices({})
+        } else {
+          smartMirrorStore.setSelectedDevices(parsedSettings)
+          console.log('Loaded selected homepage devices for project:', project.id, parsedSettings)
+        }
+      } else {
+        // No saved settings for this project, clear selected devices
+        smartMirrorStore.setSelectedDevices({})
+        console.log('No saved device settings for project:', project.id)
+      }
+    }
+    
     // Fetch user bookings for the new project
     if (user.value?.uid) {
       await academiesStore.fetchUserBookings(user.value.uid, project.id)
@@ -515,6 +537,28 @@ onMounted(async () => {
     console.log('Project changed in Home.vue, refreshing data for:', newProject.name)
     
     try {
+      // Load device settings for the new project
+      if (smartMirrorStore.isProjectConnected(newProject.id)) {
+        const savedSettings = localStorage.getItem(`deviceSettings_${newProject.id}`)
+        if (savedSettings) {
+          const parsedSettings = JSON.parse(savedSettings)
+          // Check if we need to migrate old categorization
+          if (parsedSettings.fans || parsedSettings.other) {
+            console.log('Migrating old device categorization for project:', newProject.id)
+            // Clear old settings and let them be recategorized
+            localStorage.removeItem(`deviceSettings_${newProject.id}`)
+            smartMirrorStore.setSelectedDevices({})
+          } else {
+            smartMirrorStore.setSelectedDevices(parsedSettings)
+            console.log('Loaded selected homepage devices for project:', newProject.id, parsedSettings)
+          }
+        } else {
+          // No saved settings for this project, clear selected devices
+          smartMirrorStore.setSelectedDevices({})
+          console.log('No saved device settings for project:', newProject.id)
+        }
+      }
+      
       // Fetch user bookings for the new project
       if (user.value?.uid && newProject?.id) {
         await academiesStore.fetchUserBookings(user.value.uid, newProject.id)
