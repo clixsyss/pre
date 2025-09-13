@@ -174,7 +174,8 @@ class SmartMirrorService {
 
   // Check if a project has Smart Mirror connection
   isProjectConnected(projectId) {
-    return this.projectConnections.has(projectId)
+    const connection = this.projectConnections.get(projectId)
+    return connection && connection.isConnected && connection.devices && connection.devices.length > 0
   }
 
   // Re-authenticate with stored credentials for a project

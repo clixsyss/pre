@@ -216,10 +216,10 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
   }
 
   const isProjectConnected = (projectId) => {
-    // Check both service and store state
-    const serviceConnected = smartMirrorService.isProjectConnected(projectId)
-    const storeConnected = projectConnections.value.has(projectId)
-    return serviceConnected || storeConnected
+    // Check if project has a connection AND if we have devices loaded for it
+    const hasConnection = projectConnections.value.has(projectId)
+    const hasDevices = hasConnection && devices.value.length > 0 && currentProjectId.value === projectId
+    return hasConnection && hasDevices
   }
 
   const getProjectConnectionStatus = (projectId) => {

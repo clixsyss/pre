@@ -317,7 +317,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, onActivated } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
 import { useNotificationStore } from '../../stores/notifications'
 import { useProjectStore } from '../../stores/projectStore'
@@ -327,7 +327,6 @@ defineOptions({
   name: 'SmartDevicesPage'
 })
 
-const router = useRouter()
 const route = useRoute()
 const smartMirrorStore = useSmartMirrorStore()
 const notificationStore = useNotificationStore()
@@ -336,7 +335,11 @@ const projectStore = useProjectStore()
 // Check if current project is connected to smart home
 const isCurrentProjectConnected = computed(() => {
   const currentProjectId = projectStore.selectedProject?.id
-  return currentProjectId ? smartMirrorStore.isProjectConnected(currentProjectId) : false
+  if (!currentProjectId) return false
+  
+  // Check if we have devices loaded for the current project
+  const hasDevices = smartMirrorStore.devices.length > 0 && smartMirrorStore.currentProjectId === currentProjectId
+  return hasDevices
 })
 
 // Reactive state
@@ -501,15 +504,26 @@ const togglePlug = async (plug) => {
 
 // Method to load devices for current project
 const loadDevicesForCurrentProject = async () => {
-  if (isCurrentProjectConnected.value) {
+  const currentProjectId = projectStore.selectedProject?.id
+  
+  console.log('SmartDevices: Loading devices for project:', currentProjectId)
+  console.log('SmartDevices: Current project ID in store:', smartMirrorStore.currentProjectId)
+  console.log('SmartDevices: Devices count:', smartMirrorStore.devices.length)
+  console.log('SmartDevices: Is connected:', smartMirrorStore.isConnected)
+  
+  // Check if we have devices for the current project
+  const hasDevices = smartMirrorStore.devices.length > 0 && smartMirrorStore.currentProjectId === currentProjectId
+  
+  if (hasDevices) {
     loading.value = true
     try {
-      await smartMirrorStore.refreshDevices()
       // Select first room if available
       if (smartMirrorStore.rooms.length > 0) {
         selectedRoomId.value = smartMirrorStore.rooms[0].id
       }
-    } catch {
+      console.log('SmartDevices: Devices loaded successfully:', smartMirrorStore.devices.length)
+    } catch (error) {
+      console.error('SmartDevices: Error loading devices:', error)
       notificationStore.showError('Failed to load devices')
     } finally {
       loading.value = false
@@ -517,6 +531,8 @@ const loadDevicesForCurrentProject = async () => {
   } else {
     // Clear selected room if not connected
     selectedRoomId.value = null
+    loading.value = false
+    console.log('SmartDevices: No devices available for current project')
   }
 }
 
@@ -527,7 +543,11 @@ const checkAndLoadProjectData = async () => {
   try {
     // Switch to the selected project in the smart mirror service
     if (projectStore.selectedProject?.id) {
+      console.log('SmartDevices: Switching to project:', projectStore.selectedProject.id)
       await smartMirrorStore.switchToProject(projectStore.selectedProject.id)
+      
+      // Load devices for the current project after switching
+      await loadDevicesForCurrentProject()
     }
   } catch (error) {
     console.error('Error switching to selected project:', error)
@@ -558,11 +578,8 @@ onMounted(async () => {
   // Initialize Smart Mirror app first
   await smartMirrorStore.initializeApp()
   
-  // Check and load the correct project data
+  // Check and load the correct project data (this will also load devices)
   await checkAndLoadProjectData()
-  
-  // Load devices for current project
-  await loadDevicesForCurrentProject()
 })
 
 // Watch for route changes to check project data

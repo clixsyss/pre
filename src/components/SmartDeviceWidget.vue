@@ -222,7 +222,11 @@ const projectStore = useProjectStore()
 // Check if current project is connected to smart home
 const isCurrentProjectConnected = computed(() => {
   const currentProjectId = projectStore.selectedProject?.id
-  return currentProjectId ? smartMirrorStore.isProjectConnected(currentProjectId) : false
+  if (!currentProjectId) return false
+  
+  // Check if we have devices loaded for the current project
+  const hasDevices = smartMirrorStore.devices.length > 0 && smartMirrorStore.currentProjectId === currentProjectId
+  return hasDevices
 })
 
 // Smart Mirror app is initialized in the Home page
