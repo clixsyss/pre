@@ -13,11 +13,11 @@
           </div>
           <div class="title-text">
             <h3>Smart Home</h3>
-            <p v-if="smartMirrorStore.isConnected">{{ selectedTotalDevices }} devices selected</p>
+            <p v-if="isCurrentProjectConnected">{{ selectedTotalDevices }} devices selected</p>
             <p v-else>Connect to control your devices</p>
           </div>
         </div>
-        <button @click="goToDevices" class="view-all-btn" v-if="smartMirrorStore.isConnected">
+        <button @click="goToDevices" class="view-all-btn" v-if="isCurrentProjectConnected">
           <span>View All</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -27,7 +27,7 @@
     </div>
 
     <!-- Not Connected State -->
-    <div v-if="!smartMirrorStore.isConnected" class="not-connected-state">
+    <div v-if="!isCurrentProjectConnected" class="not-connected-state">
       <div class="not-connected-content">
         <div class="not-connected-icon">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -203,10 +203,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSmartMirrorStore } from '../stores/smartMirrorStore'
 import { useNotificationStore } from '../stores/notifications'
+import { useProjectStore } from '../stores/projectStore'
 
 // Component name for ESLint
 defineOptions({
@@ -216,6 +217,13 @@ defineOptions({
 const router = useRouter()
 const smartMirrorStore = useSmartMirrorStore()
 const notificationStore = useNotificationStore()
+const projectStore = useProjectStore()
+
+// Check if current project is connected to smart home
+const isCurrentProjectConnected = computed(() => {
+  const currentProjectId = projectStore.selectedProject?.id
+  return currentProjectId ? smartMirrorStore.isProjectConnected(currentProjectId) : false
+})
 
 // Smart Mirror app is initialized in the Home page
 
@@ -226,56 +234,43 @@ const plugLoading = ref(null)
 
 // Computed properties
 const totalDevices = computed(() => {
-  return smartMirrorStore.lights.length + smartMirrorStore.climateDevices.length + smartMirrorStore.plugs.length
+  return smartMirrorStore.devices.length
 })
 
 // Get only selected devices for home page display
 const selectedLights = computed(() => {
   const selectedDevices = smartMirrorStore.selectedHomepageDevices
-  console.log('Selected devices object:', selectedDevices)
-  console.log('All devices:', smartMirrorStore.devices)
   if (!selectedDevices || !selectedDevices.lights) return []
   
-  // Filter from all devices using the new categorization
+  // Filter from current project's devices
   const filtered = smartMirrorStore.devices.filter(device => 
     selectedDevices.lights.includes(device.id) && 
     device.type === 'light'
   )
-  console.log('Selected lights:', filtered)
   return filtered
 })
 
 const selectedClimateDevices = computed(() => {
   const selectedDevices = smartMirrorStore.selectedHomepageDevices
-  console.log('Selected climate devices:', selectedDevices?.climate)
-  console.log('All climate devices:', smartMirrorStore.climateDevices)
-  console.log('All devices:', smartMirrorStore.devices)
-  
   if (!selectedDevices || !selectedDevices.climate) return []
   
-  // Filter from all devices since climateDevices might be empty
+  // Filter from current project's devices
   const filtered = smartMirrorStore.devices.filter(device => 
     selectedDevices.climate.includes(device.id) && 
     (device.type === 'thermostat' || device.type === 'climate' || device.type === 'fan' || device.type === 'heater' || device.type === 'ac' || device.type === 'air_conditioner' || device.type === 'air-conditioner')
   )
-  console.log('Filtered climate devices:', filtered)
   return filtered
 })
 
 const selectedPlugs = computed(() => {
   const selectedDevices = smartMirrorStore.selectedHomepageDevices
-  console.log('Selected plugs:', selectedDevices?.plugs)
-  console.log('All plugs:', smartMirrorStore.plugs)
-  console.log('All devices:', smartMirrorStore.devices)
-  
   if (!selectedDevices || !selectedDevices.plugs) return []
   
-  // Filter from all devices since plugs might be empty
+  // Filter from current project's devices
   const filtered = smartMirrorStore.devices.filter(device => 
     selectedDevices.plugs.includes(device.id) && 
     (device.type === 'plug' || device.type === 'outlet' || device.type === 'switch' || device.type === 'sensor' || device.type === 'camera' || device.type === 'door' || device.type === 'window')
   )
-  console.log('Filtered plugs:', filtered)
   return filtered
 })
 
@@ -287,6 +282,32 @@ const selectedTotalDevices = computed(() => {
 const hasManyDevices = computed(() => {
   return selectedTotalDevices.value > 6
 })
+
+// Watch for project changes to ensure device settings are loaded
+watch(() => projectStore.selectedProject, (newProject, oldProject) => {
+  if (newProject && newProject.id !== oldProject?.id) {
+    // Load device settings for the new project
+    smartMirrorStore.loadDeviceSettingsForProject(newProject.id)
+  }
+}, { immediate: true })
+
+// Watch for changes in selectedHomepageDevices to ensure widget updates
+watch(() => smartMirrorStore.selectedHomepageDevices, () => {
+  // This will trigger reactivity in the computed properties
+}, { deep: true })
+
+// Watch for changes in devices to ensure widget updates
+watch(() => smartMirrorStore.devices, () => {
+  // This will trigger reactivity in the computed properties
+}, { deep: true })
+
+// Watch for currentProjectId changes to ensure widget updates
+watch(() => smartMirrorStore.currentProjectId, (newProjectId, oldProjectId) => {
+  if (newProjectId && newProjectId !== oldProjectId) {
+    // Load device settings for the new project
+    smartMirrorStore.loadDeviceSettingsForProject(newProjectId)
+  }
+}, { immediate: true })
 
 
 // Methods

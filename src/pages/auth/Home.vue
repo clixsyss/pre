@@ -48,7 +48,7 @@
     </div>
 
     <!-- Smart Device Widget - Only show if current project has Smart Mirror connection -->
-    <SmartDeviceWidget v-if="hasSmartMirrorConnection" />
+    <SmartDeviceWidget v-if="hasSmartMirrorConnection" :key="currentProjectId" />
 
     <!-- Quick Actions -->
     <div class="quick-actions-section">
@@ -440,27 +440,8 @@ const switchToProject = async (project) => {
     // Switch Smart Mirror data to the new project
     await smartMirrorStore.switchToProject(project.id)
     
-    // Load device settings for the new project
-    if (smartMirrorStore.isProjectConnected(project.id)) {
-      const savedSettings = localStorage.getItem(`deviceSettings_${project.id}`)
-      if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings)
-        // Check if we need to migrate old categorization
-        if (parsedSettings.fans || parsedSettings.other) {
-          console.log('Migrating old device categorization for project:', project.id)
-          // Clear old settings and let them be recategorized
-          localStorage.removeItem(`deviceSettings_${project.id}`)
-          smartMirrorStore.setSelectedDevices({})
-        } else {
-          smartMirrorStore.setSelectedDevices(parsedSettings)
-          console.log('Loaded selected homepage devices for project:', project.id, parsedSettings)
-        }
-      } else {
-        // No saved settings for this project, clear selected devices
-        smartMirrorStore.setSelectedDevices({})
-        console.log('No saved device settings for project:', project.id)
-      }
-    }
+    // Load device settings for the new project using the store method
+    smartMirrorStore.loadDeviceSettingsForProject(project.id)
     
     // Fetch user bookings for the new project
     if (user.value?.uid) {
@@ -512,7 +493,11 @@ onMounted(async () => {
       // Initialize Smart Mirror app to restore authentication and project connections
       try {
         await smartMirrorStore.initializeApp()
-        console.log('Smart Mirror app initialized')
+        
+        // Load device settings for the current project
+        if (projectStore.selectedProject?.id) {
+          smartMirrorStore.loadDeviceSettingsForProject(projectStore.selectedProject.id)
+        }
       } catch (error) {
         console.error('Error initializing Smart Mirror app:', error)
       }
@@ -534,44 +519,23 @@ onMounted(async () => {
   // Listen for project changes from MainLayout
   const handleProjectChange = async (event) => {
     const { newProject } = event.detail
-    console.log('Project changed in Home.vue, refreshing data for:', newProject.name)
     
     try {
-      // Load device settings for the new project
-      if (smartMirrorStore.isProjectConnected(newProject.id)) {
-        const savedSettings = localStorage.getItem(`deviceSettings_${newProject.id}`)
-        if (savedSettings) {
-          const parsedSettings = JSON.parse(savedSettings)
-          // Check if we need to migrate old categorization
-          if (parsedSettings.fans || parsedSettings.other) {
-            console.log('Migrating old device categorization for project:', newProject.id)
-            // Clear old settings and let them be recategorized
-            localStorage.removeItem(`deviceSettings_${newProject.id}`)
-            smartMirrorStore.setSelectedDevices({})
-          } else {
-            smartMirrorStore.setSelectedDevices(parsedSettings)
-            console.log('Loaded selected homepage devices for project:', newProject.id, parsedSettings)
-          }
-        } else {
-          // No saved settings for this project, clear selected devices
-          smartMirrorStore.setSelectedDevices({})
-          console.log('No saved device settings for project:', newProject.id)
-        }
-      }
+      // Load device settings for the new project using the store method
+      smartMirrorStore.loadDeviceSettingsForProject(newProject.id)
       
       // Fetch user bookings for the new project
       if (user.value?.uid && newProject?.id) {
         await academiesStore.fetchUserBookings(user.value.uid, newProject.id)
-        console.log('User bookings refreshed for new project')
       }
       
       // Refresh notifications for the new project
       await fetchNotifications()
-      console.log('Notifications refreshed for new project')
     } catch (error) {
       console.error('Error refreshing data for new project:', error)
     }
   }
+
 
   // Add event listener for project changes
   window.addEventListener('projectChanged', handleProjectChange)

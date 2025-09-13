@@ -12,7 +12,7 @@
         <h1>Smart Devices</h1>
         <p class="header-subtitle">Control your Smart Mirror devices</p>
       </div>
-      <div class="header-stats" v-if="smartMirrorStore.isConnected">
+      <div class="header-stats" v-if="isCurrentProjectConnected">
         <div class="stat-item">
           <span class="stat-number">{{ smartMirrorStore.devices.length }}</span>
           <span class="stat-label">Devices</span>
@@ -25,7 +25,7 @@
     </div>
 
     <!-- Not Connected State -->
-    <div v-if="!smartMirrorStore.isConnected" class="not-connected-state">
+    <div v-if="!isCurrentProjectConnected" class="not-connected-state">
       <div class="not-connected-icon">🏠</div>
       <h3>Smart Mirror Not Connected</h3>
       <p>Please connect your Smart Mirror account for the current project in your profile to control devices.</p>
@@ -316,9 +316,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
 import { useNotificationStore } from '../../stores/notifications'
+import { useProjectStore } from '../../stores/projectStore'
 
 // Component name for ESLint
 defineOptions({
@@ -327,6 +328,13 @@ defineOptions({
 
 const smartMirrorStore = useSmartMirrorStore()
 const notificationStore = useNotificationStore()
+const projectStore = useProjectStore()
+
+// Check if current project is connected to smart home
+const isCurrentProjectConnected = computed(() => {
+  const currentProjectId = projectStore.selectedProject?.id
+  return currentProjectId ? smartMirrorStore.isProjectConnected(currentProjectId) : false
+})
 
 // Reactive state
 const loading = ref(false)
@@ -338,15 +346,9 @@ const plugLoading = ref(null)
 // Computed properties
 const roomDevices = computed(() => {
   if (selectedRoomId.value) {
-    const devices = smartMirrorStore.getRoomDevices(selectedRoomId.value)
-    // Debug: Log all device types to help identify air-conditioner devices
-    console.log('All room devices:', devices.map(d => ({ name: d.name, type: d.type })))
-    return devices
+    return smartMirrorStore.getRoomDevices(selectedRoomId.value)
   }
-  const devices = smartMirrorStore.devices
-  // Debug: Log all device types to help identify air-conditioner devices
-  console.log('All devices:', devices.map(d => ({ name: d.name, type: d.type })))
-  return devices
+  return smartMirrorStore.devices
 })
 
 const roomLights = computed(() => 
@@ -494,12 +496,9 @@ const togglePlug = async (plug) => {
   }
 }
 
-// Lifecycle
-onMounted(async () => {
-  // Initialize Smart Mirror app first
-  await smartMirrorStore.initializeApp()
-  
-  if (smartMirrorStore.isConnected) {
+// Method to load devices for current project
+const loadDevicesForCurrentProject = async () => {
+  if (isCurrentProjectConnected.value) {
     loading.value = true
     try {
       await smartMirrorStore.refreshDevices()
@@ -512,7 +511,38 @@ onMounted(async () => {
     } finally {
       loading.value = false
     }
+  } else {
+    // Clear selected room if not connected
+    selectedRoomId.value = null
   }
+}
+
+// Watch for project changes
+watch(() => projectStore.selectedProject, async (newProject, oldProject) => {
+  if (newProject && newProject.id !== oldProject?.id) {
+    await loadDevicesForCurrentProject()
+  }
+}, { immediate: true })
+
+// Watch for changes in devices to ensure page updates
+watch(() => smartMirrorStore.devices, () => {
+  // This will trigger reactivity in the computed properties
+}, { deep: true })
+
+// Watch for currentProjectId changes to ensure page updates
+watch(() => smartMirrorStore.currentProjectId, async (newProjectId, oldProjectId) => {
+  if (newProjectId && newProjectId !== oldProjectId) {
+    await loadDevicesForCurrentProject()
+  }
+}, { immediate: true })
+
+// Lifecycle
+onMounted(async () => {
+  // Initialize Smart Mirror app first
+  await smartMirrorStore.initializeApp()
+  
+  // Load devices for current project
+  await loadDevicesForCurrentProject()
 })
 </script>
 

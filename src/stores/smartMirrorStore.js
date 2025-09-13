@@ -80,6 +80,9 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
           }
         })
         
+        // Load device settings for this project
+        loadDeviceSettingsForProject(projectId)
+        
         return { success: true }
       }
     } catch (error) {
@@ -106,32 +109,18 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
       // Update project connections map
       projectConnections.value = new Map(smartMirrorService.projectConnections)
       
-      // Load selected homepage devices from localStorage
-      if (currentProjectId.value) {
-        const savedSettings = localStorage.getItem(`deviceSettings_${currentProjectId.value}`)
-        if (savedSettings) {
-          const parsedSettings = JSON.parse(savedSettings)
-          // Check if we need to migrate old categorization
-          if (parsedSettings.fans || parsedSettings.other) {
-            console.log('Migrating old device categorization...')
-            // Clear old settings and let them be recategorized
-            localStorage.removeItem(`deviceSettings_${currentProjectId.value}`)
-            selectedHomepageDevices.value = {}
-          } else {
-            selectedHomepageDevices.value = parsedSettings
-            console.log('Loaded selected homepage devices:', selectedHomepageDevices.value)
-          }
+      // Load device settings for the current project after devices are loaded
+      if (currentProjectId.value && devices.value.length > 0) {
+        loadDeviceSettingsForProject(currentProjectId.value)
+      } else if (currentProjectId.value) {
+        // If no devices yet, set empty selection
+        selectedHomepageDevices.value = {
+          lights: [],
+          climate: [],
+          plugs: []
         }
       }
       
-      // Debug logging
-      console.log('Smart Mirror Store initialized:', {
-        isConnected: isConnected.value,
-        currentProjectId: currentProjectId.value,
-        projectConnections: Array.from(projectConnections.value.keys()),
-        devicesCount: devices.value.length,
-        selectedHomepageDevices: selectedHomepageDevices.value
-      })
       
       // Set up real-time update callback with project filtering
       smartMirrorService.setDevicesUpdateCallback((updatedRooms, updatedDevices, updatedProjectId) => {
@@ -212,6 +201,9 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
           }
         })
         
+        // Load device settings for this project
+        loadDeviceSettingsForProject(projectId)
+        
         console.log(`Switched to project ${projectId}:`, {
           isConnected: isConnected.value,
           devicesCount: devices.value.length,
@@ -234,11 +226,6 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
     const storeConnected = projectConnections.value.has(projectId)
     return serviceConnected || storeConnected
   }
-
-  const needsReAuthentication = (projectId) => {
-    return smartMirrorService.needsReAuthentication(projectId)
-  }
-
 
   const getProjectConnectionStatus = (projectId) => {
     return smartMirrorService.getProjectConnectionStatus(projectId)
@@ -351,6 +338,45 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
     selectedHomepageDevices.value = selectedDevices
   }
 
+  const loadDeviceSettingsForProject = (projectId) => {
+    try {
+      const savedSettings = localStorage.getItem(`deviceSettings_${projectId}`)
+      if (savedSettings) {
+        selectedHomepageDevices.value = JSON.parse(savedSettings)
+      } else {
+        // Default to selecting all devices for new projects
+        const allDevices = devices.value || []
+        const defaultSelection = {
+          lights: [],
+          climate: [],
+          plugs: []
+        }
+        
+        allDevices.forEach(device => {
+          if (device.type === 'light') {
+            defaultSelection.lights.push(device.id)
+          } else if (device.type === 'thermostat' || device.type === 'climate' || device.type === 'fan' || device.type === 'heater' || device.type === 'ac' || device.type === 'air_conditioner' || device.type === 'air-conditioner') {
+            defaultSelection.climate.push(device.id)
+          } else if (device.type === 'plug' || device.type === 'outlet' || device.type === 'switch' || device.type === 'sensor' || device.type === 'camera' || device.type === 'door' || device.type === 'window') {
+            defaultSelection.plugs.push(device.id)
+          }
+        })
+        
+        selectedHomepageDevices.value = defaultSelection
+        
+        // Save the default selection
+        localStorage.setItem(`deviceSettings_${projectId}`, JSON.stringify(defaultSelection))
+      }
+    } catch (error) {
+      console.error('Error loading device settings for project:', error)
+      selectedHomepageDevices.value = {
+        lights: [],
+        climate: [],
+        plugs: []
+      }
+    }
+  }
+
   const reset = () => {
     isConnected.value = false
     isConnecting.value = false
@@ -388,7 +414,6 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
     disconnect,
     switchToProject,
     isProjectConnected,
-    needsReAuthentication,
     getProjectConnectionStatus,
     getProjectDevices,
     refreshDevices,
@@ -400,6 +425,7 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
     setClimateTemperature,
     setClimateMode,
     setSelectedDevices,
+    loadDeviceSettingsForProject,
     clearError,
     reset
   }

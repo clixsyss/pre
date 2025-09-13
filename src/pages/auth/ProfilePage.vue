@@ -137,13 +137,6 @@
               <div class="device-summary">
                 <span class="device-count">{{ getProjectDeviceCount(project.id) }} devices</span>
                 <span class="device-types">Lights, Climate, Plugs</span>
-                <div v-if="smartMirrorStore.needsReAuthentication(project.id)" class="reauth-indicator">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                    <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Stored data
-                </div>
               </div>
               <div class="smart-mirror-actions">
                 <button @click="goToDevices" class="control-devices-btn">
@@ -1195,15 +1188,24 @@ const loadDeviceSettings = () => {
   if (savedSettings) {
     selectedDevices.value = JSON.parse(savedSettings)
   } else {
-    // Default to all devices selected
-    selectedDevices.value = {}
-    smartMirrorStore.devices.forEach(device => {
+    // Default to all devices selected for the current project
+    selectedDevices.value = {
+      lights: [],
+      climate: [],
+      plugs: []
+    }
+    const currentProjectDevices = smartMirrorStore.devices || []
+    
+    currentProjectDevices.forEach(device => {
       const categoryType = getDeviceCategory(device.type)
       if (!selectedDevices.value[categoryType]) {
         selectedDevices.value[categoryType] = []
       }
       selectedDevices.value[categoryType].push(device.id)
     })
+    
+    // Save the default selection
+    localStorage.setItem(`deviceSettings_${currentProjectId.value}`, JSON.stringify(selectedDevices.value))
   }
 }
 
@@ -2301,23 +2303,6 @@ onMounted(() => {
   color: #f59e0b;
 }
 
-.reauth-indicator {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-  padding: 3px 6px;
-  background: #f3f4f6;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-.reauth-indicator svg {
-  color: #6b7280;
-}
 
 .smart-mirror-disconnected {
   display: flex;

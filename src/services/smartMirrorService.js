@@ -177,17 +177,6 @@ class SmartMirrorService {
     return this.projectConnections.has(projectId)
   }
 
-  // Check if a project needs re-authentication for real-time updates
-  needsReAuthentication(projectId) {
-    const connection = this.projectConnections.get(projectId)
-    if (!connection || !connection.email) return false
-    
-    const currentUserEmail = smartMirrorAuth.currentUser?.email
-    return currentUserEmail !== connection.email
-  }
-
-
-
   // Re-authenticate with stored credentials for a project
   async reAuthenticateForProject(projectId) {
     const connection = this.projectConnections.get(projectId)
