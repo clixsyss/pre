@@ -316,7 +316,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onActivated } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
 import { useNotificationStore } from '../../stores/notifications'
 import { useProjectStore } from '../../stores/projectStore'
@@ -326,6 +327,8 @@ defineOptions({
   name: 'SmartDevicesPage'
 })
 
+const router = useRouter()
+const route = useRoute()
 const smartMirrorStore = useSmartMirrorStore()
 const notificationStore = useNotificationStore()
 const projectStore = useProjectStore()
@@ -517,6 +520,20 @@ const loadDevicesForCurrentProject = async () => {
   }
 }
 
+// Method to check and load the correct project data
+const checkAndLoadProjectData = async () => {
+  if (!projectStore.selectedProject) return
+  
+  try {
+    // Switch to the selected project in the smart mirror service
+    if (projectStore.selectedProject?.id) {
+      await smartMirrorStore.switchToProject(projectStore.selectedProject.id)
+    }
+  } catch (error) {
+    console.error('Error switching to selected project:', error)
+  }
+}
+
 // Watch for project changes
 watch(() => projectStore.selectedProject, async (newProject, oldProject) => {
   if (newProject && newProject.id !== oldProject?.id) {
@@ -541,8 +558,23 @@ onMounted(async () => {
   // Initialize Smart Mirror app first
   await smartMirrorStore.initializeApp()
   
+  // Check and load the correct project data
+  await checkAndLoadProjectData()
+  
   // Load devices for current project
   await loadDevicesForCurrentProject()
+})
+
+// Watch for route changes to check project data
+watch(() => route.path, async () => {
+  if (route.path === '/smart-devices') {
+    await checkAndLoadProjectData()
+  }
+})
+
+// Check project data when component is activated (when navigating back to this page)
+onActivated(async () => {
+  await checkAndLoadProjectData()
 })
 </script>
 

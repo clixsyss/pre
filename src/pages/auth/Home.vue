@@ -233,8 +233,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch, onActivated } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { auth } from '../../boot/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useProjectStore } from '../../stores/projectStore'
@@ -252,6 +252,7 @@ defineOptions({
 })
 
 const router = useRouter()
+const route = useRoute()
 const projectStore = useProjectStore()
 const academiesStore = useAcademiesStore()
 const smartMirrorStore = useSmartMirrorStore()
@@ -462,6 +463,20 @@ const goToProjectSelection = () => {
   router.push('/project-selection')
 }
 
+// Method to check and load the correct project data
+const checkAndLoadProjectData = async () => {
+  if (!user.value || !projectStore.selectedProject) return
+  
+  try {
+    // Switch to the selected project in the smart mirror service
+    if (projectStore.selectedProject?.id) {
+      await smartMirrorStore.switchToProject(projectStore.selectedProject.id)
+    }
+  } catch (error) {
+    console.error('Error switching to selected project:', error)
+  }
+}
+
 onMounted(async () => {
   // Listen for auth state changes
   onAuthStateChanged(auth, async (currentUser) => {
@@ -494,10 +509,8 @@ onMounted(async () => {
       try {
         await smartMirrorStore.initializeApp()
         
-        // Load device settings for the current project
-        if (projectStore.selectedProject?.id) {
-          smartMirrorStore.loadDeviceSettingsForProject(projectStore.selectedProject.id)
-        }
+        // Check and load the correct project data
+        await checkAndLoadProjectData()
       } catch (error) {
         console.error('Error initializing Smart Mirror app:', error)
       }
@@ -544,6 +557,20 @@ onMounted(async () => {
   onUnmounted(() => {
     window.removeEventListener('projectChanged', handleProjectChange)
   })
+})
+
+// Watch for route changes to check project data
+watch(() => route.path, async () => {
+  if (route.path === '/home' && user.value) {
+    await checkAndLoadProjectData()
+  }
+})
+
+// Check project data when component is activated (when navigating back to this page)
+onActivated(async () => {
+  if (user.value) {
+    await checkAndLoadProjectData()
+  }
 })
 </script>
 

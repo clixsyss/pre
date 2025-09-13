@@ -253,10 +253,10 @@ class SmartMirrorService {
         // Restore project connections from localStorage
         await this.restoreProjectConnections()
         
-        // If we have project connections, set up the first one as current
-        if (this.projectConnections.size > 0) {
-          const firstProjectId = this.projectConnections.keys().next().value
-          this.switchToProject(firstProjectId)
+        // Switch to the selected project if it has a connection
+        const selectedProjectId = localStorage.getItem('selectedProjectId')
+        if (selectedProjectId && this.projectConnections.has(selectedProjectId)) {
+          await this.switchToProject(selectedProjectId)
         }
       } else {
         this.currentUser = null
@@ -286,10 +286,10 @@ class SmartMirrorService {
         // Restore project connections from localStorage
         await this.restoreProjectConnections()
         
-        // If we have project connections, set up the first one as current
-        if (this.projectConnections.size > 0) {
-          const firstProjectId = this.projectConnections.keys().next().value
-          this.switchToProject(firstProjectId)
+        // Switch to the selected project if it has a connection
+        const selectedProjectId = localStorage.getItem('selectedProjectId')
+        if (selectedProjectId && this.projectConnections.has(selectedProjectId)) {
+          await this.switchToProject(selectedProjectId)
         }
       }
     } catch (error) {

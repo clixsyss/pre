@@ -204,11 +204,6 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
         // Load device settings for this project
         loadDeviceSettingsForProject(projectId)
         
-        console.log(`Switched to project ${projectId}:`, {
-          isConnected: isConnected.value,
-          devicesCount: devices.value.length,
-          roomsCount: rooms.value.length
-        })
         
         return { success: true }
       } else {
