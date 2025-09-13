@@ -1,22 +1,13 @@
 <template>
   <SplashScreen />
   
-  <!-- Loading state while router is resolving -->
-  <div v-if="isRouterLoading" class="loading-container">
-    <div class="loading-content">
-      <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-      <p class="text-gray-600 text-lg">Loading...</p>
-      <p class="text-gray-500 text-sm mt-2">Please wait while we verify your authentication</p>
-    </div>
-  </div>
-  
   <!-- Show MainLayout only for authenticated pages -->
-  <MainLayout v-else-if="isAuthenticatedPage">
+  <MainLayout v-if="isAuthenticatedPage && !isRouterLoading">
     <router-view />
   </MainLayout>
   
   <!-- Show clean layout for authentication pages -->
-  <div v-else class="auth-layout">
+  <div v-else-if="!isRouterLoading" class="auth-layout">
     <router-view />
   </div>
   
@@ -29,6 +20,7 @@ import { useRoute } from 'vue-router'
 import SplashScreen from './components/SplashScreen.vue'
 import NotificationPopup from './components/NotificationPopup.vue'
 import MainLayout from './layouts/MainLayout.vue'
+import { useSplashStore } from './stores/splash'
 
 // Component name for ESLint
 defineOptions({
@@ -37,12 +29,24 @@ defineOptions({
 
 const route = useRoute()
 const isRouterLoading = ref(true)
+const splashStore = useSplashStore()
 
-onMounted(() => {
-  // Hide router loading after a short delay
+onMounted(async () => {
+  // Show splash screen with loading
+  splashStore.showSplash()
+  splashStore.setLoading(true)
+  
+  // Simulate app initialization
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  
+  // Hide loading indicator
+  splashStore.setLoading(false)
+  
+  // Hide splash screen after a short delay
   setTimeout(() => {
+    splashStore.hideSplash()
     isRouterLoading.value = false
-  }, 1000)
+  }, 500)
 })
 
 // Define which routes should show the main layout (authenticated pages)
@@ -93,33 +97,5 @@ const isAuthenticatedPage = computed(() => {
 .auth-layout {
   min-height: 100vh;
   background-color: #f8f9fa;
-}
-
-/* Loading container styles */
-.loading-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f8f9fa;
-}
-
-.loading-content {
-  text-align: center;
-  padding: 2rem;
-}
-
-/* Spinner animation */
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 </style>

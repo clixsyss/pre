@@ -1,6 +1,6 @@
 <template>
-  <Transition name="splash-fade">
-    <div class="splash-screen" v-if="splashStore.show">
+  <Transition name="loading-fade">
+    <div class="loading-screen" v-if="show">
       <!-- Pure Black Background -->
       <div class="black-background"></div>
       
@@ -18,15 +18,14 @@
           <img src="../assets/logo.png" alt="PRE Logo" class="logo" />
           <div class="logo-glow"></div>
         </div>
-        <div class="loading-indicator" v-if="splashStore.loading">
+        <div class="tagline">Relive.</div>
+        <div class="loading-indicator">
           <div class="loading-dots">
             <div class="dot"></div>
             <div class="dot"></div>
             <div class="dot"></div>
           </div>
-          <div class="loading-text" v-if="splashStore.loadingMessage">
-            {{ splashStore.loadingMessage }}
-          </div>
+          <div class="loading-text" v-if="message">{{ message }}</div>
         </div>
       </div>
     </div>
@@ -34,36 +33,22 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
-import { useSplashStore } from '../stores/splash'
+import { defineProps } from 'vue'
 
-const splashStore = useSplashStore()
-
-onMounted(() => {
-  // Only show splash screen for first visit or if explicitly needed
-  const hasSeenSplash = localStorage.getItem('hasSeenSplash')
-  
-  if (!hasSeenSplash) {
-    // First time user - show splash screen
-    splashStore.setLoading(true)
-    
-    // Hide splash screen after 2 seconds
-    setTimeout(() => {
-      splashStore.setLoading(false)
-      setTimeout(() => {
-        splashStore.hideSplash()
-        localStorage.setItem('hasSeenSplash', 'true')
-      }, 500)
-    }, 2000)
-  } else {
-    // Returning user - hide splash immediately
-    splashStore.hideSplash()
+defineProps({
+  show: {
+    type: Boolean,
+    default: true
+  },
+  message: {
+    type: String,
+    default: ''
   }
 })
 </script>
 
 <style scoped>
-.splash-screen {
+.loading-screen {
   position: fixed;
   top: 0;
   left: 0;
@@ -72,7 +57,7 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
+  z-index: 9998;
   overflow: hidden;
 }
 
@@ -149,7 +134,7 @@ onMounted(() => {
 }
 
 .logo {
-  max-width: 250px;
+  max-width: 200px;
   height: auto;
   filter: drop-shadow(0 8px 16px rgba(255, 255, 255, 0.1));
   animation: logoPulse 2s ease-in-out infinite;
@@ -172,7 +157,7 @@ onMounted(() => {
 
 .tagline {
   color: white;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 300;
   letter-spacing: 2px;
   opacity: 0.9;
@@ -191,14 +176,6 @@ onMounted(() => {
   justify-content: center;
   gap: 12px;
   margin-bottom: 20px;
-}
-
-.loading-text {
-  color: white;
-  font-size: 14px;
-  font-weight: 300;
-  opacity: 0.8;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .dot {
@@ -220,6 +197,14 @@ onMounted(() => {
 
 .dot:nth-child(3) {
   animation-delay: 0s;
+}
+
+.loading-text {
+  color: white;
+  font-size: 14px;
+  font-weight: 300;
+  opacity: 0.8;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* Animations */
@@ -299,27 +284,27 @@ onMounted(() => {
 }
 
 /* Transition effects */
-.splash-fade-enter-active {
+.loading-fade-enter-active {
   transition: opacity 0.8s ease-out;
 }
 
-.splash-fade-leave-active {
+.loading-fade-leave-active {
   transition: opacity 0.6s ease-in;
 }
 
-.splash-fade-enter-from,
-.splash-fade-leave-to {
+.loading-fade-enter-from,
+.loading-fade-leave-to {
   opacity: 0;
 }
 
 /* Responsive design */
 @media (max-width: 768px) {
   .logo {
-    max-width: 200px;
+    max-width: 150px;
   }
   
   .tagline {
-    font-size: 18px;
+    font-size: 16px;
     letter-spacing: 1.5px;
   }
   
@@ -330,11 +315,11 @@ onMounted(() => {
 
 @media (max-width: 480px) {
   .logo {
-    max-width: 150px;
+    max-width: 120px;
   }
   
   .tagline {
-    font-size: 16px;
+    font-size: 14px;
     letter-spacing: 1px;
   }
   
@@ -346,15 +331,19 @@ onMounted(() => {
   .loading-dots {
     gap: 8px;
   }
+  
+  .loading-text {
+    font-size: 12px;
+  }
 }
 
 @media (max-width: 320px) {
   .logo {
-    max-width: 120px;
+    max-width: 100px;
   }
   
   .tagline {
-    font-size: 14px;
+    font-size: 12px;
   }
 }
 </style>

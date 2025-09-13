@@ -2,25 +2,29 @@
   <div class="smart-devices-page">
     <!-- Page Header -->
     <div class="page-header">
-      <button class="back-button" @click="$router.go(-1)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-      <div class="header-content">
-        <h1>Smart Devices</h1>
-        <p class="header-subtitle">Control your Smart Mirror devices</p>
-      </div>
-      <div class="header-stats" v-if="isCurrentProjectConnected">
-        <div class="stat-item">
-          <span class="stat-number">{{ smartMirrorStore.devices.length }}</span>
-          <span class="stat-label">Devices</span>
+      <div class="header-main">
+        <button class="back-button" @click="$router.go(-1)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        
+        <div class="header-content">
+          <h1>Smart Devices</h1>
+          <div class="header-status">
+            <div class="status-dot" :class="{ connected: isCurrentProjectConnected }"></div>
+            <span>{{ isCurrentProjectConnected ? 'Connected' : 'Not Connected' }}</span>
+          </div>
         </div>
-        <div class="stat-item">
-          <span class="stat-number">{{ smartMirrorStore.rooms.length }}</span>
-          <span class="stat-label">Rooms</span>
-        </div>
+        
+        <button class="refresh-button" @click="refreshDevices" :disabled="loading">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 12A9 9 0 0 1 12 3A9 9 0 0 1 21 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 12A9 9 0 0 1 12 21A9 9 0 0 1 3 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 3V12L16.5 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -502,6 +506,19 @@ const togglePlug = async (plug) => {
   }
 }
 
+const refreshDevices = async () => {
+  loading.value = true
+  try {
+    await checkAndLoadProjectData()
+    notificationStore.showSuccess('Devices refreshed successfully')
+  } catch (error) {
+    console.error('Error refreshing devices:', error)
+    notificationStore.showError('Failed to refresh devices')
+  } finally {
+    loading.value = false
+  }
+}
+
 // Method to load devices for current project
 const loadDevicesForCurrentProject = async () => {
   const currentProjectId = projectStore.selectedProject?.id
@@ -603,11 +620,16 @@ onActivated(async () => {
 }
 
 .page-header {
+  background: white;
+  border-bottom: 1px solid #e8e8e8;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.header-main {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  padding: 0;
+  gap: 16px;
 }
 
 .back-button {
@@ -615,12 +637,13 @@ onActivated(async () => {
   border: 1px solid #e8e8e8;
   color: #666;
   cursor: pointer;
-  padding: 6px;
+  padding: 8px;
   border-radius: 6px;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .back-button:hover {
@@ -631,50 +654,59 @@ onActivated(async () => {
 
 .header-content {
   flex: 1;
+  min-width: 0;
 }
 
 .header-content h1 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #333;
-  margin: 0 0 2px 0;
+  color: #1a1a1a;
+  margin: 0 0 4px 0;
   letter-spacing: -0.01em;
 }
 
-.header-subtitle {
-  color: #666;
-  font-size: 0.8rem;
-  margin: 0;
-}
-
-.header-stats {
+.header-status {
   display: flex;
-  gap: 12px;
-}
-
-.stat-item {
-  text-align: center;
-  background: white;
-  border: 1px solid #e8e8e8;
-  border-radius: 6px;
-  padding: 8px 12px;
-  min-width: 50px;
-}
-
-.stat-number {
-  display: block;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #ff6b35;
-  line-height: 1;
-  margin-bottom: 1px;
-}
-
-.stat-label {
-  font-size: 0.7rem;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
   color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f44336;
+}
+
+.status-dot.connected {
+  background: #4caf50;
+}
+
+.refresh-button {
+  background: #ff6b35;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: #e55a2b;
+  transform: translateY(-1px);
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .not-connected-state,
@@ -1215,13 +1247,16 @@ onActivated(async () => {
   }
   
   .page-header {
-    flex-direction: column;
-    gap: 12px;
-    text-align: center;
+    padding: 12px;
+    margin-bottom: 16px;
   }
   
-  .header-stats {
+  .header-main {
     gap: 12px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.125rem;
   }
   
   .devices-grid {
@@ -1249,12 +1284,26 @@ onActivated(async () => {
     padding: 8px;
   }
   
-  .header-content h1 {
-    font-size: 1.125rem;
+  .page-header {
+    padding: 10px;
+    margin-bottom: 12px;
   }
   
-  .stat-number {
-    font-size: 0.9rem;
+  .header-main {
+    gap: 10px;
+  }
+  
+  .header-content h1 {
+    font-size: 1rem;
+  }
+  
+  .header-status {
+    font-size: 0.75rem;
+  }
+  
+  .back-button,
+  .refresh-button {
+    padding: 6px;
   }
   
   .devices-section {

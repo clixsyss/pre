@@ -58,13 +58,17 @@ export const showSplashForDuration = (duration = 3000, showLoading = true) => {
  * Show splash screen while executing an async function
  * @param {Function} asyncFunction - The async function to execute
  * @param {number} minDuration - Minimum duration to show splash (ms)
+ * @param {string} message - Loading message to display
  */
-export const showSplashWhileExecuting = async (asyncFunction, minDuration = 1000) => {
+export const showSplashWhileExecuting = async (asyncFunction, minDuration = 1000, message = '') => {
   const splashStore = useSplashStore()
   const startTime = Date.now()
   
   splashStore.showSplash()
   splashStore.setLoading(true)
+  if (message) {
+    splashStore.setLoadingMessage(message)
+  }
   
   try {
     await asyncFunction()
@@ -79,7 +83,18 @@ export const showSplashWhileExecuting = async (asyncFunction, minDuration = 1000
       splashStore.setLoading(false)
       setTimeout(() => {
         splashStore.hideSplash()
+        splashStore.setLoadingMessage('')
       }, 500)
     }, remaining)
   }
+}
+
+/**
+ * Show loading screen with custom message
+ * @param {string} message - Loading message to display
+ * @param {number} duration - Duration to show loading (ms)
+ */
+export const showLoadingWithMessage = (message, duration = 3000) => {
+  const splashStore = useSplashStore()
+  splashStore.showLoadingWithMessage(message, duration)
 }
