@@ -1,7 +1,7 @@
 <template>
-  <div class="smart-device-widget">
+  <div v-if="shouldShowWidget" class="smart-device-widget">
     <!-- Header -->
-    <div class="widget-header">
+    <div class="widget-header" @click="toggleAccordion">
       <div class="header-content">
         <div class="title-section">
           <div class="icon-wrapper">
@@ -17,12 +17,19 @@
             <p v-else>Connect to control your devices</p>
           </div>
         </div>
-        <button @click="goToDevices" class="view-all-btn" v-if="isCurrentProjectConnected">
-          <span>View All</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
+        <div class="header-actions">
+          <button @click.stop="goToDevices" class="view-all-btn" v-if="isCurrentProjectConnected">
+            <span>View All</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button v-if="hasMultipleDevices" class="accordion-toggle" :class="{ expanded: isExpanded }">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -48,8 +55,10 @@
 
     <!-- Connected State -->
     <div v-else class="connected-state">
-      <!-- Device Grid -->
-      <div class="device-grid">
+      <!-- Accordion Content -->
+      <div v-if="hasMultipleDevices" class="accordion-content" :class="{ expanded: isExpanded }">
+        <!-- Device Grid -->
+        <div class="device-grid">
         <!-- Lights -->
         <div v-if="selectedLights.length > 0" class="device-category">
           <div class="category-header">
@@ -197,6 +206,27 @@
           <h4>No Devices Found</h4>
           <p>Add devices to your Smart Mirror to control them here</p>
         </div>
+        </div>
+      </div>
+
+      <!-- Single Device Display (when only one device is selected) -->
+      <div v-else-if="!hasMultipleDevices && selectedTotalDevices === 1" class="single-device-display">
+        <div class="single-device-card">
+          <div class="device-content">
+            <div class="device-name">{{ getFirstSelectedDevice()?.name }} - {{ getFirstSelectedDevice()?.roomName }}</div>
+            <div class="device-status" :class="{ on: getFirstSelectedDevice()?.state, off: !getFirstSelectedDevice()?.state }">
+              <div class="status-indicator"></div>
+              <span>{{ getFirstSelectedDevice()?.state ? 'ON' : 'OFF' }}</span>
+            </div>
+          </div>
+          <button 
+            @click="toggleFirstDevice()"
+            :class="['device-toggle', { on: getFirstSelectedDevice()?.state, off: !getFirstSelectedDevice()?.state }]"
+            :disabled="isDeviceLoading(getFirstSelectedDevice()?.id)"
+          >
+            <div class="toggle-slider"></div>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -235,10 +265,21 @@ const isCurrentProjectConnected = computed(() => {
 const lightLoading = ref(null)
 const climateLoading = ref(null)
 const plugLoading = ref(null)
+const isExpanded = ref(false)
 
 // Computed properties
 const totalDevices = computed(() => {
   return smartMirrorStore.devices.length
+})
+
+// Check if widget should be shown (has selected devices)
+const shouldShowWidget = computed(() => {
+  return isCurrentProjectConnected.value && selectedTotalDevices.value > 0
+})
+
+// Check if there are multiple devices selected
+const hasMultipleDevices = computed(() => {
+  return selectedTotalDevices.value > 1
 })
 
 // Get only selected devices for home page display
@@ -370,6 +411,37 @@ const togglePlug = async (plug) => {
     plugLoading.value = null
   }
 }
+
+// Accordion methods
+const toggleAccordion = () => {
+  if (hasMultipleDevices.value) {
+    isExpanded.value = !isExpanded.value
+  }
+}
+
+// Single device methods
+const getFirstSelectedDevice = () => {
+  const allDevices = [...selectedLights.value, ...selectedClimateDevices.value, ...selectedPlugs.value]
+  return allDevices[0] || null
+}
+
+const toggleFirstDevice = async () => {
+  const device = getFirstSelectedDevice()
+  if (!device) return
+
+  // Determine device type and call appropriate toggle method
+  if (selectedLights.value.includes(device)) {
+    await toggleLight(device)
+  } else if (selectedClimateDevices.value.includes(device)) {
+    await toggleClimate(device)
+  } else if (selectedPlugs.value.includes(device)) {
+    await togglePlug(device)
+  }
+}
+
+const isDeviceLoading = (deviceId) => {
+  return lightLoading.value === deviceId || climateLoading.value === deviceId || plugLoading.value === deviceId
+}
 </script>
 
 <style scoped>
@@ -389,6 +461,12 @@ const togglePlug = async (plug) => {
   position: relative;
   overflow: hidden;
   border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.widget-header:hover {
+  background: linear-gradient(135deg, #ff8a65 0%, #ffab91 100%);
 }
 
 .widget-header::before {
@@ -414,6 +492,33 @@ const togglePlug = async (plug) => {
   align-items: center;
   position: relative;
   z-index: 1;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.accordion-toggle {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.accordion-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.accordion-toggle.expanded {
+  transform: rotate(180deg);
 }
 
 .title-section {
@@ -535,6 +640,38 @@ const togglePlug = async (plug) => {
 /* Connected State */
 .connected-state {
   padding: 20px;
+}
+
+/* Accordion Content */
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.accordion-content.expanded {
+  max-height: 1000px;
+}
+
+/* Single Device Display */
+.single-device-display {
+  padding: 20px;
+}
+
+.single-device-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.single-device-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
 }
 
 .device-grid {
