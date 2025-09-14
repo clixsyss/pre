@@ -128,6 +128,8 @@ export const useComplaintStore = defineStore('complaint', () => {
   };
 
   const addMessage = async (complaintId, messageData) => {
+    let tempMessage = null;
+    
     try {
       loading.value = true;
       error.value = null;
@@ -139,18 +141,45 @@ export const useComplaintStore = defineStore('complaint', () => {
         throw new Error('No project selected');
       }
 
+      // Add optimistic update
+      tempMessage = {
+        id: `temp_${Date.now()}`,
+        ...messageData,
+        timestamp: new Date(),
+        isOptimistic: true
+      };
+
+      // Update current complaint optimistically
+      if (currentComplaint.value && currentComplaint.value.id === complaintId) {
+        currentComplaint.value.messages.push(tempMessage);
+        currentComplaint.value.lastMessageAt = tempMessage.timestamp;
+      }
+      
+      // Update complaints list optimistically
+      const complaintIndex = complaints.value.findIndex(c => c.id === complaintId);
+      if (complaintIndex !== -1) {
+        complaints.value[complaintIndex].messages.push(tempMessage);
+        complaints.value[complaintIndex].lastMessageAt = tempMessage.timestamp;
+      }
+
+      // Send to server
       const message = await complaintService.addMessage(projectId, complaintId, messageData);
       
-      // Update current complaint if it's the one being updated
+      // Replace optimistic update with real message
       if (currentComplaint.value && currentComplaint.value.id === complaintId) {
-        currentComplaint.value.messages.push(message);
+        const messageIndex = currentComplaint.value.messages.findIndex(m => m.id === tempMessage.id);
+        if (messageIndex !== -1) {
+          currentComplaint.value.messages[messageIndex] = message;
+        }
         currentComplaint.value.lastMessageAt = message.timestamp;
       }
       
-      // Update complaints list
-      const complaintIndex = complaints.value.findIndex(c => c.id === complaintId);
+      // Update complaints list with real message
       if (complaintIndex !== -1) {
-        complaints.value[complaintIndex].messages.push(message);
+        const messageIndex = complaints.value[complaintIndex].messages.findIndex(m => m.id === tempMessage.id);
+        if (messageIndex !== -1) {
+          complaints.value[complaintIndex].messages[messageIndex] = message;
+        }
         complaints.value[complaintIndex].lastMessageAt = message.timestamp;
       }
       
@@ -158,6 +187,19 @@ export const useComplaintStore = defineStore('complaint', () => {
     } catch (err) {
       error.value = err.message;
       console.error('Error adding message:', err);
+      
+      // Remove optimistic update on error
+      if (tempMessage) {
+        if (currentComplaint.value && currentComplaint.value.id === complaintId) {
+          currentComplaint.value.messages = currentComplaint.value.messages.filter(m => m.id !== tempMessage.id);
+        }
+        
+        const complaintIndex = complaints.value.findIndex(c => c.id === complaintId);
+        if (complaintIndex !== -1) {
+          complaints.value[complaintIndex].messages = complaints.value[complaintIndex].messages.filter(m => m.id !== tempMessage.id);
+        }
+      }
+      
       throw err;
     } finally {
       loading.value = false;

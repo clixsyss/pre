@@ -410,9 +410,14 @@ onUnmounted(() => {
 .complaint-chat {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: calc(100vh - 140px - 60px); /* Full height minus header and bottom nav */
   background: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 80px; /* Bottom nav height */
+  z-index: 100;
 }
 
 /* Header Styles */
@@ -424,7 +429,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 1rem;
   position: sticky;
-  top: 0;
   z-index: 10;
   border-bottom: 1px solid #e5e7eb;
 }
@@ -737,7 +741,7 @@ onUnmounted(() => {
   padding: 1.5rem;
   border-top: 1px solid #e5e7eb;
   position: sticky;
-  bottom: 0;
+  bottom: -12px;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
 }
 

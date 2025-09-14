@@ -321,6 +321,8 @@ const closeModal = () => {
 };
 
 const submitComplaint = async () => {
+  if (complaintStore.loading) return; // Prevent multiple submissions
+  
   try {
     let imageUrl = null;
     let imageFileName = null;
