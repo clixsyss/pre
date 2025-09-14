@@ -24,9 +24,15 @@
       </div>
 
       <div v-else-if="!complaint" class="error-state">
-        <i class="fas fa-exclamation-triangle"></i>
-        <h4>Complaint not found</h4>
-        <p>The complaint you're looking for doesn't exist or has been deleted.</p>
+        <div class="error-icon">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="#fbbf24" stroke-width="2"/>
+            <line x1="12" y1="8" x2="12" y2="12" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 class="error-title">Complaint Not Found</h3>
+        <p class="error-message">The complaint you're looking for doesn't exist or has been deleted.</p>
         <button @click="goBack" class="btn-primary">Go Back</button>
       </div>
 
@@ -102,20 +108,16 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useComplaintStore } from '../stores/complaintStore';
 import { getAuth } from 'firebase/auth';
 
 const router = useRouter();
+const route = useRoute();
 const complaintStore = useComplaintStore();
 
-// Props
-const props = defineProps({
-  complaintId: {
-    type: String,
-    required: true
-  }
-});
+// Get complaint ID from route params
+const complaintId = computed(() => route.params.id);
 
 // Reactive data
 const newMessage = ref('');
@@ -160,12 +162,12 @@ const handleImageSelect = async (event) => {
     showImageUpload.value = false;
 
     // Upload image
-    const imageData = await complaintStore.uploadImage(file, props.complaintId);
+    const imageData = await complaintStore.uploadImage(file, complaintId.value);
     
     // Send message with image
     const auth = getAuth();
     const user = auth.currentUser;
-    await complaintStore.addMessage(props.complaintId, {
+    await complaintStore.addMessage(complaintId.value, {
       senderType: 'user',
       senderId: user.uid,
       text: newMessage.value || 'Image message',
@@ -189,7 +191,7 @@ const sendMessage = async () => {
   try {
     const auth = getAuth();
     const user = auth.currentUser;
-    await complaintStore.addMessage(props.complaintId, {
+    await complaintStore.addMessage(complaintId.value, {
       senderType: 'user',
       senderId: user.uid,
       text: newMessage.value.trim()
@@ -223,7 +225,7 @@ const getCategoryName = (categoryId) => {
 
 const formatMessageTime = (timestamp) => {
   if (!timestamp) return '';
-  const date = timestamp.toDate();
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   const now = new Date();
   const diffInMinutes = (now - date) / (1000 * 60);
   
@@ -242,10 +244,10 @@ watch(() => complaint.value?.messages?.length, () => {
 onMounted(async () => {
   try {
     // Fetch complaint data
-    await complaintStore.fetchComplaint(props.complaintId);
+    await complaintStore.fetchComplaint(complaintId.value);
     
     // Subscribe to real-time updates
-    unsubscribe.value = complaintStore.subscribeToComplaint(props.complaintId);
+    unsubscribe.value = complaintStore.subscribeToComplaint(complaintId.value);
     
     // Focus on message input
     nextTick(() => {
@@ -372,14 +374,15 @@ onUnmounted(() => {
   justify-content: center;
   height: 100%;
   text-align: center;
-  color: #6b7280;
+  padding: 2rem;
+  background: #f8fafc;
 }
 
 .spinner {
   width: 40px;
   height: 40px;
   border: 4px solid #e5e7eb;
-  border-top: 4px solid #3b82f6;
+  border-top: 4px solid #AF1E23;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 1rem;
@@ -390,20 +393,31 @@ onUnmounted(() => {
   100% { transform: rotate(360deg); }
 }
 
-.error-state i {
-  font-size: 3rem;
-  color: #fbbf24;
-  margin-bottom: 1rem;
-}
-
-.error-state h4 {
-  margin: 0 0 0.5rem 0;
-  color: #374151;
-}
-
-.error-state p {
-  margin: 0 0 1.5rem 0;
+.loading-state p {
+  margin: 0;
+  font-size: 0.875rem;
   color: #6b7280;
+}
+
+.error-icon {
+  margin-bottom: 1.5rem;
+  opacity: 0.8;
+}
+
+.error-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.2;
+}
+
+.error-message {
+  font-size: 1rem;
+  color: #6b7280;
+  margin: 0 0 2rem 0;
+  line-height: 1.5;
+  max-width: 400px;
 }
 
 .messages-list {

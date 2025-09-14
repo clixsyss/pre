@@ -49,8 +49,8 @@
 
     <!-- My Complaints List -->
     <div class="my-complaints-section">
+      <h2 class="section-title">My Complaints</h2>
       <div class="section-header">
-        <h2 class="section-title">My Complaints</h2>
         <div class="filter-tabs">
           <button 
             v-for="status in statusOptions" 
@@ -179,6 +179,57 @@
             ></textarea>
           </div>
 
+          <!-- Image/Video Upload -->
+          <div class="form-group">
+            <label>Attach Image or Video (Optional)</label>
+            <div class="file-upload-section">
+              <input 
+                ref="fileInput"
+                type="file" 
+                @change="handleFileSelect"
+                accept="image/*,video/*"
+                class="file-input"
+                id="complaint-file"
+              />
+              <label for="complaint-file" class="file-upload-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Choose File
+              </label>
+              <div v-if="selectedFile" class="file-preview">
+                <div class="file-info">
+                  <div class="file-icon">
+                    <svg v-if="isImage" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
+                      <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <polygon points="23 7 16 12 23 17 23 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </div>
+                  <div class="file-details">
+                    <span class="file-name">{{ selectedFile.name }}</span>
+                    <span class="file-size">{{ formatFileSize(selectedFile.size) }}</span>
+                  </div>
+                  <button type="button" @click="removeFile" class="remove-file-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+                <div v-if="isImage" class="image-preview">
+                  <img :src="filePreviewUrl" :alt="selectedFile.name" />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="form-actions">
             <button type="button" @click="closeModal" class="btn-secondary">
               Cancel
@@ -218,6 +269,11 @@ const newComplaint = ref({
   initialMessage: ''
 });
 
+// File upload variables
+const selectedFile = ref(null);
+const filePreviewUrl = ref(null);
+const fileInput = ref(null);
+
 const statusOptions = [
   { id: 'all', name: 'All' },
   { id: 'Open', name: 'Open' },
@@ -235,8 +291,12 @@ const filteredComplaints = computed(() => {
   }
   
   return complaints.sort((a, b) => 
-    new Date(b.lastMessageAt?.toDate()) - new Date(a.lastMessageAt?.toDate())
+    new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
   );
+});
+
+const isImage = computed(() => {
+  return selectedFile.value && selectedFile.value.type.startsWith('image/');
 });
 
 // Methods
@@ -262,7 +322,33 @@ const closeModal = () => {
 
 const submitComplaint = async () => {
   try {
-    await complaintStore.createComplaint(newComplaint.value);
+    let imageUrl = null;
+    let imageFileName = null;
+    
+    // Upload file if selected
+    if (selectedFile.value) {
+      const uploadResult = await complaintStore.uploadImage(selectedFile.value, 'complaints');
+      imageUrl = uploadResult.url;
+      imageFileName = uploadResult.fileName;
+    }
+    
+    // Create complaint with file data
+    const complaintData = {
+      ...newComplaint.value,
+      imageUrl,
+      imageFileName
+    };
+    
+    await complaintStore.createComplaint(complaintData);
+    
+    // Reset form
+    newComplaint.value = {
+      title: '',
+      category: '',
+      priority: 'Medium',
+      initialMessage: ''
+    };
+    removeFile();
     closeModal();
   } catch (error) {
     console.error('Error creating complaint:', error);
@@ -282,7 +368,7 @@ const getCategoryName = (categoryId) => {
 
 const formatTime = (timestamp) => {
   if (!timestamp) return '';
-  const date = timestamp.toDate();
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   const now = new Date();
   const diffInHours = (now - date) / (1000 * 60 * 60);
   
@@ -290,6 +376,44 @@ const formatTime = (timestamp) => {
   if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
   if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
   return date.toLocaleDateString();
+};
+
+// File handling methods
+const handleFileSelect = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+    
+    selectedFile.value = file;
+    
+    // Create preview URL for images
+    if (file.type.startsWith('image/')) {
+      filePreviewUrl.value = URL.createObjectURL(file);
+    }
+  }
+};
+
+const removeFile = () => {
+  selectedFile.value = null;
+  if (filePreviewUrl.value) {
+    URL.revokeObjectURL(filePreviewUrl.value);
+    filePreviewUrl.value = null;
+  }
+  if (fileInput.value) {
+    fileInput.value.value = '';
+  }
+};
+
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
 // Lifecycle
@@ -313,7 +437,6 @@ onUnmounted(() => {
 
 <style scoped>
 .complaints-page {
-  min-height: 100vh;
   background: #f8fafc;
   margin: 0 auto;
   padding: 16px;
@@ -807,6 +930,114 @@ onUnmounted(() => {
 .btn-primary:disabled {
   background: #9ca3af;
   cursor: not-allowed;
+}
+
+/* File Upload Styles */
+.file-upload-section {
+  margin-top: 8px;
+}
+
+.file-input {
+  display: none;
+}
+
+.file-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #6b7280;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.file-upload-btn:hover {
+  background: #f1f5f9;
+  border-color: #AF1E23;
+  color: #AF1E23;
+}
+
+.file-preview {
+  margin-top: 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-icon {
+  width: 32px;
+  height: 32px;
+  background: #AF1E23;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.file-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-size {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.remove-file-btn {
+  background: #f3f4f6;
+  border: none;
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.remove-file-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.image-preview {
+  margin-top: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  max-height: 200px;
+}
+
+.image-preview img {
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  object-fit: cover;
 }
 
 .btn-secondary {

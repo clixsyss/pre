@@ -27,6 +27,7 @@ class ComplaintService {
   async createComplaint(projectId, userId, complaintData) {
     try {
       const complaintRef = collection(this.db, `projects/${projectId}/complaints`);
+      const now = new Date();
       const complaint = {
         userId,
         adminId: null,
@@ -39,13 +40,13 @@ class ComplaintService {
           senderType: 'user',
           senderId: userId,
           text: complaintData.initialMessage,
-          timestamp: serverTimestamp(),
-          imageUrl: null,
-          imageFileName: null
+          timestamp: now,
+          imageUrl: complaintData.imageUrl || null,
+          imageFileName: complaintData.imageFileName || null
         }],
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        lastMessageAt: serverTimestamp()
+        createdAt: now,
+        updatedAt: now,
+        lastMessageAt: now
       };
 
       const docRef = await addDoc(complaintRef, complaint);
@@ -93,12 +94,25 @@ class ComplaintService {
   // Get a specific complaint by ID
   async getComplaint(projectId, complaintId) {
     try {
+      console.log('Fetching complaint:', { projectId, complaintId });
+      
+      if (!projectId) {
+        throw new Error('Project ID is required');
+      }
+      
+      if (!complaintId) {
+        throw new Error('Complaint ID is required');
+      }
+      
       const complaintRef = doc(this.db, `projects/${projectId}/complaints`, complaintId);
       const complaintSnap = await getDoc(complaintRef);
       
       if (complaintSnap.exists()) {
-        return { id: complaintSnap.id, ...complaintSnap.data() };
+        const data = complaintSnap.data();
+        console.log('Complaint found:', { id: complaintSnap.id, ...data });
+        return { id: complaintSnap.id, ...data };
       } else {
+        console.log('Complaint not found in database');
         throw new Error('Complaint not found');
       }
     } catch (error) {
@@ -112,12 +126,13 @@ class ComplaintService {
     try {
       const complaintRef = doc(this.db, `projects/${projectId}/complaints`, complaintId);
       
+      const now = new Date();
       const message = {
         id: Date.now().toString(),
         senderType: messageData.senderType, // 'user' or 'admin'
         senderId: messageData.senderId,
         text: messageData.text,
-        timestamp: serverTimestamp(),
+        timestamp: now,
         imageUrl: messageData.imageUrl || null,
         imageFileName: messageData.imageFileName || null
       };
@@ -133,8 +148,8 @@ class ComplaintService {
 
       await updateDoc(complaintRef, {
         messages: updatedMessages,
-        updatedAt: serverTimestamp(),
-        lastMessageAt: serverTimestamp()
+        updatedAt: now,
+        lastMessageAt: now
       });
 
       return message;
@@ -181,10 +196,11 @@ class ComplaintService {
   }
 
   // Upload image for complaint message
-  async uploadComplaintImage(file, complaintId) {
+  async uploadComplaintImage(file, complaintId = null) {
     try {
       const fileExtension = file.name.split('.').pop();
-      const fileName = `complaints/${complaintId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
+      const tempId = complaintId || 'temp';
+      const fileName = `complaints/${tempId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
       const fileRef = storageRef(this.storage, fileName);
       
       await uploadBytes(fileRef, file);

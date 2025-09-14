@@ -79,6 +79,18 @@ service firebase.storage {
       allow write: if request.auth != null;
     }
     
+    // Allow complaint file uploads for authenticated users
+    match /complaints/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Allow project-specific complaint file uploads for authenticated users
+    match /projects/{projectId}/complaints/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
     // Allow logo and other public assets to be read by anyone
     match /logo.png {
       allow read: if true;

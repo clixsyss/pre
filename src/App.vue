@@ -67,7 +67,8 @@ const authenticatedRoutes = [
   '/profile',
   '/smart-devices',
   '/news',
-  '/complaints'
+  '/complaints',
+  '/complaints/:id'
 ]
 
 // Check if current route should show main layout
@@ -87,6 +88,10 @@ const isAuthenticatedPage = computed(() => {
   }
   
   if (route.path.startsWith('/store/')) {
+    return true
+  }
+
+  if (route.path.startsWith('/complaints/')) {
     return true
   }
   

@@ -66,8 +66,12 @@ export const useComplaintStore = defineStore('complaint', () => {
       loading.value = true;
       error.value = null;
       
+      console.log('Fetching complaint in store:', complaintId);
+      
       const projectStore = useProjectStore();
       const projectId = projectStore.selectedProject?.id;
+      
+      console.log('Selected project:', projectId);
       
       if (!projectId) {
         throw new Error('No project selected');
@@ -76,10 +80,12 @@ export const useComplaintStore = defineStore('complaint', () => {
       const complaint = await complaintService.getComplaint(projectId, complaintId);
       currentComplaint.value = complaint;
       
+      console.log('Complaint loaded in store:', complaint);
       return complaint;
     } catch (err) {
       error.value = err.message;
       console.error('Error fetching complaint:', err);
+      currentComplaint.value = null;
       throw err;
     } finally {
       loading.value = false;
