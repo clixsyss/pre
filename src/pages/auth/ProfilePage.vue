@@ -1728,7 +1728,8 @@ onMounted(() => {
 
 .modal-header h3 {
   margin: 0 0 16px 0;
-  color: #333;
+  color: #f3e5f5;
+  font-weight: 600;
   font-size: 1.3rem;
 }
 

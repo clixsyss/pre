@@ -9,6 +9,7 @@ class NewsService {
    * @param {boolean} options.publishedOnly - Only fetch published news
    * @param {string} options.category - Filter by category
    * @param {number} options.limit - Limit the number of results
+   * @param {boolean} options.prioritizeFeatured - Prioritize featured news (for homepage)
    * @returns {Promise<Array>} Array of news items
    */
   async fetchNews(projectId, options = {}) {
@@ -17,7 +18,8 @@ class NewsService {
     const {
       publishedOnly = true,
       category = null,
-      limit = null
+      limit = null,
+      prioritizeFeatured = false
     } = options
 
     try {
@@ -63,6 +65,20 @@ class NewsService {
       })
 
       console.log('✅ Final news items array:', newsItems)
+
+      // If prioritizing featured news (for homepage), sort featured items first
+      if (prioritizeFeatured) {
+        newsItems.sort((a, b) => {
+          // Featured items first, then by creation date
+          if (a.featured && !b.featured) return -1
+          if (!a.featured && b.featured) return 1
+          
+          // If both are featured or both are not featured, sort by date
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt)
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt)
+          return dateB - dateA
+        })
+      }
 
       // Apply limit if specified
       if (limit && newsItems.length > limit) {

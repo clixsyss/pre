@@ -147,6 +147,19 @@
           </div>
         </button>
 
+        <button class="action-card" @click="navigateToNews">
+          <div class="action-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M22 6L12 13L2 6" stroke="currentColor" stroke-width="2"/>
+            </svg>
+          </div>
+          <div class="action-content">
+            <h3>News</h3>
+            <p>Read all news</p>
+          </div>
+        </button>
+
         <button class="action-card" @click="navigateToMyBookings">
           <div class="action-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -402,6 +415,10 @@ const navigateToStores = () => {
 
 const navigateToSmartDevices = () => {
   router.push('/smart-devices')
+}
+
+const navigateToNews = () => {
+  router.push('/news')
 }
 
 // Format timestamp for display

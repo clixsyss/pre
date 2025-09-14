@@ -3,13 +3,26 @@
     <!-- Header -->
     <div class="news-header">
       <div class="news-title-section">
-        <h2 class="news-title">Latest News</h2>
-        <div class="news-count">{{ filteredNews.length }} {{ filteredNews.length === 1 ? 'item' : 'items' }}</div>
+        <div class="title-row">
+          <button v-if="backButton" @click="handleGoBack" class="back-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <h2 class="news-title">{{ showAll ? 'All News' : 'Latest News' }}</h2>
+        </div>
+        <div v-if="showAll" class="news-count">{{ filteredNews.length }} {{ filteredNews.length === 1 ? 'item' : 'items' }}</div>
       </div>
+      <button v-if="!showAll" @click="navigateToAllNews" class="view-all-btn">
+        <span>View All News</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
     </div>
 
     <!-- Filter Tabs -->
-    <div class="filter-section">
+    <div v-if="showAll" class="filter-section">
       <div class="filter-tabs">
         <button v-for="tab in tabs" :key="tab.value" @click="activeTab = tab.value"
           :class="['filter-tab', { active: activeTab === tab.value }]">
@@ -181,7 +194,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 // import { useProjectStore } from '../stores/projectStore'
 import { getDownloadURL, ref as storageRef } from 'firebase/storage'
 import { storage } from '../boot/firebase'
@@ -195,9 +209,20 @@ const props = defineProps({
   projectId: {
     type: String,
     required: true
+  },
+  showAll: {
+    type: Boolean,
+    default: false
+  },
+  backButton: {
+    type: Boolean,
+    default: false
   }
 })
 
+const emit = defineEmits(['newsCountUpdate', 'goBack'])
+
+const router = useRouter()
 // const projectStore = useProjectStore()
 const loading = ref(false)
 const newsItems = ref([])
@@ -260,10 +285,14 @@ const tabs = [
 ]
 
 const filteredNews = computed(() => {
+  let filtered = []
   if (activeTab.value === 'all') {
-    return newsItems.value
+    filtered = newsItems.value
+  } else {
+    filtered = newsItems.value.filter(item => item.type === activeTab.value)
   }
-  return newsItems.value.filter(item => item.type === activeTab.value)
+  // Show only the latest 3 news items unless showAll is true
+  return props.showAll ? filtered : filtered.slice(0, 3)
 })
 
 const getTabCount = (tabValue) => {
@@ -348,6 +377,21 @@ const closeNewsModal = () => {
   selectedNewsItem.value = null
 }
 
+const navigateToAllNews = () => {
+  router.push('/news')
+}
+
+const handleGoBack = () => {
+  emit('goBack')
+}
+
+// Watch for changes in filteredNews and emit count to parent when showAll is true
+watch(filteredNews, (newValue) => {
+  if (props.showAll) {
+    emit('newsCountUpdate', newValue.length)
+  }
+}, { immediate: true })
+
 const loadDefaultLogo = async () => {
   try {
     const logoRef = storageRef(storage, 'logo.png')
@@ -367,7 +411,8 @@ const fetchNews = async () => {
     const { default: newsService } = await import('../services/newsService.js')
     const news = await newsService.fetchNews(props.projectId, {
       publishedOnly: true,
-      limit: 20
+      limit: 20,
+      prioritizeFeatured: !props.showAll // Prioritize featured news on homepage only
     })
 
     // Transform news items to display format
@@ -454,12 +499,23 @@ onUnmounted(() => {
 
 .news-header {
   margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
 }
 
 .news-title-section {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .news-title {
@@ -468,12 +524,63 @@ onUnmounted(() => {
   color: #1a1a1a;
   margin: 0;
   letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .news-count {
   font-size: 0.8rem;
   color: #6b7280;
   font-weight: 500;
+}
+
+.view-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #AF1E23;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.view-all-btn:hover {
+  background: #AF1E23;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+}
+
+.view-all-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+.back-btn {
+  background: #f3f4f6;
+  border: none;
+  border-radius: 12px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.back-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+  transform: scale(1.05);
 }
 
 .filter-section {
@@ -835,6 +942,7 @@ onUnmounted(() => {
   margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -913,6 +1021,11 @@ onUnmounted(() => {
     font-size: 0.75rem;
   }
 
+  .view-all-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+
   .filter-tab {
     padding: 6px 10px;
     font-size: 0.75rem;
@@ -966,6 +1079,11 @@ onUnmounted(() => {
 
   .news-headline {
     font-size: 1.125rem;
+  }
+
+  .view-all-btn {
+    padding: 6px 10px;
+    font-size: 0.7rem;
   }
 
   .filter-tab {

@@ -160,6 +160,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/news',
+    name: 'News',
+    component: () => import('../pages/auth/News.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/smart-devices',
     name: 'SmartDevices',
     component: () => import('../pages/auth/SmartDevices.vue'),
