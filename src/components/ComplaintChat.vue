@@ -98,8 +98,20 @@
 
     <!-- Message Input -->
     <div class="message-input-container">
-      <div class="message-input">
-        <button @click="toggleImageUpload" class="attachment-btn" :disabled="uploading" title="Attach Image">
+      <!-- Closed Complaint Notice -->
+      <div v-if="isComplaintClosed" class="closed-notice">
+        <div class="closed-notice-content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>This complaint has been closed. You can view the conversation but cannot send new messages.</span>
+        </div>
+      </div>
+      
+      <div class="message-input" :class="{ 'disabled': isComplaintClosed }">
+        <button @click="toggleImageUpload" class="attachment-btn" :disabled="uploading || isComplaintClosed" title="Attach Image">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M21.44 11.05L12.25 20.24C11.1242 21.3658 9.59722 21.9983 8.005 21.9983C6.41278 21.9983 4.88583 21.3658 3.76 20.24C2.63417 19.1142 2.00167 17.5872 2.00167 15.995C2.00167 14.4028 2.63417 12.8758 3.76 11.75L12.95 2.56C13.7006 1.80944 14.7186 1.38787 15.79 1.38787C16.8614 1.38787 17.8794 1.80944 18.63 2.56C19.3806 3.31056 19.8021 4.32856 19.8021 5.4C19.8021 6.47144 19.3806 7.48944 18.63 8.24L9.41 17.46C9.03473 17.8353 8.53127 18.0499 8.005 18.0499C7.47873 18.0499 6.97527 17.8353 6.6 17.46C6.22473 17.0847 6.01013 16.5813 6.01013 16.055C6.01013 15.5287 6.22473 15.0253 6.6 14.65L15.07 6.18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -111,8 +123,8 @@
             v-model="newMessage"
             @keydown.enter.prevent="handleEnterKey"
             @input="adjustTextareaHeight"
-            placeholder="Type your message..."
-            :disabled="complaintStore.loading"
+            :placeholder="isComplaintClosed ? 'This complaint is closed' : 'Type your message...'"
+            :disabled="complaintStore.loading || isComplaintClosed"
             rows="1"
             class="message-textarea"
           ></textarea>
@@ -123,9 +135,9 @@
         
         <button 
           @click="sendMessage" 
-          :disabled="!newMessage.trim() || complaintStore.loading || uploading" 
+          :disabled="!newMessage.trim() || complaintStore.loading || uploading || isComplaintClosed" 
           class="send-btn"
-          title="Send Message"
+          :title="isComplaintClosed ? 'Cannot send messages to closed complaints' : 'Send Message'"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -218,6 +230,7 @@ const messageInput = ref(null);
 
 // Computed properties
 const complaint = computed(() => complaintStore.currentComplaint);
+const isComplaintClosed = computed(() => complaint.value?.status === 'Closed');
 
 // Methods
 const goBack = () => {
@@ -322,7 +335,7 @@ const handleImageSelect = async (event) => {
 };
 
 const sendMessage = async () => {
-  if (!newMessage.value.trim() || complaintStore.loading) return;
+  if (!newMessage.value.trim() || complaintStore.loading || isComplaintClosed.value) return;
 
   try {
     const auth = getAuth();
@@ -410,7 +423,7 @@ onUnmounted(() => {
 .complaint-chat {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 140px - 60px); /* Full height minus header and bottom nav */
+  height: calc(100vh - 150px - 60px); /* Full height minus header and bottom nav */
   background: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   position: fixed;
@@ -745,6 +758,29 @@ onUnmounted(() => {
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Closed Complaint Notice */
+.closed-notice {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+}
+
+.closed-notice-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #92400e;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.closed-notice-content svg {
+  flex-shrink: 0;
+  color: #f59e0b;
+}
+
 .message-input {
   display: flex;
   align-items: flex-end;
@@ -756,6 +792,13 @@ onUnmounted(() => {
   transition: all 0.2s ease;
   max-width: 800px;
   margin: 0 auto;
+}
+
+.message-input.disabled {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .message-input:focus-within {
