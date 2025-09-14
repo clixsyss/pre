@@ -3,15 +3,26 @@
     <!-- Header -->
     <div class="chat-header">
       <button @click="goBack" class="back-btn">
-        <i class="fas fa-arrow-left"></i>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
       </button>
       <div class="header-info">
-        <h2>{{ complaint?.title || 'Complaint Chat' }}</h2>
-        <div class="status-info">
-          <span :class="['status-badge', complaint?.status?.toLowerCase().replace(' ', '-')]">
-            {{ complaint?.status || 'Loading...' }}
-          </span>
-          <span class="category">{{ getCategoryName(complaint?.category) }}</span>
+        <div class="header-title">
+          <h2>{{ complaint?.title || 'Complaint Chat' }}</h2>
+          <div class="status-info">
+            <span :class="['status-badge', complaint?.status?.toLowerCase().replace(' ', '-')]">
+              {{ complaint?.status || 'Loading...' }}
+            </span>
+            <span class="category">{{ getCategoryName(complaint?.category) }}</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button @click="toggleFullscreen" class="action-btn" title="Toggle Fullscreen">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 3H5C3.89543 3 3 3.89543 3 5V8M21 3H19C17.8954 3 17 3.89543 17 5V8M3 16V19C3 20.1046 3.89543 21 5 21H8M16 21H19C20.1046 21 21 20.1046 21 19V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -40,17 +51,45 @@
         <div 
           v-for="message in complaint.messages" 
           :key="message.id"
-          :class="['message', message.senderType]"
+          :class="['message-wrapper', message.senderType]"
         >
-          <div class="message-bubble">
-            <div v-if="message.imageUrl" class="message-image">
-              <img :src="message.imageUrl" :alt="'Image message'" @click="viewImage(message.imageUrl)" />
+          <!-- Message Avatar -->
+          <div class="message-avatar">
+            <div :class="['avatar', message.senderType]">
+              <svg v-if="message.senderType === 'user'" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </div>
-            <div v-if="message.text" class="message-text">
-              {{ message.text }}
-            </div>
-            <div class="message-time">
-              {{ formatMessageTime(message.timestamp) }}
+          </div>
+
+          <!-- Message Content -->
+          <div class="message-content">
+            <div class="message-bubble">
+              <!-- Image Message -->
+              <div v-if="message.imageUrl" class="message-image" @click="viewImage(message.imageUrl)">
+                <img :src="message.imageUrl" :alt="'Image message'" />
+                <div class="image-overlay">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 3H21V9M21 3L3 21M21 3V9H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- Text Message -->
+              <div v-if="message.text" class="message-text">
+                {{ message.text }}
+              </div>
+              
+              <!-- Message Time -->
+              <div class="message-time">
+                {{ formatMessageTime(message.timestamp) }}
+              </div>
             </div>
           </div>
         </div>
@@ -60,18 +99,37 @@
     <!-- Message Input -->
     <div class="message-input-container">
       <div class="message-input">
-        <button @click="toggleImageUpload" class="image-btn" :disabled="uploading">
-          <i class="fas fa-image"></i>
+        <button @click="toggleImageUpload" class="attachment-btn" :disabled="uploading" title="Attach Image">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21.44 11.05L12.25 20.24C11.1242 21.3658 9.59722 21.9983 8.005 21.9983C6.41278 21.9983 4.88583 21.3658 3.76 20.24C2.63417 19.1142 2.00167 17.5872 2.00167 15.995C2.00167 14.4028 2.63417 12.8758 3.76 11.75L12.95 2.56C13.7006 1.80944 14.7186 1.38787 15.79 1.38787C16.8614 1.38787 17.8794 1.80944 18.63 2.56C19.3806 3.31056 19.8021 4.32856 19.8021 5.4C19.8021 6.47144 19.3806 7.48944 18.63 8.24L9.41 17.46C9.03473 17.8353 8.53127 18.0499 8.005 18.0499C7.47873 18.0499 6.97527 17.8353 6.6 17.46C6.22473 17.0847 6.01013 16.5813 6.01013 16.055C6.01013 15.5287 6.22473 15.0253 6.6 14.65L15.07 6.18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </button>
-        <input 
-          ref="messageInput"
-          v-model="newMessage"
-          @keyup.enter="sendMessage"
-          placeholder="Type your message..."
-          :disabled="complaintStore.loading"
-        />
-        <button @click="sendMessage" :disabled="!newMessage.trim() || complaintStore.loading" class="send-btn">
-          <i class="fas fa-paper-plane"></i>
+        
+        <div class="input-wrapper">
+          <textarea 
+            ref="messageInput"
+            v-model="newMessage"
+            @keydown.enter.prevent="handleEnterKey"
+            @input="adjustTextareaHeight"
+            placeholder="Type your message..."
+            :disabled="complaintStore.loading"
+            rows="1"
+            class="message-textarea"
+          ></textarea>
+          <div v-if="uploading" class="upload-indicator">
+            <div class="upload-spinner"></div>
+          </div>
+        </div>
+        
+        <button 
+          @click="sendMessage" 
+          :disabled="!newMessage.trim() || complaintStore.loading || uploading" 
+          class="send-btn"
+          title="Send Message"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </button>
       </div>
       
@@ -80,27 +138,56 @@
         <input 
           ref="imageInput"
           type="file" 
-          accept="image/*" 
+          accept="image/*,video/*" 
           @change="handleImageSelect"
           style="display: none"
         />
-        <button @click="$refs.imageInput.click()" class="select-image-btn">
-          <i class="fas fa-camera"></i>
-          Select Image
-        </button>
-        <button @click="showImageUpload = false" class="cancel-btn">
-          Cancel
-        </button>
+        <div class="upload-options">
+          <button @click="$refs.imageInput.click()" class="select-image-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
+              <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            Select Image/Video
+          </button>
+          <button @click="showImageUpload = false" class="cancel-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- Image Preview Modal -->
-    <div v-if="showImagePreview" class="image-preview-modal" @click="showImagePreview = false">
-      <div class="image-preview-content" @click.stop>
-        <img :src="previewImageUrl" alt="Image preview" />
-        <button @click="showImagePreview = false" class="close-preview-btn">
-          <i class="fas fa-times"></i>
-        </button>
+    <!-- Full Screen Image/Video Modal -->
+    <div v-if="showImagePreview" class="fullscreen-modal" @click="closeFullscreen">
+      <div class="fullscreen-content" @click.stop>
+        <div class="fullscreen-header">
+          <button @click="closeFullscreen" class="close-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="media-actions">
+            <button @click="downloadMedia" class="action-btn" title="Download">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="media-container">
+          <img v-if="isImageFile(previewImageUrl)" :src="previewImageUrl" alt="Image preview" class="fullscreen-image" />
+          <video v-else :src="previewImageUrl" controls class="fullscreen-video">
+            Your browser does not support the video tag.
+          </video>
+        </div>
       </div>
     </div>
   </div>
@@ -139,6 +226,55 @@ const goBack = () => {
 
 const toggleImageUpload = () => {
   showImageUpload.value = !showImageUpload.value;
+};
+
+const toggleFullscreen = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+};
+
+const closeFullscreen = () => {
+  showImagePreview.value = false;
+  previewImageUrl.value = '';
+};
+
+const isImageFile = (url) => {
+  if (!url) return false;
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+  return imageExtensions.some(ext => url.toLowerCase().includes(ext));
+};
+
+const downloadMedia = () => {
+  if (previewImageUrl.value) {
+    const link = document.createElement('a');
+    link.href = previewImageUrl.value;
+    link.download = `complaint-media-${Date.now()}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
+
+const handleEnterKey = (event) => {
+  if (event.shiftKey) {
+    // Allow new line with Shift+Enter
+    return;
+  } else {
+    // Send message with Enter
+    event.preventDefault();
+    sendMessage();
+  }
+};
+
+const adjustTextareaHeight = () => {
+  const textarea = messageInput.value;
+  if (textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+  }
 };
 
 const handleImageSelect = async (event) => {
@@ -276,47 +412,57 @@ onUnmounted(() => {
   flex-direction: column;
   height: 100vh;
   background: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+/* Header Styles */
 .chat-header {
   background: white;
-  padding: 1rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 1rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   gap: 1rem;
   position: sticky;
   top: 0;
   z-index: 10;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .back-btn {
-  background: #3b82f6;
+  background: #AF1E23;
   color: white;
   border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  border-radius: 12px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(175, 30, 35, 0.2);
 }
 
 .back-btn:hover {
-  background: #2563eb;
+  background: #8b161a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(175, 30, 35, 0.3);
 }
 
 .header-info {
   flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.header-info h2 {
+.header-title h2 {
   margin: 0 0 0.25rem 0;
   font-size: 1.25rem;
   font-weight: 600;
   color: #1f2937;
+  line-height: 1.3;
 }
 
 .status-info {
@@ -331,6 +477,7 @@ onUnmounted(() => {
   font-size: 0.75rem;
   font-weight: 500;
   text-transform: uppercase;
+  letter-spacing: 0.025em;
 }
 
 .status-badge.open {
@@ -358,13 +505,39 @@ onUnmounted(() => {
   color: #6b7280;
   background: #f3f4f6;
   padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  background: #f3f4f6;
+  border: none;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #6b7280;
+}
+
+.action-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+/* Messages Container */
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
 .loading-state, .error-state {
@@ -420,248 +593,422 @@ onUnmounted(() => {
   max-width: 400px;
 }
 
+/* Messages List */
 .messages-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
-.message {
+.message-wrapper {
   display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
   margin-bottom: 0.5rem;
 }
 
-.message.user {
-  justify-content: flex-end;
+.message-wrapper.user {
+  flex-direction: row-reverse;
 }
 
-.message.admin {
-  justify-content: flex-start;
+.message-wrapper.admin {
+  flex-direction: row;
+}
+
+/* Message Avatar */
+.message-avatar {
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+}
+
+.avatar.user {
+  background: #AF1E23;
+}
+
+.avatar.admin {
+  background: #6b7280;
+}
+
+/* Message Content */
+.message-content {
+  flex: 1;
+  max-width: 70%;
 }
 
 .message-bubble {
-  max-width: 70%;
   padding: 0.75rem 1rem;
   border-radius: 18px;
   position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  word-wrap: break-word;
 }
 
-.message.user .message-bubble {
-  background: #3b82f6;
+.message-wrapper.user .message-bubble {
+  background: #AF1E23;
   color: white;
   border-bottom-right-radius: 4px;
 }
 
-.message.admin .message-bubble {
+.message-wrapper.admin .message-bubble {
   background: white;
   color: #1f2937;
   border: 1px solid #e5e7eb;
   border-bottom-left-radius: 4px;
 }
 
+/* Message Image */
 .message-image {
   margin-bottom: 0.5rem;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.message-image:hover {
+  transform: scale(1.02);
 }
 
 .message-image img {
   width: 100%;
-  max-width: 200px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: transform 0.2s;
+  max-width: 250px;
+  height: auto;
+  border-radius: 12px;
+  display: block;
 }
 
-.message-image img:hover {
-  transform: scale(1.05);
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: 12px;
 }
 
+.message-image:hover .image-overlay {
+  opacity: 1;
+}
+
+.image-overlay svg {
+  color: white;
+}
+
+/* Message Text */
 .message-text {
-  line-height: 1.4;
-  word-wrap: break-word;
+  line-height: 1.5;
+  font-size: 0.95rem;
 }
 
 .message-time {
   font-size: 0.75rem;
   opacity: 0.7;
   margin-top: 0.25rem;
+  text-align: right;
 }
 
+.message-wrapper.admin .message-time {
+  text-align: left;
+}
+
+/* Message Input */
 .message-input-container {
   background: white;
-  padding: 1rem;
+  padding: 1.5rem;
   border-top: 1px solid #e5e7eb;
   position: sticky;
   bottom: 0;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .message-input {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.75rem;
-  background: #f3f4f6;
+  background: #f8fafc;
+  border: 2px solid #e5e7eb;
   border-radius: 24px;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  transition: all 0.2s ease;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
-.image-btn, .send-btn {
+.message-input:focus-within {
+  border-color: #AF1E23;
+  box-shadow: 0 0 0 3px rgba(175, 30, 35, 0.1);
+}
+
+.attachment-btn, .send-btn {
   background: none;
   border: none;
   color: #6b7280;
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 50%;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
 }
 
-.image-btn:hover, .send-btn:hover {
+.attachment-btn:hover {
   background: #e5e7eb;
   color: #374151;
 }
 
+.send-btn {
+  background: #AF1E23;
+  color: white;
+}
+
+.send-btn:hover:not(:disabled) {
+  background: #8b161a;
+  transform: scale(1.05);
+}
+
 .send-btn:disabled {
-  color: #d1d5db;
+  background: #d1d5db;
   cursor: not-allowed;
+  transform: none;
 }
 
-.send-btn:not(:disabled) {
-  color: #3b82f6;
-}
-
-.message-input input {
+.input-wrapper {
   flex: 1;
-  border: none;
-  background: none;
-  outline: none;
-  font-size: 1rem;
-  color: #1f2937;
+  position: relative;
 }
 
-.message-input input::placeholder {
+.message-textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  resize: none;
+  outline: none;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #1f2937;
+  font-family: inherit;
+  min-height: 20px;
+  max-height: 120px;
+}
+
+.message-textarea::placeholder {
   color: #9ca3af;
 }
 
+.upload-indicator {
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  transform: translateY(-50%);
+}
+
+.upload-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #AF1E23;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Image Upload */
 .image-upload {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.upload-options {
   display: flex;
   gap: 0.75rem;
-  margin-top: 0.75rem;
-  padding: 0.75rem;
-  background: #f9fafb;
-  border-radius: 8px;
+  justify-content: center;
 }
 
 .select-image-btn, .cancel-btn {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
 }
 
 .select-image-btn {
-  background: #3b82f6;
+  background: #AF1E23;
   color: white;
 }
 
 .select-image-btn:hover {
-  background: #2563eb;
+  background: #8b161a;
+  transform: translateY(-1px);
 }
 
 .cancel-btn {
   background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  color: #6b7280;
 }
 
 .cancel-btn:hover {
   background: #e5e7eb;
+  color: #374151;
 }
 
-.image-preview-modal {
+/* Fullscreen Modal */
+.fullscreen-modal {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.9);
+  background: rgba(0, 0, 0, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  backdrop-filter: blur(4px);
 }
 
-.image-preview-content {
+.fullscreen-content {
   position: relative;
-  max-width: 90vw;
-  max-height: 90vh;
+  width: 90vw;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
-.image-preview-content img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  border-radius: 8px;
-}
-
-.close-preview-btn {
+.fullscreen-header {
   position: absolute;
-  top: -40px;
+  top: 0;
+  left: 0;
   right: 0;
-  background: rgba(255,255,255,0.2);
-  color: white;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+}
+
+.fullscreen-header .close-btn {
+  background: rgba(255, 255, 255, 0.1);
   border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s;
-}
-
-.close-preview-btn:hover {
-  background: rgba(255,255,255,0.3);
-}
-
-.btn-primary {
-  background: #3b82f6;
   color: white;
+  transition: all 0.2s ease;
+}
+
+.fullscreen-header .close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.media-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.media-actions .action-btn {
+  background: rgba(255, 255, 255, 0.1);
   border: none;
   border-radius: 8px;
-  padding: 0.75rem 1.5rem;
-  font-weight: 500;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: background 0.2s;
+  color: white;
+  transition: all 0.2s ease;
 }
 
-.btn-primary:hover {
-  background: #2563eb;
+.media-actions .action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
-@media (max-width: 640px) {
+.media-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1rem 1rem;
+}
+
+.fullscreen-image, .fullscreen-video {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.fullscreen-video {
+  width: 100%;
+  height: 100%;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .messages-container {
+    padding: 1rem;
+  }
+  
+  .message-input-container {
+    padding: 1rem;
+  }
+  
+  .message-wrapper {
+    gap: 0.5rem;
+  }
+  
+  .avatar {
+    width: 28px;
+    height: 28px;
+  }
+  
   .message-bubble {
-    max-width: 85%;
+    padding: 0.625rem 0.875rem;
   }
   
-  .header-info h2 {
-    font-size: 1.1rem;
-  }
-  
-  .status-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
+  .fullscreen-content {
+    width: 95vw;
+    height: 95vh;
   }
 }
 </style>
