@@ -35,7 +35,9 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
                 email: academy.email,
                 phone: academy.phone,
                 website: academy.website,
-                programs: []
+                programs: [],
+                imageUrl: academy.imageUrl || null,
+                imageFileName: academy.imageFileName || null
             });
             programsByAcademy.value[academy.name] = [];
         } catch (error) {
@@ -201,9 +203,12 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
             
             const academies = [];
             academiesSnapshot.forEach((doc) => {
+                const data = doc.data();
                 academies.push({
                     id: doc.id,
-                    ...doc.data()
+                    ...data,
+                    imageUrl: data.imageUrl || null,
+                    imageFileName: data.imageFileName || null
                 });
             });
             

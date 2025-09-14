@@ -51,11 +51,16 @@ export const useSportsStore = defineStore("sportsStore", () => {
                     }
                     
                     // Add court to the sport's courts array
-                    courtsData[sportId].push({
+                    const courtWithImage = {
                         id: docSnap.id,
                         ...courtData,
-                        unavailability: courtData.unavailability || []
-                    });
+                        unavailability: courtData.unavailability || [],
+                        imageUrl: courtData.imageUrl || null,
+                        imageFileName: courtData.imageFileName || null
+                    };
+                    
+                    
+                    courtsData[sportId].push(courtWithImage);
                 }
             });
 

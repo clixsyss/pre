@@ -38,6 +38,16 @@
     <div v-else-if="academy" class="content">
       <!-- Academy Overview -->
       <div class="academy-overview">
+        <!-- Academy Image -->
+        <div class="academy-image-section" v-if="academy.imageUrl">
+          <img :src="academy.imageUrl" :alt="academy.name" class="academy-image" />
+        </div>
+        <div class="academy-image-placeholder" v-else>
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 16L8.586 11.414C9.367 10.633 10.633 10.633 11.414 11.414L16 16M14 14L15.586 12.414C16.367 11.633 17.633 11.633 18.414 12.414L20 14M14 8H14.01M6 20H18C19.105 20 20 19.105 20 18V6C20 4.895 19.105 4 18 4H6C4.895 4 4 4.895 4 6V18C4 19.105 4.895 20 6 20Z" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        
         <div class="overview-header">
           <div class="academy-info">
             <h2 class="academy-name">{{ academy.name }}</h2>
@@ -467,6 +477,31 @@ onMounted(() => {
   padding: 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.academy-image-section {
+  width: 100%;
+  height: 200px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.academy-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.academy-image-placeholder {
+  width: 100%;
+  height: 200px;
+  border-radius: 12px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
 }
 
 .overview-header {

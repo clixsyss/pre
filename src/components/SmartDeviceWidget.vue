@@ -648,11 +648,6 @@ const isDeviceLoading = (deviceId) => {
   max-height: 1000px;
 }
 
-/* Single Device Display */
-.single-device-display {
-  padding: 20px;
-}
-
 .single-device-card {
   background: #F6F6F6;
   border-radius: 12px;

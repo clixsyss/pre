@@ -196,7 +196,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-// import { useProjectStore } from '../stores/projectStore'
+import { useProjectStore } from '../stores/projectStore'
 import { getDownloadURL, ref as storageRef } from 'firebase/storage'
 import { storage } from '../boot/firebase'
 
@@ -223,7 +223,7 @@ const props = defineProps({
 const emit = defineEmits(['newsCountUpdate', 'goBack'])
 
 const router = useRouter()
-// const projectStore = useProjectStore()
+const projectStore = useProjectStore()
 const loading = ref(false)
 const newsItems = ref([])
 const activeTab = ref('all')
@@ -233,6 +233,7 @@ const selectedNewsItem = ref(null)
 const videoLoadingStates = ref({})
 const videoIntersectionObserver = ref(null)
 const videoElements = ref(new Map())
+const isInitialMount = ref(true)
 
 const tabs = [
   { 
@@ -392,6 +393,56 @@ watch(filteredNews, (newValue) => {
   }
 }, { immediate: true })
 
+// Watch for project store changes and refetch news
+watch(() => projectStore.selectedProject?.id, async (newProjectId, oldProjectId) => {
+  // Skip on initial mount (handled by onMounted)
+  if (isInitialMount.value) {
+    isInitialMount.value = false
+    return
+  }
+  
+  if (newProjectId && newProjectId !== oldProjectId) {
+    console.log('🔄 Project changed via store, refetching news:', { from: oldProjectId, to: newProjectId })
+    
+    // Reset to loading state
+    loading.value = true
+    
+    // Reset active tab to 'all' for fresh start
+    activeTab.value = 'all'
+    
+    // Clear existing news items
+    newsItems.value = []
+    
+    // Fetch new news
+    await fetchNews()
+  }
+}, { immediate: false })
+
+// Also watch the prop as a fallback
+watch(() => props.projectId, async (newProjectId, oldProjectId) => {
+  // Skip on initial mount (handled by onMounted)
+  if (isInitialMount.value) {
+    isInitialMount.value = false
+    return
+  }
+  
+  if (newProjectId && newProjectId !== oldProjectId) {
+    console.log('🔄 Project changed via prop, refetching news:', { from: oldProjectId, to: newProjectId })
+    
+    // Reset to loading state
+    loading.value = true
+    
+    // Reset active tab to 'all' for fresh start
+    activeTab.value = 'all'
+    
+    // Clear existing news items
+    newsItems.value = []
+    
+    // Fetch new news
+    await fetchNews()
+  }
+}, { immediate: false })
+
 const loadDefaultLogo = async () => {
   try {
     const logoRef = storageRef(storage, 'logo.png')
@@ -403,13 +454,15 @@ const loadDefaultLogo = async () => {
 }
 
 const fetchNews = async () => {
-  if (!props.projectId) return
+  // Use project store as primary source, prop as fallback
+  const projectId = projectStore.selectedProject?.id || props.projectId
+  if (!projectId) return
 
   loading.value = true
   try {
     // Import news service dynamically to avoid circular imports
     const { default: newsService } = await import('../services/newsService.js')
-    const news = await newsService.fetchNews(props.projectId, {
+    const news = await newsService.fetchNews(projectId, {
       publishedOnly: true,
       limit: 20,
       prioritizeFeatured: !props.showAll // Prioritize featured news on homepage only
