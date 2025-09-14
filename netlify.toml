@@ -5,9 +5,15 @@
   # Directory to publish (Quasar builds to dist/spa)
   publish = "dist/spa"
   
-  # Node.js version
+  # Node.js version and environment variables
   [build.environment]
     NODE_VERSION = "18"
+    VITE_FIREBASE_API_KEY = "AIzaSyDpYVhP_uLDecqds0VD7g409N_AMj-OMF8"
+    VITE_FIREBASE_AUTH_DOMAIN = "pre-group.firebaseapp.com"
+    VITE_FIREBASE_PROJECT_ID = "pre-group"
+    VITE_FIREBASE_STORAGE_BUCKET = "pre-group.firebasestorage.app"
+    VITE_FIREBASE_MESSAGING_SENDER_ID = "871778209250"
+    VITE_FIREBASE_APP_ID = "1:871778209250:web:79e726a4f5b5579bfc7dbb"
 
 # Redirect rules for SPA routing
 [[redirects]]
