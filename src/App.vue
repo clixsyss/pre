@@ -66,7 +66,8 @@ const authenticatedRoutes = [
   '/analytics',
   '/profile',
   '/smart-devices',
-  '/news'
+  '/news',
+  '/complaints'
 ]
 
 // Check if current route should show main layout

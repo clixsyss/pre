@@ -166,6 +166,18 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/complaints',
+    name: 'Complaints',
+    component: () => import('../pages/auth/Complaints.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/complaints/:id',
+    name: 'ComplaintChat',
+    component: () => import('../components/ComplaintChat.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/smart-devices',
     name: 'SmartDevices',
     component: () => import('../pages/auth/SmartDevices.vue'),
