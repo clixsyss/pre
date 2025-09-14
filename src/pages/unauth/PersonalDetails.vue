@@ -50,8 +50,8 @@
       <div class="icon-section">
         <div class="icon-wrapper">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="12" cy="7" r="4" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="7" r="4" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
       </div>
@@ -432,7 +432,7 @@ const handleSubmit = async () => {
 
 .separator-line {
   height: 3px;
-  background-color: #ff6b35;
+  background-color: #AF1E23;
   margin: 0;
   width: 100%;
   margin-bottom: 0;
@@ -474,15 +474,15 @@ const handleSubmit = async () => {
 }
 
 .progress-step.active .step-icon {
-  background-color: #000000;
-  border-color: #000000;
+  background-color: #231F20;
+  border-color: #231F20;
   color: white;
   width: 48px;
   height: 48px;
 }
 
 .progress-step.active .step-label {
-  color: #000000;
+  color: #231F20;
   font-weight: 600;
   font-size: 1rem;
   margin-top: 12px;
@@ -593,7 +593,7 @@ const handleSubmit = async () => {
 }
 
 .signin-header-btn {
-  background-color: #ff6b35;
+  background-color: #AF1E23;
   color: white;
   border: none;
   padding: 8px 15px;
@@ -605,7 +605,7 @@ const handleSubmit = async () => {
 }
 
 .signin-header-btn:hover {
-  background-color: #e55a2b;
+  background-color: #AF1E23;
 }
 
 .tabs {
@@ -628,7 +628,7 @@ const handleSubmit = async () => {
 }
 
 .tab-btn.active {
-  color: #ff6b35;
+  color: #AF1E23;
   font-weight: 600;
 }
 
@@ -639,7 +639,7 @@ const handleSubmit = async () => {
   left: 0;
   right: 0;
   height: 3px;
-  background-color: #ff6b35;
+  background-color: #AF1E23;
 }
 
 .completion-info {
@@ -722,8 +722,8 @@ const handleSubmit = async () => {
 }
 
 .nav-btn.secondary:hover {
-  border-color: #ff6b35;
-  color: #ff6b35;
+  border-color: #AF1E23;
+  color: #AF1E23;
 }
 
 .content {
@@ -782,7 +782,7 @@ const handleSubmit = async () => {
 
 .form-input:focus {
   outline: none;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
 }
 
 .form-input[readonly] {
@@ -823,14 +823,14 @@ const handleSubmit = async () => {
 }
 
 .gender-btn.active {
-  border-color: #ff6b35;
-  background-color: #ff6b35;
+  border-color: #AF1E23;
+  background-color: #AF1E23;
   color: white;
 }
 
 .gender-btn:hover:not(.active) {
-  border-color: #ff6b35;
-  color: #ff6b35;
+  border-color: #AF1E23;
+  color: #AF1E23;
 }
 
 .file-upload {
@@ -860,13 +860,13 @@ const handleSubmit = async () => {
 }
 
 .file-label:hover {
-  border-color: #ff6b35;
-  color: #ff6b35;
+  border-color: #AF1E23;
+  color: #AF1E23;
 }
 
 .continue-btn {
   width: 100%;
-  background-color: #ff6b35;
+  background-color: #AF1E23;
   color: white;
   border: none;
   padding: 16px;
@@ -878,7 +878,7 @@ const handleSubmit = async () => {
 }
 
 .continue-btn:hover:not(:disabled) {
-  background-color: #e55a2b;
+  background-color: #AF1E23;
 }
 
 .continue-btn:disabled {

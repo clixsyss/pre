@@ -371,7 +371,7 @@ const goToSignUp = () => {
 
 .form-input:focus {
   outline: none;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
 }
 
 .password-input-wrapper {
@@ -420,8 +420,8 @@ const goToSignUp = () => {
 }
 
 .checkbox:checked + .checkmark {
-  background-color: #ff6b35;
-  border-color: #ff6b35;
+  background-color: #AF1E23;
+  border-color: #AF1E23;
 }
 
 .checkbox:checked + .checkmark::after {
@@ -438,7 +438,7 @@ const goToSignUp = () => {
 .forgot-link {
   background: none;
   border: none;
-  color: #ff6b35;
+  color: #AF1E23;
   font-size: 0.9rem;
   cursor: pointer;
   text-decoration: underline;
@@ -446,7 +446,7 @@ const goToSignUp = () => {
 
 .signin-btn {
   width: 100%;
-  background-color: #ff6b35;
+  background-color: #AF1E23;
   color: white;
   border: none;
   padding: 16px;
@@ -458,7 +458,7 @@ const goToSignUp = () => {
 }
 
 .signin-btn:hover:not(:disabled) {
-  background-color: #e55a2b;
+  background-color: #AF1E23;
 }
 
 .signin-btn:disabled {
@@ -533,7 +533,7 @@ const goToSignUp = () => {
 }
 
 .social-btn:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   background-color: #f8f9fa;
 }
 
@@ -546,7 +546,7 @@ const goToSignUp = () => {
 .signup-link {
   background: none;
   border: none;
-  color: #ff6b35;
+  color: #AF1E23;
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;

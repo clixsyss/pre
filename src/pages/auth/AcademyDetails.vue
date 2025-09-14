@@ -417,7 +417,7 @@ onMounted(() => {
   width: 40px;
   height: 40px;
   border: 3px solid #f3f3f3;
-  border-top: 3px solid #ff6b35;
+  border-top: 3px solid #AF1E23;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -443,7 +443,7 @@ onMounted(() => {
 }
 
 .retry-button {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -454,7 +454,7 @@ onMounted(() => {
 }
 
 .retry-button:hover {
-  background: #e55a2b;
+  background: #AF1E23;
 }
 
 .content {
@@ -654,7 +654,7 @@ onMounted(() => {
 }
 
 .program-card:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
@@ -689,7 +689,7 @@ onMounted(() => {
 .price-amount {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #ff6b35;
+  color: #AF1E23;
 }
 
 .price-period {
@@ -792,7 +792,7 @@ onMounted(() => {
 }
 
 .register-button {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -803,7 +803,7 @@ onMounted(() => {
 }
 
 .register-button:hover {
-  background: #e55a2b;
+  background: #AF1E23;
 }
 
 /* Responsive Design */

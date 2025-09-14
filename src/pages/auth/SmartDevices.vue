@@ -620,7 +620,7 @@ onActivated(async () => {
 }
 
 .page-header {
-  background: white;
+  background: #F6F6F6;
   border-bottom: 1px solid #e8e8e8;
   padding: 16px;
   margin-bottom: 20px;
@@ -649,7 +649,7 @@ onActivated(async () => {
 .back-button:hover {
   background: #e9ecef;
   color: #333;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
 }
 
 .header-content {
@@ -689,9 +689,9 @@ onActivated(async () => {
 }
 
 .refresh-button {
-  background: #ff6b35;
+  background: #AF1E23;
   border: none;
-  color: white;
+  color: #F6F6F6;
   cursor: pointer;
   padding: 8px;
   border-radius: 6px;
@@ -703,7 +703,7 @@ onActivated(async () => {
 }
 
 .refresh-button:hover:not(:disabled) {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-1px);
 }
 
@@ -739,8 +739,8 @@ onActivated(async () => {
 }
 
 .connect-btn {
-  background: #ff6b35;
-  color: white;
+  background: #AF1E23;
+  color: #F6F6F6;
   border: none;
   border-radius: 12px;
   padding: 12px 24px;
@@ -751,7 +751,7 @@ onActivated(async () => {
 }
 
 .connect-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-1px);
 }
 
@@ -759,7 +759,7 @@ onActivated(async () => {
   width: 40px;
   height: 40px;
   border: 4px solid #f3f3f3;
-  border-top: 4px solid #ff6b35;
+  border-top: 4px solid #AF1E23;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 16px;
@@ -782,7 +782,7 @@ onActivated(async () => {
 }
 
 .room-selector {
-  background: white;
+  background: #F6F6F6;
   border: 1px solid #e8e8e8;
   border-radius: 8px;
   padding: 16px;
@@ -834,13 +834,13 @@ onActivated(async () => {
 .room-tab:hover {
   background: #e9ecef;
   color: #333;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
 }
 
 .room-tab.active {
-  background: #ff6b35;
-  color: white;
-  border-color: #ff6b35;
+  background: #AF1E23;
+  color: #F6F6F6;
+  border-color: #AF1E23;
 }
 
 .room-tab-content {
@@ -866,7 +866,7 @@ onActivated(async () => {
 }
 
 .devices-section {
-  background: white;
+  background: #F6F6F6;
   border: 1px solid #e8e8e8;
   border-radius: 8px;
   padding: 16px;
@@ -894,8 +894,8 @@ onActivated(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  color: #F6F6F6;
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
 
@@ -938,7 +938,7 @@ onActivated(async () => {
 .action-btn:hover {
   background: #e9ecef;
   color: #333;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
 }
 
 .devices-grid {
@@ -952,12 +952,12 @@ onActivated(async () => {
   border-radius: 8px;
   padding: 16px;
   transition: all 0.2s ease;
-  background: white;
+  background: #F6F6F6;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .device-card:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
   transform: translateY(-1px);
 }
@@ -1067,14 +1067,14 @@ onActivated(async () => {
   width: 18px;
   left: 3px;
   bottom: 3px;
-  background-color: white;
+  background-color: #F6F6F6;
   transition: 0.3s;
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .toggle-switch input:checked + .toggle-slider {
-  background-color: #ff6b35;
+  background-color: #AF1E23;
 }
 
 .toggle-switch input:checked + .toggle-slider:before {
@@ -1130,8 +1130,8 @@ onActivated(async () => {
 .temperature-value {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #ff6b35;
-  background: #fff3e0;
+  color: #AF1E23;
+  background: #F6F6F6;
   padding: 2px 6px;
   border-radius: 8px;
 }
@@ -1155,7 +1155,7 @@ onActivated(async () => {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #ff6b35;
+  background: #AF1E23;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(255, 107, 53, 0.3);
   transition: all 0.2s ease;
@@ -1172,7 +1172,7 @@ onActivated(async () => {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #ff6b35;
+  background: #AF1E23;
   cursor: pointer;
   border: none;
   box-shadow: 0 2px 6px rgba(255, 107, 53, 0.3);
@@ -1184,7 +1184,7 @@ onActivated(async () => {
   border-radius: 8px;
   font-size: 0.85rem;
   font-weight: 500;
-  background: white;
+  background: #F6F6F6;
   cursor: pointer;
   transition: all 0.3s ease;
   appearance: none;
@@ -1198,14 +1198,14 @@ onActivated(async () => {
 }
 
 .mode-select:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
   transform: translateY(-1px);
 }
 
 .mode-select:focus {
   outline: none;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1), 0 4px 12px rgba(255, 107, 53, 0.2);
   transform: translateY(-1px);
 }

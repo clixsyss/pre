@@ -695,7 +695,7 @@ const fetchUserBookings = async () => {
 }
 
 .filter-tab.active {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
 }
 
@@ -708,7 +708,7 @@ const fetchUserBookings = async () => {
   width: 40px;
   height: 40px;
   border: 4px solid #f3f3f3;
-  border-top: 4px solid #ff6b35;
+  border-top: 4px solid #AF1E23;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 16px;
@@ -731,12 +731,12 @@ const fetchUserBookings = async () => {
 
 .no-project-icon {
   font-size: 4rem;
-  color: #ff6b35;
+  color: #AF1E23;
   margin-bottom: 16px;
 }
 
 .select-project-btn {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   border-radius: 12px;
@@ -749,7 +749,7 @@ const fetchUserBookings = async () => {
 }
 
 .select-project-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-2px);
 }
 
@@ -777,7 +777,7 @@ const fetchUserBookings = async () => {
 }
 
 .book-now-btn {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   border-radius: 12px;
@@ -789,7 +789,7 @@ const fetchUserBookings = async () => {
 }
 
 .book-now-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-1px);
 }
 
@@ -942,7 +942,7 @@ const fetchUserBookings = async () => {
 }
 
 .detail-text.price-text {
-  color: #ff6b35;
+  color: #AF1E23;
   font-weight: 600;
 }
 

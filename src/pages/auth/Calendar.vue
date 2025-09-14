@@ -567,7 +567,7 @@ onMounted(async () => {
 }
 
 .today-btn {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 6px 12px;
@@ -604,8 +604,8 @@ onMounted(async () => {
 }
 
 .view-btn.active {
-  background: #ff6b35;
-  border-color: #ff6b35;
+  background: #AF1E23;
+  border-color: #AF1E23;
   color: white;
 }
 
@@ -615,8 +615,8 @@ onMounted(async () => {
 }
 
 .view-btn.active:hover {
-  background: #ff6b35;
-  border-color: #ff6b35;
+  background: #AF1E23;
+  border-color: #AF1E23;
   color: white;
 }
 
@@ -677,7 +677,7 @@ onMounted(async () => {
 }
 
 .date-cell.today {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   font-weight: 600;
 }
@@ -688,7 +688,7 @@ onMounted(async () => {
 }
 
 .date-cell.selected {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   font-weight: 600;
 }
@@ -710,7 +710,7 @@ onMounted(async () => {
   position: absolute;
   top: 2px;
   right: 2px;
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   font-size: 0.65rem;
   font-weight: 600;
@@ -912,7 +912,7 @@ onMounted(async () => {
 .date-day {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #ff6b35;
+  color: #AF1E23;
   line-height: 1;
 }
 

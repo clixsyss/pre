@@ -56,7 +56,7 @@ defineOptions({
 }
 
 .generate-btn {
-  background-color: #ff6b35;
+  background-color: #AF1E23;
   color: white;
   border: none;
   padding: 16px 32px;
@@ -69,7 +69,7 @@ defineOptions({
 }
 
 .generate-btn:hover {
-  background-color: #e55a2b;
+  background-color: #AF1E23;
 }
 
 .no-passes-message {

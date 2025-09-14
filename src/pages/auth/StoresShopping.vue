@@ -1395,7 +1395,7 @@ watch(() => route.query.tab, (newTab) => {
 .header-content h1 {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #000000;
+  color: #231F20;
   margin: 0 0 12px 0;
   letter-spacing: -1px;
 }
@@ -1530,7 +1530,7 @@ watch(() => route.query.tab, (newTab) => {
 .store-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  border-color: #F37C4E;
+  border-color: #AF1E23;
 }
 
 /* Inactive store styling */
@@ -2283,7 +2283,7 @@ watch(() => route.query.tab, (newTab) => {
   justify-content: space-between;
   align-items: flex-start;
   padding: 24px 32px;
-  background: linear-gradient(135deg, #E88B65 0%, #F37C4E 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   position: relative;
 }
@@ -2445,7 +2445,7 @@ watch(() => route.query.tab, (newTab) => {
 }
 
 .summary-card.total {
-  background: linear-gradient(135deg, #E88B65 0%, #F37C4E 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   border: none;
 }

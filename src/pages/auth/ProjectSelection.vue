@@ -296,7 +296,7 @@ onMounted(async () => {
   justify-content: center;
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, #ff6b35, #ff8a65);
+  background: linear-gradient(135deg, #AF1E23, #AF1E23);
   border-radius: 50%;
   box-shadow: 0 8px 32px rgba(255, 107, 53, 0.3);
   animation: icon-float 3s ease-in-out infinite;
@@ -362,7 +362,7 @@ onMounted(async () => {
 .dot {
   width: 12px;
   height: 12px;
-  background: #ff6b35;
+  background: #AF1E23;
   border-radius: 50%;
   animation: dot-bounce 1.4s ease-in-out infinite both;
 }
@@ -430,7 +430,7 @@ onMounted(async () => {
 }
 
 .retry-btn {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -452,7 +452,7 @@ onMounted(async () => {
 }
 
 .support-btn {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -573,7 +573,7 @@ onMounted(async () => {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #ff6b35, #ff8a65);
+  background: linear-gradient(90deg, #AF1E23, #AF1E23);
   transform: scaleX(0);
   transition: transform 0.3s ease;
 }
@@ -609,7 +609,7 @@ onMounted(async () => {
 .project-icon {
   width: 64px;
   height: 64px;
-  background: linear-gradient(135deg, #ff6b35, #ff8a65);
+  background: linear-gradient(135deg, #AF1E23, #AF1E23);
   border-radius: 18px;
   display: flex;
   align-items: center;
@@ -671,7 +671,7 @@ onMounted(async () => {
 }
 
 .project-card:hover .project-name {
-  color: #ff6b35;
+  color: #AF1E23;
 }
 
 .project-description {
@@ -697,11 +697,11 @@ onMounted(async () => {
 
 .project-card:hover .project-location {
   background: #fff5f2;
-  color: #ff6b35;
+  color: #AF1E23;
 }
 
 .project-location svg {
-  color: #ff6b35;
+  color: #AF1E23;
   transition: transform 0.3s ease;
 }
 
@@ -737,7 +737,7 @@ onMounted(async () => {
 
 .user-location {
   background: linear-gradient(135deg, #f6e3dc, #ffcfc0);
-  color: #ff6b35;
+  color: #AF1E23;
 }
 
 .user-role {
@@ -772,7 +772,7 @@ onMounted(async () => {
 }
 
 .click-indicator svg {
-  color: #ff6b35;
+  color: #AF1E23;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
@@ -840,7 +840,7 @@ onMounted(async () => {
 }
 
 .continue-btn {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 16px 32px;
@@ -852,7 +852,7 @@ onMounted(async () => {
 }
 
 .continue-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
 }
@@ -878,8 +878,8 @@ onMounted(async () => {
 
 .help-btn {
   background: transparent;
-  color: #ff6b35;
-  border: 2px solid #ff6b35;
+  color: #AF1E23;
+  border: 2px solid #AF1E23;
   padding: 12px 24px;
   border-radius: 8px;
   font-size: 1rem;
@@ -888,7 +888,7 @@ onMounted(async () => {
 }
 
 .help-btn:hover {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
 }
 
@@ -898,7 +898,7 @@ onMounted(async () => {
   padding: 40px;
   background: linear-gradient(135deg, #fff5f2, #fff);
   border-radius: 12px;
-  border: 1px solid #ff6b35;
+  border: 1px solid #AF1E23;
   margin-top: 20px;
 }
 
@@ -915,7 +915,7 @@ onMounted(async () => {
 }
 
 .back-home-section strong {
-  color: #ff6b35;
+  color: #AF1E23;
   font-weight: 700;
 }
 
@@ -923,7 +923,7 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 14px 24px;
@@ -935,7 +935,7 @@ onMounted(async () => {
 }
 
 .back-home-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
 }

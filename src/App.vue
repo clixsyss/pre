@@ -96,6 +96,6 @@ const isAuthenticatedPage = computed(() => {
 /* Clean layout for authentication pages */
 .auth-layout {
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: #F6F6F6;
 }
 </style>

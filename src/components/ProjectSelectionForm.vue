@@ -130,7 +130,7 @@ watch(() => props.projectIds, () => {
   width: 32px;
   height: 32px;
   border: 3px solid #e1e5e9;
-  border-top: 3px solid #ff6b35;
+  border-top: 3px solid #AF1E23;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 16px;
@@ -162,7 +162,7 @@ watch(() => props.projectIds, () => {
 .project-icon {
   width: 48px;
   height: 48px;
-  background: #ff6b35;
+  background: #AF1E23;
   border-radius: 8px;
   display: flex;
   align-items: center;

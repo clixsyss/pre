@@ -511,13 +511,13 @@ onMounted(async () => {
 }
 
 .sport-option:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   background: #fff5f2;
 }
 
 .sport-option.active {
   background: #fff5f2;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   color: white;
 }
 
@@ -558,14 +558,14 @@ onMounted(async () => {
 }
 
 .court-option:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   background: #fff5f2;
 }
 
 .court-option.active {
   background: #fff5f2;
-  border-color: #ff6b35;
-  color: #ff6b35;
+  border-color: #AF1E23;
+  color: #AF1E23;
 }
 
 .court-info h3 {
@@ -614,7 +614,7 @@ onMounted(async () => {
 .price {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #ff6b35;
+  color: #AF1E23;
 }
 
 .status-badge {
@@ -646,13 +646,13 @@ onMounted(async () => {
 }
 
 .date-option:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   background: #fff5f2;
 }
 
 .date-option.active {
-  background: #ff6b35;
-  border-color: #ff6b35;
+  background: #AF1E23;
+  border-color: #AF1E23;
   color: white;
 }
 
@@ -696,13 +696,13 @@ onMounted(async () => {
 }
 
 .time-slot:hover:not(.reserved) {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   background: #fff5f2;
 }
 
 .time-slot.active {
-  background: #ff6b35;
-  border-color: #ff6b35;
+  background: #AF1E23;
+  border-color: #AF1E23;
   color: white;
 }
 
@@ -738,7 +738,7 @@ onMounted(async () => {
   width: 32px;
   height: 32px;
   border: 3px solid #f3f3f3;
-  border-top: 3px solid #ff6b35;
+  border-top: 3px solid #AF1E23;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -750,7 +750,7 @@ onMounted(async () => {
 
 .booking-summary {
   background: white;
-  border: 2px solid #ff6b35;
+  border: 2px solid #AF1E23;
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 4px 16px rgba(255, 107, 53, 0.1);
@@ -786,7 +786,7 @@ onMounted(async () => {
 .summary-item.total {
   font-weight: 600;
   font-size: 1.125rem;
-  color: #ff6b35;
+  color: #AF1E23;
   border-top: 2px solid #f0f0f0;
   padding-top: 16px;
   margin-top: 8px;
@@ -804,7 +804,7 @@ onMounted(async () => {
 
 .confirm-booking-btn {
   width: 100%;
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   border-radius: 12px;
@@ -816,7 +816,7 @@ onMounted(async () => {
 }
 
 .confirm-booking-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-1px);
 }
 
@@ -837,7 +837,7 @@ onMounted(async () => {
 
 .loading-spinner {
   border: 4px solid #f3f3f3;
-  border-top: 4px solid #ff6b35;
+  border-top: 4px solid #AF1E23;
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -852,7 +852,7 @@ onMounted(async () => {
 }
 
 .retry-btn {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   border-radius: 12px;
@@ -864,12 +864,12 @@ onMounted(async () => {
 }
 
 .retry-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
 }
 
 .no-sports-icon {
   font-size: 4rem;
-  color: #ff6b35;
+  color: #AF1E23;
   margin-bottom: 16px;
 }
 
@@ -884,7 +884,7 @@ onMounted(async () => {
 
 .no-project-icon, .no-sports-icon {
   font-size: 4rem;
-  color: #ff6b35;
+  color: #AF1E23;
   margin-bottom: 16px;
 }
 
@@ -902,7 +902,7 @@ onMounted(async () => {
 }
 
 .select-project-btn {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   border-radius: 12px;
@@ -915,7 +915,7 @@ onMounted(async () => {
 }
 
 .select-project-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-2px);
 }
 

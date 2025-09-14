@@ -82,7 +82,7 @@ onMounted(() => {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: #000000;
+  background-color: #231F20;
   z-index: 1;
 }
 
@@ -171,7 +171,7 @@ onMounted(() => {
 }
 
 .tagline {
-  color: white;
+  color: #F6F6F6;
   font-size: 20px;
   font-weight: 300;
   letter-spacing: 2px;
@@ -194,7 +194,7 @@ onMounted(() => {
 }
 
 .loading-text {
-  color: white;
+  color: #F6F6F6;
   font-size: 14px;
   font-weight: 300;
   opacity: 0.8;
@@ -205,7 +205,7 @@ onMounted(() => {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: linear-gradient(45deg, #ffffff, #f0f0f0);
+  background: linear-gradient(45deg, #F6F6F6, #F6F6F6);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   animation: loadingBounce 1.6s ease-in-out infinite both;
 }

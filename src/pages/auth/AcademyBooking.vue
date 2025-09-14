@@ -399,14 +399,14 @@ onMounted(async () => {
 
 .academy-option:hover,
 .program-option:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   background: #fff5f2;
 }
 
 .academy-option.active,
 .program-option.active {
-  background: #ff6b35;
-  border-color: #ff6b35;
+  background: #AF1E23;
+  border-color: #AF1E23;
   color: white;
 }
 
@@ -430,7 +430,7 @@ onMounted(async () => {
 }
 
 .program-sport {
-  color: #ff6b35;
+  color: #AF1E23;
   font-weight: 500;
 }
 
@@ -546,13 +546,13 @@ onMounted(async () => {
 
 .form-input:focus {
   outline: none;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
 }
 
 .booking-confirmation {
   background: white;
-  border: 2px solid #ff6b35;
+  border: 2px solid #AF1E23;
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 4px 16px rgba(255, 107, 53, 0.1);
@@ -588,7 +588,7 @@ onMounted(async () => {
 .confirmation-item.total {
   font-weight: 600;
   font-size: 1.125rem;
-  color: #ff6b35;
+  color: #AF1E23;
   border-top: 2px solid #f0f0f0;
   padding-top: 16px;
   margin-top: 8px;
@@ -606,7 +606,7 @@ onMounted(async () => {
 
 .confirm-enrollment-btn {
   width: 100%;
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   border-radius: 12px;
@@ -618,7 +618,7 @@ onMounted(async () => {
 }
 
 .confirm-enrollment-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-1px);
 }
 

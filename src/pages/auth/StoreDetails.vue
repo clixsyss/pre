@@ -623,7 +623,7 @@ onMounted(() => {
 }
 
 .delivery-fee {
-  color: #ff6b35;
+  color: #AF1E23;
   font-weight: 500;
 }
 
@@ -631,7 +631,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #000000;
+  background-color: #231F20;
   color: white;
   padding: 12px 20px;
   border-radius: 12px;
@@ -653,7 +653,7 @@ onMounted(() => {
   position: absolute;
   top: -8px;
   right: -8px;
-  background-color: #F37C4E;
+  background-color: #AF1E23;
   color: white;
   border-radius: 50%;
   width: 24px;
@@ -687,7 +687,7 @@ onMounted(() => {
 }
 
 .search-container:focus-within {
-  border-color: #F37C4E;
+  border-color: #AF1E23;
   box-shadow: 0 0 0 3px rgba(243, 124, 78, 0.1);
 }
 
@@ -732,7 +732,7 @@ onMounted(() => {
   width: 40px;
   height: 40px;
   border: 3px solid #f3f4f6;
-  border-top: 3px solid #F37C4E;
+  border-top: 3px solid #AF1E23;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 16px;
@@ -777,7 +777,7 @@ onMounted(() => {
 .product-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  border-color: #F37C4E;
+  border-color: #AF1E23;
 }
 
 .product-image-container {
@@ -965,7 +965,7 @@ onMounted(() => {
 .product-price {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #F37C4E;
+  color: #AF1E23;
 }
 
 .original-price {
@@ -978,7 +978,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #000000;
+  background-color: #231F20;
   color: white;
   padding: 10px 14px;
   border-radius: 12px;

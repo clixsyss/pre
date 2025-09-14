@@ -74,8 +74,8 @@
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
-                stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <circle cx="12" cy="7" r="4" stroke="#ff6b35" stroke-width="2" stroke-linecap="round"
+                stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="12" cy="7" r="4" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
             </svg>
           </div>
@@ -131,9 +131,9 @@
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-                stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path d="M12 8V12" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path d="M12 16H12.01" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M12 8V12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M12 16H12.01" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </div>
           <h3 class="notice-title">Important Notice</h3>
@@ -152,8 +152,8 @@
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
-                stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <polyline points="9,22 9,12 15,12 15,22" stroke="#ff6b35" stroke-width="2" stroke-linecap="round"
+                stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <polyline points="9,22 9,12 15,12 15,22" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
             </svg>
           </div>
@@ -171,7 +171,7 @@
             <div class="section-header">
               <div class="section-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round"
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round" />
                 </svg>
               </div>
@@ -815,7 +815,7 @@ const goToSignIn = () => {
   align-items: center;
   justify-content: space-between;
   padding: 20px;
-  background-color: #000000;
+  background-color: #231F20;
   color: white;
   margin-bottom: 0;
 }
@@ -855,7 +855,7 @@ const goToSignIn = () => {
 }
 
 .signin-header-btn {
-  background-color: #ff6b35;
+  background-color: #AF1E23;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -867,12 +867,12 @@ const goToSignIn = () => {
 }
 
 .signin-header-btn:hover {
-  background-color: #e55a2b;
+  background-color: #AF1E23;
 }
 
 .separator-line {
   height: 3px;
-  background-color: #ff6b35;
+  background-color: #AF1E23;
   margin: 0;
   width: 100%;
   margin-bottom: 0;
@@ -957,15 +957,15 @@ const goToSignIn = () => {
 }
 
 .progress-step.active .step-icon {
-  background-color: #000000;
-  border-color: #000000;
+  background-color: #231F20;
+  border-color: #231F20;
   color: white;
   width: 48px;
   height: 48px;
 }
 
 .progress-step.active .step-label {
-  color: #000000;
+  color: #231F20;
   font-weight: 600;
   font-size: 1rem;
   margin-top: 12px;
@@ -1087,7 +1087,7 @@ const goToSignIn = () => {
 }
 
 .social-btn:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   background-color: #fff5f2;
 }
 
@@ -1188,7 +1188,7 @@ const goToSignIn = () => {
 
 .form-input:focus {
   outline: none;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
 }
 
@@ -1214,7 +1214,7 @@ select.form-input:disabled {
 .proceed-btn,
 .verify-btn {
   width: 100%;
-  background-color: #ff6b35;
+  background-color: #AF1E23;
   color: white;
   border: none;
   padding: 16px;
@@ -1227,7 +1227,7 @@ select.form-input:disabled {
 
 .proceed-btn:hover:not(:disabled),
 .verify-btn:hover:not(:disabled) {
-  background-color: #e55a2b;
+  background-color: #AF1E23;
 }
 
 .proceed-btn:disabled,
@@ -1255,8 +1255,8 @@ select.form-input:disabled {
 }
 
 .back-action-btn:hover {
-  border-color: #ff6b35;
-  color: #ff6b35;
+  border-color: #AF1E23;
+  color: #AF1E23;
 }
 
 .verify-btn {
@@ -1305,7 +1305,7 @@ select.form-input:disabled {
 }
 
 .remove-project-btn svg {
-  stroke: #ff6b35;
+  stroke: #AF1E23;
 }
 
 
@@ -1355,7 +1355,7 @@ select.form-input:disabled {
 }
 
 .nav-link:hover {
-  color: #ff6b35;
+  color: #AF1E23;
   background-color: rgba(255, 107, 53, 0.1);
 }
 
@@ -1400,7 +1400,7 @@ select.form-input:disabled {
 }
 
 .primary-property {
-  border-left: 4px solid #ff6b35;
+  border-left: 4px solid #AF1E23;
 }
 
 .additional-properties {
@@ -1484,7 +1484,7 @@ select.form-input:disabled {
 }
 
 .custom-select:focus+.select-arrow {
-  border-top-color: #ff6b35;
+  border-top-color: #AF1E23;
 }
 
 /* Enhanced Role Buttons */
@@ -1511,14 +1511,14 @@ select.form-input:disabled {
 }
 
 .role-btn.active {
-  border-color: #ff6b35;
-  background-color: #ff6b35;
+  border-color: #AF1E23;
+  background-color: #AF1E23;
   color: white;
 }
 
 .role-btn:hover:not(.active) {
-  border-color: #ff6b35;
-  color: #ff6b35;
+  border-color: #AF1E23;
+  color: #AF1E23;
   background-color: rgba(255, 107, 53, 0.05);
 }
 
@@ -1546,7 +1546,7 @@ select.form-input:disabled {
 }
 
 .project-item:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.1);
 }
 
@@ -1667,8 +1667,8 @@ select.form-input:disabled {
 }
 
 .cancel-btn:hover {
-  border-color: #ff6b35;
-  color: #ff6b35;
+  border-color: #AF1E23;
+  color: #AF1E23;
 }
 
 /* Primary Property Display */

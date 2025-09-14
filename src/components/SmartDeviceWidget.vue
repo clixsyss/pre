@@ -455,9 +455,9 @@ const isDeviceLoading = (deviceId) => {
 
 /* Header */
 .widget-header {
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   padding: 24px;
-  color: white;
+  color: #F6F6F6;
   position: relative;
   overflow: hidden;
   border-radius: 12px;
@@ -466,7 +466,7 @@ const isDeviceLoading = (deviceId) => {
 }
 
 .widget-header:hover {
-  background: linear-gradient(135deg, #ff8a65 0%, #ffab91 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
 }
 
 .widget-header::before {
@@ -505,7 +505,7 @@ const isDeviceLoading = (deviceId) => {
   border: none;
   border-radius: 8px;
   padding: 8px;
-  color: white;
+  color: #F6F6F6;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
@@ -543,7 +543,7 @@ const isDeviceLoading = (deviceId) => {
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0 0 4px 0;
-  color: white;
+  color: #F6F6F6;
   letter-spacing: -0.02em;
 }
 
@@ -558,8 +558,8 @@ const isDeviceLoading = (deviceId) => {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: white;
-  color: #ff6b35;
+  background: #F6F6F6;
+  color: #AF1E23;
   border: none;
   padding: 10px 16px;
   border-radius: 8px;
@@ -571,7 +571,7 @@ const isDeviceLoading = (deviceId) => {
 }
 
 .view-all-btn:hover {
-  background: #fff5f2;
+  background: #F6F6F6;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -590,13 +590,13 @@ const isDeviceLoading = (deviceId) => {
 .not-connected-icon {
   width: 60px;
   height: 60px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 20px;
-  color: white;
+  color: #F6F6F6;
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
 
@@ -619,8 +619,8 @@ const isDeviceLoading = (deviceId) => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #ff6b35;
-  color: white;
+  background: #AF1E23;
+  color: #F6F6F6;
   border: none;
   padding: 10px 16px;
   border-radius: 8px;
@@ -632,7 +632,7 @@ const isDeviceLoading = (deviceId) => {
 }
 
 .connect-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
@@ -654,7 +654,7 @@ const isDeviceLoading = (deviceId) => {
 }
 
 .single-device-card {
-  background: white;
+  background: #F6F6F6;
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -696,20 +696,20 @@ const isDeviceLoading = (deviceId) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #F6F6F6;
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
 
 .category-icon.lights {
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
 }
 
 .category-icon.climate {
-  background: linear-gradient(135deg, #ff8a65 0%, #ffab91 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
 }
 
 .category-icon.plugs {
-  background: linear-gradient(135deg, #ffab91 0%, #ffccbc 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
 }
 
 .category-info {
@@ -780,7 +780,7 @@ const isDeviceLoading = (deviceId) => {
 }
 
 .message-content svg {
-  color: #ff6b35;
+  color: #AF1E23;
 }
 
 .message-content span {
@@ -800,7 +800,7 @@ const isDeviceLoading = (deviceId) => {
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: white;
+  background: #F6F6F6;
   border-radius: 8px;
   border: 1px solid #e8e8e8;
   transition: all 0.2s ease;
@@ -808,7 +808,7 @@ const isDeviceLoading = (deviceId) => {
 }
 
 .device-card:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);
   transform: translateY(-2px);
 }
@@ -873,7 +873,7 @@ const isDeviceLoading = (deviceId) => {
 }
 
 .device-toggle.on {
-  background: #ff6b35;
+  background: #AF1E23;
 }
 
 .device-toggle.off {
@@ -886,7 +886,7 @@ const isDeviceLoading = (deviceId) => {
   left: 2px;
   width: 20px;
   height: 20px;
-  background: white;
+  background: #F6F6F6;
   border-radius: 50%;
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);

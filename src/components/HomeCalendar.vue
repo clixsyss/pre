@@ -232,7 +232,7 @@ onMounted(async () => {
 .home-calendar-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  border-color: #ff6b35;
+  border-color: #AF1E23;
 }
 
 .card-header {
@@ -325,7 +325,7 @@ onMounted(async () => {
 }
 
 .date-cell.today {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   font-weight: 600;
 }
@@ -369,7 +369,7 @@ onMounted(async () => {
 .view-all-btn {
   background: none;
   border: none;
-  color: #ff6b35;
+  color: #AF1E23;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -377,7 +377,7 @@ onMounted(async () => {
 }
 
 .view-all-btn:hover {
-  color: #e55a2b;
+  color: #AF1E23;
 }
 
 .events-list {
@@ -402,7 +402,7 @@ onMounted(async () => {
 }
 
 .event-icon {
-  color: #ff6b35;
+  color: #AF1E23;
   flex-shrink: 0;
 }
 

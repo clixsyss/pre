@@ -588,8 +588,8 @@ onActivated(async () => {
 
 /* Hero Section */
 .hero-section {
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
-  color: white;
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  color: #F6F6F6;
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 24px;
@@ -627,8 +627,8 @@ onActivated(async () => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: white;
-  color: #ff6b35;
+  background: #F6F6F6;
+  color: #AF1E23;
   border: none;
   padding: 10px 16px;
   border-radius: 8px;
@@ -658,7 +658,7 @@ onActivated(async () => {
   align-items: center;
   justify-content: flex-start;
   gap: 10px;
-  background: white;
+  background: #F6F6F6;
   border: 1px solid #e8e8e8;
   border-radius: 12px;
   padding: 20px;
@@ -668,7 +668,7 @@ onActivated(async () => {
 }
 
 .stat-card:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);
   transform: translateY(-2px);
 }
@@ -684,12 +684,12 @@ onActivated(async () => {
 .stat-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #F6F6F6;
   flex-shrink: 0;
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
@@ -758,8 +758,8 @@ onActivated(async () => {
 }
 
 .action-card:hover {
-  background: white;
-  border-color: #ff6b35;
+  background: #F6F6F6;
+  border-color: #AF1E23;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
 }
@@ -767,12 +767,12 @@ onActivated(async () => {
 .action-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #F6F6F6;
   flex-shrink: 0;
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
@@ -812,7 +812,7 @@ onActivated(async () => {
 
 .bookings-section,
 .news-section {
-  background: white;
+  background: #F6F6F6;
   border: 1px solid #e8e8e8;
   border-radius: 16px;
   overflow: hidden;
@@ -954,7 +954,7 @@ onActivated(async () => {
 }
 
 .modal-content {
-  background: white;
+  background: #F6F6F6;
   border-radius: 24px;
   padding: 32px;
   max-width: 600px;
@@ -1023,15 +1023,15 @@ onActivated(async () => {
 }
 
 .project-option:hover {
-  background: white;
-  border-color: #ff6b35;
+  background: #F6F6F6;
+  border-color: #AF1E23;
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.15);
   transform: translateY(-2px);
 }
 
 .project-option.current {
   background: #fff5f2;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.2);
 }
 
@@ -1086,8 +1086,8 @@ onActivated(async () => {
 }
 
 .current-badge {
-  background: #ff6b35;
-  color: white;
+  background: #AF1E23;
+  color: #F6F6F6;
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 0.8rem;
@@ -1095,7 +1095,7 @@ onActivated(async () => {
 }
 
 .project-option-status svg {
-  color: #ff6b35;
+  color: #AF1E23;
 }
 
 .no-projects {
@@ -1110,8 +1110,8 @@ onActivated(async () => {
 }
 
 .go-to-selection-btn {
-  background: #ff6b35;
-  color: white;
+  background: #AF1E23;
+  color: #F6F6F6;
   border: none;
   padding: 14px 28px;
   border-radius: 10px;
@@ -1123,7 +1123,7 @@ onActivated(async () => {
 }
 
 .go-to-selection-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
 }
@@ -1151,8 +1151,8 @@ onActivated(async () => {
 
 .secondary-btn:hover {
   background: #fff5f2;
-  border-color: #ff6b35;
-  color: #ff6b35;
+  border-color: #AF1E23;
+  color: #AF1E23;
   transform: translateY(-2px);
 }
 

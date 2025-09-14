@@ -29,8 +29,8 @@
       <div class="info-section">
         <h3 class="section-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="12" cy="7" r="4" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="7" r="4" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           Personal Information
         </h3>
@@ -67,8 +67,8 @@
         <div class="section-header">
           <h3 class="section-title">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <polyline points="9,22 9,12 15,12 15,22" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="9,22 9,12 15,12 15,22" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             My Projects
           </h3>
@@ -206,9 +206,9 @@
       <div class="info-section">
         <h3 class="section-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 16V12" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 8H12.01" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 16V12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 8H12.01" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           Account Information
         </h3>
@@ -240,9 +240,9 @@
       <div v-if="smartMirrorStore.isProjectConnected(currentProjectId)" class="info-section">
         <h3 class="section-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 17L12 22L22 17" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 12L12 17L22 12" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 17L12 22L22 17" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 12L12 17L22 12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           Smart Home Settings
         </h3>
@@ -399,9 +399,9 @@
             <div class="header-content">
               <div class="header-icon">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 17L12 22L22 17" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 12L12 17L22 12" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 17L12 22L22 17" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </div>
               <div class="header-text">
@@ -421,8 +421,8 @@
           <div class="project-selection-card">
             <div class="project-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M9 22V12H15V22" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 22V12H15V22" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
             <div class="project-details">
@@ -1269,7 +1269,7 @@ onMounted(() => {
   width: 40px;
   height: 40px;
   border: 4px solid #e1e5e9;
-  border-top: 4px solid #ff6b35;
+  border-top: 4px solid #AF1E23;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -1290,7 +1290,7 @@ onMounted(() => {
   text-align: center;
   margin-bottom: 40px;
   padding: 40px 20px;
-  background-color: white;
+  background-color: #F6F6F6;
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -1302,7 +1302,7 @@ onMounted(() => {
 .avatar-initial {
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, #ff6b35, #f7931e);
+  background: linear-gradient(135deg, #AF1E23, #AF1E23);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1362,7 +1362,7 @@ onMounted(() => {
 }
 
 .info-section {
-  background-color: white;
+  background-color: #F6F6F6;
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 24px;
@@ -1390,7 +1390,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #ff6b35 !important;
+  background: #AF1E23 !important;
   color: white;
   border: none;
   padding: 10px 16px;
@@ -1402,7 +1402,7 @@ onMounted(() => {
 }
 
 .add-project-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-2px);
 }
 
@@ -1431,14 +1431,14 @@ onMounted(() => {
 }
 
 .project-item:hover {
-  background: white;
-  border-color: #ff6b35;
+  background: #F6F6F6;
+  border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .project-item.current {
-  background: #fff5f2;
-  border-color: #ff6b35;
+  background: #F6F6F6;
+  border-color: #AF1E23;
   box-shadow: 0 4px 16px rgba(255, 107, 53, 0.15);
 }
 
@@ -1511,8 +1511,8 @@ onMounted(() => {
 
 .switch-project-btn {
   background: transparent;
-  border: 2px solid #ff6b35;
-  color: #ff6b35;
+  border: 2px solid #AF1E23;
+  color: #AF1E23;
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -1522,13 +1522,13 @@ onMounted(() => {
 }
 
 .switch-project-btn:hover {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   transform: translateY(-2px);
 }
 
 .current-project-badge {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   padding: 8px 16px;
   border-radius: 6px;
@@ -1554,7 +1554,7 @@ onMounted(() => {
 }
 
 .add-first-project-btn {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -1566,7 +1566,7 @@ onMounted(() => {
 }
 
 .add-first-project-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-2px);
 }
 
@@ -1632,7 +1632,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background-color: #ff6b35;
+  background-color: #AF1E23;
   color: white;
   border: none;
   padding: 14px 24px;
@@ -1644,7 +1644,7 @@ onMounted(() => {
 }
 
 .edit-btn:hover {
-  background-color: #e55a2b;
+  background-color: #AF1E23;
   transform: translateY(-2px);
 }
 
@@ -1688,7 +1688,7 @@ onMounted(() => {
 }
 
 .retry-btn {
-  background-color: #ff6b35;
+  background-color: #AF1E23;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -1700,7 +1700,7 @@ onMounted(() => {
 }
 
 .retry-btn:hover {
-  background-color: #e55a2b;
+  background-color: #AF1E23;
 }
 
 /* Modal Styles */
@@ -1718,7 +1718,7 @@ onMounted(() => {
 }
 
 .modal-content {
-  background-color: white;
+  background-color: #F6F6F6;
   border-radius: 16px;
   padding: 24px;
   max-width: 400px;
@@ -1862,7 +1862,7 @@ onMounted(() => {
   font-size: 1rem;
   font-weight: 500;
   transition: all 0.3s ease;
-  background: white;
+  background: #F6F6F6;
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
@@ -1883,19 +1883,19 @@ onMounted(() => {
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
 }
 
 .form-group select:focus {
   outline: none;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
   transform: translateY(-1px);
 }
 
 .form-group select:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   background-color: #fff5f2;
 }
 
@@ -1905,19 +1905,19 @@ onMounted(() => {
   font-size: 1rem;
   font-weight: 500;
   color: #333;
-  background: white;
+  background: #F6F6F6;
   border: none;
   transition: all 0.2s ease;
 }
 
 .form-group select option:hover {
   background-color: #fff5f2;
-  color: #ff6b35;
+  color: #AF1E23;
   transform: translateX(4px);
 }
 
 .form-group select option:checked {
-  background: linear-gradient(135deg, #ff6b35, #ff8a65);
+  background: linear-gradient(135deg, #AF1E23, #AF1E23);
   color: white;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
@@ -1947,7 +1947,7 @@ onMounted(() => {
   content: '';
   width: 4px;
   height: 4px;
-  background: #ff6b35;
+  background: #AF1E23;
   border-radius: 50%;
   display: inline-block;
 }
@@ -1972,7 +1972,7 @@ onMounted(() => {
 .dot {
   width: 6px;
   height: 6px;
-  background: #ff6b35;
+  background: #AF1E23;
   border-radius: 50%;
   animation: dot-bounce 1.4s ease-in-out infinite both;
 }
@@ -2023,7 +2023,7 @@ onMounted(() => {
 }
 
 .unified-project-card {
-  background: #ffffff;
+  background: #F6F6F6;
   border-radius: 16px;
   padding: 20px;
   border: 1px solid #e5e7eb;
@@ -2037,8 +2037,8 @@ onMounted(() => {
 }
 
 .unified-project-card.current {
-  border-color: #ff6b35;
-  background: linear-gradient(135deg, #fff7f3 0%, #ffffff 100%);
+  border-color: #AF1E23;
+  background: linear-gradient(135deg, #F6F6F6 0%, #F6F6F6 100%);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.1);
 }
 
@@ -2090,7 +2090,7 @@ onMounted(() => {
 }
 
 .current-badge {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   padding: 3px 8px;
   border-radius: 6px;
@@ -2139,7 +2139,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 12px 16px;
@@ -2152,7 +2152,7 @@ onMounted(() => {
 }
 
 .manage-devices-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
@@ -2174,7 +2174,7 @@ onMounted(() => {
 }
 
 .smart-mirror-title svg {
-  color: #ff6b35;
+  color: #AF1E23;
   width: 16px;
   height: 16px;
 }
@@ -2221,7 +2221,7 @@ onMounted(() => {
 .device-count {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #ff6b35;
+  color: #AF1E23;
 }
 
 .device-types {
@@ -2239,7 +2239,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 8px 12px;
@@ -2251,7 +2251,7 @@ onMounted(() => {
 }
 
 .control-devices-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-1px);
 }
 
@@ -2322,7 +2322,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 8px 12px;
@@ -2335,7 +2335,7 @@ onMounted(() => {
 }
 
 .connect-smart-mirror-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-1px);
 }
 
@@ -2394,7 +2394,7 @@ onMounted(() => {
 }
 
 .modal-content {
-  background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+  background: linear-gradient(135deg, #F6F6F6 0%, #F6F6F6 100%);
   border-radius: 24px;
   padding: 0;
   max-width: 480px;
@@ -2427,7 +2427,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: flex-start;
   padding: 32px 32px 24px 32px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   position: relative;
 }
@@ -2505,7 +2505,7 @@ onMounted(() => {
   align-items: center;
   gap: 16px;
   padding: 24px 32px;
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #F6F6F6 0%, #F6F6F6 100%);
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -2515,7 +2515,7 @@ onMounted(() => {
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   border-radius: 12px;
   color: white;
 }
@@ -2588,14 +2588,14 @@ onMounted(() => {
   border-radius: 16px;
   font-size: 1rem;
   font-weight: 500;
-  background: #ffffff;
+  background: #F6F6F6;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-sizing: border-box;
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   background: #fefefe;
   transform: translateY(-1px);
   box-shadow: 
@@ -2615,7 +2615,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, #ff6b35, #ff8a65);
+  background: linear-gradient(90deg, #AF1E23, #AF1E23);
   border-radius: 1px;
   transform: scaleX(0);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2650,7 +2650,7 @@ onMounted(() => {
   gap: 16px;
   justify-content: flex-end;
   padding: 24px 32px 32px 32px;
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #F6F6F6 0%, #F6F6F6 100%);
   border-top: 1px solid #e2e8f0;
 }
 
@@ -2685,7 +2685,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   border: none;
   padding: 14px 28px;
@@ -2762,7 +2762,7 @@ onMounted(() => {
   max-width: 700px;
   max-height: 85vh;
   width: 95%;
-  background: white;
+  background: #F6F6F6;
   border-radius: 20px;
   box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
   overflow: hidden;
@@ -2773,7 +2773,7 @@ onMounted(() => {
 
 .device-management-modal .modal-header {
   padding: 32px 32px 24px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   flex-shrink: 0;
   position: relative;
@@ -2852,11 +2852,11 @@ onMounted(() => {
 }
 
 .category-icon.lights {
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
 }
 
 .category-icon.climate {
-  background: linear-gradient(135deg, #ff8a65 0%, #ffab91 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
 }
 
 .category-icon.plugs {
@@ -2914,7 +2914,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: white;
+  background: #F6F6F6;
   border-radius: 8px;
   padding: 12px;
   border: 1px solid #e5e7eb;
@@ -2922,7 +2922,7 @@ onMounted(() => {
 }
 
 .device-item:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.1);
 }
 
@@ -2982,14 +2982,14 @@ onMounted(() => {
   width: 20px;
   left: 2px;
   bottom: 2px;
-  background-color: white;
+  background-color: #F6F6F6;
   transition: 0.2s;
   border-radius: 50%;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 input:checked + .toggle-slider {
-  background-color: #ff6b35;
+  background-color: #AF1E23;
 }
 
 input:checked + .toggle-slider:before {
@@ -2999,7 +2999,7 @@ input:checked + .toggle-slider:before {
 .no-devices-message {
   text-align: center;
   padding: 60px 32px;
-  background: white;
+  background: #F6F6F6;
   margin: 24px 32px;
   border-radius: 16px;
   border: 2px dashed #e5e7eb;
@@ -3036,7 +3036,7 @@ input:checked + .toggle-slider:before {
   display: flex;
   gap: 16px;
   padding: 24px 32px;
-  background: white;
+  background: #F6F6F6;
   border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
 }
@@ -3046,7 +3046,7 @@ input:checked + .toggle-slider:before {
   padding: 14px 24px;
   border-radius: 12px;
   border: 2px solid #e5e7eb;
-  background: white;
+  background: #F6F6F6;
   color: #6b7280;
   font-weight: 600;
   font-size: 15px;
@@ -3065,7 +3065,7 @@ input:checked + .toggle-slider:before {
   padding: 14px 24px;
   border-radius: 12px;
   border: none;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   font-weight: 600;
   font-size: 15px;

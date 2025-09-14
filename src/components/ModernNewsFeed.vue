@@ -519,9 +519,9 @@ onUnmounted(() => {
 }
 
 .filter-tab.active {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 2px 4px rgba(255, 107, 53, 0.2);
 }
 
@@ -654,7 +654,7 @@ onUnmounted(() => {
 
 .news-card.featured {
   background: linear-gradient(135deg, #fff5f2 0%, #ffffff 100%);
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 4px 20px rgba(255, 107, 53, 0.15);
 }
 
@@ -701,7 +701,7 @@ onUnmounted(() => {
   height: 100%;
   object-fit: cover;
   border-radius: 12px;
-  background: #000;
+  background: #231F20;
   /* Performance optimizations */
   will-change: transform;
   backface-visibility: hidden;
@@ -756,7 +756,7 @@ onUnmounted(() => {
   position: absolute;
   top: 8px;
   right: 8px;
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   padding: 4px 8px;
   border-radius: 6px;
@@ -848,7 +848,7 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -861,7 +861,7 @@ onUnmounted(() => {
 }
 
 .read-more-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
 }
@@ -1130,7 +1130,7 @@ onUnmounted(() => {
   max-height: 400px;
   object-fit: cover;
   border-radius: 0;
-  background: #000;
+  background: #231F20;
   /* Performance optimizations */
   will-change: transform;
   backface-visibility: hidden;
@@ -1168,7 +1168,7 @@ onUnmounted(() => {
 
 .dialog-action-btn {
   width: 100%;
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   border-radius: 16px;
@@ -1185,7 +1185,7 @@ onUnmounted(() => {
 }
 
 .dialog-action-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
 }

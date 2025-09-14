@@ -67,8 +67,8 @@
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
-                stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <circle cx="12" cy="7" r="4" stroke="#ff6b35" stroke-width="2" stroke-linecap="round"
+                stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="12" cy="7" r="4" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
             </svg>
           </div>
@@ -172,8 +172,8 @@
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
-                stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <polyline points="9,22 9,12 15,12 15,22" stroke="#ff6b35" stroke-width="2" stroke-linecap="round"
+                stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <polyline points="9,22 9,12 15,12 15,22" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
             </svg>
           </div>
@@ -573,7 +573,7 @@ const resendCode = async () => {
 
 .separator-line {
   height: 3px;
-  background-color: #ff6b35;
+  background-color: #AF1E23;
   margin: 0;
   width: 100%;
   margin-bottom: 0;
@@ -603,15 +603,15 @@ const resendCode = async () => {
 }
 
 .progress-step.active .step-icon {
-  background-color: #000000;
-  border-color: #000000;
+  background-color: #231F20;
+  border-color: #231F20;
   color: white;
   width: 48px;
   height: 48px;
 }
 
 .progress-step.active .step-label {
-  color: #000000;
+  color: #231F20;
   font-weight: 600;
   font-size: 1rem;
   margin-top: 12px;
@@ -747,7 +747,7 @@ const resendCode = async () => {
 
 .email-display {
   font-weight: 600;
-  color: #ff6b35;
+  color: #AF1E23;
   font-size: 1.1rem;
 }
 
@@ -821,7 +821,7 @@ const resendCode = async () => {
 
 .code-input:focus {
   outline: none;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
 }
 
@@ -865,7 +865,7 @@ const resendCode = async () => {
 
 .form-input:focus {
   outline: none;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
 }
 
 .form-input[readonly] {
@@ -876,7 +876,7 @@ const resendCode = async () => {
 
 .verify-btn {
   width: 100%;
-  background-color: #ff6b35;
+  background-color: #AF1E23;
   color: white;
   border: none;
   padding: 16px;
@@ -888,7 +888,7 @@ const resendCode = async () => {
 }
 
 .verify-btn:hover:not(:disabled) {
-  background-color: #e55a2b;
+  background-color: #AF1E23;
 }
 
 .verify-btn:disabled {
@@ -903,7 +903,7 @@ const resendCode = async () => {
 .resend-btn {
   background: none;
   border: none;
-  color: #ff6b35;
+  color: #AF1E23;
   font-size: 0.9rem;
   cursor: pointer;
   text-decoration: underline;
@@ -911,7 +911,7 @@ const resendCode = async () => {
 }
 
 .resend-btn:hover:not(:disabled) {
-  color: #e55a2b;
+  color: #AF1E23;
 }
 
 .resend-btn:disabled {
@@ -937,7 +937,7 @@ const resendCode = async () => {
 }
 
 .action-section:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
 }
 
 .section-header {

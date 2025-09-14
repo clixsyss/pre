@@ -4,9 +4,9 @@
     <div class="project-connections">
       <h3 class="section-title">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M2 17L12 22L22 17" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M2 12L12 17L22 12" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 17L12 22L22 17" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 12L12 17L22 12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         Smart Mirror Integration
       </h3>
@@ -67,9 +67,9 @@
           <div class="header-content">
             <div class="header-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 17L12 22L22 17" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 12L12 17L22 12" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 17L12 22L22 17" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 12L12 17L22 12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
             <div class="header-text">
@@ -89,8 +89,8 @@
         <div class="project-selection-card">
           <div class="project-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M9 22V12H15V22" stroke="#ff6b35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 22V12H15V22" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
           <div class="project-details">
@@ -358,7 +358,7 @@ const goToDevices = () => {
 }
 
 .project-connection-item:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.15);
   transform: translateY(-2px);
 }
@@ -409,7 +409,7 @@ const goToDevices = () => {
 }
 
 .control-devices-btn {
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   border: none;
   padding: 10px 20px;
@@ -452,7 +452,7 @@ const goToDevices = () => {
 }
 
 .connect-btn {
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   border: none;
   padding: 10px 20px;
@@ -556,7 +556,7 @@ const goToDevices = () => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 12px 20px;
@@ -569,7 +569,7 @@ const goToDevices = () => {
 }
 
 .connect-btn:hover:not(:disabled) {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-2px);
 }
 
@@ -603,7 +603,7 @@ const goToDevices = () => {
 .summary-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #ff6b35;
+  color: #AF1E23;
 }
 
 .connected-actions {
@@ -711,7 +711,7 @@ const goToDevices = () => {
   justify-content: space-between;
   align-items: flex-start;
   padding: 32px 32px 24px 32px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   position: relative;
 }
@@ -799,7 +799,7 @@ const goToDevices = () => {
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   border-radius: 12px;
   color: white;
 }
@@ -861,7 +861,7 @@ const goToDevices = () => {
 
 .form-group input:focus {
   outline: none;
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   background: #fefefe;
   transform: translateY(-1px);
   box-shadow: 
@@ -881,7 +881,7 @@ const goToDevices = () => {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, #ff6b35, #ff8a65);
+  background: linear-gradient(90deg, #AF1E23, #AF1E23);
   border-radius: 1px;
   transform: scaleX(0);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -951,7 +951,7 @@ const goToDevices = () => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8a65 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   border: none;
   padding: 14px 28px;

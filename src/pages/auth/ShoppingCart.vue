@@ -767,7 +767,7 @@ onMounted(() => {
 
 .browse-stores-btn:hover {
   background: #c6c6c6;
-  color: #000000;
+  color: #231F20;
   transform: translateY(-2px);
 }
 
@@ -1120,7 +1120,7 @@ onMounted(() => {
 .success-header {
   text-align: center;
   padding: 32px 24px;
-  background: linear-gradient(135deg, #E88B65 0%, #F37C4E 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   position: relative;
 }
@@ -1433,7 +1433,7 @@ onMounted(() => {
 
 .continue-shopping-btn:hover {
   background: #c6c6c6;
-  color: #000000;
+  color: #231F20;
   transform: translateY(-2px);
 }
 
@@ -1787,7 +1787,7 @@ onMounted(() => {
 .store-avatar {
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, #F37C4E 0%, #e55a2b 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   border-radius: 16px;
   display: flex;
   align-items: center;
@@ -1833,7 +1833,7 @@ onMounted(() => {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #F37C4E 0%, #e55a2b 100%);
+  background: linear-gradient(90deg, #AF1E23 0%, #AF1E23 100%);
   border-radius: 3px;
   transition: width 0.3s ease;
 }
@@ -1930,7 +1930,7 @@ onMounted(() => {
 
 .comment-textarea:focus {
   outline: none;
-  border-color: #F37C4E;
+  border-color: #AF1E23;
   background: white;
   box-shadow: 0 0 0 4px rgba(243, 124, 78, 0.1);
 }
@@ -1980,7 +1980,7 @@ onMounted(() => {
 .submit-button {
   flex: 2;
   padding: 14px 24px;
-  background: linear-gradient(135deg, #F37C4E 0%, #e55a2b 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   border: none;
   border-radius: 16px;

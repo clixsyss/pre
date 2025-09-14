@@ -408,12 +408,12 @@ watch(currentProject, (newProject) => {
 }
 
 .program-item:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .program-item.expanded {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   background: #fff5f2;
 }
 
@@ -680,7 +680,7 @@ watch(currentProject, (newProject) => {
 .monthly-price {
   font-size: 1.125rem;
   font-weight: 700;
-  color: #ff6b35;
+  color: #AF1E23;
 }
 
 .total-price {
@@ -690,7 +690,7 @@ watch(currentProject, (newProject) => {
 }
 
 .register-button {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -702,7 +702,7 @@ watch(currentProject, (newProject) => {
 }
 
 .register-button:hover {
-  background: #e55a2b;
+  background: #AF1E23;
 }
 
 /* Loading and Error States */
@@ -722,7 +722,7 @@ watch(currentProject, (newProject) => {
   width: 40px;
   height: 40px;
   border: 3px solid #f3f3f3;
-  border-top: 3px solid #ff6b35;
+  border-top: 3px solid #AF1E23;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -759,7 +759,7 @@ watch(currentProject, (newProject) => {
 
 .retry-btn,
 .select-project-btn {
-  background: #ff6b35;
+  background: #AF1E23;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -771,7 +771,7 @@ watch(currentProject, (newProject) => {
 
 .retry-btn:hover,
 .select-project-btn:hover {
-  background: #e55a2b;
+  background: #AF1E23;
 }
 
 /* Responsive Design */

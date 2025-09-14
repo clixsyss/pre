@@ -186,7 +186,7 @@ onMounted(() => {
 .upcoming-bookings-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  border-color: #ff6b35;
+  border-color: #AF1E23;
 }
 
 .card-header h3 {
@@ -213,7 +213,7 @@ onMounted(() => {
   width: 32px;
   height: 32px;
   border: 3px solid #f3f3f3;
-  border-top: 3px solid #ff6b35;
+  border-top: 3px solid #AF1E23;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 12px;

@@ -275,7 +275,7 @@ onMounted(async () => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: white;
+  background-color: #F6F6F6;
   width: 100%;
   overflow-x: hidden; /* Prevent horizontal overflow */
 }
@@ -284,8 +284,8 @@ onMounted(async () => {
 
 /* Header Styles */
 .app-header {
-  background-color: #000;
-  color: white;
+  background-color: #231F20;
+  color: #F6F6F6;
   padding: 16px 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
@@ -353,7 +353,7 @@ onMounted(async () => {
 .dot {
   width: 6px;
   height: 6px;
-  background: #ff6b35;
+  background: #AF1E23;
   border-radius: 50%;
   animation: dot-bounce 1.4s ease-in-out infinite both;
 }
@@ -391,7 +391,7 @@ onMounted(async () => {
 }
 
 .project-name {
-  color: white;
+  color: #F6F6F6;
   font-size: 0.875rem;
   font-weight: 600;
   max-width: 120px;
@@ -424,7 +424,7 @@ onMounted(async () => {
 }
 
 .change-project-btn:hover {
-  color: white;
+  color: #F6F6F6;
   background: rgba(255, 255, 255, 0.1);
 }
 
@@ -468,7 +468,7 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   text-decoration: none;
-  color: white;
+  color: #F6F6F6;
   transition: all 0.3s ease;
   position: relative;
   flex: 1;
@@ -480,7 +480,7 @@ onMounted(async () => {
 }
 
 .nav-item.active {
-  color: white;
+  color: #F6F6F6;
 }
 
 .nav-icon {
@@ -496,8 +496,8 @@ onMounted(async () => {
 }
 
 .nav-item.active .nav-icon {
-  background-color: #ff6b35;
-  color: white;
+  background-color: #AF1E23;
+  color: #F6F6F6;
   transform: translateY(-40px);
   border: 5px solid white;
   width: 64px;
@@ -525,7 +525,7 @@ onMounted(async () => {
   opacity: 0;
   transform: translateY(8px);
   transition: all 0.3s ease;
-  color: white;
+  color: #F6F6F6;
   letter-spacing: 0.5px;
   line-height: 1.2;
 }
@@ -551,7 +551,7 @@ onMounted(async () => {
 }
 
 .modal-content {
-  background: white;
+  background: #F6F6F6;
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   max-width: 90vw;
@@ -629,17 +629,17 @@ onMounted(async () => {
   border: 2px solid #e5e7eb;
   border-radius: 12px;
   transition: all 0.2s ease;
-  background: white;
+  background: #F6F6F6;
 }
 
 .project-option:hover {
-  border-color: #ff6b35;
+  border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.1);
 }
 
 .project-option.current {
-  border-color: #ff6b35;
-  background: #fff5f2;
+  border-color: #AF1E23;
+  background: #F6F6F6;
 }
 
 .project-info h4 {
@@ -668,8 +668,8 @@ onMounted(async () => {
 }
 
 .current-badge {
-  background: #ff6b35;
-  color: white;
+  background: #AF1E23;
+  color: #F6F6F6;
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 0.75rem;
@@ -677,8 +677,8 @@ onMounted(async () => {
 }
 
 .switch-btn {
-  background: #ff6b35;
-  color: white;
+  background: #AF1E23;
+  color: #F6F6F6;
   border: none;
   padding: 8px 16px;
   border-radius: 8px;
@@ -689,7 +689,7 @@ onMounted(async () => {
 }
 
 .switch-btn:hover:not(:disabled) {
-  background: #e55a2b;
+  background: #AF1E23;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
@@ -737,9 +737,9 @@ onMounted(async () => {
 }
 
 .secondary-btn:hover {
-  border-color: #ff6b35;
-  color: #ff6b35;
-  background: #fff5f2;
+  border-color: #AF1E23;
+  color: #AF1E23;
+  background: #F6F6F6;
 }
 
 /* Responsive Design */
