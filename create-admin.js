@@ -7,7 +7,7 @@ import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 // Your Firebase config (same as in src/boot/firebase.js)
 const firebaseConfig = {
-  apiKey: "AIzaSyDpYVhP_uLDecqds0VD7g409N_AMj-OMF8",
+  apiKey: process.env.FIREBASE_API_KEY || "YOUR_API_KEY_HERE",
   authDomain: "pre-group.firebaseapp.com",
   projectId: "pre-group",
   storageBucket: "pre-group.firebasestorage.app",

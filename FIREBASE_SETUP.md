@@ -91,7 +91,7 @@ Your Firebase configuration is set up in `src/boot/firebase.js`:
 
 ```javascript
 const firebaseConfig = {
-  apiKey: "AIzaSyDpYVhP_uLDecqds0VD7g409N_AMj-OMF8",
+  apiKey: "YOUR_API_KEY_HERE",
   authDomain: "pre-group.firebaseapp.com",
   projectId: "pre-group",
   storageBucket: "pre-group.firebasestorage.app",
