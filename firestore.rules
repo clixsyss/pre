@@ -16,12 +16,40 @@ service cloud.firestore {
          request.auth.token.email == resource.data.email);
     }
     
+    // Project Ratings - users can read/write their own ratings within project
+    match /projects/{projectId}/ratings/{ratingId} {
+      allow read, write: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    
+    // Allow listing project ratings
+    match /projects/{projectId}/ratings {
+      allow list: if request.auth != null;
+    }
+    
     // Allow admins to read all user data (for management purposes)
     // This rule needs to be separate and more permissive for admin access
     match /users/{userId} {
       allow read: if request.auth != null && 
         (request.auth.uid == userId || // User can read their own data
          exists(/databases/$(database)/documents/admins/$(request.auth.uid))); // Admin can read all user data
+    }
+    
+    
+    // Project News - allow authenticated users to read published news within project
+    // Admins can write, users can only read published news
+    match /projects/{projectId}/news/{newsId} {
+      allow read: if request.auth != null && 
+        (resource.data.isPublished == true || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      allow write: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Allow listing project news (only published for users, all for admins)
+    match /projects/{projectId}/news {
+      allow list: if request.auth != null;
     }
     
     // Allow listing users collection (needed for admin dashboard)
@@ -152,18 +180,6 @@ service cloud.firestore {
       allow list: if request.auth != null;
     }
     
-    // Project Ratings - users can read/write their own ratings within project
-    match /projects/{projectId}/ratings/{ratingId} {
-      allow read, write: if request.auth != null && 
-        (resource == null || resource.data.userId == request.auth.uid || 
-         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-    }
-    
-    // Allow listing project ratings
-    match /projects/{projectId}/ratings {
-      allow list: if request.auth != null;
-    }
-    
     // Project Gate Passes - users can read/write their own gate passes within project
     match /projects/{projectId}/gatePasses/{gatePassId} {
       allow read, write: if request.auth != null && 
@@ -176,31 +192,15 @@ service cloud.firestore {
       allow list: if request.auth != null;
     }
     
-    // Project Notifications - allow authenticated users to read notifications within project
-    // Admins can write, users can only read (notifications are created by admins)
+    // Project Notifications - users can read/write their own notifications within project
     match /projects/{projectId}/notifications/{notificationId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow read, write: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
     
     // Allow listing project notifications
     match /projects/{projectId}/notifications {
-      allow list: if request.auth != null;
-    }
-    
-    // Project News - allow authenticated users to read published news within project
-    // Admins can write, users can only read published news
-    match /projects/{projectId}/news/{newsId} {
-      allow read: if request.auth != null && 
-        (resource.data.isPublished == true || 
-         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-      allow write: if request.auth != null && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-    
-    // Allow listing project news (only published for users, all for admins)
-    match /projects/{projectId}/news {
       allow list: if request.auth != null;
     }
     
@@ -344,7 +344,31 @@ service cloud.firestore {
       allow list: if request.auth != null;
     }
     
-    // Global Notifications collection - allow authenticated users to read
+        // Project Store Management - allow authenticated users to read/write within project
+    match /projects/{projectId}/stores/{storeId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project stores
+    match /projects/{projectId}/stores {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Store Products - allow authenticated users to read/write within project store
+    match /projects/{projectId}/stores/{storeId}/products/{productId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project store products
+    match /projects/{projectId}/stores/{storeId}/products {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Products - allow authenticated users to read/write within project
+    match /projects/{projectId}/products/{productId} {
+      allow read, write: if request.auth != null;
+    }
+    
     // Admins can write (for backward compatibility)
     match /notifications/{notificationId} {
       allow read: if request.auth != null;
@@ -356,79 +380,41 @@ service cloud.firestore {
     match /notifications {
       allow list: if request.auth != null;
     }
-  }
-}
 
-// Firebase Storage Rules
-service firebase.storage {
-  match /b/{bucket}/o {
-    // Allow authenticated users to read all files
-    match /{allPaths=**} {
+    // Project News Comments - allow authenticated users to read/write comments within project
+    match /projects/{projectId}/news/{newsId}/comments/{commentId} {
       allow read: if request.auth != null;
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      allow update: if request.auth != null && 
+        (request.auth.uid == resource.data.userId || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      allow delete: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
     
-    // Allow admins to upload and manage files
-    match /{allPaths=**} {
-      allow write: if request.auth != null && 
-        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    // Allow listing project news comments
+    match /projects/{projectId}/news/{newsId}/comments {
+      allow list: if request.auth != null;
     }
     
-    // Allow news media uploads for admins
-    match /news/{fileName} {
+    // Project News Reactions - allow authenticated users to read/write reactions within project
+    match /projects/{projectId}/news/{newsId}/reactions/{reactionId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      allow update: if request.auth != null && 
+        (request.auth.uid == resource.data.userId || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      allow delete: if request.auth != null && 
+        (request.auth.uid == resource.data.userId || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
     
-    // Allow project-specific news media uploads for admins
-    match /projects/{projectId}/news/{fileName} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    // Allow listing project news reactions
+    match /projects/{projectId}/news/{newsId}/reactions {
+      allow list: if request.auth != null;
     }
-    
-    // Allow store image uploads for admins
-    match /projects/{projectId}/stores/{fileName} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        exists(/databases/(default)/documents/admins/$(request.auth.uid));
-    }
-    
-    // Allow product image uploads for admins
-    match /projects/{projectId}/stores/{storeId}/products/{fileName} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        exists(/databases/(default)/documents/admins/$(request.auth.uid));
-    }
-    
-    // Temporary: Allow authenticated users to upload news media (for testing)
-    // TODO: Remove this rule once admin authentication is properly set up
-    match /news/{fileName} {
-      allow write: if request.auth != null;
-    }
-    
-    // Temporary: Allow authenticated users to upload project-specific news media
-    match /projects/{projectId}/news/{fileName} {
-      allow write: if request.auth != null;
-    }
-    
-    // Temporary: Allow authenticated users to upload store images (for testing)
-    match /projects/{projectId}/stores/{fileName} {
-      allow write: if request.auth != null;
-    }
-    
-    // Temporary: Allow authenticated users to upload product images (for testing)
-    match /projects/{projectId}/stores/{storeId}/products/{fileName} {
-      allow write: if request.auth != null;
-    }
-    
-    // Allow logo and other public assets to be read by anyone
-    match /logo.png {
-      allow read: if true;
-    }
-    
-    match /public/{allPaths=**} {
-      allow read: if true;
-    }
+
   }
 }

@@ -176,6 +176,11 @@
               <h1 class="dialog-title">{{ selectedNewsItem.title }}</h1>
               <div class="dialog-message" v-html="selectedNewsItem.message || selectedNewsItem.content"></div>
             </div>
+
+            <!-- Comments Section -->
+            <div class="dialog-comments">
+              <NewsComments :news-id="selectedNewsItem.id" />
+            </div>
           </div>
 
           <!-- Dialog Actions -->
@@ -199,10 +204,14 @@ import { useRouter } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { getDownloadURL, ref as storageRef } from 'firebase/storage'
 import { storage } from '../boot/firebase'
+import NewsComments from './NewsComments.vue'
 
 // Component name for ESLint
 defineOptions({
-  name: 'ModernNewsFeed'
+  name: 'ModernNewsFeed',
+  components: {
+    NewsComments
+  }
 })
 
 const props = defineProps({
@@ -1315,6 +1324,14 @@ onUnmounted(() => {
   gap: 16px;
 }
 
+.dialog-comments {
+  padding: 0 24px 24px 24px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 16px;
+  background: #f8fafc;
+  border-radius: 0 0 12px 12px;
+}
+
 .dialog-title {
   font-size: 1.5rem;
   font-weight: 700;
@@ -1672,6 +1689,12 @@ onUnmounted(() => {
     gap: 14px;
   }
   
+  .dialog-comments {
+    padding: 0 20px 20px 20px;
+    background: #f8fafc;
+    border-radius: 0 0 12px 12px;
+  }
+  
   .dialog-title {
     font-size: 1.375rem;
   }
@@ -1703,6 +1726,12 @@ onUnmounted(() => {
   .dialog-text {
     padding: 18px;
     gap: 12px;
+  }
+  
+  .dialog-comments {
+    padding: 0 18px 18px 18px;
+    background: #f8fafc;
+    border-radius: 0 0 12px 12px;
   }
   
   .dialog-title {
