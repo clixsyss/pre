@@ -159,21 +159,22 @@
               <p>Manage your project memberships and smart home connections</p>
             </div>
           </div>
-          <div class="accordion-actions">
-            <button @click.stop="showAddProjectModal = true" class="add-project-btn">
+          <div class="accordion-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </button>
+        <div class="accordion-content" :class="{ active: activeAccordion === 'projects' }">
+          <!-- Join Project Button -->
+          <div class="join-project-section">
+            <button @click="showAddProjectModal = true" class="add-project-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               Join Project
             </button>
-            <div class="accordion-arrow">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
           </div>
-        </button>
-        <div class="accordion-content" :class="{ active: activeAccordion === 'projects' }">
         
       <!-- Unified Project Management -->
       <div v-if="userProjects.length > 0" class="unified-projects-section">
@@ -437,6 +438,30 @@
         </div>
       </div>
 
+      <!-- Project Guidelines -->
+      <div class="guidelines-section">
+        <div class="section-header">
+          <div class="section-title">
+            <div class="section-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="section-text">
+              <h3>Project Guidelines</h3>
+              <p>Important rules and procedures for our community</p>
+            </div>
+          </div>
+          <button @click="showGuidelinesDialog = true" class="guidelines-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            View Guidelines
+          </button>
+        </div>
+      </div>
+
       <!-- Actions -->
       <div class="actions-section">
         <div class="compact-actions">
@@ -470,6 +495,12 @@
       <p>{{ error }}</p>
       <button @click="loadProfile" class="retry-btn">Try Again</button>
     </div>
+
+    <!-- Project Guidelines Dialog -->
+    <ProjectGuidelinesDialog 
+      :isOpen="showGuidelinesDialog" 
+      @close="showGuidelinesDialog = false" 
+    />
 
     <!-- Logout Confirmation Modal -->
     <div v-if="showLogoutConfirm" class="modal-overlay" @click="showLogoutConfirm = false">
@@ -803,6 +834,7 @@ import { getUserDocument } from '../../utils/firestore'
 import { useNotificationStore } from '../../stores/notifications'
 import { useProjectStore } from '../../stores/projectStore'
 import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
+import ProjectGuidelinesDialog from '../../components/ProjectGuidelinesDialog.vue'
 import { collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { db } from '../../boot/firebase'
 
@@ -822,6 +854,7 @@ const error = ref(null)
 const userProfile = ref(null)
 const showLogoutConfirm = ref(false)
 const logoutLoading = ref(false)
+const showGuidelinesDialog = ref(false)
 const showAddProjectModal = ref(false)
 const addProjectLoading = ref(false)
 const projectJoinSuccess = ref(false)
@@ -1668,6 +1701,12 @@ onMounted(() => {
   padding: 0 24px 24px 24px;
 }
 
+.join-project-section {
+  padding: 20px 0;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 20px;
+}
+
 /* Info Sections */
 .info-section {
   background: white;
@@ -1881,6 +1920,38 @@ onMounted(() => {
   transform: translateY(-1px);
 }
 
+/* Guidelines Section */
+.guidelines-section {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e5e7eb;
+}
+
+.guidelines-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #AF1E23;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
+}
+
+.guidelines-btn:hover {
+  background: #991b1f;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
+}
+
 /* Actions Section */
 .actions-section {
   margin-top: 32px;
@@ -2075,8 +2146,6 @@ onMounted(() => {
   }
   
   .section-title {
-    flex-direction: column;
-    align-items: flex-start;
     gap: 12px;
   }
 }
