@@ -1,5 +1,5 @@
 <template>
-  <div class="comment-item">
+  <div class="comment-item" :class="{ 'is-reply': isReply }">
     <!-- Comment Header -->
     <div class="comment-header">
       <div class="user-info">
@@ -7,10 +7,11 @@
           <span class="avatar-text">{{ comment.userName?.charAt(0)?.toUpperCase() || 'A' }}</span>
         </div>
         <div class="user-details">
-          <h4 class="user-name">{{ comment.userName || 'Anonymous' }}</h4>
+          <div class="user-name-row">
+            <h4 class="user-name">{{ comment.userName || 'Anonymous' }}</h4>
+          </div>
           <div class="comment-meta">
             <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
-            <span v-if="comment.userUnit" class="user-unit">Unit {{ comment.userUnit }}</span>
           </div>
         </div>
       </div>
@@ -23,6 +24,11 @@
         <button @click="handleReply" class="action-btn" title="Reply">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button @click="handleComplaint" class="action-btn complaint-btn" title="Start Complaint">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
       </div>
@@ -72,9 +78,9 @@
           :key="reply.id"
           :comment="reply"
           :news-id="newsId"
-          @reply="$emit('reply', $event)"
-          @react="$emit('react', $event, emoji)"
-          @delete="$emit('delete', $event)"
+          @reply="(commentId) => emit('reply', commentId)"
+          @react="(commentId, emoji) => emit('react', commentId, emoji)"
+          @delete="(commentId) => emit('delete', commentId)"
         />
       </div>
     </div>
@@ -95,12 +101,23 @@ export default {
     newsId: {
       type: String,
       required: true
+    },
+    isReply: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['reply', 'react', 'delete'],
-  setup(props) {
+  setup(props, { emit }) {
     const showReactions = ref(false);
     const replies = ref([]);
+    
+    // Check if this is the current user's comment
+    const isCurrentUser = computed(() => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      return user && props.comment.userId === user.uid;
+    });
     
     // Available emojis for reactions
     const availableEmojis = ['👍', '❤️', '😂', '😮', '😢', '😡', '👏', '🎉'];
@@ -131,12 +148,12 @@ export default {
     };
     
     const handleReaction = (emoji) => {
-      this.$emit('react', props.comment.id, emoji);
+      emit('react', props.comment.id, emoji);
       showReactions.value = false;
     };
     
     const handleReply = () => {
-      this.$emit('reply', props.comment.id);
+      emit('reply', props.comment.id);
     };
     
     const hasUserReacted = (emoji) => {
@@ -160,6 +177,7 @@ export default {
       replies,
       availableEmojis,
       hasReactions,
+      isCurrentUser,
       formatTime,
       toggleReactions,
       handleReaction,
@@ -174,11 +192,17 @@ export default {
 .comment-item {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
   transition: all 0.2s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.comment-item.is-reply {
+  background: #f8fafc;
+  border-left: 3px solid #AF1E23;
+  margin-left: 0;
 }
 
 .comment-item:hover {
@@ -190,20 +214,20 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .user-info {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 8px;
 }
 
 .user-avatar {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #AF1E23, #9c27b0);
+  background: linear-gradient(135deg, #AF1E23, #991b1b);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -213,7 +237,7 @@ export default {
 .avatar-text {
   color: white;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .user-details {
@@ -221,23 +245,24 @@ export default {
 }
 
 .user-name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #231F20;
-  margin: 0 0 4px 0;
+  margin: 0 0 2px 0;
+  line-height: normal;
 }
 
 .comment-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 6px;
+  font-size: 11px;
   color: #64748b;
 }
 
 .user-unit {
   background: #f1f5f9;
-  padding: 2px 6px;
+  padding: 1px 4px;
   border-radius: 4px;
   font-weight: 500;
   color: #475569;
@@ -245,14 +270,14 @@ export default {
 
 .comment-actions {
   display: flex;
-  gap: 4px;
+  gap: 2px;
 }
 
 .action-btn {
   background: none;
   border: none;
-  padding: 6px;
-  border-radius: 6px;
+  padding: 4px;
+  border-radius: 4px;
   color: #64748b;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -260,16 +285,16 @@ export default {
 
 .action-btn:hover {
   background: #f1f5f9;
-  color: #231F20;
+  color: #AF1E23;
 }
 
 .comment-content {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .comment-text {
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.5;
   color: #475569;
   margin: 0;
   word-wrap: break-word;
@@ -362,7 +387,9 @@ export default {
 }
 
 .replies-list {
-  space-y: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 /* Responsive design */
@@ -372,12 +399,11 @@ export default {
   }
   
   .comment-header {
-    flex-direction: column;
     gap: 8px;
   }
   
   .comment-actions {
-    align-self: flex-end;
+    align-self: flex-start;
   }
   
   .replies {

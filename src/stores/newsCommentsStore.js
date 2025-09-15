@@ -7,9 +7,12 @@ import { useProjectStore } from './projectStore';
 export const useNewsCommentsStore = defineStore('newsComments', () => {
   // State
   const comments = ref({}); // { newsId: [comments] }
+  const newsReactions = ref({}); // { newsId: { emoji: { count, users } } }
+  const userNewsReactions = ref({}); // { newsId: [userReactions] }
   const loading = ref(false);
   const error = ref(null);
   const subscriptions = ref({}); // { newsId: unsubscribeFunction }
+  const reactionSubscriptions = ref({}); // { newsId: unsubscribeFunction }
 
   // Getters
   const getCommentsForNews = computed(() => {
@@ -29,6 +32,18 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
     return (newsId) => {
       const newsComments = comments.value[newsId] || [];
       return newsComments.filter(comment => comment.isDeleted);
+    };
+  });
+
+  const getNewsReactions = computed(() => {
+    return (newsId) => {
+      return newsReactions.value[newsId] || {};
+    };
+  });
+
+  const getUserNewsReactions = computed(() => {
+    return (newsId) => {
+      return userNewsReactions.value[newsId] || [];
     };
   });
 
@@ -179,6 +194,105 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
     }
   };
 
+  const fetchNewsReactions = async (newsId) => {
+    if (!newsId) return;
+    
+    try {
+      const projectStore = useProjectStore();
+      const projectId = projectStore.selectedProject?.id;
+      
+      if (!projectId) {
+        throw new Error('No project selected');
+      }
+      
+      const reactions = await newsCommentsService.getNewsReactions(projectId, newsId);
+      
+      // Process reactions to group by emoji
+      const reactionGroups = {};
+      const userReactions = [];
+      const auth = getAuth();
+      const user = auth.currentUser;
+      
+      reactions.forEach(reaction => {
+        const emoji = reaction.emoji;
+        if (!reactionGroups[emoji]) {
+          reactionGroups[emoji] = { count: 0, users: [] };
+        }
+        reactionGroups[emoji].count++;
+        reactionGroups[emoji].users.push({
+          userId: reaction.userId,
+          userName: reaction.userName,
+          timestamp: reaction.timestamp
+        });
+        
+        // Track user's own reactions
+        if (user && reaction.userId === user.uid) {
+          userReactions.push(emoji);
+        }
+      });
+      
+      newsReactions.value[newsId] = reactionGroups;
+      userNewsReactions.value[newsId] = userReactions;
+    } catch (err) {
+      error.value = err.message;
+      console.error('Error fetching news reactions:', err);
+    }
+  };
+
+  const subscribeToNewsReactions = (newsId) => {
+    if (!newsId || reactionSubscriptions.value[newsId]) return;
+    
+    try {
+      const projectStore = useProjectStore();
+      const projectId = projectStore.selectedProject?.id;
+      
+      if (!projectId) {
+        throw new Error('No project selected');
+      }
+      
+      const unsubscribe = newsCommentsService.subscribeToNewsReactions(projectId, newsId, (reactions) => {
+        // Process reactions to group by emoji
+        const reactionGroups = {};
+        const userReactions = [];
+        const auth = getAuth();
+        const user = auth.currentUser;
+        
+        reactions.forEach(reaction => {
+          const emoji = reaction.emoji;
+          if (!reactionGroups[emoji]) {
+            reactionGroups[emoji] = { count: 0, users: [] };
+          }
+          reactionGroups[emoji].count++;
+          reactionGroups[emoji].users.push({
+            userId: reaction.userId,
+            userName: reaction.userName,
+            timestamp: reaction.timestamp
+          });
+          
+          // Track user's own reactions
+          if (user && reaction.userId === user.uid) {
+            userReactions.push(emoji);
+          }
+        });
+        
+        newsReactions.value[newsId] = reactionGroups;
+        userNewsReactions.value[newsId] = userReactions;
+      });
+      
+      reactionSubscriptions.value[newsId] = unsubscribe;
+    } catch (err) {
+      error.value = err.message;
+      console.error('Error subscribing to news reactions:', err);
+    }
+  };
+
+  const unsubscribeFromNewsReactions = (newsId) => {
+    if (reactionSubscriptions.value[newsId]) {
+      reactionSubscriptions.value[newsId]();
+      delete reactionSubscriptions.value[newsId];
+    }
+  };
+
   const toggleNewsReaction = async (newsId, emoji) => {
     if (!newsId || !emoji) return;
     
@@ -198,6 +312,9 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
       }
       
       await newsCommentsService.toggleNewsReaction(projectId, newsId, emoji);
+      
+      // Refresh reactions after toggle
+      await fetchNewsReactions(newsId);
     } catch (err) {
       error.value = err.message;
       console.error('Error toggling news reaction:', err);
@@ -292,6 +409,8 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
   return {
     // State
     comments,
+    newsReactions,
+    userNewsReactions,
     loading,
     error,
     
@@ -299,6 +418,8 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
     getCommentsForNews,
     getActiveComments,
     getDeletedComments,
+    getNewsReactions,
+    getUserNewsReactions,
     
     // Actions
     fetchComments,
@@ -306,6 +427,9 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
     unsubscribeFromComments,
     addComment,
     toggleReaction,
+    fetchNewsReactions,
+    subscribeToNewsReactions,
+    unsubscribeFromNewsReactions,
     toggleNewsReaction,
     deleteComment,
     restoreComment,

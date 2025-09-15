@@ -357,6 +357,53 @@ class NewsCommentsService {
   }
 
   /**
+   * Get all reactions for a news item
+   * @param {string} projectId - Project ID
+   * @param {string} newsId - The news item ID
+   * @returns {Promise<Array>} Array of reactions
+   */
+  async getNewsReactions(projectId, newsId) {
+    try {
+      const reactionsRef = collection(this.db, `projects/${projectId}/news/${newsId}/reactions`);
+      const q = query(reactionsRef, orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error fetching news reactions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Subscribe to news reactions in real-time
+   * @param {string} projectId - Project ID
+   * @param {string} newsId - The news item ID
+   * @param {Function} callback - Callback function to handle reactions
+   * @returns {Function} Unsubscribe function
+   */
+  subscribeToNewsReactions(projectId, newsId, callback) {
+    try {
+      const reactionsRef = collection(this.db, `projects/${projectId}/news/${newsId}/reactions`);
+      const q = query(reactionsRef, orderBy('createdAt', 'desc'));
+      
+      return onSnapshot(q, (snapshot) => {
+        const reactions = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        callback(reactions);
+      });
+    } catch (error) {
+      console.error('Error subscribing to news reactions:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Toggle a reaction on a news item
    * @param {string} projectId - Project ID
    * @param {string} newsId - The news item ID

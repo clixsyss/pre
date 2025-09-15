@@ -143,8 +143,8 @@
             </button>
           </div>
 
-          <!-- Dialog Content -->
-          <div class="dialog-content">
+          <!-- Scrollable Dialog Content -->
+          <div class="dialog-content-scrollable">
             <!-- Media Section -->
             <div v-if="selectedNewsItem.mediaUrl || selectedNewsItem.mediaType" class="dialog-media">
               <div v-if="selectedNewsItem.mediaType === 'video'" class="dialog-video-container">
@@ -177,8 +177,8 @@
               <div class="dialog-message" v-html="selectedNewsItem.message || selectedNewsItem.content"></div>
             </div>
 
-            <!-- Comments Section -->
-            <div class="dialog-comments">
+            <!-- Compact Comments Section -->
+            <div class="dialog-comments-compact">
               <NewsComments :news-id="selectedNewsItem.id" />
             </div>
           </div>
@@ -380,11 +380,15 @@ const handleVideoClick = (item) => {
 const openNewsDetail = (item) => {
   selectedNewsItem.value = item
   showNewsModal.value = true
+  // Prevent background scrolling
+  document.body.style.overflow = 'hidden'
 }
 
 const closeNewsModal = () => {
   showNewsModal.value = false
   selectedNewsItem.value = null
+  // Restore background scrolling
+  document.body.style.overflow = ''
 }
 
 const navigateToAllNews = () => {
@@ -544,6 +548,8 @@ onUnmounted(() => {
   if (videoIntersectionObserver.value) {
     videoIntersectionObserver.value.disconnect()
   }
+  // Restore background scrolling in case component unmounts while modal is open
+  document.body.style.overflow = ''
 })
 </script>
 
@@ -1184,6 +1190,7 @@ onUnmounted(() => {
   justify-content: center;
   z-index: 1000;
   padding: 0;
+  overflow: hidden; /* Prevent background scrolling */
 }
 
 .dialog-container {
@@ -1193,6 +1200,7 @@ onUnmounted(() => {
   max-width: 100%;
   width: 100%;
   max-height: 85vh;
+  min-height: 50vh; /* Ensure minimum height */
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1272,6 +1280,8 @@ onUnmounted(() => {
 .dialog-media {
   width: 100%;
   height: auto;
+  min-height: 200px; /* Ensure minimum height for media */
+  max-height: 300px; /* Limit maximum height */
   border-radius: 0;
   overflow: hidden;
   background: #f8f9fa;
@@ -1279,13 +1289,15 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   position: relative;
+  flex-shrink: 0; /* Prevent shrinking when content is long */
 }
 
 .dialog-image-container,
 .dialog-video-container {
   width: 100%;
   height: auto;
-  max-height: 400px;
+  min-height: 200px; /* Ensure minimum height */
+  max-height: 300px; /* Limit maximum height */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1293,24 +1305,29 @@ onUnmounted(() => {
   overflow: hidden;
   position: relative;
   padding: 10px;
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 .dialog-image {
   width: 100%;
   height: auto;
-  max-height: 400px;
+  min-height: 200px; /* Ensure minimum height */
+  max-height: 300px; /* Limit maximum height */
   object-fit: contain;
   border-radius: 0;
   background: #f8f9fa;
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 .dialog-video {
   width: 100%;
   height: auto;
-  max-height: 400px;
+  min-height: 200px; /* Ensure minimum height */
+  max-height: 300px; /* Limit maximum height */
   object-fit: cover;
   border-radius: 0;
   background: #231F20;
+  flex-shrink: 0; /* Prevent shrinking */
   /* Performance optimizations */
   will-change: transform;
   backface-visibility: hidden;
@@ -1328,6 +1345,24 @@ onUnmounted(() => {
   padding: 0 24px 24px 24px;
   border-top: 1px solid #e2e8f0;
   margin-top: 16px;
+  background: #f8fafc;
+  border-radius: 0 0 12px 12px;
+}
+
+/* Scrollable Dialog Content */
+.dialog-content-scrollable {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Compact Comments Section */
+.dialog-comments-compact {
+  padding: 12px 16px 16px 16px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 12px;
   background: #f8fafc;
   border-radius: 0 0 12px 12px;
 }
@@ -1677,7 +1712,7 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .dialog-container {
     border-radius: 20px 20px 0 0;
-    max-height: 90vh;
+    overflow-y: auto;
   }
   
   .dialog-header {
