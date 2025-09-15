@@ -1,74 +1,81 @@
 <template>
   <div class="store-details-page">
-    <!-- Minimal Header -->
-    <div class="store-header">
-      <div class="header-content">
-        <!-- Back Button -->
-        <button class="back-button" @click="goBack">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Back
-        </button>
-        
-        <div class="store-main-content">
-          <div class="store-basic-info">
-            <div class="store-image">
-              <img v-if="store?.image" :src="store.image" :alt="store?.name" />
-              <div v-else class="store-placeholder">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-            </div>
-            
-            <div class="store-info">
-              <div class="store-name-container">
-                <h1 class="store-name">{{ store?.name }}</h1>
-                <div 
-                  v-if="store?.status && store.status !== 'active'"
-                  class="store-status-badge"
-                  :class="store.status"
-                >
-                  {{ store.status === 'inactive' ? 'CLOSED' : 'MAINTENANCE' }}
-                </div>
-              </div>
-              <div class="store-meta">
-                <span class="location">{{ store?.location }}</span>
-                <span class="delivery">{{ store?.averageDeliveryTime }} delivery</span>
-                <span v-if="store?.deliveryFee" class="delivery-fee">${{ store.deliveryFee }} delivery fee</span>
-              </div>
-              
-              <!-- Store Rating -->
-              <div v-if="store?.rating" class="store-rating">
-                <div class="rating-stars">
-                  <svg
-                    v-for="star in 5"
-                    :key="star"
-                    :class="['star', { 'filled': star <= (store.rating || 0) }]"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                  </svg>
-                </div>
-                <span class="rating-value">{{ (store.rating || 0).toFixed(1) }}</span>
-                <span class="rating-count">
-                  {{ (store.reviewCount || 0) === 0 ? 'No reviews yet' : `(${store.reviewCount} reviews)` }}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <button class="cart-button" @click="viewCart">
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <div class="hero-content">
+        <div class="hero-header">
+          <button class="back-button" @click="goBack">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <span v-if="cartStore.itemCount > 0" class="cart-count">{{ cartStore.itemCount }}</span>
+            Back
           </button>
         </div>
+        
+        <div class="hero-text">
+          <h1 class="hero-title">{{ store?.name || 'Store Details' }}</h1>
+          <p class="hero-subtitle">{{ store?.location || 'Discover amazing products' }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Store Info Section -->
+    <div class="store-info-section">
+      <div class="store-basic-info">
+        <div class="store-image">
+          <img v-if="store?.image" :src="store.image" :alt="store?.name" />
+          <div v-else class="store-placeholder">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="store-details">
+          <div class="store-name-container">
+            <h2 class="store-name">{{ store?.name }}</h2>
+            <div 
+              v-if="store?.status && store.status !== 'active'"
+              class="store-status-badge"
+              :class="store.status"
+            >
+              {{ store.status === 'inactive' ? 'CLOSED' : 'MAINTENANCE' }}
+            </div>
+          </div>
+          <div class="store-meta">
+            <span class="location">{{ store?.location }}</span>
+            <span class="delivery">{{ store?.averageDeliveryTime }} delivery</span>
+            <span v-if="store?.deliveryFee" class="delivery-fee">${{ store.deliveryFee }} delivery fee</span>
+          </div>
+          
+          <!-- Store Rating -->
+          <div v-if="store?.rating" class="store-rating">
+            <div class="rating-stars">
+              <svg
+                v-for="star in 5"
+                :key="star"
+                :class="['star', { 'filled': star <= (store.rating || 0) }]"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+              </svg>
+            </div>
+            <span class="rating-value">{{ (store.rating || 0).toFixed(1) }}</span>
+            <span class="rating-count">
+              {{ (store.reviewCount || 0) === 0 ? 'No reviews yet' : `(${store.reviewCount} reviews)` }}
+            </span>
+          </div>
+        </div>
+        
+        <button class="cart-button" @click="viewCart">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span v-if="cartStore.itemCount > 0" class="cart-count">{{ cartStore.itemCount }}</span>
+        </button>
       </div>
     </div>
 
@@ -433,60 +440,87 @@ onMounted(() => {
 
 <style scoped>
 .store-details-page {
-  background: #f8f9fa;
+  padding: 20px 16px;
+  background: #fafafa;
   min-height: 100vh;
 }
 
-.store-header {
-  background: white;
-  padding: 24px 20px;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  color: #F6F6F6;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(175, 30, 35, 0.2);
 }
 
-.header-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.hero-content {
+  width: 100%;
+}
+
+.hero-header {
+  margin-bottom: 20px;
 }
 
 .back-button {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: none;
-  border: 1px solid #e5e7eb;
-  color: #6b7280;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  align-self: flex-start;
+  backdrop-filter: blur(10px);
 }
 
 .back-button:hover {
-  background: #f8f9fa;
-  border-color: #d1d5db;
-  color: #374151;
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
   transform: translateX(-2px);
 }
 
-.store-main-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 24px;
-  width: 100%;
+.hero-text {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.hero-subtitle {
+  font-size: 0.9rem;
+  margin: 0;
+  opacity: 0.9;
+  font-weight: 400;
+  margin-top: 4px;
+}
+
+/* Store Info Section */
+.store-info-section {
+  background: white;
+  padding: 24px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .store-basic-info {
+  max-width: 1200px;
+  margin: 0 auto;
   display: flex;
   gap: 20px;
   align-items: center;
+  justify-content: space-between;
 }
 
 .store-image {

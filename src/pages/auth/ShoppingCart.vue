@@ -1,15 +1,21 @@
 <template>
   <div class="shopping-cart-page">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <div class="hero-content">
+        <div class="hero-header">
+          <button class="back-button" @click="goBack">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Back
+          </button>
         </div>
-        <h1>Shopping Cart</h1>
-        <p class="subtitle">Review your items and place your order</p>
+        
+        <div class="hero-text">
+          <h1 class="hero-title">Shopping Cart</h1>
+          <p class="hero-subtitle">Review your items and place your order</p>
+        </div>
       </div>
     </div>
     <!-- Cart Items -->
@@ -666,6 +672,10 @@ const browseStores = () => {
   router.push('/stores-shopping');
 };
 
+const goBack = () => {
+  router.back();
+};
+
 // Lifecycle
 onMounted(() => {
   try {
@@ -702,31 +712,65 @@ onMounted(() => {
   min-height: 100vh;
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: 32px;
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  color: #F6F6F6;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(175, 30, 35, 0.2);
 }
 
-.header-content h1 {
-  font-size: 2rem;
-  font-weight: 300;
-  color: #333;
-  margin: 0 0 8px 0;
-  letter-spacing: -0.5px;
+.hero-content {
+  width: 100%;
 }
 
-.subtitle {
-  color: #666;
-  font-size: 1rem;
+.hero-header {
+  margin-bottom: 20px;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateX(-2px);
+}
+
+.hero-text {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-title {
+  font-size: 1.75rem;
+  font-weight: 700;
   margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
-.header-icon {
-  margin-bottom: 16px;
-}
-
-.header-icon svg {
-  color: var(--q-secondary);
+.hero-subtitle {
+  font-size: 0.9rem;
+  margin: 0;
+  opacity: 0.9;
+  font-weight: 400;
+  margin-top: 4px;
 }
 
 .empty-cart {

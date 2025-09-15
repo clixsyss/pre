@@ -1,6 +1,5 @@
 <template>
   <div class="profile-page">
-
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
@@ -9,76 +8,172 @@
 
     <!-- Profile Content -->
     <div v-else-if="userProfile" class="profile-content">
-      <!-- Profile Header -->
-      <div class="profile-header">
-        <div class="profile-avatar">
-          <div class="avatar-initial">
-            {{ getInitials(userProfile.firstName, userProfile.lastName) }}
+      <!-- Hero Section -->
+      <div class="hero-section">
+        <div class="hero-content">
+          <div class="profile-avatar">
+            <div class="avatar-initial">
+              {{ getInitials(userProfile.firstName, userProfile.lastName) }}
+            </div>
+            <div class="avatar-status" :class="getStatusClass(userProfile.registrationStatus)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
           </div>
-        </div>
-        <h2 class="profile-name">{{ getFullName(userProfile.firstName, userProfile.lastName) }}</h2>
-        <p class="profile-email">{{ userProfile.email }}</p>
-        <div class="profile-status">
-          <span class="status-badge" :class="getStatusClass(userProfile.registrationStatus)">
-            {{ formatStatus(userProfile.registrationStatus) }}
-          </span>
-        </div>
-      </div>
-
-      <!-- Personal Information -->
-      <div class="info-section">
-        <h3 class="section-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="12" cy="7" r="4" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Personal Information
-        </h3>
-        <div class="info-grid">
-          <div class="info-item">
-            <label>First Name</label>
-            <span>{{ userProfile.firstName || 'Not provided' }}</span>
-          </div>
-          <div class="info-item">
-            <label>Last Name</label>
-            <span>{{ userProfile.lastName || 'Not provided' }}</span>
-          </div>
-          <div class="info-item">
-            <label>Mobile</label>
-            <span>{{ userProfile.mobile || 'Not provided' }}</span>
-          </div>
-          <div class="info-item">
-            <label>Date of Birth</label>
-            <span>{{ formatDate(userProfile.dateOfBirth) || 'Not provided' }}</span>
-          </div>
-          <div class="info-item">
-            <label>Gender</label>
-            <span>{{ formatGender(userProfile.gender) || 'Not provided' }}</span>
-          </div>
-          <div class="info-item">
-            <label>National ID</label>
-            <span>{{ userProfile.nationalId || 'Not provided' }}</span>
+          <div class="hero-text">
+            <h1 class="hero-title">{{ getFullName(userProfile.firstName, userProfile.lastName) }}</h1>
+            <p class="hero-subtitle">{{ userProfile.email }}</p>
+            <div class="profile-badges">
+              <span class="status-badge" :class="getStatusClass(userProfile.registrationStatus)">
+                {{ formatStatus(userProfile.registrationStatus) }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Current Projects -->
-      <div class="info-section">
-        <div class="section-header">
-          <h3 class="section-title">
+      <!-- Personal Information Accordion -->
+      <div class="accordion-section">
+        <button 
+          @click="toggleAccordion('personal')" 
+          class="accordion-header"
+          :class="{ active: activeAccordion === 'personal' }"
+        >
+          <div class="accordion-title">
+            <div class="section-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="section-text">
+              <h3>Personal Information</h3>
+              <p>Your personal details and contact information</p>
+            </div>
+          </div>
+          <div class="accordion-arrow">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <polyline points="9,22 9,12 15,12 15,22" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            My Projects
-          </h3>
-          <button @click="showAddProjectModal = true" class="add-project-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Join Project
-          </button>
+          </div>
+        </button>
+        <div class="accordion-content" :class="{ active: activeAccordion === 'personal' }">
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="info-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="info-content">
+                <label>Full Name</label>
+                <span>{{ getFullName(userProfile.firstName, userProfile.lastName) || 'Not provided' }}</span>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M22 16.92V19C22 19.5304 21.7893 20.0391 21.4142 20.4142C21.0391 20.7893 20.5304 21 20 21H4C3.46957 21 2.96086 20.7893 2.58579 20.4142C2.21071 20.0391 2 19.5304 2 19V16.92L8.5 10.92C9.5 9.92 11 9.92 12 10.92L22 16.92Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="info-content">
+                <label>Email</label>
+                <span>{{ userProfile.email || 'Not provided' }}</span>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M22 16.92V19C22 19.5304 21.7893 20.0391 21.4142 20.4142C21.0391 20.7893 20.5304 21 20 21H4C3.46957 21 2.96086 20.7893 2.58579 20.4142C2.21071 20.0391 2 19.5304 2 19V16.92L8.5 10.92C9.5 9.92 11 9.92 12 10.92L22 16.92Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="info-content">
+                <label>Mobile</label>
+                <span>{{ userProfile.mobile || 'Not provided' }}</span>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
+                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/>
+                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="info-content">
+                <label>Date of Birth</label>
+                <span>{{ formatDate(userProfile.dateOfBirth) || 'Not provided' }}</span>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <path d="M8 14S9.5 16 12 16S16 14 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="9" y1="9" x2="9.01" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="15" y1="9" x2="15.01" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="info-content">
+                <label>Gender</label>
+                <span>{{ formatGender(userProfile.gender) || 'Not provided' }}</span>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
+                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/>
+                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="info-content">
+                <label>National ID</label>
+                <span>{{ userProfile.nationalId || 'Not provided' }}</span>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <!-- Current Projects Accordion -->
+      <div class="accordion-section">
+        <button 
+          @click="toggleAccordion('projects')" 
+          class="accordion-header"
+          :class="{ active: activeAccordion === 'projects' }"
+        >
+          <div class="accordion-title">
+            <div class="section-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="section-text">
+              <h3>My Projects</h3>
+              <p>Manage your project memberships and smart home connections</p>
+            </div>
+          </div>
+          <div class="accordion-actions">
+            <button @click.stop="showAddProjectModal = true" class="add-project-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Join Project
+            </button>
+            <div class="accordion-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </button>
+        <div class="accordion-content" :class="{ active: activeAccordion === 'projects' }">
         
       <!-- Unified Project Management -->
       <div v-if="userProjects.length > 0" class="unified-projects-section">
@@ -192,92 +287,174 @@
         </div>
       </div>
       
-      <!-- No Projects State -->
-      <div v-else class="no-projects">
-        <div class="no-projects-icon">🏠</div>
-        <p>You don't have any projects yet.</p>
-        <button @click="showAddProjectModal = true" class="add-first-project-btn">
-          Join Your First Project
-        </button>
-      </div>
-    </div>
-
-      <!-- Account Information -->
-      <div class="info-section">
-        <h3 class="section-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 16V12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 8H12.01" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Account Information
-        </h3>
-        <div class="info-grid">
-          <div class="info-item">
-            <label>Email Verified</label>
-            <span class="verification-status" :class="{ verified: userProfile.emailVerified, unverified: !userProfile.emailVerified }">
-              {{ userProfile.emailVerified ? 'Yes' : 'No' }}
-            </span>
-          </div>
-          <div class="info-item">
-            <label>Registration Date</label>
-            <span>{{ formatDate(userProfile.createdAt) || 'Not available' }}</span>
-          </div>
-          <div class="info-item">
-            <label>Last Updated</label>
-            <span>{{ formatDate(userProfile.updatedAt) || 'Not available' }}</span>
-          </div>
-          <div class="info-item">
-            <label>Profile Complete</label>
-            <span class="completion-status" :class="{ complete: userProfile.isProfileComplete, incomplete: !userProfile.isProfileComplete }">
-              {{ userProfile.isProfileComplete ? 'Yes' : 'No' }}
-            </span>
+          <!-- No Projects State -->
+          <div v-else class="no-projects">
+            <div class="no-projects-icon">🏠</div>
+            <p>You don't have any projects yet.</p>
+            <button @click="showAddProjectModal = true" class="add-first-project-btn">
+              Join Your First Project
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Smart Home Settings - Only show if current project has Smart Mirror connection -->
-      <div v-if="smartMirrorStore.isProjectConnected(currentProjectId)" class="info-section">
-        <h3 class="section-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 17L12 22L22 17" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 12L12 17L22 12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Smart Home Settings
-        </h3>
-        <div class="smart-home-settings">
-          <div class="settings-description">
-            <p>Manage which devices are displayed on your home page dashboard.</p>
+      <!-- Account Information Accordion -->
+      <div class="accordion-section">
+        <button 
+          @click="toggleAccordion('account')" 
+          class="accordion-header"
+          :class="{ active: activeAccordion === 'account' }"
+        >
+          <div class="accordion-title">
+            <div class="section-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="section-text">
+              <h3>Account Information</h3>
+              <p>Your account status and verification details</p>
+            </div>
           </div>
-          
-          <button @click="openDeviceManagementModal" class="manage-devices-btn">
+          <div class="accordion-arrow">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Manage Home Page Devices
-          </button>
+          </div>
+        </button>
+        <div class="accordion-content" :class="{ active: activeAccordion === 'account' }">
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="info-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="info-content">
+                <label>Email Verified</label>
+                <span class="verification-status" :class="{ verified: userProfile.emailVerified, unverified: !userProfile.emailVerified }">
+                  {{ userProfile.emailVerified ? 'Verified' : 'Not Verified' }}
+                </span>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
+                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/>
+                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="info-content">
+                <label>Member Since</label>
+                <span>{{ formatDate(userProfile.createdAt) || 'Not available' }}</span>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="info-content">
+                <label>Last Updated</label>
+                <span>{{ formatDate(userProfile.updatedAt) || 'Not available' }}</span>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="info-content">
+                <label>Profile Complete</label>
+                <span class="completion-status" :class="{ complete: userProfile.isProfileComplete, incomplete: !userProfile.isProfileComplete }">
+                  {{ userProfile.isProfileComplete ? 'Complete' : 'Incomplete' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Smart Home Settings Accordion - Only show if current project has Smart Mirror connection -->
+      <div v-if="smartMirrorStore.isProjectConnected(currentProjectId)" class="accordion-section">
+        <button 
+          @click="toggleAccordion('smartHome')" 
+          class="accordion-header"
+          :class="{ active: activeAccordion === 'smartHome' }"
+        >
+          <div class="accordion-title">
+            <div class="section-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="section-text">
+              <h3>Smart Home Settings</h3>
+              <p>Manage your connected devices and home automation preferences</p>
+            </div>
+          </div>
+          <div class="accordion-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </button>
+        <div class="accordion-content" :class="{ active: activeAccordion === 'smartHome' }">
+          <div class="smart-home-settings">
+            <div class="settings-card">
+              <div class="settings-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="settings-content">
+                <h4>Device Management</h4>
+                <p>Choose which devices appear on your home page dashboard</p>
+                <button @click="openDeviceManagementModal" class="manage-devices-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Manage Devices
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Actions -->
       <div class="actions-section">
-        <button @click="editProfile" class="edit-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Edit Profile
-        </button>
-        
-        <button @click="showLogoutConfirm = true" class="logout-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Logout
-        </button>
+        <div class="compact-actions">
+          <button @click="editProfile" class="compact-btn primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Edit Profile
+          </button>
+          
+          <button @click="showLogoutConfirm = true" class="compact-btn secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Logout
+          </button>
+        </div>
       </div>
     </div>
 
@@ -680,6 +857,9 @@ const savingSettings = ref(false)
 // Smart Mirror disconnect state
 const disconnectingProject = ref(null)
 
+// Accordion state
+const activeAccordion = ref('personal') // Default to personal info open
+
 // Computed properties
 const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => projectStore.selectedProject?.id)
@@ -766,6 +946,11 @@ const handleLogout = async () => {
 // Edit profile (placeholder for future implementation)
 const editProfile = () => {
   notificationStore.showInfo('Edit profile functionality coming soon!')
+}
+
+// Accordion toggle function
+const toggleAccordion = (section) => {
+  activeAccordion.value = activeAccordion.value === section ? null : section
 }
 
 // Project management methods
@@ -1253,6 +1438,7 @@ onMounted(() => {
 
 <style scoped>
 .profile-page {
+  background: #fafafa;
   min-height: 100vh;
 }
 
@@ -1283,391 +1469,619 @@ onMounted(() => {
 .profile-content {
   max-width: 800px;
   margin: 0 auto;
-  padding: 20px;
 }
 
-.profile-header {
-  text-align: center;
-  margin-bottom: 40px;
-  padding: 40px 20px;
-  background-color: #F6F6F6;
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  color: #F6F6F6;
   border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(175, 30, 35, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="10" cy="60" r="0.5" fill="white" opacity="0.1"/><circle cx="90" cy="40" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+  opacity: 0.3;
+}
+
+.hero-content {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  position: relative;
+  z-index: 1;
 }
 
 .profile-avatar {
-  margin-bottom: 20px;
+  position: relative;
+  flex-shrink: 0;
 }
 
 .avatar-initial {
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, #AF1E23, #AF1E23);
+  background: rgba(255, 255, 255, 0.2);
+  border: 3px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto;
   font-size: 32px;
   font-weight: 700;
   color: white;
-  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
+  backdrop-filter: blur(10px);
 }
 
-.profile-name {
-  font-size: 1.8rem;
+.avatar-status {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #AF1E23;
+}
+
+.avatar-status.status-verified {
+  background: #10b981;
+  color: white;
+}
+
+.avatar-status.status-pending {
+  background: #f59e0b;
+  color: white;
+}
+
+.avatar-status.status-completed {
+  background: #10b981;
+  color: white;
+}
+
+.hero-text {
+  flex: 1;
+}
+
+.hero-title {
+  font-size: 2rem;
   font-weight: 700;
   margin: 0 0 8px 0;
-  color: #333;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
-.profile-email {
+.hero-subtitle {
   font-size: 1rem;
-  color: #666;
   margin: 0 0 16px 0;
+  opacity: 0.9;
+  font-weight: 400;
 }
 
-.profile-status {
+.profile-badges {
   display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
 }
 
 .status-badge {
-  padding: 6px 16px;
+  padding: 6px 12px;
   border-radius: 20px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  backdrop-filter: blur(10px);
 }
 
-.status-pending {
-  background-color: #fff3cd;
-  color: #856404;
+.completion-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.status-completed {
-  background-color: #d4edda;
-  color: #155724;
+/* Accordion Sections */
+.accordion-section {
+  background: white;
+  border-radius: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
 }
 
-.status-verified {
-  background-color: #cce5ff;
-  color: #004085;
+.accordion-header {
+  width: 100%;
+  background: white;
+  border: none;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
 }
 
-.status-unknown {
-  background-color: #e2e3e5;
-  color: #383d41;
+.accordion-header:hover {
+  background: #f9fafb;
 }
 
+.accordion-header.active {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.accordion-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.accordion-arrow {
+  color: #6b7280;
+  transition: transform 0.2s ease;
+}
+
+.accordion-header.active .accordion-arrow {
+  transform: rotate(180deg);
+  color: #AF1E23;
+}
+
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.accordion-content.active {
+  max-height: 2000px;
+  padding: 0 24px 24px 24px;
+}
+
+/* Info Sections */
 .info-section {
-  background-color: #F6F6F6;
+  background: white;
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e5e7eb;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 24px;
 }
 
 .section-title {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #333;
+  gap: 16px;
+  flex: 1;
+}
+
+.section-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.section-text h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.section-text p {
+  font-size: 0.875rem;
+  color: #6b7280;
   margin: 0;
+  line-height: 1.4;
 }
 
 .add-project-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #AF1E23 !important;
+  background: #AF1E23;
   color: white;
   border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
 }
 
 .add-project-btn:hover {
-  background: #AF1E23;
-  transform: translateY(-2px);
+  background: #991b1f;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
 }
 
+/* Info Grid */
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-}
-
-/* Projects List */
-.projects-list {
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
 }
 
-.project-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 20px;
-  background: #f8f9fa;
-  border: 1px solid #e1e5e9;
+.info-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
   border-radius: 12px;
-  transition: all 0.3s ease;
-}
-
-.project-item:hover {
-  background: #F6F6F6;
-  border-color: #AF1E23;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.project-item.current {
-  background: #F6F6F6;
-  border-color: #AF1E23;
-  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.15);
-}
-
-.project-info {
-  flex: 1;
-}
-
-.project-main {
-  margin-bottom: 8px;
-}
-
-.project-name {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #333;
-  margin: 0 0 4px 0;
-}
-
-.project-location {
-  color: #666;
-  font-size: 0.9rem;
-  margin: 0;
-}
-
-.project-details {
+  padding: 20px;
   display: flex;
-  flex-wrap: wrap;
-  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.2s ease;
 }
 
-.project-details h4{
-  line-height: 1.2;
-  margin: 0;
+.info-card:hover {
+  border-color: #AF1E23;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.1);
+  transform: translateY(-1px);
 }
 
-.project-unit,
-.project-role,
-.project-status {
-  font-size: 0.8rem;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-weight: 500;
-}
-
-.project-unit {
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-.project-role {
-  background: #f3e5f5;
-  color: #7b1fa2;
-}
-
-.project-status {
-  background: #d4edda;
-  color: #155724;
-}
-
-.project-status.inactive,
-.project-status.unknown,
-.project-status.error {
-  background: #f8d7da;
-  color: #721c24;
-}
-
-.project-actions {
+.info-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
   flex-shrink: 0;
 }
 
-.switch-project-btn {
-  background: transparent;
-  border: 2px solid #AF1E23;
-  color: #AF1E23;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 0.85rem;
+.info-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.info-content label {
+  display: block;
+  font-size: 0.75rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.switch-project-btn:hover {
-  background: #AF1E23;
-  color: white;
-  transform: translateY(-2px);
-}
-
-.current-project-badge {
-  background: #AF1E23;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-/* No Projects State */
-.no-projects {
-  text-align: center;
-  padding: 40px 20px;
-  color: #666;
-}
-
-.no-projects-icon {
-  font-size: 3rem;
-  margin-bottom: 16px;
-}
-
-.no-projects p {
-  margin: 0 0 20px 0;
-  font-size: 1.1rem;
-}
-
-.add-first-project-btn {
-  background: #AF1E23;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.add-first-project-btn:hover {
-  background: #AF1E23;
-  transform: translateY(-2px);
-}
-
-/* Update button text to reflect new functionality */
-.add-project-btn {
-  background: #28a745;
-}
-
-.add-project-btn:hover {
-  background: #218838;
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.info-item label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #666;
+  color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-bottom: 4px;
 }
 
-.info-item span {
-  font-size: 1rem;
-  color: #333;
+.info-content span {
+  display: block;
+  font-size: 0.95rem;
+  color: #111827;
   font-weight: 500;
-}
-
-.verification-status,
-.completion-status {
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.8rem;
+  word-break: break-word;
 }
 
 .verification-status.verified,
 .completion-status.complete {
-  background-color: #d4edda;
-  color: #155724;
+  color: #10b981;
+  font-weight: 600;
 }
 
 .verification-status.unverified,
 .completion-status.incomplete {
-  background-color: #f8d7da;
-  color: #721c24;
+  color: #ef4444;
+  font-weight: 600;
 }
 
-.actions-section {
-  text-align: center;
-  margin-top: 40px;
+/* Smart Home Settings */
+.smart-home-settings {
+  margin-top: 16px;
+}
+
+.settings-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.2s ease;
+}
+
+.settings-card:hover {
+  border-color: #AF1E23;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.1);
+}
+
+.settings-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.settings-content {
+  flex: 1;
+}
+
+.settings-content h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.settings-content p {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0 0 12px 0;
+}
+
+.manage-devices-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #AF1E23;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.manage-devices-btn:hover {
+  background: #991b1f;
+  transform: translateY(-1px);
+}
+
+/* Actions Section */
+.actions-section {
+  margin-top: 32px;
+}
+
+.compact-actions {
+  display: flex;
   gap: 12px;
-  align-items: center;
+  justify-content: center;
 }
 
-.edit-btn {
+.compact-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background-color: #AF1E23;
-  color: white;
-  border: none;
-  padding: 14px 24px;
-  border-radius: 8px;
-  font-size: 1rem;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  border: none;
+  min-width: 120px;
+  justify-content: center;
 }
 
-.edit-btn:hover {
-  background-color: #AF1E23;
-  transform: translateY(-2px);
+.compact-btn.primary {
+  background: #AF1E23;
+  color: white;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
 }
 
-.logout-btn {
-  display: inline-flex;
+.compact-btn.primary:hover {
+  background: #991b1f;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
+}
+
+.compact-btn.secondary {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+.compact-btn.secondary:hover {
+  background: #fef2f2;
+  color: #ef4444;
+  border-color: #fecaca;
+  transform: translateY(-1px);
+}
+
+.action-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.action-btn {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  padding: 14px 24px;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
+  gap: 16px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
 }
 
-.logout-btn:hover {
-  background-color: #c82333;
+.action-btn:hover {
+  border-color: #AF1E23;
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.1);
   transform: translateY(-2px);
 }
 
+.action-btn.primary {
+  border-color: #AF1E23;
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  color: white;
+}
+
+.action-btn.primary:hover {
+  background: linear-gradient(135deg, #991b1f 0%, #991b1f 100%);
+  box-shadow: 0 6px 16px rgba(175, 30, 35, 0.3);
+}
+
+.action-btn.secondary:hover {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.btn-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.action-btn.secondary .btn-icon {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.btn-content {
+  flex: 1;
+}
+
+.btn-title {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.action-btn.primary .btn-title {
+  color: white;
+}
+
+.btn-subtitle {
+  display: block;
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.action-btn.primary .btn-subtitle {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .profile-content {
+    padding: 16px;
+  }
+  
+  .hero-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+  
+  .hero-title {
+    font-size: 1.75rem;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .compact-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .compact-btn {
+    width: 100%;
+  }
+  
+  .action-buttons {
+    grid-template-columns: 1fr;
+  }
+  
+  .accordion-header {
+    padding: 16px 20px;
+  }
+  
+  .accordion-content.active {
+    padding: 0 20px 20px 20px;
+  }
+  
+  .accordion-title {
+    gap: 12px;
+  }
+  
+  .accordion-actions {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  
+  .section-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+
+/* Error State */
 .error-container {
   text-align: center;
   padding: 60px 20px;
@@ -1700,7 +2114,7 @@ onMounted(() => {
 }
 
 .retry-btn:hover {
-  background-color: #AF1E23;
+  background-color: #991b1f;
 }
 
 /* Modal Styles */

@@ -257,9 +257,8 @@ const isActiveTab = (tabName) => {
              currentPath === '/my-bookings' || 
              currentPath === '/calendar' ||
              currentPath === '/analytics' ||
-             currentPath === '/profile' ||
              currentPath === '/news' ||
-             currentPath === '/complaints'
+             currentPath.startsWith('/service-category/')
     
     case 'facilities':
       // Facilities tab is active for court booking, academy programs, and shopping

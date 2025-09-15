@@ -1,10 +1,12 @@
 <template>
   <div class="stores-shopping-page">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <h1>Stores & Shopping</h1>
-        <p class="subtitle">Discover local stores and track your orders</p>
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">Stores & Shopping</h1>
+          <p class="hero-subtitle">Discover local stores and track your orders</p>
+        </div>
       </div>
     </div>
 
@@ -1379,32 +1381,44 @@ watch(() => route.query.tab, (newTab) => {
 
 <style scoped>
 .stores-shopping-page {
+  padding: 20px 16px;
+  background: #fafafa;
   min-height: 100vh;
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: 32px;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 32px 24px;
-  border-radius: 20px;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  color: #F6F6F6;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(175, 30, 35, 0.2);
 }
 
-.header-content h1 {
-  font-size: 2.5rem;
+.hero-content {
+  width: 100%;
+}
+
+.hero-text {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-title {
+  font-size: 1.75rem;
   font-weight: 700;
-  color: #231F20;
-  margin: 0 0 12px 0;
-  letter-spacing: -1px;
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
-.subtitle {
-  color: #6f6f6f;
-  font-size: 1rem;
+.hero-subtitle {
+  font-size: 0.9rem;
   margin: 0;
-  font-weight: 500;
+  opacity: 0.9;
+  font-weight: 400;
+  margin-top: 4px;
 }
 
 
