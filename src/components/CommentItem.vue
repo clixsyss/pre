@@ -31,6 +31,16 @@
             <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
+        <button 
+          v-if="isCurrentUser" 
+          @click="handleDelete" 
+          class="action-btn delete-btn" 
+          title="Delete Comment"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 6H5H21M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -107,7 +117,7 @@ export default {
       default: false
     }
   },
-  emits: ['reply', 'react', 'delete'],
+  emits: ['reply', 'react', 'delete', 'deleteWithReplies'],
   setup(props, { emit }) {
     const showReactions = ref(false);
     const replies = ref([]);
@@ -156,6 +166,12 @@ export default {
       emit('reply', props.comment.id);
     };
     
+    const handleDelete = () => {
+      if (confirm('Are you sure you want to delete this comment? This will also delete all replies to this comment.')) {
+        emit('deleteWithReplies', props.comment.id);
+      }
+    };
+    
     const hasUserReacted = (emoji) => {
       const auth = getAuth();
       const user = auth.currentUser;
@@ -182,6 +198,7 @@ export default {
       toggleReactions,
       handleReaction,
       handleReply,
+      handleDelete,
       hasUserReacted
     };
   }
@@ -286,6 +303,15 @@ export default {
 .action-btn:hover {
   background: #f1f5f9;
   color: #AF1E23;
+}
+
+.delete-btn {
+  color: #dc2626;
+}
+
+.delete-btn:hover {
+  background: #fef2f2;
+  color: #b91c1c;
 }
 
 .comment-content {

@@ -406,6 +406,32 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
     error.value = null;
   };
 
+  const deleteCommentWithReplies = async (projectId, newsId, commentId) => {
+    try {
+      loading.value = true;
+      error.value = null;
+      
+      await newsCommentsService.deleteCommentWithReplies(projectId, newsId, commentId);
+      
+      // Remove the comment and its replies from local state
+      const commentIndex = comments.value.findIndex(c => c.id === commentId);
+      if (commentIndex !== -1) {
+        // Remove the main comment
+        comments.value.splice(commentIndex, 1);
+        
+        // Remove all replies to this comment
+        comments.value = comments.value.filter(c => c.parentCommentId !== commentId);
+      }
+      
+      console.log('Comment and replies deleted successfully');
+    } catch (err) {
+      console.error('Error deleting comment with replies:', err);
+      error.value = err.message || 'Failed to delete comment';
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     // State
     comments,
@@ -432,6 +458,7 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
     unsubscribeFromNewsReactions,
     toggleNewsReaction,
     deleteComment,
+    deleteCommentWithReplies,
     restoreComment,
     getCommentStats,
     clearComments,

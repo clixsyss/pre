@@ -93,6 +93,7 @@
             @reply="handleReply"
             @react="handleReaction"
             @delete="handleDelete"
+            @delete-with-replies="handleDeleteWithReplies"
           />
           <!-- Render replies -->
           <div v-if="comment.replies && comment.replies.length > 0" class="replies-container">
@@ -105,6 +106,7 @@
               @reply="handleReply"
               @react="handleReaction"
               @delete="handleDelete"
+              @delete-with-replies="handleDeleteWithReplies"
             />
           </div>
         </div>
@@ -323,6 +325,11 @@ const availableReactions = ['like', 'love', 'laugh', 'sad'];
        }
      };
 
+     const handleDeleteWithReplies = (commentId) => {
+       console.log('Handling delete with replies for comment:', commentId);
+       commentsStore.deleteCommentWithReplies(props.projectId, props.newsId, commentId);
+     };
+
      const toggleSortDropdown = () => {
        showSortDropdown.value = !showSortDropdown.value;
      };
@@ -387,6 +394,7 @@ const loadNewsReactions = async () => {
        handleReply,
        handleReaction,
        handleDelete,
+       handleDeleteWithReplies,
        toggleSortDropdown,
        setSortOption
      };
