@@ -155,7 +155,7 @@
               </svg>
             </div>
             <div class="section-text">
-              <h3>My Projects</h3>
+              <h3>Manage Units</h3>
               <p>Manage your project memberships and smart home connections</p>
             </div>
           </div>
@@ -172,7 +172,7 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              Join Project
+              Add aUnit
             </button>
           </div>
         
@@ -500,6 +500,14 @@
     <ProjectGuidelinesDialog 
       :isOpen="showGuidelinesDialog" 
       @close="showGuidelinesDialog = false" 
+    />
+
+    <!-- Edit Profile Dialog -->
+    <EditProfileDialog 
+      :isOpen="showEditProfileDialog" 
+      :userProfile="userProfile"
+      @close="showEditProfileDialog = false"
+      @saved="handleProfileSaved"
     />
 
     <!-- Logout Confirmation Modal -->
@@ -835,6 +843,7 @@ import { useNotificationStore } from '../../stores/notifications'
 import { useProjectStore } from '../../stores/projectStore'
 import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
 import ProjectGuidelinesDialog from '../../components/ProjectGuidelinesDialog.vue'
+import EditProfileDialog from '../../components/EditProfileDialog.vue'
 import { collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { db } from '../../boot/firebase'
 
@@ -855,6 +864,7 @@ const userProfile = ref(null)
 const showLogoutConfirm = ref(false)
 const logoutLoading = ref(false)
 const showGuidelinesDialog = ref(false)
+const showEditProfileDialog = ref(false)
 const showAddProjectModal = ref(false)
 const addProjectLoading = ref(false)
 const projectJoinSuccess = ref(false)
@@ -978,7 +988,17 @@ const handleLogout = async () => {
 
 // Edit profile (placeholder for future implementation)
 const editProfile = () => {
-  notificationStore.showInfo('Edit profile functionality coming soon!')
+  showEditProfileDialog.value = true
+}
+
+const handleProfileSaved = (updatedData) => {
+  // Update the local userProfile with the new data
+  if (userProfile.value) {
+    Object.assign(userProfile.value, updatedData)
+  }
+  
+  // Show success message
+  notificationStore.showSuccess('Profile updated successfully!')
 }
 
 // Accordion toggle function
@@ -1674,6 +1694,10 @@ onMounted(() => {
   flex: 1;
 }
 
+.accordion-title h3 {
+  line-height: normal;
+}
+
 .accordion-actions {
   display: flex;
   align-items: center;
@@ -1698,7 +1722,7 @@ onMounted(() => {
 
 .accordion-content.active {
   max-height: 2000px;
-  padding: 0 24px 24px 24px;
+  padding: 24px 24px 24px 24px;
 }
 
 .join-project-section {
@@ -1721,7 +1745,6 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
 }
 
 .section-title {
@@ -1729,6 +1752,10 @@ onMounted(() => {
   align-items: center;
   gap: 16px;
   flex: 1;
+}
+
+.section-title h3 {
+  line-height: normal;
 }
 
 .section-icon {
@@ -2126,7 +2153,7 @@ onMounted(() => {
   }
   
   .accordion-content.active {
-    padding: 0 20px 20px 20px;
+    padding: 12px 12px 12px 12px;
   }
   
   .accordion-title {
