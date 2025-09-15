@@ -151,6 +151,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAcademiesStore } from '../../stores/academyStore';
 import { useProjectStore } from '../../stores/projectStore';
+import { useServiceBookingStore } from '../../stores/serviceBookingStore';
 import { auth } from '../../boot/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
@@ -162,6 +163,7 @@ defineOptions({
 const router = useRouter();
 const academiesStore = useAcademiesStore();
 const projectStore = useProjectStore();
+const serviceBookingStore = useServiceBookingStore();
 
 // Utility function to normalize dates and avoid timezone issues
 const normalizeDate = (dateInput) => {
@@ -273,7 +275,9 @@ const allUpcomingEvents = computed(() => {
   if (!currentUser.value || !projectStore.selectedProject) return [];
   
   const allBookings = academiesStore.userBookings;
+  const serviceBookings = serviceBookingStore.getCalendarBookings;
   console.log('Current user bookings:', allBookings);
+  console.log('Service bookings:', serviceBookings);
   
   const events = [];
   
@@ -316,6 +320,34 @@ const allUpcomingEvents = computed(() => {
         type: 'academy',
         status: booking.status,
         location: booking.academyName || 'Academy'
+      });
+    }
+  });
+
+  // Add service bookings as events
+  serviceBookings.forEach(booking => {
+    if (booking.selectedDate) {
+      const normalizedDate = normalizeDate(booking.selectedDate);
+      if (!normalizedDate) {
+        console.warn('Invalid date for service booking:', booking);
+        return;
+      }
+      
+      const formattedDate = formatDateAsString(normalizedDate);
+      console.log('Processing service booking:', {
+        originalDate: booking.selectedDate,
+        normalizedDate: normalizedDate,
+        formattedDate: formattedDate
+      });
+      
+      events.push({
+        id: booking.id,
+        title: `${booking.serviceName} - ${booking.categoryName}`,
+        date: formattedDate,
+        type: 'service',
+        status: booking.status,
+        price: booking.servicePrice,
+        location: booking.categoryName || 'Service'
       });
     }
   });
@@ -446,6 +478,11 @@ onMounted(async () => {
         // Fetch user bookings with both user ID and project ID
         await academiesStore.fetchUserBookings(user.uid, projectStore.selectedProject.id);
         console.log('User bookings fetched:', academiesStore.userBookings);
+        
+        // Fetch service bookings
+        await serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid);
+        console.log('Service bookings fetched:', serviceBookingStore.getBookings);
+        
         console.log('Current project:', projectStore.selectedProject);
       } catch (error) {
         console.error("Error fetching user bookings:", error);

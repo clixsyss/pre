@@ -209,11 +209,13 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useComplaintStore } from '../stores/complaintStore';
+import { useNotificationStore } from '../stores/notifications';
 import { getAuth } from 'firebase/auth';
 
 const router = useRouter();
 const route = useRoute();
 const complaintStore = useComplaintStore();
+const notificationStore = useNotificationStore();
 
 // Get complaint ID from route params
 const complaintId = computed(() => route.params.id);
@@ -296,13 +298,13 @@ const handleImageSelect = async (event) => {
 
   // Validate file size (max 5MB)
   if (file.size > 5 * 1024 * 1024) {
-    alert('Image size must be less than 5MB');
+    notificationStore.showError('Image size must be less than 5MB');
     return;
   }
 
   // Validate file type
   if (!file.type.startsWith('image/')) {
-    alert('Please select an image file');
+    notificationStore.showError('Please select an image file');
     return;
   }
 
@@ -328,7 +330,7 @@ const handleImageSelect = async (event) => {
     scrollToBottom();
   } catch (error) {
     console.error('Error uploading image:', error);
-    alert('Failed to upload image. Please try again.');
+    notificationStore.showError('Failed to upload image. Please try again.');
   } finally {
     uploading.value = false;
   }
@@ -350,7 +352,7 @@ const sendMessage = async () => {
     scrollToBottom();
   } catch (error) {
     console.error('Error sending message:', error);
-    alert('Failed to send message. Please try again.');
+    notificationStore.showError('Failed to send message. Please try again.');
   }
 };
 

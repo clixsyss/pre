@@ -37,6 +37,13 @@
         >
           Academy Programs
         </button>
+        <button 
+          class="filter-tab"
+          :class="{ active: activeFilter === 'service' }"
+          @click="setFilter('service')"
+        >
+          Service Bookings
+        </button>
       </div>
 
       <!-- Loading State -->
@@ -308,6 +315,7 @@ import { useRouter } from 'vue-router';
 import { useAcademiesStore } from 'src/stores/academyStore';
 import { useProjectStore } from 'src/stores/projectStore';
 import { useNotificationStore } from 'src/stores/notifications';
+import { useServiceBookingStore } from 'src/stores/serviceBookingStore';
 import bookingService from 'src/services/bookingService';
 import { getAuth } from 'firebase/auth';
 
@@ -320,6 +328,7 @@ const router = useRouter();
 const academiesStore = useAcademiesStore();
 const projectStore = useProjectStore();
 const notificationStore = useNotificationStore();
+const serviceBookingStore = useServiceBookingStore();
 
 // Reactive data
 const loading = ref(true);
@@ -334,14 +343,18 @@ const projectId = computed(() => projectStore.selectedProject?.id);
 const projectName = computed(() => projectStore.selectedProject?.name);
 
 const filteredBookings = computed(() => {
+  const allBookings = [...academiesStore.userBookings, ...serviceBookingStore.getBookings];
+  
   if (activeFilter.value === 'all') {
-    return academiesStore.userBookings;
+    return allBookings;
   } else if (activeFilter.value === 'court') {
-    return academiesStore.userBookings.filter(booking => isCourtBooking(booking));
+    return allBookings.filter(booking => isCourtBooking(booking));
   } else if (activeFilter.value === 'academy') {
-    return academiesStore.userBookings.filter(booking => isAcademyBooking(booking));
+    return allBookings.filter(booking => isAcademyBooking(booking));
+  } else if (activeFilter.value === 'service') {
+    return allBookings.filter(booking => isServiceBooking(booking));
   }
-  return academiesStore.userBookings;
+  return allBookings;
 });
 
 // Methods
@@ -352,12 +365,14 @@ const setFilter = (filter) => {
 const getTypeLabel = (type) => {
   if (type === 'court') return 'Court';
   if (type === 'academy') return 'Academy';
-  return 'Service';
+  if (type === 'service') return 'Service';
+  return 'Booking';
 };
 
 const getTypeClass = (type) => {
   if (type === 'court') return 'court-type';
   if (type === 'academy') return 'academy-type';
+  if (type === 'service') return 'service-type';
   return 'other-type';
 };
 
@@ -371,6 +386,12 @@ const isCourtBooking = (booking) => {
 const isAcademyBooking = (booking) => {
   return booking.type === 'academy' || 
          (booking.programName && (booking.studentName || booking.academyName));
+};
+
+// Helper function to detect service bookings by their data structure
+const isServiceBooking = (booking) => {
+  return booking.type === 'service' || 
+         (booking.serviceName && booking.categoryName && booking.selectedDate);
 };
 
 const getStatusLabel = (status) => {
@@ -606,6 +627,9 @@ const fetchUserBookings = async () => {
     }
     
     await academiesStore.fetchUserBookings(userId, projectId.value);
+    
+    // Also fetch service bookings
+    await serviceBookingStore.fetchUserBookings(projectId.value, userId);
     
   } catch (error) {
     console.error('Error fetching user bookings:', error);
@@ -858,6 +882,11 @@ const fetchUserBookings = async () => {
 .booking-icon.academy-type {
   background: #f3e5f5;
   color: #7b1fa2;
+}
+
+.booking-icon.service-type {
+  background: #fff3e0;
+  color: #e65100;
 }
 
 .booking-info {

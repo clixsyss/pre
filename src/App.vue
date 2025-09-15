@@ -68,7 +68,8 @@ const authenticatedRoutes = [
   '/smart-devices',
   '/news',
   '/complaints',
-  '/complaints/:id'
+  '/complaints/:id',
+  '/facilities'
 ]
 
 // Check if current route should show main layout
@@ -92,6 +93,10 @@ const isAuthenticatedPage = computed(() => {
   }
 
   if (route.path.startsWith('/complaints/')) {
+    return true
+  }
+  
+  if (route.path.startsWith('/service-category/')) {
     return true
   }
   

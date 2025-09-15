@@ -143,6 +143,20 @@
         <span class="nav-label">Services</span>
       </router-link>
 
+      <router-link to="/facilities" class="nav-item" :class="{ active: isActiveTab('facilities') }">
+        <div class="nav-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 21H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M5 21V7L13 2L21 7V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 9V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M15 9V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 17V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M15 17V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="nav-label">Facilities</span>
+      </router-link>
+
       <router-link to="/complaints" class="nav-item" :class="{ active: isActiveTab('complaints') }">
         <div class="nav-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -236,12 +250,31 @@ const isActiveTab = (tabName) => {
       return currentPath === '/complaints' || currentPath.startsWith('/complaints/')
     
     case 'services':
-      // Services tab is active for all other pages (shopping, stores, cart, etc.)
-      return currentPath !== '/home' && 
-             currentPath !== '/access' && 
-             currentPath !== '/profile' &&
-             currentPath !== '/complaints' &&
-             !currentPath.startsWith('/complaints/')
+      // Services tab is active for smart devices and other service pages
+      return currentPath === '/services' || 
+             currentPath === '/smart-devices' ||
+             currentPath === '/service-category' ||
+             currentPath === '/my-bookings' || 
+             currentPath === '/calendar' ||
+             currentPath === '/analytics' ||
+             currentPath === '/profile' ||
+             currentPath === '/news' ||
+             currentPath === '/complaints'
+    
+    case 'facilities':
+      // Facilities tab is active for court booking, academy programs, and shopping
+      return currentPath === '/facilities' ||
+             currentPath === '/court-booking' ||
+             currentPath === '/academy-programs' ||
+             currentPath === '/academy-details' ||
+             currentPath === '/academy-registration' ||
+             currentPath === '/academy-booking' ||
+             currentPath === '/stores-shopping' ||
+             currentPath === '/store' ||
+             currentPath === '/shopping-cart' ||
+             currentPath.startsWith('/store/') ||
+             currentPath.startsWith('/academy-details/') ||
+             currentPath.startsWith('/academy-registration/')
     
     default:
       return false

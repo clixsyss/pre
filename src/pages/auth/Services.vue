@@ -1,41 +1,85 @@
 <template>
   <div class="services-page">
+    <div class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">Services</h1>
+          <p class="hero-subtitle">Smart home devices and other services</p>
+        </div>
+      </div>
+    </div>
 
-    <div class="services-grid">
-      <!-- Court Booking -->
-      <div class="service-card" @click="navigateToCourtBooking">
+    <!-- Loading State -->
+    <div v-if="serviceCategoriesStore.isLoading" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p>Loading services...</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="serviceCategoriesStore.getError" class="error-container">
+      <p>{{ serviceCategoriesStore.getError }}</p>
+      <button @click="loadServiceCategories" class="retry-btn">Retry</button>
+    </div>
+
+    <!-- Services Grid -->
+    <div v-else class="services-grid">
+      <!-- Dynamic Service Categories -->
+      <div 
+        v-for="category in serviceCategoriesStore.getCategories" 
+        :key="category.id" 
+        class="service-card" 
+        @click="navigateToCategory(category)"
+      >
         <div class="service-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <img 
+            v-if="category.imageUrl" 
+            :src="category.imageUrl" 
+            :alt="category.englishTitle"
+            class="service-image"
+          />
+          <svg 
+            v-else 
+            width="32" 
+            height="32" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            xmlns="http://www.w3.org/2000/svg"
+            class="default-icon"
+          >
+            <path d="M14.7 6.3C14.7 4.4 13.3 3 11.4 3C9.5 3 8.1 4.4 8.1 6.3C8.1 8.2 9.5 9.6 11.4 9.6C13.3 9.6 14.7 8.2 14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M20 12C20 16.4 16.4 20 12 20C7.6 20 4 16.4 4 12C4 7.6 7.6 4 12 4C16.4 4 20 7.6 20 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 8V12L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <span class="service-name">Court Booking</span>
+        <div class="service-content">
+          <h3 class="service-name">{{ category.englishTitle }}</h3>
+        </div>
+        <div class="service-arrow">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
       </div>
 
-      <!-- Academy Programs -->
-      <div class="service-card" @click="navigateToAcademyPrograms">
+      <!-- Static Services -->
+      <!-- Smart Devices -->
+      <div class="service-card" @click="navigateToSmartDevices">
         <div class="service-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15C10.9391 15 9.92172 15.4214 9.17157 16.1716C8.42143 16.9217 8 17.9391 8 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 11V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M9 13H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 21C9 21.5523 9.44772 22 10 22H14C14.5523 22 15 21.5523 15 21V20H9V21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <span class="service-name">Academy Programs</span>
-      </div>
-
-      <!-- Stores & Shopping -->
-      <div class="service-card" @click="navigateToStores">
-        <div class="service-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M3 6H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M16 10C16 11.0609 15.5786 12.0783 14.8284 12.8284C14.0783 13.5786 13.0609 14 12 14C10.9391 14 9.92172 13.5786 9.17157 12.8284C8.42143 12.0783 8 11.0609 8 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <div class="service-content">
+          <h3 class="service-name">Smart Devices</h3>
+          <p class="service-description">Control your smart home devices and automation</p>
+        </div>
+        <div class="service-arrow">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <span class="service-name">Shopping</span>
       </div>
 
       <!-- Calendar  -->
@@ -50,7 +94,15 @@
             <path d="M8 18H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <span class="service-name">Calendar</span>
+        <div class="service-content">
+          <h3 class="service-name">Calendar</h3>
+          <p class="service-description">View your schedule and upcoming events</p>
+        </div>
+        <div class="service-arrow">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
        </div>
 
       <!-- My Bookings -->
@@ -61,19 +113,15 @@
             <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
           </svg>
         </div>
-        <span class="service-name">My Bookings</span>
-      </div>
-
-      <!-- Smart Devices -->
-      <div class="service-card" @click="navigateToSmartDevices">
-        <div class="service-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 21C9 21.5523 9.44772 22 10 22H14C14.5523 22 15 21.5523 15 21V20H9V21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <div class="service-content">
+          <h3 class="service-name">My Bookings</h3>
+          <p class="service-description">Manage your reservations and appointments</p>
+        </div>
+        <div class="service-arrow">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <span class="service-name">Smart Devices</span>
       </div>
 
       <!-- Equipment Rental -->
@@ -121,7 +169,10 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore';
+import { useProjectStore } from '../../stores/projectStore';
 
 // Component name for ESLint
 defineOptions({
@@ -129,17 +180,25 @@ defineOptions({
 });
 
 const router = useRouter();
+const serviceCategoriesStore = useServiceCategoriesStore();
+const projectStore = useProjectStore();
 
-const navigateToCourtBooking = () => {
-  router.push('/court-booking');
+// Load service categories on component mount
+onMounted(async () => {
+  if (projectStore.selectedProject?.id) {
+    await loadServiceCategories();
+  }
+});
+
+const loadServiceCategories = async () => {
+  if (projectStore.selectedProject?.id) {
+    await serviceCategoriesStore.fetchCategories(projectStore.selectedProject.id);
+  }
 };
 
-const navigateToAcademyPrograms = () => {
-  router.push('/academy-programs');
-};
-
-const navigateToStores = () => {
-  router.push('/stores-shopping');
+const navigateToCategory = (category) => {
+  // Navigate to category details page
+  router.push(`/service-category/${category.id}`);
 };
 
 const navigateToMyBookings = () => {
@@ -161,24 +220,46 @@ const navigateToSmartDevices = () => {
   background: #fafafa;
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: 32px;
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  color: #F6F6F6;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(175, 30, 35, 0.2);
 }
 
-.page-header h1 {
-  font-size: 2rem;
-  font-weight: 300;
-  color: #333;
+.hero-content {
+  width: 100%;
+}
+
+.hero-text {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-title {
+  font-size: 1.75rem;
+  font-weight: 700;
   margin: 0;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.hero-subtitle {
+  font-size: 0.9rem;
+  margin: 0;
+  opacity: 0.9;
+  font-weight: 400;
+  margin-top: 4px;
 }
 
 .services-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 600px;
   margin: 0 auto;
 }
 
@@ -186,22 +267,19 @@ const navigateToSmartDevices = () => {
   background: white;
   border: 1px solid #e8e8e8;
   border-radius: 16px;
-  padding: 24px 20px;
+  padding: 24px;
   cursor: pointer;
   transition: all 0.2s ease;
-  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 120px;
+  gap: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.service-card:not(.coming-soon):hover {
+.service-card:hover {
   transform: translateY(-2px);
-  border-color: var(--q-secondary);
-  box-shadow: 0 8px 24px rgba(0, 122, 255, 0.12);
+  border-color: #AF1E23;
+  box-shadow: 0 8px 24px rgba(175, 30, 35, 0.12);
 }
 
 .service-card.coming-soon {
@@ -210,19 +288,45 @@ const navigateToSmartDevices = () => {
 }
 
 .service-icon {
-  margin-bottom: 16px;
-  color: var(--q-secondary);
+  color: #AF1E23;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+}
+
+.service-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .service-name {
-  font-size: 1.125rem;
-  font-weight: 500;
+  font-size: 1.25rem;
+  font-weight: 600;
   color: #333;
-  text-align: center;
+  margin: 0 0 4px 0;
   line-height: 1.3;
+}
+
+.service-description {
+  font-size: 0.875rem;
+  color: #666;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.service-arrow {
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.service-card:hover .service-arrow {
+  color: #AF1E23;
+  transform: translateX(4px);
 }
 
 .coming-soon-badge {
@@ -243,31 +347,29 @@ const navigateToSmartDevices = () => {
     padding: 32px 24px;
   }
   
-  .page-header {
-    margin-bottom: 48px;
+  .hero-section {
+    margin-bottom: 24px;
   }
   
-  .page-header h1 {
-    font-size: 2.5rem;
+  .hero-title {
+    font-size: 2rem;
   }
   
   .services-grid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    max-width: 1200px;
+    max-width: 800px;
     gap: 20px;
   }
   
   .service-card {
-    padding: 32px 24px;
-    min-height: 140px;
-  }
-  
-  .service-icon {
-    margin-bottom: 20px;
+    padding: 32px;
   }
   
   .service-name {
-    font-size: 1.25rem;
+    font-size: 1.375rem;
+  }
+  
+  .service-description {
+    font-size: 1rem;
   }
 }
 
@@ -276,21 +378,91 @@ const navigateToSmartDevices = () => {
     padding: 40px 32px;
   }
   
-  .page-header h1 {
-    font-size: 3rem;
+  .hero-title {
+    font-size: 2.25rem;
+  }
+  
+  .services-grid {
+    max-width: 1000px;
+    gap: 24px;
   }
   
   .service-card {
-    padding: 40px 32px;
-    min-height: 160px;
-  }
-  
-  .service-icon {
-    margin-bottom: 24px;
+    padding: 40px;
   }
   
   .service-name {
-    font-size: 1.375rem;
+    font-size: 1.5rem;
   }
+  
+  .service-description {
+    font-size: 1.125rem;
+  }
+}
+
+/* Loading and Error States */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #AF1E23;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+.retry-btn {
+  background: #AF1E23;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.retry-btn:hover {
+  background: #8B1A1E;
+}
+
+/* Service Image Styles */
+.service-image {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.default-icon {
+  color: #6b7280;
 }
 </style>

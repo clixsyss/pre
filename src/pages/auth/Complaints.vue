@@ -248,6 +248,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useComplaintStore } from '../../stores/complaintStore';
+import { useNotificationStore } from '../../stores/notifications';
 
 // Component name for ESLint
 defineOptions({
@@ -256,6 +257,7 @@ defineOptions({
 
 const router = useRouter();
 const complaintStore = useComplaintStore();
+const notificationStore = useNotificationStore();
 
 // Reactive data
 const showNewComplaintModal = ref(false);
@@ -386,7 +388,7 @@ const handleFileSelect = (event) => {
   if (file) {
     // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      alert('File size must be less than 10MB');
+      notificationStore.showError('File size must be less than 10MB');
       return;
     }
     

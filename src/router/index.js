@@ -87,6 +87,18 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/service-category/:id',
+    name: 'ServiceCategoryDetails',
+    component: () => import('../pages/auth/ServiceCategoryDetails.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/facilities',
+    name: 'Facilities',
+    component: () => import('../pages/auth/Facilities.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/stores-shopping',
     name: 'StoresShopping',
     component: () => import('../pages/auth/StoresShopping.vue'),
