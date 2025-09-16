@@ -2,12 +2,16 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { 
   getProjectGuidelines, 
-  searchGuidelines 
+  searchGuidelines,
+  getPDFGuidelines,
+  getLatestPDFGuideline
 } from '../services/projectGuidelinesService';
 
 export const useProjectGuidelinesStore = defineStore('projectGuidelines', () => {
   // State
   const guidelines = ref([]);
+  const pdfGuidelines = ref([]);
+  const latestPDFGuideline = ref(null);
   const loading = ref(false);
   const error = ref(null);
   const searchTerm = ref('');
@@ -15,6 +19,8 @@ export const useProjectGuidelinesStore = defineStore('projectGuidelines', () => 
 
   // Getters
   const getGuidelines = computed(() => guidelines.value);
+  const pdfGuidelinesList = computed(() => pdfGuidelines.value);
+  const latestPDFGuidelineData = computed(() => latestPDFGuideline.value);
   const isLoading = computed(() => loading.value);
   const getError = computed(() => error.value);
 
@@ -62,16 +68,21 @@ export const useProjectGuidelinesStore = defineStore('projectGuidelines', () => 
 
   // Actions
   const fetchGuidelines = async (projectId) => {
-    if (!projectId) return;
+    if (!projectId) {
+      console.log('No project ID provided for fetching guidelines');
+      return;
+    }
     
     try {
+      console.log('Store: Fetching guidelines for project:', projectId);
       loading.value = true;
       error.value = null;
       const data = await getProjectGuidelines(projectId);
+      console.log('Store: Received guidelines data:', data);
       guidelines.value = data;
     } catch (err) {
       error.value = 'Failed to load project guidelines';
-      console.error('Error fetching guidelines:', err);
+      console.error('Store: Error fetching guidelines:', err);
     } finally {
       loading.value = false;
     }
@@ -107,8 +118,53 @@ export const useProjectGuidelinesStore = defineStore('projectGuidelines', () => 
 
   const clearGuidelines = () => {
     guidelines.value = [];
+    pdfGuidelines.value = [];
+    latestPDFGuideline.value = null;
     searchTerm.value = '';
     selectedCategory.value = 'all';
+  };
+
+  // PDF Guidelines Actions
+  const fetchPDFGuidelines = async (projectId) => {
+    if (!projectId) {
+      console.log('No project ID provided for fetching PDF guidelines');
+      return;
+    }
+    
+    try {
+      console.log('Store: Fetching PDF guidelines for project:', projectId);
+      loading.value = true;
+      error.value = null;
+      const data = await getPDFGuidelines(projectId);
+      console.log('Store: Received PDF guidelines data:', data);
+      pdfGuidelines.value = data;
+    } catch (err) {
+      error.value = 'Failed to load PDF guidelines';
+      console.error('Store: Error fetching PDF guidelines:', err);
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const fetchLatestPDFGuideline = async (projectId) => {
+    if (!projectId) {
+      console.log('No project ID provided for fetching latest PDF guideline');
+      return;
+    }
+    
+    try {
+      console.log('Store: Fetching latest PDF guideline for project:', projectId);
+      loading.value = true;
+      error.value = null;
+      const data = await getLatestPDFGuideline(projectId);
+      console.log('Store: Received latest PDF guideline data:', data);
+      latestPDFGuideline.value = data;
+    } catch (err) {
+      error.value = 'Failed to load latest PDF guideline';
+      console.error('Store: Error fetching latest PDF guideline:', err);
+    } finally {
+      loading.value = false;
+    }
   };
 
   // Helper functions
@@ -158,6 +214,8 @@ export const useProjectGuidelinesStore = defineStore('projectGuidelines', () => 
   return {
     // State
     guidelines,
+    pdfGuidelines,
+    latestPDFGuideline,
     loading,
     error,
     searchTerm,
@@ -165,6 +223,8 @@ export const useProjectGuidelinesStore = defineStore('projectGuidelines', () => 
     
     // Getters
     getGuidelines,
+    pdfGuidelinesList,
+    latestPDFGuidelineData,
     isLoading,
     getError,
     getGuidelinesByCategory,
@@ -175,6 +235,8 @@ export const useProjectGuidelinesStore = defineStore('projectGuidelines', () => 
     
     // Actions
     fetchGuidelines,
+    fetchPDFGuidelines,
+    fetchLatestPDFGuideline,
     searchGuidelinesAction,
     setSearchTerm,
     setSelectedCategory,

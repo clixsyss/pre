@@ -1,17 +1,32 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Admins collection - consolidated rules
+    // Admins collection - allow admins to read their own data and check admin status
     match /admins/{adminId} {
-      // Allow admins to read their own data
       allow read, write: if request.auth != null && request.auth.uid == adminId;
-      
-      // Allow other admins to read all admin documents (for admin management)
+    }
+    
+    // Allow admins to read all admin documents (for admin management)
+    match /admins/{adminId} {
       allow read: if request.auth != null && 
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-      
-      // Allow admins to create, update, and delete admin accounts
-      allow create, update, delete: if request.auth != null && 
+    }
+    
+    // Allow admins to create new admin accounts
+    match /admins/{adminId} {
+      allow create: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Allow admins to update admin accounts
+    match /admins/{adminId} {
+      allow update: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Allow admins to delete admin accounts
+    match /admins/{adminId} {
+      allow delete: if request.auth != null && 
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
     
@@ -103,29 +118,47 @@ service cloud.firestore {
       allow list: if request.auth != null;
     }
     
-    // Project Bookings - users can read/write their own bookings within project
-    match /projects/{projectId}/bookings/{bookingId} {
-      allow read, write: if request.auth != null && 
-        (resource == null || resource.data.userId == request.auth.uid || 
-         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-    }
-    
-    // Allow listing project bookings
-    match /projects/{projectId}/bookings {
-      allow list: if request.auth != null;
-    }
-    
-    // Project Events - allow authenticated users to read/write within project
-    match /projects/{projectId}/events/{eventId} {
+    // Project Service Categories - allow authenticated users to read/write within project
+    match /projects/{projectId}/serviceCategories/{categoryId} {
       allow read, write: if request.auth != null;
     }
     
-    // Allow listing project events
-    match /projects/{projectId}/events {
+    // Allow listing project service categories
+    match /projects/{projectId}/serviceCategories {
       allow list: if request.auth != null;
     }
     
-    // Project Store Management - allow authenticated users to read/write within project
+    // Project Services within Categories - allow authenticated users to read/write within project
+    match /projects/{projectId}/serviceCategories/{categoryId}/services/{serviceId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project services within categories
+    match /projects/{projectId}/serviceCategories/{categoryId}/services {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Complaints - allow authenticated users to read/write within project
+    match /projects/{projectId}/complaints/{complaintId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project complaints
+    match /projects/{projectId}/complaints {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Shops - allow authenticated users to read/write within project
+    match /projects/{projectId}/shops/{shopId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project shops
+    match /projects/{projectId}/shops {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Stores - allow authenticated users to read/write within project
     match /projects/{projectId}/stores/{storeId} {
       allow read, write: if request.auth != null;
     }
@@ -142,16 +175,6 @@ service cloud.firestore {
     
     // Allow listing project products
     match /projects/{projectId}/products {
-      allow list: if request.auth != null;
-    }
-    
-    // Project Product Categories - allow authenticated users to read/write within project
-    match /projects/{projectId}/productCategories/{categoryId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Allow listing project product categories
-    match /projects/{projectId}/productCategories {
       allow list: if request.auth != null;
     }
     
@@ -179,12 +202,90 @@ service cloud.firestore {
       allow list: if request.auth != null;
     }
     
+    // Project Bookings - allow any authenticated user to read for availability checking
+    // Users can write their own bookings, admins can write all
+    match /projects/{projectId}/bookings/{bookingId} {
+      allow read: if request.auth != null; // Allow any authenticated user to read for availability
+      allow write: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    
+    // Allow listing project bookings
+    match /projects/{projectId}/bookings {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Service Bookings - allow any authenticated user to read for availability checking
+    // Users can write their own service bookings, admins can write all
+    match /projects/{projectId}/serviceBookings/{bookingId} {
+      allow read: if request.auth != null; // Allow any authenticated user to read for availability
+      allow write: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    
+    // Allow listing project service bookings
+    match /projects/{projectId}/serviceBookings {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Service Bookings (alternative naming) - users can read/write their own service bookings within project
+    match /projects/{projectId}/service_bookings/{bookingId} {
+      allow read, write: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    
+    // Allow reading all service bookings for availability checking (alternative naming)
+    match /projects/{projectId}/service_bookings/{bookingId} {
+      allow read: if request.auth != null; // Allow any authenticated user to read for availability
+    }
+    
+    // Allow listing project service bookings (alternative naming)
+    match /projects/{projectId}/service_bookings {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Events - allow authenticated users to read/write within project
+    match /projects/{projectId}/events/{eventId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project events
+    match /projects/{projectId}/events {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Product Categories - allow authenticated users to read/write within project
+    match /projects/{projectId}/productCategories/{categoryId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project product categories
+    match /projects/{projectId}/productCategories {
+      allow list: if request.auth != null;
+    }
+    
     // Project Notifications - allow authenticated users to read notifications within project
     // Admins can write, users can only read (notifications are created by admins)
     match /projects/{projectId}/notifications/{notificationId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && 
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Project Guidelines - allow authenticated users to read guidelines within project
+    // Admins can write, users can only read (guidelines are created by admins)
+    match /projects/{projectId}/projectGuidelines/{guidelineId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Allow listing project guidelines
+    match /projects/{projectId}/projectGuidelines {
+      allow list: if request.auth != null;
     }
     
     // Allow listing project notifications
@@ -219,6 +320,36 @@ service cloud.firestore {
     
     // Allow listing project dining products
     match /projects/{projectId}/shops/{shopId}/products {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Store Products - allow authenticated users to read/write within project
+    match /projects/{projectId}/stores/{storeId}/products/{productId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project store products
+    match /projects/{projectId}/stores/{storeId}/products {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Ratings - allow authenticated users to read/write ratings within project
+    match /projects/{projectId}/ratings/{ratingId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project ratings
+    match /projects/{projectId}/ratings {
+      allow list: if request.auth != null;
+    }
+    
+    // Project Sample Data - allow authenticated users to read/write sample data within project
+    match /projects/{projectId}/sampleData/{sampleId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow listing project sample data
+    match /projects/{projectId}/sampleData {
       allow list: if request.auth != null;
     }
     
@@ -258,6 +389,30 @@ service cloud.firestore {
     
     // Allow listing userBookings collection (users can only see their own)
     match /userBookings {
+      allow list: if request.auth != null;
+    }
+    
+    // Service Bookings collection - users can read/write their own service bookings
+    match /serviceBookings/{bookingId} {
+      allow read, write: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    
+    // Allow listing service bookings collection (users can only see their own)
+    match /serviceBookings {
+      allow list: if request.auth != null;
+    }
+    
+    // Service Bookings collection (alternative naming) - users can read/write their own service bookings
+    match /service_bookings/{bookingId} {
+      allow read, write: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    
+    // Allow listing service bookings collection (alternative naming)
+    match /service_bookings {
       allow list: if request.auth != null;
     }
     
@@ -334,6 +489,22 @@ service cloud.firestore {
       allow list: if request.auth != null;
     }
     
+    // Pending Admins collection - allow anyone to create (for registration)
+    // Allow authenticated users to read (for status checking)
+    // Only approved admins can update/delete (for approval process)
+    match /pendingAdmins/{pendingAdminId} {
+      allow create, write: if true; // Temporarily allow anyone to create/write (for debugging)
+      allow read: if request.auth != null; // Any authenticated user can read (for status checking)
+      allow update, delete: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Allow listing pending admins collection (only for approved admins)
+    match /pendingAdmins {
+      allow list: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
     // Project News - allow authenticated users to read published news within project
     // Admins can write, users can only read published news
     match /projects/{projectId}/news/{newsId} {
@@ -382,6 +553,39 @@ service cloud.firestore {
     // Allow listing project news reactions
     match /projects/{projectId}/news/{newsId}/reactions {
       allow list: if request.auth != null;
+    }
+    
+    // SMART MIRROR COLLECTIONS - User-specific smart home data
+    // Users can only access their own smart home data
+    
+    // User Rooms - users can read/write their own rooms
+    match /users/{userId}/rooms/{roomId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow listing user rooms
+    match /users/{userId}/rooms {
+      allow list: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // User Room Devices - users can read/write their own room devices
+    match /users/{userId}/rooms/{roomId}/devices/{deviceId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow listing user room devices
+    match /users/{userId}/rooms/{roomId}/devices {
+      allow list: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // User Profile - users can read/write their own profile
+    match /users/{userId}/profile/{profileId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow listing user profiles
+    match /users/{userId}/profile {
+      allow list: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

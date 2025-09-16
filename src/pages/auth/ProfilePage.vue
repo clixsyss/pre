@@ -901,7 +901,7 @@ const savingSettings = ref(false)
 const disconnectingProject = ref(null)
 
 // Accordion state
-const activeAccordion = ref('personal') // Default to personal info open
+const activeAccordion = ref(null) // Default to all accordions closed
 
 // Computed properties
 const userProjects = computed(() => projectStore.userProjects)
