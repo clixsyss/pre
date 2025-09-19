@@ -199,10 +199,6 @@ const smartMirrorStore = useSmartMirrorStore()
 
 // Initialize swipe navigation
 const {
-  isSwipeActive,
-  swipeProgress,
-  getCurrentTabIndex,
-  mainTabs,
   addDeadZone
 } = useSwipeNavigation()
 
