@@ -184,6 +184,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { useSmartMirrorStore } from '../stores/smartMirrorStore'
+import { useSwipeNavigation } from '../composables/useSwipeNavigation'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 
 // Component name for ESLint
@@ -196,8 +197,18 @@ const route = useRoute()
 const projectStore = useProjectStore()
 const smartMirrorStore = useSmartMirrorStore()
 
+// Initialize swipe navigation
+const {
+  isSwipeActive,
+  swipeProgress,
+  getCurrentTabIndex,
+  mainTabs,
+  addDeadZone
+} = useSwipeNavigation()
+
 // Reactive state
 const showProjectSwitcher = ref(false)
+const showSwipeHint = ref(false)
 
 // Computed properties
 const currentProject = computed(() => projectStore.selectedProject)
@@ -312,6 +323,26 @@ onMounted(async () => {
       }
     }
   })
+  
+  // Add dead zones for areas where swipe should be disabled
+  // Bottom navigation area (prevent accidental swipes when tapping nav items)
+  const navHeight = 80 // Smaller dead zone
+  addDeadZone(0, window.innerHeight - navHeight, window.innerWidth, navHeight)
+  
+  // Show swipe hint for first-time users
+  const hasSeenSwipeHint = localStorage.getItem('hasSeenSwipeHint')
+  if (!hasSeenSwipeHint) {
+    // Show hint after a brief delay
+    setTimeout(() => {
+      showSwipeHint.value = true
+      // Hide hint after 4 seconds
+      setTimeout(() => {
+        showSwipeHint.value = false
+        localStorage.setItem('hasSeenSwipeHint', 'true')
+      }, 4000)
+    }, 2000)
+  }
+  
   return () => unsubscribe()
 })
 </script>
@@ -889,6 +920,180 @@ onMounted(async () => {
   }
 }
 
+/* Swipe Indicator Styles */
+.swipe-indicator {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(35, 31, 32, 0.95);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  min-width: 200px;
+}
+
+.swipe-indicator.swipe-active {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.swipe-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.swipe-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #AF1E23, #ff4757);
+  border-radius: 2px;
+  transition: width 0.1s ease;
+  box-shadow: 0 0 10px rgba(175, 30, 35, 0.5);
+}
+
+.swipe-tabs-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.swipe-tab-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0.4;
+  transition: all 0.3s ease;
+}
+
+.swipe-tab-dot.active {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.swipe-tab-dot.next,
+.swipe-tab-dot.prev {
+  opacity: 0.7;
+  transform: scale(1.1);
+}
+
+.swipe-tab-dot::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  margin-bottom: 4px;
+  transition: all 0.3s ease;
+}
+
+.swipe-tab-dot.active::before {
+  background: #AF1E23;
+  box-shadow: 0 0 8px rgba(175, 30, 35, 0.8);
+  width: 10px;
+  height: 10px;
+}
+
+.swipe-tab-dot.next::before,
+.swipe-tab-dot.prev::before {
+  background: rgba(255, 255, 255, 0.7);
+  width: 9px;
+  height: 9px;
+}
+
+.tab-name {
+  font-size: 0.7rem;
+  color: #F6F6F6;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.swipe-tab-dot.active .tab-name {
+  font-weight: 700;
+  color: #AF1E23;
+  text-shadow: 0 0 4px rgba(175, 30, 35, 0.5);
+}
+
+/* Swipe Hint Styles */
+.swipe-hint {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  pointer-events: none;
+  animation: swipe-hint-appear 0.5s ease-out;
+}
+
+@keyframes swipe-hint-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.swipe-hint-content {
+  background: rgba(35, 31, 32, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 25px;
+  padding: 12px 20px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.swipe-hint-arrows {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.swipe-hint-text {
+  font-size: 0.85rem;
+  color: #F6F6F6;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.swipe-arrow {
+  font-size: 1.2rem;
+  animation: swipe-bounce 2s ease-in-out infinite;
+}
+
+.swipe-arrow.left {
+  animation-delay: 0s;
+}
+
+.swipe-arrow.right {
+  animation-delay: 1s;
+}
+
+@keyframes swipe-bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(-3px);
+  }
+  60% {
+    transform: translateX(3px);
+  }
+}
+
 /* Very narrow screens (like mobile simulation) */
 @media (max-width: 480px) {
   .app-header {
@@ -913,6 +1118,20 @@ onMounted(async () => {
   
   .nav-label {
     font-size: 0.75rem;
+  }
+  
+  /* Responsive swipe indicator */
+  .swipe-indicator {
+    min-width: 180px;
+    padding: 16px;
+  }
+  
+  .swipe-tabs-preview {
+    gap: 8px;
+  }
+  
+  .tab-name {
+    font-size: 0.65rem;
   }
 }
 </style>
