@@ -105,8 +105,8 @@
                 v-for="(day, index) in availableDays" 
                 :key="index"
                 class="day-option"
-                :class="{ 'selected': selectedDate === day.date, 'unavailable': !day.available }"
-                @click="day.available && selectDate(day.date)"
+                :class="{ 'selected': selectedDate === day.fullDate, 'unavailable': !day.available }"
+                @click="day.available && selectDate(day.fullDate)"
               >
                 <div class="day-name">{{ day.name }}</div>
                 <div class="day-date">{{ day.date }}</div>
@@ -228,7 +228,7 @@ const generateAvailableDays = () => {
     
     const dayInfo = {
       name: dayName,
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       fullDate: date.toISOString().split('T')[0],
       available: availability?.available || false,
       timeRange: availability?.available ? `${availability.startTime} - ${availability.endTime}` : null

@@ -17,13 +17,6 @@
             <span class="category">{{ booking?.categoryName }}</span>
           </div>
         </div>
-        <div class="header-actions">
-          <button @click="toggleFullscreen" class="action-btn" title="Toggle Fullscreen">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 3H5C3.89543 3 3 3.89543 3 5V8M21 3H19C17.8954 3 17 3.89543 17 5V8M3 16V19C3 20.1046 3.89543 21 5 21H8M16 21H19C20.1046 21 21 20.1046 21 19V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-        </div>
       </div>
     </div>
 
@@ -197,7 +190,6 @@ const imageInput = ref(null);
 const unsubscribe = ref(null);
 const uploading = ref(false);
 const showImageUpload = ref(false);
-const isFullscreen = ref(false);
 
 // Get booking ID from route
 const bookingId = route.params.id;
@@ -329,15 +321,6 @@ const adjustTextareaHeight = () => {
   }
 };
 
-const toggleFullscreen = () => {
-  isFullscreen.value = !isFullscreen.value;
-  if (isFullscreen.value) {
-    document.documentElement.requestFullscreen?.();
-  } else {
-    document.exitFullscreen?.();
-  }
-};
-
 const sendMessage = async () => {
   if (!newMessage.value.trim() || sending.value || !booking.value || isBookingClosed.value) return;
 
@@ -382,8 +365,16 @@ const formatMessageTime = (timestamp) => {
   if (timestamp.seconds) {
     // Firestore timestamp
     date = new Date(timestamp.seconds * 1000);
+  } else if (timestamp.toDate) {
+    // Firestore timestamp object
+    date = timestamp.toDate();
   } else {
     date = new Date(timestamp);
+  }
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return 'Invalid date';
   }
   
   return date.toLocaleTimeString('en-US', { 
@@ -673,9 +664,9 @@ const formatMessageTime = (timestamp) => {
 }
 
 .message-wrapper.admin .message-bubble {
-  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
-  color: white;
-  border-color: #1976d2;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #d1d5db;
+  border-left: 4px solid #AF1E23;
 }
 
 .message-wrapper.system .message-bubble {
