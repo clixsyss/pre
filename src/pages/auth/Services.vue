@@ -208,11 +208,16 @@
             v-for="booking in openBookings" 
             :key="booking.id"
             class="booking-card"
-            @click="openBookingChat(booking)"
+            @click="openBookingModal(booking)"
           >
             <div class="booking-header">
               <h3 class="booking-title">{{ booking.serviceName }}</h3>
-              <span class="booking-status open">{{ booking.status }}</span>
+              <div class="header-right">
+                <span class="booking-status open">{{ booking.status }}</span>
+                <div v-if="getUnreadCount(booking) > 0" class="unread-badge">
+                  {{ getUnreadCount(booking) }}
+                </div>
+              </div>
             </div>
             <div class="booking-details">
               <p class="booking-category">{{ booking.categoryName }}</p>
@@ -250,11 +255,16 @@
             v-for="booking in closedBookings" 
             :key="booking.id"
             class="booking-card"
-            @click="openBookingChat(booking)"
+            @click="openBookingModal(booking)"
           >
             <div class="booking-header">
               <h3 class="booking-title">{{ booking.serviceName }}</h3>
-              <span class="booking-status closed">{{ booking.status }}</span>
+              <div class="header-right">
+                <span class="booking-status closed">{{ booking.status }}</span>
+                <div v-if="getUnreadCount(booking) > 0" class="unread-badge">
+                  {{ getUnreadCount(booking) }}
+                </div>
+              </div>
             </div>
             <div class="booking-details">
               <p class="booking-category">{{ booking.categoryName }}</p>
@@ -271,6 +281,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Service Booking Modal -->
+    <ServiceBookingModal
+      :isOpen="showBookingModal"
+      :booking="selectedBooking"
+      @close="closeBookingModal"
+      @openChat="openBookingChat"
+    />
   </div>
 </template>
 
@@ -280,6 +298,7 @@ import { useRouter } from 'vue-router';
 import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
 import serviceBookingService from '../../services/serviceBookingService';
+import ServiceBookingModal from '../../components/ServiceBookingModal.vue';
 
 // Component name for ESLint
 defineOptions({
@@ -295,6 +314,8 @@ const activeTab = ref('services');
 const loadingBookings = ref(false);
 const openBookings = ref([]);
 const closedBookings = ref([]);
+const showBookingModal = ref(false);
+const selectedBooking = ref(null);
 
 // Computed properties
 const tabs = computed(() => [
@@ -378,7 +399,19 @@ const loadBookings = async () => {
   }
 };
 
-// Open booking chat
+// Open booking modal
+const openBookingModal = (booking) => {
+  selectedBooking.value = booking;
+  showBookingModal.value = true;
+};
+
+// Close booking modal
+const closeBookingModal = () => {
+  showBookingModal.value = false;
+  selectedBooking.value = null;
+};
+
+// Open booking chat (called from modal)
 const openBookingChat = (booking) => {
   router.push(`/service-booking-chat/${booking.id}`);
 };
@@ -431,6 +464,36 @@ const formatTime = (timestamp) => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
+// Get unread message count
+const getUnreadCount = (booking) => {
+  if (!booking.messages || booking.messages.length === 0) {
+    return 0;
+  }
+  
+  // Get the last message ID that the user has read
+  const lastReadId = localStorage.getItem(`lastReadMessage_${booking.id}`);
+  
+  if (!lastReadId) {
+    // If no last read message, count all admin/system messages
+    return booking.messages.filter(msg => 
+      msg.senderType === 'admin' || msg.senderType === 'system'
+    ).length;
+  }
+  
+  // Count messages after the last read message
+  const lastReadIndex = booking.messages.findIndex(msg => msg.id === lastReadId);
+  if (lastReadIndex === -1) {
+    return booking.messages.filter(msg => 
+      msg.senderType === 'admin' || msg.senderType === 'system'
+    ).length;
+  }
+  
+  const unreadMessages = booking.messages.slice(lastReadIndex + 1);
+  return unreadMessages.filter(msg => 
+    msg.senderType === 'admin' || msg.senderType === 'system'
+  ).length;
+};
+
 // Get last message preview
 const getLastMessagePreview = (booking) => {
   if (!booking.messages || booking.messages.length === 0) {
@@ -440,11 +503,12 @@ const getLastMessagePreview = (booking) => {
   const lastMessage = booking.messages[booking.messages.length - 1];
   
   if (lastMessage.messageType === 'status_update') {
-    return '📋 Status updated';
+    return 'Status updated';
   } else if (lastMessage.messageType === 'details_update') {
-    return '✏️ Details updated';
+    return 'Details updated';
   } else {
-    return lastMessage.text || 'New message';
+    const preview = lastMessage.text || 'New message';
+    return preview.length > 40 ? preview.substring(0, 40) + '...' : preview;
   }
 };
 </script>
@@ -814,6 +878,13 @@ const getLastMessagePreview = (booking) => {
   margin-bottom: 12px;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
 .booking-title {
   font-size: 1.125rem;
   font-weight: 600;
@@ -918,5 +989,33 @@ const getLastMessagePreview = (booking) => {
   font-size: 0.875rem;
   margin: 0;
   line-height: 1.5;
+}
+
+/* Unread Message Badge */
+.unread-badge {
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
 }
 </style>
