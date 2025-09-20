@@ -1,21 +1,4 @@
 <template>
-  <!-- Debug info (remove in production) -->
-  <div v-if="ads.length === 0" class="debug-info" style="padding: 10px; background: #f0f0f0; margin: 10px 0; border-radius: 5px; font-size: 12px;">
-    <strong>Ads Debug Info:</strong><br>
-    Project ID: {{ projectStore.selectedProject?.id || 'No project selected' }}<br>
-    Project Name: {{ projectStore.selectedProject?.name || 'No project selected' }}<br>
-    Available Projects: {{ projectStore.userProjects?.length || 0 }}<br>
-    Loading: {{ isLoading }}<br>
-    Ads count: {{ ads.length }}<br>
-    <span v-if="!projectStore.selectedProject?.id">⚠️ No project selected</span>
-    <span v-else-if="ads.length === 0 && !isLoading">📭 No ads found for this project</span>
-    <div v-if="projectStore.userProjects?.length > 0" style="margin-top: 10px;">
-      <strong>Available Projects:</strong><br>
-      <div v-for="project in projectStore.userProjects" :key="project.id" style="margin: 5px 0; padding: 5px; background: #e0e0e0; border-radius: 3px;">
-        {{ project.name }} ({{ project.id }})
-      </div>
-    </div>
-  </div>
   
   <div class="ads-carousel" v-if="ads.length > 0">
     <div class="carousel-container" ref="carouselContainer">
@@ -24,7 +7,7 @@
         :style="{ transform: `translateX(-${currentIndex * 100}%)` }"
       >
         <div 
-          v-for="(ad, index) in ads" 
+          v-for="ad in ads" 
           :key="ad.id"
           class="carousel-slide"
           @click="handleAdClick(ad)"
@@ -33,7 +16,7 @@
           <div class="ad-image-container">
             <img 
               :src="ad.imageUrl" 
-              :alt="`Ad ${index + 1}`"
+              :alt="`Advertisement`"
               class="ad-image"
               @error="handleImageError"
             />
