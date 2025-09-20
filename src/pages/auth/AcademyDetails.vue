@@ -175,7 +175,7 @@
                 <span class="program-category">{{ program.category || 'Sports' }}</span>
               </div>
               <div class="program-price" v-if="program.price">
-                <span class="price-amount">${{ program.price }}</span>
+                <span class="price-amount">EGP {{ program.price }}</span>
                 <span class="price-period">{{ getPricingTypeLabel(program.pricingType) }}</span>
               </div>
             </div>

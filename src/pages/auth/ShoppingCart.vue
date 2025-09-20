@@ -62,7 +62,7 @@
                 <h3 class="item-name">{{ item.name }}</h3>
                 <div class="item-meta">
                   <span class="item-store">{{ item.storeName }}</span>
-                  <span class="item-price">${{ item.price }}</span>
+                  <span class="item-price">EGP {{ item.price }}</span>
                 </div>
                 <p class="item-description">{{ item.description }}</p>
               </div>
@@ -94,7 +94,7 @@
               
               <div class="item-total">
                 <span class="total-label">Total</span>
-                <span class="total-amount">${{ (item.price * item.quantity).toFixed(2) }}</span>
+                <span class="total-amount">EGP {{ (item.price * item.quantity).toFixed(2) }}</span>
               </div>
               
               <button class="remove-btn" @click="removeItem(item)">
@@ -203,7 +203,7 @@
                     {{ item.quantity }}
                   </div>
                 </div>
-                <div class="item-price">${{ (item.price * item.quantity).toFixed(2) }}</div>
+                <div class="item-price">EGP {{ (item.price * item.quantity).toFixed(2) }}</div>
               </div>
             </div>
             

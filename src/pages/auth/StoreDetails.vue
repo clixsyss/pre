@@ -178,8 +178,8 @@
             
             <div class="product-footer">
               <div class="price-section">
-                <span class="product-price">${{ product.price }}</span>
-                <span v-if="product.originalPrice && product.originalPrice > product.price" class="original-price">${{ product.originalPrice }}</span>
+                <span class="product-price">EGP {{ product.price }}</span>
+                <span v-if="product.originalPrice && product.originalPrice > product.price" class="original-price">EGP {{ product.originalPrice }}</span>
               </div>
               
               <button

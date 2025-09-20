@@ -56,11 +56,11 @@
             </div>
             <div class="detail-row" v-if="program.price">
               <span class="label">Price:</span>
-              <span class="value">${{ program.price }}{{ getPricingTypeLabel(program.pricingType) }}</span>
+              <span class="value">EGP {{ program.price }}{{ getPricingTypeLabel(program.pricingType) }}</span>
             </div>
             <div class="detail-row total">
               <span class="label">Total Cost:</span>
-              <span class="value">${{ totalCost }}</span>
+              <span class="value">EGP {{ totalCost }}</span>
             </div>
           </div>
         </div>

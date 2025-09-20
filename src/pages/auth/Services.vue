@@ -9,20 +9,40 @@
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="serviceCategoriesStore.isLoading" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>Loading services...</p>
+    <!-- Tabs Navigation -->
+    <div class="tabs-container">
+      <div class="tabs-nav">
+        <button 
+          v-for="tab in tabs" 
+          :key="tab.id"
+          :class="['tab-btn', { active: activeTab === tab.id }]"
+          @click="activeTab = tab.id"
+        >
+          <span class="tab-icon">{{ tab.icon }}</span>
+          <span class="tab-label">{{ tab.label }}</span>
+          <span v-if="tab.count !== undefined" class="tab-count">{{ tab.count }}</span>
+        </button>
+      </div>
     </div>
 
-    <!-- Error State -->
-    <div v-else-if="serviceCategoriesStore.getError" class="error-container">
-      <p>{{ serviceCategoriesStore.getError }}</p>
-      <button @click="loadServiceCategories" class="retry-btn">Retry</button>
-    </div>
+    <!-- Tab Content -->
+    <div class="tab-content">
+      <!-- Services Tab -->
+      <div v-if="activeTab === 'services'" class="services-content">
+        <!-- Loading State -->
+        <div v-if="serviceCategoriesStore.isLoading" class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>Loading services...</p>
+        </div>
 
-    <!-- Services Grid -->
-    <div v-else class="services-grid">
+        <!-- Error State -->
+        <div v-else-if="serviceCategoriesStore.getError" class="error-container">
+          <p>{{ serviceCategoriesStore.getError }}</p>
+          <button @click="loadServiceCategories" class="retry-btn">Retry</button>
+        </div>
+
+        <!-- Services Grid -->
+        <div v-else class="services-grid">
       <!-- Dynamic Service Categories -->
       <div 
         v-for="category in serviceCategoriesStore.getCategories" 
@@ -164,15 +184,102 @@
         <span class="service-name">Membership Plans</span>
         <span class="coming-soon-badge">Coming Soon</span>
       </div> -->
+        </div>
+      </div>
+
+      <!-- Open Bookings Tab -->
+      <div v-else-if="activeTab === 'open'" class="bookings-content">
+        <div v-if="loadingBookings" class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>Loading open bookings...</p>
+        </div>
+        <div v-else-if="openBookings.length === 0" class="empty-state">
+          <div class="empty-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="10" stroke="#ccc" stroke-width="2"/>
+              <path d="M12 8V12L15 15" stroke="#ccc" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3>No Open Bookings</h3>
+          <p>You don't have any open service bookings at the moment.</p>
+        </div>
+        <div v-else class="bookings-list">
+          <div 
+            v-for="booking in openBookings" 
+            :key="booking.id"
+            class="booking-card"
+            @click="openBookingChat(booking)"
+          >
+            <div class="booking-header">
+              <h3 class="booking-title">{{ booking.serviceName }}</h3>
+              <span class="booking-status open">{{ booking.status }}</span>
+            </div>
+            <div class="booking-details">
+              <p class="booking-category">{{ booking.categoryName }}</p>
+              <p class="booking-date">{{ formatDate(booking.selectedDate) }}</p>
+              <p class="booking-price">EGP {{ booking.servicePrice }}</p>
+            </div>
+            <div class="booking-footer">
+              <span class="last-message">
+                {{ getLastMessagePreview(booking) }}
+              </span>
+              <span class="booking-time">{{ formatTime(booking.lastMessageAt) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Closed Bookings Tab -->
+      <div v-else-if="activeTab === 'closed'" class="bookings-content">
+        <div v-if="loadingBookings" class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>Loading closed bookings...</p>
+        </div>
+        <div v-else-if="closedBookings.length === 0" class="empty-state">
+          <div class="empty-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="10" stroke="#ccc" stroke-width="2"/>
+              <path d="M9 12L11 14L15 10" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3>No Closed Bookings</h3>
+          <p>You don't have any closed service bookings yet.</p>
+        </div>
+        <div v-else class="bookings-list">
+          <div 
+            v-for="booking in closedBookings" 
+            :key="booking.id"
+            class="booking-card"
+            @click="openBookingChat(booking)"
+          >
+            <div class="booking-header">
+              <h3 class="booking-title">{{ booking.serviceName }}</h3>
+              <span class="booking-status closed">{{ booking.status }}</span>
+            </div>
+            <div class="booking-details">
+              <p class="booking-category">{{ booking.categoryName }}</p>
+              <p class="booking-date">{{ formatDate(booking.selectedDate) }}</p>
+              <p class="booking-price">EGP {{ booking.servicePrice }}</p>
+            </div>
+            <div class="booking-footer">
+              <span class="last-message">
+                {{ getLastMessagePreview(booking) }}
+              </span>
+              <span class="booking-time">{{ formatTime(booking.lastMessageAt) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
+import serviceBookingService from '../../services/serviceBookingService';
 
 // Component name for ESLint
 defineOptions({
@@ -183,10 +290,45 @@ const router = useRouter();
 const serviceCategoriesStore = useServiceCategoriesStore();
 const projectStore = useProjectStore();
 
-// Load service categories on component mount
+// Reactive state
+const activeTab = ref('services');
+const loadingBookings = ref(false);
+const openBookings = ref([]);
+const closedBookings = ref([]);
+
+// Computed properties
+const tabs = computed(() => [
+  { 
+    id: 'services', 
+    label: 'Services', 
+    icon: '' 
+  },
+  { 
+    id: 'open', 
+    label: 'Open', 
+    icon: '', 
+    count: openBookings.value.length 
+  },
+  { 
+    id: 'closed', 
+    label: 'Closed', 
+    icon: '', 
+    count: closedBookings.value.length 
+  }
+]);
+
+// Load service categories and bookings on component mount
 onMounted(async () => {
   if (projectStore.selectedProject?.id) {
     await loadServiceCategories();
+    await loadBookings();
+  }
+});
+
+// Watch for project changes
+watch(() => projectStore.selectedProject?.id, async (newProjectId) => {
+  if (newProjectId) {
+    await loadBookings();
   }
 });
 
@@ -211,6 +353,84 @@ const navigateToCalendar = () => {
 
 const navigateToSmartDevices = () => {
   router.push('/smart-devices');
+};
+
+// Load bookings function
+const loadBookings = async () => {
+  if (!projectStore.selectedProject?.id) return;
+  
+  try {
+    loadingBookings.value = true;
+    
+    // Load open bookings (including processing)
+    const [openResults, processingResults, closedResults] = await Promise.all([
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, 'open'),
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, 'processing'),
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, 'closed')
+    ]);
+    
+    openBookings.value = [...openResults, ...processingResults];
+    closedBookings.value = closedResults;
+  } catch (error) {
+    console.error('Error loading bookings:', error);
+  } finally {
+    loadingBookings.value = false;
+  }
+};
+
+// Open booking chat
+const openBookingChat = (booking) => {
+  router.push(`/service-booking-chat/${booking.id}`);
+};
+
+// Format date
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric' 
+  });
+};
+
+// Format time
+const formatTime = (timestamp) => {
+  if (!timestamp) return '';
+  
+  let date;
+  if (timestamp.seconds) {
+    // Firestore timestamp
+    date = new Date(timestamp.seconds * 1000);
+  } else {
+    date = new Date(timestamp);
+  }
+  
+  const now = new Date();
+  const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+  
+  if (diffInMinutes < 1) return 'Just now';
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+  
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+// Get last message preview
+const getLastMessagePreview = (booking) => {
+  if (!booking.messages || booking.messages.length === 0) {
+    return 'No messages yet';
+  }
+  
+  const lastMessage = booking.messages[booking.messages.length - 1];
+  
+  if (lastMessage.messageType === 'status_update') {
+    return '📋 Status updated';
+  } else if (lastMessage.messageType === 'details_update') {
+    return '✏️ Details updated';
+  } else {
+    return lastMessage.text || 'New message';
+  }
 };
 </script>
 
@@ -464,5 +684,224 @@ const navigateToSmartDevices = () => {
 
 .default-icon {
   color: #6b7280;
+}
+
+/* Tabs Styles */
+.tabs-container {
+  margin-bottom: 20px;
+}
+
+.tabs-nav {
+  display: flex;
+  background: white;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: #666;
+}
+
+.tab-btn.active {
+  background: #AF1E23;
+  color: white;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
+}
+
+.tab-icon {
+  font-size: 16px;
+}
+
+.tab-label {
+  font-size: 14px;
+}
+
+.tab-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
+.tab-btn:not(.active) .tab-count {
+  background: #e5e7eb;
+  color: #666;
+}
+
+/* Tab Content */
+.tab-content {
+  min-height: 300px;
+}
+
+.services-content,
+.bookings-content {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Bookings List */
+.bookings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.booking-card {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.booking-card:hover {
+  transform: translateY(-2px);
+  border-color: #AF1E23;
+  box-shadow: 0 8px 24px rgba(175, 30, 35, 0.12);
+}
+
+.booking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.booking-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.booking-status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.booking-status.open {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.booking-status.processing {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.booking-status.closed {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.booking-details {
+  margin-bottom: 16px;
+}
+
+.booking-details p {
+  margin: 4px 0;
+  font-size: 0.875rem;
+}
+
+.booking-category {
+  color: #666;
+}
+
+.booking-date {
+  color: #AF1E23;
+  font-weight: 500;
+}
+
+.booking-price {
+  color: #333;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.booking-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.last-message {
+  color: #666;
+  font-size: 0.875rem;
+  flex: 1;
+  margin-right: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.booking-time {
+  color: #999;
+  font-size: 0.75rem;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.empty-icon {
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.empty-state h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 8px 0;
+}
+
+.empty-state p {
+  font-size: 0.875rem;
+  margin: 0;
+  line-height: 1.5;
 }
 </style>

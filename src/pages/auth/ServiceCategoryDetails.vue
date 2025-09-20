@@ -56,7 +56,7 @@
         <div class="service-info">
           <h4 class="service-name">{{ service.englishTitle }}</h4>
           <p class="service-description">{{ service.englishDescription }}</p>
-          <div class="service-price">${{ service.price }}</div>
+          <div class="service-price">EGP {{ service.price }}</div>
         </div>
         <div class="service-arrow">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -95,7 +95,7 @@
           <div class="service-info">
             <h4 class="service-name">{{ selectedService?.englishTitle }}</h4>
             <p class="service-description">{{ selectedService?.englishDescription }}</p>
-            <div class="service-price">${{ selectedService?.price }}</div>
+            <div class="service-price">EGP {{ selectedService?.price }}</div>
           </div>
           
           <div class="availability-section">

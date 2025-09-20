@@ -190,6 +190,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/service-booking-chat/:id',
+    name: 'ServiceBookingChat',
+    component: () => import('../components/ServiceBookingChat.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/smart-devices',
     name: 'SmartDevices',
     component: () => import('../pages/auth/SmartDevices.vue'),

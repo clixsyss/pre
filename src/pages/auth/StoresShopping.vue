@@ -514,11 +514,11 @@
               >
                 <div class="item-main">
                   <div class="item-name">{{ item.productName }}</div>
-                  <div class="item-price">${{ (item.price || 0).toFixed(2) }}</div>
+                  <div class="item-price">EGP {{ (item.price || 0).toFixed(2) }}</div>
                 </div>
                 <div class="item-details">
                   <span class="quantity">Qty: {{ item.quantity }}</span>
-                  <span class="item-total">${{ ((item.price || 0) * (item.quantity || 0)).toFixed(2) }}</span>
+                  <span class="item-total">EGP {{ ((item.price || 0) * (item.quantity || 0)).toFixed(2) }}</span>
                 </div>
               </div>
             </div>

@@ -187,13 +187,13 @@
                 <div class="program-pricing">
                   <div class="pricing-info">
                     <span class="price" v-if="programData.program.price">
-                      ${{ programData.program.price }}
+                      EGP {{ programData.program.price }}
                       <span class="pricing-type">
                         {{ getPricingTypeLabel(programData.program.pricingType) }}
                       </span>
                     </span>
                     <span class="total-price" v-if="programData.program.price && programData.program.duration && (programData.program.pricingType === 'per-month' || programData.program.pricingType === 'per-week' || programData.program.pricingType === 'per-term')">
-                      Total: ${{ programData.program.price * programData.program.duration }}
+                      Total: EGP {{ programData.program.price * programData.program.duration }}
                     </span>
                   </div>
                   <button 

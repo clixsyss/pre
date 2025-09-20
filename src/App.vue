@@ -69,7 +69,8 @@ const authenticatedRoutes = [
   '/news',
   '/complaints',
   '/complaints/:id',
-  '/facilities'
+  '/facilities',
+  '/service-booking-chat/:id'
 ]
 
 // Check if current route should show main layout
@@ -97,6 +98,10 @@ const isAuthenticatedPage = computed(() => {
   }
   
   if (route.path.startsWith('/service-category/')) {
+    return true
+  }
+  
+  if (route.path.startsWith('/service-booking-chat/')) {
     return true
   }
   
