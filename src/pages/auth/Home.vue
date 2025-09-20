@@ -16,6 +16,9 @@
       </div>
     </div>
 
+    <!-- Ads Carousel -->
+    <AdsCarousel />
+
     <!-- Stats Overview -->
     <div class="stats-overview">
       <div class="stat-card" :class="{ 'loading': isStatsLoading }" @click="navigateToCalendar">
@@ -256,6 +259,7 @@ import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
 import UpcomingBookingsCard from '../../components/UpcomingBookingsCard.vue'
 import ModernNewsFeed from '../../components/ModernNewsFeed.vue'
 import SmartDeviceWidget from '../../components/SmartDeviceWidget.vue'
+import AdsCarousel from '../../components/AdsCarousel.vue'
 import sampleDataService from '../../services/sampleDataService.js'
 import notificationService from '../../services/notificationService.js'
 
