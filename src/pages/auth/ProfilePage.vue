@@ -189,6 +189,10 @@
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
+                  <!-- Notification Badge for Pending Violations -->
+                  <div v-if="violationStats.pending > 0" class="notification-badge violations-badge">
+                    {{ violationStats.pending }}
+                  </div>
                 </div>
                 <div class="violations-btn-text">
                   <h4>View All Violations</h4>
@@ -264,6 +268,10 @@
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
+                  <!-- Notification Badge for Open Complaints -->
+                  <div v-if="complaintStats.open > 0" class="notification-badge complaints-badge">
+                    {{ complaintStats.open }}
+                  </div>
                 </div>
                 <div class="complaints-btn-text">
                   <h4>View All Complaints</h4>
@@ -3919,6 +3927,7 @@ input:checked + .toggle-slider:before {
   justify-content: center;
   color: #d97706;
   flex-shrink: 0;
+  position: relative;
 }
 
 .violations-btn-text h4 {
@@ -4069,6 +4078,7 @@ input:checked + .toggle-slider:before {
   justify-content: center;
   color: #3b82f6;
   flex-shrink: 0;
+  position: relative;
 }
 
 .complaints-btn-text h4 {
@@ -4153,6 +4163,53 @@ input:checked + .toggle-slider:before {
   .no-complaints-icon {
     width: 56px;
     height: 56px;
+  }
+}
+
+/* Notification Badges */
+.notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+  padding: 0 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  animation: badge-pulse 2s infinite;
+}
+
+.violations-badge {
+  background: #ef4444;
+}
+
+.complaints-badge {
+  background: #f59e0b;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* Mobile optimizations for badges */
+@media (max-width: 480px) {
+  .notification-badge {
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
   }
 }
 </style>
