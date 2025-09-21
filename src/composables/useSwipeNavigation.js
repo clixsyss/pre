@@ -30,7 +30,6 @@ export function useSwipeNavigation() {
     { path: '/home', name: 'Home' },
     { path: '/services', name: 'Services' },
     { path: '/facilities', name: 'Facilities' },
-    { path: '/complaints', name: 'Complaints' },
     { path: '/profile', name: 'Profile' }
   ]
   

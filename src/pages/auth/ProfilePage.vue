@@ -215,6 +215,81 @@
         </div>
       </div>
 
+      <!-- Complaints & Support Accordion -->
+      <div class="accordion-section">
+        <button 
+          @click="toggleAccordion('complaints')" 
+          class="accordion-header"
+          :class="{ active: activeAccordion === 'complaints' }"
+        >
+          <div class="accordion-title">
+            <div class="section-icon complaints-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="section-text">
+              <h3>Complaints & Support</h3>
+              <p>Submit and track your complaints</p>
+            </div>
+          </div>
+          <div class="accordion-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </button>
+        <div class="accordion-content" :class="{ active: activeAccordion === 'complaints' }">
+          <div class="complaints-container">
+            <div class="complaints-summary">
+              <div class="complaints-stats">
+                <div class="stat-item">
+                  <span class="stat-number">{{ complaintStats.total }}</span>
+                  <span class="stat-label">Total</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-number">{{ complaintStats.open }}</span>
+                  <span class="stat-label">Open</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-number">{{ complaintStats.resolved }}</span>
+                  <span class="stat-label">Resolved</span>
+                </div>
+              </div>
+            </div>
+
+            <button @click="handleComplaintChat" class="complaints-btn">
+              <div class="complaints-btn-content">
+                <div class="complaints-btn-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="complaints-btn-text">
+                  <h4>View All Complaints</h4>
+                  <p>Submit new complaints and track existing ones</p>
+                </div>
+              </div>
+              <div class="complaints-btn-arrow">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </button>
+
+            <div v-if="complaintStats.total === 0" class="no-complaints">
+              <div class="no-complaints-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <h4>No Complaints</h4>
+              <p>You haven't submitted any complaints. We're here to help if you need support!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Current Projects Accordion -->
       <div class="accordion-section">
         <button 
@@ -931,6 +1006,7 @@ import ViolationsModal from '../../components/ViolationsModal.vue'
 import { collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { db } from '../../boot/firebase'
 import { getUserFines } from '../../services/finesService'
+import complaintService from '../../services/complaintService'
 
 // Component name for ESLint
 defineOptions({
@@ -996,6 +1072,14 @@ const violationStats = ref({
   paid: 0,
   disputed: 0,
   cancelled: 0
+})
+
+// Complaints state
+const complaintStats = ref({
+  total: 0,
+  open: 0,
+  resolved: 0,
+  closed: 0
 })
 
 // Computed properties
@@ -1079,6 +1163,29 @@ const loadViolationStats = async () => {
     violationStats.value = stats
   } catch (error) {
     console.error('Error loading violation stats:', error)
+  }
+}
+
+const loadComplaintStats = async () => {
+  if (!auth.currentUser || !projectStore.selectedProject) return
+  
+  try {
+    const userComplaints = await complaintService.getComplaints(projectStore.selectedProject.id)
+    
+    // Filter complaints for current user
+    const myComplaints = userComplaints.filter(complaint => complaint.userId === auth.currentUser.uid)
+    
+    const stats = myComplaints.reduce((acc, complaint) => {
+      acc.total++
+      if (complaint.status === 'Open') acc.open++
+      else if (complaint.status === 'Resolved') acc.resolved++
+      else if (complaint.status === 'Closed') acc.closed++
+      return acc
+    }, { total: 0, open: 0, resolved: 0, closed: 0 })
+    
+    complaintStats.value = stats
+  } catch (error) {
+    console.error('Error loading complaint stats:', error)
   }
 }
 
@@ -1604,10 +1711,16 @@ const handleViolationChat = (violation) => {
   router.push(`/violation-chat/${violation.id}`)
 }
 
+const handleComplaintChat = () => {
+  // Navigate to complaints page
+  router.push('/complaints')
+}
+
 // Load profile on component mount
 onMounted(() => {
   loadProfile()
   loadViolationStats()
+  loadComplaintStats()
 })
 </script>
 
@@ -3892,6 +4005,152 @@ input:checked + .toggle-slider:before {
   }
   
   .no-violations-icon {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+/* Complaints Styles */
+.complaints-icon {
+  background: #dbeafe;
+  color: #3b82f6;
+}
+
+.complaints-container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.complaints-summary {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.complaints-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 16px;
+}
+
+.complaints-btn {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.complaints-btn:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+.complaints-btn-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.complaints-btn-icon {
+  width: 48px;
+  height: 48px;
+  background: #dbeafe;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.complaints-btn-text h4 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.complaints-btn-text p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.complaints-btn-arrow {
+  color: #9ca3af;
+  transition: transform 0.2s ease;
+}
+
+.complaints-btn:hover .complaints-btn-arrow {
+  transform: translateX(4px);
+}
+
+.no-complaints {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+  gap: 16px;
+}
+
+.no-complaints-icon {
+  width: 64px;
+  height: 64px;
+  background: #f0fdf4;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #16a34a;
+}
+
+.no-complaints h4 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.no-complaints p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+/* Mobile Optimizations for Complaints */
+@media (max-width: 480px) {
+  .complaints-stats {
+    gap: 12px;
+  }
+  
+  .complaints-btn {
+    padding: 12px;
+  }
+  
+  .complaints-btn-content {
+    gap: 12px;
+  }
+  
+  .complaints-btn-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .no-complaints {
+    padding: 30px 16px;
+  }
+  
+  .no-complaints-icon {
     width: 56px;
     height: 56px;
   }

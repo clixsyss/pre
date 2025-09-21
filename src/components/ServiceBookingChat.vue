@@ -389,7 +389,7 @@ const formatMessageTime = (timestamp) => {
 .service-booking-chat {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 150px - 60px); /* Full height minus header and bottom nav */
+  height: calc(100vh - 150px - 0px); /* Full height minus header and bottom nav */
   background: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   position: fixed;
@@ -908,7 +908,7 @@ const formatMessageTime = (timestamp) => {
 /* Responsive Design */
 @media (max-width: 768px) {
   .service-booking-chat {
-    bottom: 74px;
+    bottom: 72px;
   }
   
   .chat-header {
