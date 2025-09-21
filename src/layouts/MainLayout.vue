@@ -1001,8 +1001,6 @@ onMounted(async () => {
     padding: 10px 12px;
   }
   
-  /* Removed main-content padding adjustment since we removed the main padding */
-  
   .bottom-navigation {
     padding: 10px 12px 20px;
   }
@@ -1228,7 +1226,7 @@ onMounted(async () => {
   
   .main-content {
     padding: 16px;
-    padding-top: 70px; /* Adjust for smallest header */
+    padding-top: 90px; /* Adjust for smallest header */
   }
   
   .logo-image {
