@@ -3,13 +3,8 @@
     <!-- Header (Black)  padding top-->
     <header class="app-header" style="padding: 20px;">
       <div class="header-content">
-        <div class="logo-section">
-          <div class="logo">
-            <img src="../assets/logo.png" alt="PRE Logo" class="logo-image" />
-          </div>
-        </div>
-        
-        <div class="header-right">
+        <!-- Project Selection Section -->
+        <div class="header-left">
           <!-- Loading State -->
           <div v-if="projectStore.loading && !currentProject" class="loading-projects">
             <div class="loading-dots">
@@ -32,7 +27,6 @@
           
           <!-- Current Project Display -->
           <div v-else-if="currentProject" class="current-project">
-            <span class="project-label">Project:</span>
             <span class="project-name">{{ currentProject.name }}</span>
             <span v-if="currentProject.userUnit" class="project-unit">Unit: {{ currentProject.userUnit }}</span>
             <button @click="showProjectSwitcher = true" class="change-project-btn" title="Switch Project">
@@ -41,6 +35,65 @@
               </svg>
             </button>
           </div>
+        </div>
+        
+        <!-- Logo Section (Center) -->
+        <div class="header-center">
+          <div class="logo">
+            <img src="../assets/logo.png" alt="PRE Logo" class="logo-image" />
+          </div>
+        </div>
+        
+        <!-- Gate Access Section (Right) -->
+        <div class="header-right">
+          <router-link to="/access" class="gate-access-btn" title="Gate Access">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- QR Code outer border -->
+              <rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="1.5" fill="none"/>
+              
+              <!-- Top-left finder pattern -->
+              <rect x="4" y="4" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none"/>
+              <rect x="5" y="5" width="4" height="4" fill="currentColor"/>
+              <rect x="6" y="6" width="2" height="2" fill="white"/>
+              
+              <!-- Top-right finder pattern -->
+              <rect x="14" y="4" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none"/>
+              <rect x="15" y="5" width="4" height="4" fill="currentColor"/>
+              <rect x="16" y="6" width="2" height="2" fill="white"/>
+              
+              <!-- Bottom-left finder pattern -->
+              <rect x="4" y="14" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none"/>
+              <rect x="5" y="15" width="4" height="4" fill="currentColor"/>
+              <rect x="6" y="16" width="2" height="2" fill="white"/>
+              
+              <!-- Data pattern (random-looking squares) -->
+              <rect x="11" y="5" width="1" height="1" fill="currentColor"/>
+              <rect x="12" y="6" width="1" height="1" fill="currentColor"/>
+              <rect x="11" y="7" width="1" height="1" fill="currentColor"/>
+              <rect x="13" y="7" width="1" height="1" fill="currentColor"/>
+              <rect x="5" y="11" width="1" height="1" fill="currentColor"/>
+              <rect x="7" y="11" width="1" height="1" fill="currentColor"/>
+              <rect x="9" y="11" width="1" height="1" fill="currentColor"/>
+              <rect x="6" y="12" width="1" height="1" fill="currentColor"/>
+              <rect x="8" y="12" width="1" height="1" fill="currentColor"/>
+              <rect x="11" y="12" width="1" height="1" fill="currentColor"/>
+              <rect x="13" y="12" width="1" height="1" fill="currentColor"/>
+              <rect x="15" y="11" width="1" height="1" fill="currentColor"/>
+              <rect x="17" y="11" width="1" height="1" fill="currentColor"/>
+              <rect x="19" y="11" width="1" height="1" fill="currentColor"/>
+              <rect x="16" y="12" width="1" height="1" fill="currentColor"/>
+              <rect x="18" y="12" width="1" height="1" fill="currentColor"/>
+              <rect x="11" y="15" width="1" height="1" fill="currentColor"/>
+              <rect x="13" y="15" width="1" height="1" fill="currentColor"/>
+              <rect x="15" y="15" width="1" height="1" fill="currentColor"/>
+              <rect x="17" y="15" width="1" height="1" fill="currentColor"/>
+              <rect x="19" y="15" width="1" height="1" fill="currentColor"/>
+              <rect x="12" y="16" width="1" height="1" fill="currentColor"/>
+              <rect x="14" y="16" width="1" height="1" fill="currentColor"/>
+              <rect x="18" y="16" width="1" height="1" fill="currentColor"/>
+            </svg>
+            <span class="gate-access-text">Access</span>
+          </router-link>
         </div>
       </div>
     </header>
@@ -115,23 +168,6 @@
         <span class="nav-label">Home</span>
       </router-link>
 
-      <router-link to="/access" class="nav-item" :class="{ active: isActiveTab('access') }">
-        <div class="nav-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 3H7V7H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M3 17H7V21H3V17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M17 3H21V7H17V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M17 17H21V21H17V17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M3 9H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M17 9H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M9 3V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M9 17V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M9 9H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M9 15H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <span class="nav-label">Access</span>
-      </router-link>
 
       <router-link to="/services" class="nav-item" :class="{ active: isActiveTab('services') }">
         <div class="nav-icon">
@@ -247,9 +283,6 @@ const isActiveTab = (tabName) => {
     case 'home':
       return currentPath === '/home'
     
-    case 'access':
-      return currentPath === '/access'
-    
     case 'profile':
       return currentPath === '/profile'
     
@@ -362,19 +395,39 @@ onMounted(async () => {
   color: #F6F6F6;
   padding: 16px 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
 }
 
 .header-content {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: 100%;
+  gap: 16px;
+}
+
+.header-left {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
+  justify-content: flex-start;
   min-width: 0; /* Allow flex item to shrink */
 }
 
-.logo-section {
+.header-center {
   display: flex;
   align-items: center;
+  justify-content: center;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
 }
 
 .logo {
@@ -388,10 +441,42 @@ onMounted(async () => {
   object-fit: contain;
 }
 
-.header-right {
+/* Gate Access Button */
+.gate-access-btn {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
+  background: rgba(175, 30, 35, 0.1);
+  border: 2px solid rgba(175, 30, 35, 0.3);
+  border-radius: 12px;
+  padding: 10px 16px;
+  text-decoration: none;
+  color: #F6F6F6;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+}
+
+.gate-access-btn:hover {
+  background: rgba(175, 30, 35, 0.2);
+  border-color: rgba(175, 30, 35, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
+}
+
+.gate-access-btn.router-link-active {
+  background: rgba(175, 30, 35, 0.3);
+  border-color: #AF1E23;
+  box-shadow: 0 0 0 2px rgba(175, 30, 35, 0.2);
+}
+
+.gate-access-btn svg {
+  flex-shrink: 0;
+}
+
+.gate-access-text {
+  white-space: nowrap;
 }
 
 /* Loading State */
@@ -515,6 +600,7 @@ onMounted(async () => {
 .main-content {
   flex: 1;
   padding: 20px;
+  padding-top: 100px; /* Account for fixed header */
   width: 100%;
   box-sizing: border-box;
   overflow-x: hidden; /* Prevent horizontal overflow */
@@ -823,13 +909,61 @@ onMounted(async () => {
   }
   
   .header-content {
-    flex-direction: column;
-    gap: 16px;
+    gap: 8px;
   }
   
-  .header-left, .header-center, .header-right {
-    width: 100%;
+  .main-content {
+    padding-top: 80px; /* Adjust for smaller header */
+  }
+  
+  .header-left {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .header-center {
+    flex: 0 0 auto;
+  }
+  
+  .header-right {
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+  
+  .gate-access-btn {
+    padding: 8px;
+    font-size: 0.8rem;
+    border-radius: 10px;
+    min-width: 44px;
     justify-content: center;
+  }
+  
+  .gate-access-text {
+    display: none; /* Hide text on mobile, show only icon */
+  }
+  
+  .logo-image {
+    height: 32px;
+  }
+  
+  /* Make project info more compact on mobile */
+  .current-project {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+  
+  .project-name {
+    max-width: 100px;
+    font-size: 0.8rem;
+  }
+  
+  .project-unit {
+    max-width: 70px;
+    font-size: 0.7rem;
+  }
+  
+  .project-label {
+    font-size: 0.7rem;
   }
   
   /* Removed main-content padding adjustment since we removed the main padding */
@@ -1094,19 +1228,44 @@ onMounted(async () => {
 /* Very narrow screens (like mobile simulation) */
 @media (max-width: 480px) {
   .app-header {
-    padding: 12px 16px;
+    padding: 10px 12px;
+  }
+  
+  .header-content {
+    gap: 6px;
   }
   
   .main-content {
     padding: 16px;
+    padding-top: 70px; /* Adjust for smallest header */
+  }
+  
+  .logo-image {
+    height: 28px;
+  }
+  
+  .gate-access-btn {
+    padding: 6px;
+    min-width: 40px;
   }
   
   .project-name {
-    max-width: 80px;
+    max-width: 70px;
+    font-size: 0.75rem;
   }
   
   .project-unit {
-    max-width: 60px;
+    max-width: 50px;
+    font-size: 0.65rem;
+  }
+  
+  .project-label {
+    font-size: 0.65rem;
+  }
+  
+  .current-project {
+    padding: 4px 8px;
+    gap: 4px;
   }
   
   .bottom-navigation {

@@ -28,7 +28,6 @@ export function useSwipeNavigation() {
   // Define the main navigation tabs in order
   const mainTabs = [
     { path: '/home', name: 'Home' },
-    { path: '/access', name: 'Access' },
     { path: '/services', name: 'Services' },
     { path: '/facilities', name: 'Facilities' },
     { path: '/complaints', name: 'Complaints' },

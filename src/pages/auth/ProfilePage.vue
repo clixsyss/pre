@@ -11,23 +11,23 @@
       <!-- Hero Section -->
       <div class="hero-section">
         <div class="hero-content">
-          <div class="profile-avatar">
-            <div class="avatar-initial">
-              {{ getInitials(userProfile.firstName, userProfile.lastName) }}
-            </div>
+        <div class="profile-avatar">
+          <div class="avatar-initial">
+            {{ getInitials(userProfile.firstName, userProfile.lastName) }}
+          </div>
             <div class="avatar-status" :class="getStatusClass(userProfile.registrationStatus)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-            </div>
+        </div>
           </div>
           <div class="hero-text">
             <h1 class="hero-title">{{ getFullName(userProfile.firstName, userProfile.lastName) }}</h1>
             <p class="hero-subtitle">{{ userProfile.email }}</p>
             <div class="profile-badges">
-              <span class="status-badge" :class="getStatusClass(userProfile.registrationStatus)">
-                {{ formatStatus(userProfile.registrationStatus) }}
-              </span>
+          <span class="status-badge" :class="getStatusClass(userProfile.registrationStatus)">
+            {{ formatStatus(userProfile.registrationStatus) }}
+          </span>
             </div>
           </div>
         </div>
@@ -42,10 +42,10 @@
         >
           <div class="accordion-title">
             <div class="section-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+          </svg>
             </div>
             <div class="section-text">
               <h3>Personal Information</h3>
@@ -59,18 +59,18 @@
           </div>
         </button>
         <div class="accordion-content" :class="{ active: activeAccordion === 'personal' }">
-          <div class="info-grid">
+        <div class="info-grid">
             <div class="info-card">
               <div class="info-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-              </div>
+          </div>
               <div class="info-content">
                 <label>Full Name</label>
                 <span>{{ getFullName(userProfile.firstName, userProfile.lastName) || 'Not provided' }}</span>
-              </div>
+          </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
@@ -90,9 +90,9 @@
                 </svg>
               </div>
               <div class="info-content">
-                <label>Mobile</label>
-                <span>{{ userProfile.mobile || 'Not provided' }}</span>
-              </div>
+            <label>Mobile</label>
+            <span>{{ userProfile.mobile || 'Not provided' }}</span>
+          </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
@@ -104,9 +104,9 @@
                 </svg>
               </div>
               <div class="info-content">
-                <label>Date of Birth</label>
-                <span>{{ formatDate(userProfile.dateOfBirth) || 'Not provided' }}</span>
-              </div>
+            <label>Date of Birth</label>
+            <span>{{ formatDate(userProfile.dateOfBirth) || 'Not provided' }}</span>
+          </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
@@ -118,9 +118,9 @@
                 </svg>
               </div>
               <div class="info-content">
-                <label>Gender</label>
-                <span>{{ formatGender(userProfile.gender) || 'Not provided' }}</span>
-              </div>
+            <label>Gender</label>
+            <span>{{ formatGender(userProfile.gender) || 'Not provided' }}</span>
+          </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
@@ -132,9 +132,84 @@
                 </svg>
               </div>
               <div class="info-content">
-                <label>National ID</label>
-                <span>{{ userProfile.nationalId || 'Not provided' }}</span>
+            <label>National ID</label>
+            <span>{{ userProfile.nationalId || 'Not provided' }}</span>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Violations & Fines Accordion -->
+      <div class="accordion-section">
+        <button 
+          @click="toggleAccordion('violations')" 
+          class="accordion-header"
+          :class="{ active: activeAccordion === 'violations' }"
+        >
+          <div class="accordion-title">
+            <div class="section-icon violations-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            </div>
+            <div class="section-text">
+              <h3>Violations & Fines</h3>
+              <p>View your violation history and fines</p>
+            </div>
+          </div>
+          <div class="accordion-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </button>
+        <div class="accordion-content" :class="{ active: activeAccordion === 'violations' }">
+          <div class="violations-container">
+            <div class="violations-summary">
+              <div class="violations-stats">
+                <div class="stat-item">
+                  <span class="stat-number">{{ violationStats.total }}</span>
+                  <span class="stat-label">Total</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-number">{{ violationStats.pending }}</span>
+                  <span class="stat-label">Pending</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-number">{{ violationStats.paid }}</span>
+                  <span class="stat-label">Paid</span>
+                </div>
+              </div>
+            </div>
+
+            <button @click="showViolationsModal = true" class="violations-btn">
+              <div class="violations-btn-content">
+                <div class="violations-btn-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="violations-btn-text">
+                  <h4>View All Violations</h4>
+                  <p>See detailed information and chat with admin</p>
+                </div>
+              </div>
+              <div class="violations-btn-arrow">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </button>
+
+            <div v-if="violationStats.total === 0" class="no-violations">
+              <div class="no-violations-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <h4>No Violations</h4>
+              <p>You have a clean record with no violations or fines.</p>
             </div>
           </div>
         </div>
@@ -168,13 +243,13 @@
         <div class="accordion-content" :class="{ active: activeAccordion === 'projects' }">
           <!-- Join Project Button -->
           <div class="join-project-section">
-            <button @click="showAddProjectModal = true" class="add-project-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+          <button @click="showAddProjectModal = true" class="add-project-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
               Add aUnit
-            </button>
-          </div>
+          </button>
+        </div>
         
       <!-- Unified Project Management -->
       <div v-if="userProjects.length > 0" class="unified-projects-section">
@@ -288,16 +363,16 @@
         </div>
       </div>
       
-          <!-- No Projects State -->
-          <div v-else class="no-projects">
-            <div class="no-projects-icon">🏠</div>
-            <p>You don't have any projects yet.</p>
-            <button @click="showAddProjectModal = true" class="add-first-project-btn">
-              Join Your First Project
-            </button>
+      <!-- No Projects State -->
+      <div v-else class="no-projects">
+        <div class="no-projects-icon">🏠</div>
+        <p>You don't have any projects yet.</p>
+        <button @click="showAddProjectModal = true" class="add-first-project-btn">
+          Join Your First Project
+        </button>
           </div>
-        </div>
       </div>
+    </div>
 
       <!-- Account Information Accordion -->
       <div class="accordion-section">
@@ -308,11 +383,11 @@
         >
           <div class="accordion-title">
             <div class="section-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+          </svg>
             </div>
             <div class="section-text">
               <h3>Account Information</h3>
@@ -326,7 +401,7 @@
           </div>
         </button>
         <div class="accordion-content" :class="{ active: activeAccordion === 'account' }">
-          <div class="info-grid">
+        <div class="info-grid">
             <div class="info-card">
               <div class="info-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -335,11 +410,11 @@
                 </svg>
               </div>
               <div class="info-content">
-                <label>Email Verified</label>
-                <span class="verification-status" :class="{ verified: userProfile.emailVerified, unverified: !userProfile.emailVerified }">
+            <label>Email Verified</label>
+            <span class="verification-status" :class="{ verified: userProfile.emailVerified, unverified: !userProfile.emailVerified }">
                   {{ userProfile.emailVerified ? 'Verified' : 'Not Verified' }}
-                </span>
-              </div>
+            </span>
+          </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
@@ -352,8 +427,8 @@
               </div>
               <div class="info-content">
                 <label>Member Since</label>
-                <span>{{ formatDate(userProfile.createdAt) || 'Not available' }}</span>
-              </div>
+            <span>{{ formatDate(userProfile.createdAt) || 'Not available' }}</span>
+          </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
@@ -363,9 +438,9 @@
                 </svg>
               </div>
               <div class="info-content">
-                <label>Last Updated</label>
-                <span>{{ formatDate(userProfile.updatedAt) || 'Not available' }}</span>
-              </div>
+            <label>Last Updated</label>
+            <span>{{ formatDate(userProfile.updatedAt) || 'Not available' }}</span>
+          </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
@@ -375,10 +450,10 @@
                 </svg>
               </div>
               <div class="info-content">
-                <label>Profile Complete</label>
-                <span class="completion-status" :class="{ complete: userProfile.isProfileComplete, incomplete: !userProfile.isProfileComplete }">
+            <label>Profile Complete</label>
+            <span class="completion-status" :class="{ complete: userProfile.isProfileComplete, incomplete: !userProfile.isProfileComplete }">
                   {{ userProfile.isProfileComplete ? 'Complete' : 'Incomplete' }}
-                </span>
+            </span>
               </div>
             </div>
           </div>
@@ -394,11 +469,11 @@
         >
           <div class="accordion-title">
             <div class="section-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+          </svg>
             </div>
             <div class="section-text">
               <h3>Smart Home Settings</h3>
@@ -412,7 +487,7 @@
           </div>
         </button>
         <div class="accordion-content" :class="{ active: activeAccordion === 'smartHome' }">
-          <div class="smart-home-settings">
+        <div class="smart-home-settings">
             <div class="settings-card">
               <div class="settings-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -420,16 +495,16 @@
                   <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-              </div>
+          </div>
               <div class="settings-content">
                 <h4>Device Management</h4>
                 <p>Choose which devices appear on your home page dashboard</p>
-                <button @click="openDeviceManagementModal" class="manage-devices-btn">
+          <button @click="openDeviceManagementModal" class="manage-devices-btn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
                   Manage Devices
                 </button>
               </div>
@@ -467,18 +542,18 @@
         <div class="compact-actions">
           <button @click="editProfile" class="compact-btn primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Edit Profile
-          </button>
-          
+            <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Edit Profile
+        </button>
+        
           <button @click="showLogoutConfirm = true" class="compact-btn secondary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Logout
-          </button>
+            <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Logout
+        </button>
         </div>
       </div>
     </div>
@@ -508,6 +583,14 @@
       :userProfile="userProfile"
       @close="showEditProfileDialog = false"
       @saved="handleProfileSaved"
+    />
+
+    <!-- Violations Modal -->
+    <ViolationsModal
+      :is-open="showViolationsModal"
+      :user-id="auth.currentUser?.uid || ''"
+      @close="showViolationsModal = false"
+      @start-chat="handleViolationChat"
     />
 
     <!-- Logout Confirmation Modal -->
@@ -844,8 +927,10 @@ import { useProjectStore } from '../../stores/projectStore'
 import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
 import ProjectGuidelinesDialog from '../../components/ProjectGuidelinesDialog.vue'
 import EditProfileDialog from '../../components/EditProfileDialog.vue'
+import ViolationsModal from '../../components/ViolationsModal.vue'
 import { collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { db } from '../../boot/firebase'
+import { getUserFines } from '../../services/finesService'
 
 // Component name for ESLint
 defineOptions({
@@ -902,6 +987,16 @@ const disconnectingProject = ref(null)
 
 // Accordion state
 const activeAccordion = ref(null) // Default to all accordions closed
+
+// Violations state
+const showViolationsModal = ref(false)
+const violationStats = ref({
+  total: 0,
+  pending: 0,
+  paid: 0,
+  disputed: 0,
+  cancelled: 0
+})
 
 // Computed properties
 const userProjects = computed(() => projectStore.userProjects)
@@ -963,6 +1058,27 @@ const loadProfile = async () => {
     error.value = 'Failed to load profile. Please try again.'
   } finally {
     loading.value = false
+  }
+}
+
+const loadViolationStats = async () => {
+  if (!auth.currentUser || !projectStore.selectedProject) return
+  
+  try {
+    const userViolations = await getUserFines(projectStore.selectedProject.id, auth.currentUser.uid)
+    
+    const stats = userViolations.reduce((acc, violation) => {
+      acc.total++
+      if (violation.status === 'issued') acc.pending++
+      else if (violation.status === 'paid') acc.paid++
+      else if (violation.status === 'disputed') acc.disputed++
+      else if (violation.status === 'cancelled') acc.cancelled++
+      return acc
+    }, { total: 0, pending: 0, paid: 0, disputed: 0, cancelled: 0 })
+    
+    violationStats.value = stats
+  } catch (error) {
+    console.error('Error loading violation stats:', error)
   }
 }
 
@@ -1483,9 +1599,15 @@ const saveDeviceSettings = async () => {
   }
 }
 
+const handleViolationChat = (violation) => {
+  // Navigate to violation chat - similar to complaints/services
+  router.push(`/violation-chat/${violation.id}`)
+}
+
 // Load profile on component mount
 onMounted(() => {
   loadProfile()
+  loadViolationStats()
 })
 </script>
 
@@ -2122,7 +2244,7 @@ onMounted(() => {
   }
   
   .hero-content {
-    flex-direction: column;
+  flex-direction: column;
     text-align: center;
     gap: 16px;
   }
@@ -2137,7 +2259,7 @@ onMounted(() => {
   
   .compact-actions {
     flex-direction: column;
-    gap: 8px;
+  gap: 8px;
   }
   
   .compact-btn {
@@ -2162,7 +2284,7 @@ onMounted(() => {
   
   .accordion-actions {
     flex-direction: column;
-    gap: 8px;
+  gap: 8px;
     align-items: flex-end;
   }
   
@@ -3602,5 +3724,176 @@ input:checked + .toggle-slider:before {
 
 .device-management-modal .spinning {
   animation: spin 1s linear infinite;
+}
+
+/* Violations Styles */
+.violations-icon {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.violations-container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.violations-summary {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.violations-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 16px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.violations-btn {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.violations-btn:hover {
+  border-color: #AF1E23;
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.1);
+}
+
+.violations-btn-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.violations-btn-icon {
+  width: 48px;
+  height: 48px;
+  background: #fef3c7;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+.violations-btn-text h4 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.violations-btn-text p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.violations-btn-arrow {
+  color: #9ca3af;
+  transition: transform 0.2s ease;
+}
+
+.violations-btn:hover .violations-btn-arrow {
+  transform: translateX(4px);
+}
+
+.no-violations {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+  gap: 16px;
+}
+
+.no-violations-icon {
+  width: 64px;
+  height: 64px;
+  background: #f0fdf4;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #16a34a;
+}
+
+.no-violations h4 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.no-violations p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+/* Mobile Optimizations for Violations */
+@media (max-width: 480px) {
+  .violations-stats {
+    gap: 12px;
+  }
+  
+  .stat-number {
+    font-size: 1.25rem;
+  }
+  
+  .violations-btn {
+    padding: 12px;
+  }
+  
+  .violations-btn-content {
+    gap: 12px;
+  }
+  
+  .violations-btn-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .no-violations {
+    padding: 30px 16px;
+  }
+  
+  .no-violations-icon {
+    width: 56px;
+    height: 56px;
+  }
 }
 </style>
