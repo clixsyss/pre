@@ -3,6 +3,7 @@ import { auth, db } from '../boot/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { validateProfileCompletion, getNextProfileStep } from '../utils/profileValidation'
+import { canUserAccessRoute, checkUserSuspension } from '../services/suspensionService'
 
 // Import pages
 import Onboarding from '../pages/unauth/Onboarding.vue'
@@ -342,6 +343,34 @@ router.beforeEach(async (to, from, next) => {
               }
             } else {
               console.log('No user document found in Firestore')
+            }
+            
+            // Check if user is suspended and can access this route
+            try {
+              const canAccess = await canUserAccessRoute(user.uid, to.path)
+              if (!canAccess) {
+                console.log('User is suspended and cannot access this route:', to.path)
+                
+                // Check suspension details to show proper message
+                const suspensionStatus = await checkUserSuspension(user.uid)
+                if (suspensionStatus.isSuspended) {
+                  // Emit event to show suspension message
+                  window.dispatchEvent(new CustomEvent('showSuspensionMessage', {
+                    detail: {
+                      suspensionDetails: suspensionStatus.suspensionDetails,
+                      attemptedRoute: to.path
+                    }
+                  }))
+                }
+                
+                // Redirect to home page for suspended users
+                next('/home')
+                resolve()
+                return
+              }
+            } catch (error) {
+              console.error('Error checking suspension status:', error)
+              // On error, allow access but log the issue
             }
             
             // Profile complete or no profile data - allow access

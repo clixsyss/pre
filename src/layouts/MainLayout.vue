@@ -213,18 +213,28 @@
       @close="closeViolationNotification"
       @view-violations="viewViolations"
     />
+
+    <!-- Suspension Message -->
+    <SuspensionMessage
+      v-if="showSuspensionMessage"
+      :show="showSuspensionMessage"
+      :message="suspensionMessage"
+      @dismiss="handleSuspensionDismiss"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { useSmartMirrorStore } from '../stores/smartMirrorStore'
 import { useSwipeNavigation } from '../composables/useSwipeNavigation'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import ViolationNotificationPopup from '../components/ViolationNotificationPopup.vue'
+import SuspensionMessage from '../components/SuspensionMessage.vue'
 import { markViolationsAsShown, hasActiveViolations, clearOldNotificationHistory } from '../services/violationNotificationService'
+import { checkUserSuspension, getSuspensionMessage } from '../services/suspensionService'
 
 // Component name for ESLint
 defineOptions({
@@ -246,6 +256,11 @@ const showProjectSwitcher = ref(false)
 const showSwipeHint = ref(false)
 const showViolationNotification = ref(false)
 const violationCount = ref(0)
+
+// Suspension state
+const showSuspensionMessage = ref(false)
+const suspensionMessage = ref(null)
+const isUserSuspended = ref(false)
 
 // Computed properties
 const currentProject = computed(() => projectStore.selectedProject)
@@ -313,6 +328,34 @@ const closeViolationNotification = () => {
 const viewViolations = () => {
   router.push('/profile')
 }
+
+// Suspension check methods
+const checkUserSuspensionStatus = async () => {
+  const auth = getAuth()
+  if (!auth.currentUser) return
+  
+  try {
+    const suspensionStatus = await checkUserSuspension(auth.currentUser.uid)
+    
+    if (suspensionStatus.isSuspended) {
+      isUserSuspended.value = true
+      suspensionMessage.value = getSuspensionMessage(suspensionStatus.suspensionDetails)
+      showSuspensionMessage.value = true
+    } else {
+      isUserSuspended.value = false
+      showSuspensionMessage.value = false
+      suspensionMessage.value = null
+    }
+  } catch (error) {
+    console.error('Error checking user suspension:', error)
+  }
+}
+
+const handleSuspensionDismiss = () => {
+  showSuspensionMessage.value = false
+}
+
+// Removed unused canAccessCurrentRoute function
 
 // Reset violation notification state (clear history so notifications show again)
 const resetViolationNotifications = () => {
@@ -390,10 +433,27 @@ watch(
       setTimeout(() => {
         checkForViolations()
       }, 500)
+      
+      // Check user suspension status when switching projects
+      setTimeout(() => {
+        checkUserSuspensionStatus()
+      }, 1000)
     }
   },
   { deep: true }
 )
+
+// Listen for suspension message events from router
+const handleSuspensionMessage = (event) => {
+  const { suspensionDetails, attemptedRoute } = event.detail
+  console.log('Suspension message triggered for route:', attemptedRoute)
+  
+  if (suspensionDetails) {
+    isUserSuspended.value = true
+    suspensionMessage.value = getSuspensionMessage(suspensionDetails)
+    showSuspensionMessage.value = true
+  }
+}
 
 // Load user projects when component mounts
 onMounted(async () => {
@@ -414,8 +474,15 @@ onMounted(async () => {
           checkForViolations()
         }, 1000) // Small delay to ensure everything is loaded
       }
+      
+      // Check user suspension status
+      setTimeout(() => {
+        checkUserSuspensionStatus()
+      }, 1500) // Check after violations check
     }
   })
+  
+  window.addEventListener('showSuspensionMessage', handleSuspensionMessage)
   
   // Add dead zones for areas where swipe should be disabled
   // Bottom navigation area (prevent accidental swipes when tapping nav items)
@@ -437,6 +504,11 @@ onMounted(async () => {
   }
   
   return () => unsubscribe()
+})
+
+// Cleanup event listener on unmount
+onUnmounted(() => {
+  window.removeEventListener('showSuspensionMessage', handleSuspensionMessage)
 })
 </script>
 
