@@ -8,8 +8,10 @@
           <p class="hero-subtitle">Get help with any issues or concerns</p>
           <button @click="showNewComplaintModal = true" class="new-complaint-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+              <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
             New Complaint
           </button>
@@ -21,22 +23,28 @@
     <div class="quick-complaints-section">
       <h2 class="section-title">Quick Complaints</h2>
       <div class="quick-options-scroll">
-        <button 
-          v-for="category in complaintStore.complaintCategories" 
-          :key="category.id"
-          @click="startQuickComplaint(category)"
-          class="quick-option-card"
-        >
+        <button v-for="category in complaintStore.complaintCategories" :key="category.id"
+          @click="startQuickComplaint(category)" class="quick-option-card">
           <div class="quick-option-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path v-if="category.icon === 'gate'" d="M3 3H7V7H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path v-if="category.icon === 'volume_off'" d="M11 5L6 9H2V15H6L11 19V5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path v-if="category.icon === 'build'" d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path v-if="category.icon === 'security'" d="M12 22S8 18 8 13V6L12 4L16 6V13C16 18 12 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path v-if="category.icon === 'home'" d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path v-if="category.icon === 'receipt'" d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path v-if="category.icon === 'help'" d="M9.09 9A3 3 0 0 1 12 6C12.5 6 13 6.5 13 7A3 3 0 0 1 9.09 9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path v-if="category.icon === 'help'" d="M12 17H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path v-if="category.icon === 'gate'" d="M3 3H7V7H3V3Z" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" />
+              <path v-if="category.icon === 'volume_off'" d="M11 5L6 9H2V15H6L11 19V5Z" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path v-if="category.icon === 'build'"
+                d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path v-if="category.icon === 'security'" d="M12 22S8 18 8 13V6L12 4L16 6V13C16 18 12 22 12 22Z"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path v-if="category.icon === 'home'"
+                d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path v-if="category.icon === 'receipt'" d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" />
+              <path v-if="category.icon === 'help'" d="M9.09 9A3 3 0 0 1 12 6C12.5 6 13 6.5 13 7A3 3 0 0 1 9.09 9Z"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path v-if="category.icon === 'help'" d="M12 17H12.01" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </div>
           <div class="quick-option-content">
@@ -52,12 +60,8 @@
       <h2 class="section-title">My Complaints</h2>
       <div class="section-header">
         <div class="filter-tabs">
-          <button 
-            v-for="status in statusOptions" 
-            :key="status.id"
-            @click="selectedStatus = status.id"
-            :class="['filter-tab', { active: selectedStatus === status.id }]"
-          >
+          <button v-for="status in statusOptions" :key="status.id" @click="selectedStatus = status.id"
+            :class="['filter-tab', { active: selectedStatus === status.id }]">
             {{ status.name }}
           </button>
         </div>
@@ -73,7 +77,9 @@
       <div v-else-if="filteredComplaints.length === 0" class="empty-state">
         <div class="empty-icon">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path
+              d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
         <h4>No complaints found</h4>
@@ -85,12 +91,8 @@
 
       <!-- Complaints List -->
       <div v-else class="complaints-list">
-        <div 
-          v-for="complaint in filteredComplaints" 
-          :key="complaint.id"
-          @click="openComplaint(complaint)"
-          class="complaint-card"
-        >
+        <div v-for="complaint in filteredComplaints" :key="complaint.id" @click="openComplaint(complaint)"
+          class="complaint-card">
           <div class="complaint-header">
             <div class="complaint-title-section">
               <h4 class="complaint-title">{{ complaint.title }}</h4>
@@ -106,14 +108,16 @@
           <div class="complaint-footer">
             <div class="complaint-time">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
               {{ formatTime(complaint.lastMessageAt) }}
             </div>
             <div class="complaint-arrow">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
             </div>
           </div>
@@ -130,27 +134,18 @@
             <i class="fas fa-times"></i>
           </button>
         </div>
-        
+
         <form @submit.prevent="submitComplaint" class="complaint-form">
           <div class="form-group">
             <label>Title</label>
-            <input 
-              v-model="newComplaint.title" 
-              type="text" 
-              placeholder="Brief description of the issue"
-              required
-            />
+            <input v-model="newComplaint.title" type="text" placeholder="Brief description of the issue" required />
           </div>
 
           <div class="form-group">
             <label>Category</label>
             <select v-model="newComplaint.category" required>
               <option value="">Select a category</option>
-              <option 
-                v-for="category in complaintStore.complaintCategories" 
-                :key="category.id" 
-                :value="category.id"
-              >
+              <option v-for="category in complaintStore.complaintCategories" :key="category.id" :value="category.id">
                 {{ category.name }}
               </option>
             </select>
@@ -159,11 +154,7 @@
           <div class="form-group">
             <label>Priority</label>
             <select v-model="newComplaint.priority">
-              <option 
-                v-for="priority in complaintStore.priorityLevels" 
-                :key="priority.id" 
-                :value="priority.id"
-              >
+              <option v-for="priority in complaintStore.priorityLevels" :key="priority.id" :value="priority.id">
                 {{ priority.name }}
               </option>
             </select>
@@ -171,45 +162,42 @@
 
           <div class="form-group">
             <label>Description</label>
-            <textarea 
-              v-model="newComplaint.initialMessage" 
-              placeholder="Please describe the issue in detail..."
-              rows="4"
-              required
-            ></textarea>
+            <textarea v-model="newComplaint.initialMessage" placeholder="Please describe the issue in detail..."
+              rows="4" required></textarea>
           </div>
 
           <!-- Image/Video Upload -->
           <div class="form-group">
             <label>Attach Image or Video (Optional)</label>
             <div class="file-upload-section">
-              <input 
-                ref="fileInput"
-                type="file" 
-                @change="handleFileSelect"
-                accept="image/*,video/*"
-                class="file-input"
-                id="complaint-file"
-              />
+              <input ref="fileInput" type="file" @change="handleFileSelect" accept="image/*,video/*" class="file-input"
+                id="complaint-file" />
               <label for="complaint-file" class="file-upload-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
                 Choose File
               </label>
               <div v-if="selectedFile" class="file-preview">
                 <div class="file-info">
                   <div class="file-icon">
-                    <svg v-if="isImage" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                      <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
-                      <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
+                    <svg v-if="isImage" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      xmlns="http://www.w3.org/2000/svg">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2" />
+                      <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" />
                     </svg>
-                    <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <polygon points="23 7 16 12 23 17 23 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                    <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      xmlns="http://www.w3.org/2000/svg">
+                      <polygon points="23 7 16 12 23 17 23 7" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
                     </svg>
                   </div>
                   <div class="file-details">
@@ -218,8 +206,10 @@
                   </div>
                   <button type="button" @click="removeFile" class="remove-file-btn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                      <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
                     </svg>
                   </button>
                 </div>
@@ -287,12 +277,12 @@ const statusOptions = [
 // Computed properties
 const filteredComplaints = computed(() => {
   let complaints = complaintStore.userComplaints;
-  
+
   if (selectedStatus.value !== 'all') {
     complaints = complaints.filter(complaint => complaint.status === selectedStatus.value);
   }
-  
-  return complaints.sort((a, b) => 
+
+  return complaints.sort((a, b) =>
     new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
   );
 });
@@ -324,27 +314,27 @@ const closeModal = () => {
 
 const submitComplaint = async () => {
   if (complaintStore.loading) return; // Prevent multiple submissions
-  
+
   try {
     let imageUrl = null;
     let imageFileName = null;
-    
+
     // Upload file if selected
     if (selectedFile.value) {
       const uploadResult = await complaintStore.uploadImage(selectedFile.value, 'complaints');
       imageUrl = uploadResult.url;
       imageFileName = uploadResult.fileName;
     }
-    
+
     // Create complaint with file data
     const complaintData = {
       ...newComplaint.value,
       imageUrl,
       imageFileName
     };
-    
+
     await complaintStore.createComplaint(complaintData);
-    
+
     // Reset form
     newComplaint.value = {
       title: '',
@@ -375,7 +365,7 @@ const formatTime = (timestamp) => {
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   const now = new Date();
   const diffInHours = (now - date) / (1000 * 60 * 60);
-  
+
   if (diffInHours < 1) return 'Just now';
   if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
   if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
@@ -391,9 +381,9 @@ const handleFileSelect = (event) => {
       notificationStore.showError('File size must be less than 10MB');
       return;
     }
-    
+
     selectedFile.value = file;
-    
+
     // Create preview URL for images
     if (file.type.startsWith('image/')) {
       filePreviewUrl.value = URL.createObjectURL(file);
@@ -424,7 +414,7 @@ const formatFileSize = (bytes) => {
 onMounted(async () => {
   try {
     await complaintStore.fetchComplaints();
-    
+
     // Subscribe to real-time updates
     unsubscribe.value = complaintStore.subscribeToComplaints();
   } catch (error) {
@@ -443,7 +433,6 @@ onUnmounted(() => {
 .complaints-page {
   background: #f8fafc;
   margin: 0 auto;
-  padding: 16px;
   box-sizing: border-box;
   overflow-x: hidden;
 }
@@ -640,7 +629,8 @@ onUnmounted(() => {
 }
 
 /* Loading and Empty States */
-.loading-state, .empty-state {
+.loading-state,
+.empty-state {
   text-align: center;
   padding: 2rem 1rem;
   color: #6b7280;
@@ -657,8 +647,13 @@ onUnmounted(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .empty-icon {
@@ -828,7 +823,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -913,7 +908,8 @@ onUnmounted(() => {
   justify-content: flex-end;
 }
 
-.btn-primary, .btn-secondary {
+.btn-primary,
+.btn-secondary {
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   font-weight: 500;
@@ -1057,50 +1053,50 @@ onUnmounted(() => {
 /* Responsive Design */
 @media (min-width: 768px) {
   .complaints-page {
-    padding: 24px;
+    padding: 0px;
   }
-  
+
   .hero-section {
     margin-bottom: 24px;
   }
-  
+
   .hero-title {
     font-size: 2rem;
   }
-  
+
   .quick-complaints-section {
     margin-bottom: 24px;
   }
-  
+
   .quick-options-scroll {
     gap: 14px;
   }
-  
+
   .quick-option-card {
     min-width: 140px;
     padding: 16px;
   }
-  
+
   .quick-option-content h3 {
     font-size: 0.9rem;
   }
-  
+
   .quick-option-content p {
     font-size: 0.75rem;
   }
-  
+
   .my-complaints-section {
     margin-bottom: 24px;
   }
-  
+
   .complaints-list {
     gap: 12px;
   }
-  
+
   .complaint-card {
     padding: 18px;
   }
-  
+
   .complaint-title {
     font-size: 1rem;
   }
@@ -1108,37 +1104,37 @@ onUnmounted(() => {
 
 @media (min-width: 1024px) {
   .complaints-page {
-    padding: 32px;
+    padding: 0px;
     max-width: 1200px;
     margin: 0 auto;
   }
-  
+
   .hero-title {
     font-size: 2.25rem;
   }
-  
+
   .quick-options-scroll {
     gap: 16px;
   }
-  
+
   .quick-option-card {
     min-width: 160px;
     padding: 18px;
   }
-  
+
   .quick-option-icon {
     width: 40px;
     height: 40px;
   }
-  
+
   .quick-option-content h3 {
     font-size: 0.95rem;
   }
-  
+
   .complaint-card {
     padding: 20px;
   }
-  
+
   .complaint-title {
     font-size: 1.05rem;
   }
@@ -1148,7 +1144,7 @@ onUnmounted(() => {
   .filter-tabs {
     gap: 0.25rem;
   }
-  
+
   .filter-tab {
     padding: 0.375rem 0.75rem;
     font-size: 0.8rem;

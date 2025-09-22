@@ -204,6 +204,15 @@
         <span class="nav-label">Profile</span>
       </router-link>
     </nav>
+
+    <!-- Violation Notification Popup -->
+    <ViolationNotificationPopup
+      v-if="showViolationNotification"
+      :is-visible="showViolationNotification"
+      :violation-count="violationCount"
+      @close="closeViolationNotification"
+      @view-violations="viewViolations"
+    />
   </div>
 </template>
 
@@ -214,6 +223,8 @@ import { useProjectStore } from '../stores/projectStore'
 import { useSmartMirrorStore } from '../stores/smartMirrorStore'
 import { useSwipeNavigation } from '../composables/useSwipeNavigation'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import ViolationNotificationPopup from '../components/ViolationNotificationPopup.vue'
+import { checkForNewViolations, markViolationsAsShown } from '../services/violationNotificationService'
 
 // Component name for ESLint
 defineOptions({
@@ -233,6 +244,8 @@ const {
 // Reactive state
 const showProjectSwitcher = ref(false)
 const showSwipeHint = ref(false)
+const showViolationNotification = ref(false)
+const violationCount = ref(0)
 
 // Computed properties
 const currentProject = computed(() => projectStore.selectedProject)
@@ -267,6 +280,35 @@ const goToProjectSelection = () => {
   router.push('/profile')
 }
 
+// Violation notification methods
+const checkForViolations = async () => {
+  if (!currentProject.value || !getAuth().currentUser) return
+  
+  try {
+    const result = await checkForNewViolations(currentProject.value.id, getAuth().currentUser.uid)
+    
+    if (result.hasNewViolations) {
+      violationCount.value = result.violationCount
+      showViolationNotification.value = true
+      
+      // Mark violations as shown
+      const violationIds = result.violations.map(v => v.id)
+      markViolationsAsShown(violationIds)
+    }
+  } catch (error) {
+    console.error('Error checking for violations:', error)
+  }
+}
+
+const closeViolationNotification = () => {
+  showViolationNotification.value = false
+  violationCount.value = 0
+}
+
+const viewViolations = () => {
+  router.push('/profile')
+}
+
 // Method to determine which tab should be active
 const isActiveTab = (tabName) => {
   const currentPath = route.path
@@ -278,7 +320,9 @@ const isActiveTab = (tabName) => {
     case 'profile':
       return currentPath === '/profile' || 
              currentPath === '/complaints' || 
-             currentPath.startsWith('/complaints/')
+             currentPath.startsWith('/complaints/') ||
+             currentPath === '/violations' ||
+             currentPath.startsWith('/violation-chat/')
     
     case 'services':
       // Services tab is active for smart devices and other service pages
@@ -326,6 +370,11 @@ watch(
       window.dispatchEvent(new CustomEvent('projectChanged', {
         detail: { newProject, oldProject }
       }))
+      
+      // Check for violations in the new project
+      setTimeout(() => {
+        checkForViolations()
+      }, 500)
     }
   },
   { deep: true }
@@ -341,6 +390,11 @@ onMounted(async () => {
       
       if (!restored) {
         console.log('No project restored, user needs to select a project')
+      } else {
+        // Check for violations after project is loaded
+        setTimeout(() => {
+          checkForViolations()
+        }, 1000) // Small delay to ensure everything is loaded
       }
     }
   })

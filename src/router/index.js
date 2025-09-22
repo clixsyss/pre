@@ -190,6 +190,18 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/violations',
+    name: 'Violations',
+    component: () => import('../pages/auth/ViolationsPage.vue'),
+    meta: { requiresAuth: true }
+  },
+      {
+        path: '/violation-chat/:id',
+        name: 'ViolationChat',
+        component: () => import('../components/ViolationChat.vue'),
+        meta: { requiresAuth: true }
+      },
+  {
     path: '/service-booking-chat/:id',
     name: 'ServiceBookingChat',
     component: () => import('../components/ServiceBookingChat.vue'),

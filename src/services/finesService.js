@@ -213,6 +213,42 @@ export const addMessage = async (projectId, fineId, messageData) => {
   }
 };
 
+// Mark messages as read
+export const markMessagesAsRead = async (projectId, fineId, userId) => {
+  try {
+    const fineDoc = doc(db, 'projects', projectId, 'fines', fineId);
+    
+    // Get current fine
+    const currentFine = await getFine(projectId, fineId);
+    
+    if (!currentFine.messages || !Array.isArray(currentFine.messages)) {
+      return { success: true };
+    }
+    
+    // Update messages to mark as read by user
+    const updatedMessages = currentFine.messages.map(message => {
+      if ((message.sender === 'admin' || message.sender === 'system') && 
+          !message.readBy?.includes(userId)) {
+        return {
+          ...message,
+          readBy: [...(message.readBy || []), userId]
+        };
+      }
+      return message;
+    });
+
+    await updateDoc(fineDoc, {
+      messages: updatedMessages,
+      updatedAt: new Date()
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error marking messages as read:', error);
+    throw error;
+  }
+};
+
 // Listen to real-time fine changes
 export const onFineChange = (projectId, fineId, callback) => {
   const fineDoc = doc(db, 'projects', projectId, 'fines', fineId);
@@ -316,6 +352,7 @@ export default {
   updateFineStatus,
   updateFineDetails,
   addMessage,
+  markMessagesAsRead,
   onFineChange,
   uploadFineImage,
   deleteFineImage,

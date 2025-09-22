@@ -189,7 +189,7 @@
               </div>
             </div>
 
-            <button @click="showViolationsModal = true" class="violations-btn">
+            <button @click="handleViolationChat" class="violations-btn">
               <div class="violations-btn-content">
                 <div class="violations-btn-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1723,9 +1723,9 @@ const saveDeviceSettings = async () => {
   }
 }
 
-const handleViolationChat = (violation) => {
-  // Navigate to violation chat - similar to complaints/services
-  router.push(`/violation-chat/${violation.id}`)
+const handleViolationChat = () => {
+  // Navigate to violations page
+  router.push('/violations')
 }
 
 const handleComplaintChat = () => {
@@ -2378,10 +2378,7 @@ onMounted(() => {
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
-  .profile-content {
-    padding: 16px;
-  }
+@media (max-width: 768px) { 
   
   .hero-content {
   flex-direction: column;
@@ -2767,9 +2764,6 @@ onMounted(() => {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .profile-content {
-    padding: 16px;
-  }
   
   .info-grid {
     grid-template-columns: 1fr;
