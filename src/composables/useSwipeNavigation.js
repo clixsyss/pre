@@ -169,7 +169,9 @@ export function useSwipeNavigation() {
     
     // Prevent default scrolling if this looks like a horizontal swipe
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
-      event.preventDefault()
+      if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault()
+      }
     }
   }
   
@@ -255,7 +257,8 @@ export function useSwipeNavigation() {
   const handleMouseMove = (event) => {
     if (!isMouseDown) return
     const fakeTouch = {
-      touches: [{ clientX: event.clientX, clientY: event.clientY }]
+      touches: [{ clientX: event.clientX, clientY: event.clientY }],
+      preventDefault: () => event.preventDefault()
     }
     handleTouchMove(fakeTouch)
   }

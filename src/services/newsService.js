@@ -48,13 +48,11 @@ class NewsService {
 
       console.log('🔄 Executing Firestore query...')
       const querySnapshot = await getDocs(q)
-      console.log('📊 Query snapshot size:', querySnapshot.size)
       
       const newsItems = []
 
       querySnapshot.forEach((doc) => {
         const data = doc.data()
-        console.log('📄 Processing document:', doc.id, data)
         newsItems.push({
           id: doc.id,
           ...data,
@@ -64,7 +62,6 @@ class NewsService {
         })
       })
 
-      console.log('✅ Final news items array:', newsItems)
 
       // If prioritizing featured news (for homepage), sort featured items first
       if (prioritizeFeatured) {

@@ -17,6 +17,45 @@
       <!-- Form Content -->
       <div class="dialog-content">
         <form @submit.prevent="saveProfile" class="profile-form">
+          <!-- Profile Picture Section -->
+          <div class="form-section">
+            <h3 class="section-title">Profile Picture</h3>
+            
+            <div class="profile-picture-section">
+              <div class="current-profile-pic">
+                <img 
+                  v-if="formData.profilePictureUrl" 
+                  :src="formData.profilePictureUrl" 
+                  alt="Profile Picture" 
+                  class="profile-pic-image"
+                />
+                <div v-else class="profile-pic-placeholder">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="profile-pic-actions">
+                <input
+                  id="profilePicUpload"
+                  type="file"
+                  accept="image/*"
+                  @change="handleProfilePictureChange"
+                  class="file-input"
+                  style="display: none;"
+                />
+                <label for="profilePicUpload" class="upload-profile-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ profilePicUploading ? 'Uploading...' : 'Change Picture' }}
+                </label>
+              </div>
+            </div>
+          </div>
           <!-- Personal Information Section -->
           <div class="form-section">
             <h3 class="section-title">Personal Information</h3>
@@ -117,6 +156,68 @@
             </div>
           </div>
 
+          <!-- Documents Section -->
+          <div class="form-section">
+            <h3 class="section-title">Uploaded Documents</h3>
+            <p class="section-description">View your uploaded identification documents</p>
+            
+            <div class="documents-grid">
+              <!-- Front National ID -->
+              <div class="document-card">
+                <div class="document-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="document-info">
+                  <h5>Front National ID</h5>
+                  <p v-if="formData.documents?.frontIdUrl">Document uploaded</p>
+                  <p v-else class="missing">Not uploaded</p>
+                </div>
+                <button 
+                  v-if="formData.documents?.frontIdUrl"
+                  @click="viewDocument(formData.documents.frontIdUrl, 'Front National ID')"
+                  class="view-doc-btn"
+                  type="button"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  View
+                </button>
+              </div>
+
+              <!-- Back National ID -->
+              <div class="document-card">
+                <div class="document-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="document-info">
+                  <h5>Back National ID</h5>
+                  <p v-if="formData.documents?.backIdUrl">Document uploaded</p>
+                  <p v-else class="missing">Not uploaded</p>
+                </div>
+                <button 
+                  v-if="formData.documents?.backIdUrl"
+                  @click="viewDocument(formData.documents.backIdUrl, 'Back National ID')"
+                  class="view-doc-btn"
+                  type="button"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  View
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Password Reset Section -->
           <div class="form-section">
             <h3 class="section-title">Password</h3>
@@ -167,15 +268,34 @@
         </form>
       </div>
     </div>
+
+    <!-- Document Viewer Modal -->
+    <div v-if="showDocumentModal" class="modal-overlay" @click="showDocumentModal = false">
+      <div class="document-modal" @click.stop>
+        <div class="document-modal-header">
+          <h3>{{ documentModalTitle }}</h3>
+          <button @click="showDocumentModal = false" class="close-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="document-modal-content">
+          <img :src="documentModalUrl" :alt="documentModalTitle" class="document-image" />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../boot/firebase';
+import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '../boot/firebase';
 import { useNotificationStore } from '../stores/notifications';
 import { updateUserProfile } from '../services/userService';
+import fileUploadService from '../services/fileUploadService';
 
 const props = defineProps({
   isOpen: {
@@ -198,13 +318,24 @@ const formData = ref({
   lastName: '',
   mobile: '',
   gender: '',
-  nationalId: ''
+  nationalId: '',
+  profilePictureUrl: '',
+  documents: {
+    frontIdUrl: '',
+    backIdUrl: ''
+  }
 });
 
 // Form state
 const saving = ref(false);
 const passwordResetLoading = ref(false);
+const profilePicUploading = ref(false);
 const errors = ref({});
+
+// Document modal state
+const showDocumentModal = ref(false);
+const documentModalUrl = ref('');
+const documentModalTitle = ref('');
 
 // Computed
 const isFormValid = computed(() => {
@@ -228,7 +359,12 @@ const resetForm = () => {
     lastName: '',
     mobile: '',
     gender: '',
-    nationalId: ''
+    nationalId: '',
+    profilePictureUrl: '',
+    documents: {
+      frontIdUrl: '',
+      backIdUrl: ''
+    }
   };
   errors.value = {};
 };
@@ -240,7 +376,12 @@ const loadUserData = () => {
       lastName: props.userProfile.lastName || '',
       mobile: props.userProfile.mobile || '',
       gender: props.userProfile.gender || '',
-      nationalId: props.userProfile.nationalId || ''
+      nationalId: props.userProfile.nationalId || '',
+      profilePictureUrl: props.userProfile.documents?.profilePictureUrl || '',
+      documents: {
+        frontIdUrl: props.userProfile.documents?.frontIdUrl || '',
+        backIdUrl: props.userProfile.documents?.backIdUrl || ''
+      }
     };
   }
 };
@@ -337,6 +478,65 @@ const formatDate = (timestamp) => {
     month: 'long',
     day: 'numeric'
   });
+};
+
+// Document functions
+const viewDocument = (url, title) => {
+  documentModalUrl.value = url;
+  documentModalTitle.value = title;
+  showDocumentModal.value = true;
+};
+
+const handleProfilePictureChange = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Validate file
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    notificationStore.showError('Please select a valid image file (JPEG, PNG, or WebP)');
+    return;
+  }
+
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) {
+    notificationStore.showError('File size must be less than 10MB');
+    return;
+  }
+
+  profilePicUploading.value = true;
+
+  try {
+    const userId = auth.currentUser.uid;
+    const uploadedDocuments = await fileUploadService.uploadUserDocuments(
+      userId,
+      null, // frontId
+      null, // backId
+      file  // profilePicture
+    );
+
+    // Update user profile in Firebase Auth
+    await updateProfile(auth.currentUser, {
+      photoURL: uploadedDocuments.profilePicture
+    });
+
+    // Update user document in Firestore
+    const userDocRef = doc(db, 'users', userId);
+    await updateDoc(userDocRef, {
+      'documents.profilePictureUrl': uploadedDocuments.profilePicture,
+      updatedAt: new Date()
+    });
+
+    // Update local form data
+    formData.value.profilePictureUrl = uploadedDocuments.profilePicture;
+
+    notificationStore.showSuccess('Profile picture updated successfully!');
+  } catch (error) {
+    console.error('Error updating profile picture:', error);
+    notificationStore.showError('Failed to update profile picture. Please try again.');
+  } finally {
+    profilePicUploading.value = false;
+  }
 };
 
 // Watch for dialog open/close
@@ -648,6 +848,221 @@ onMounted(() => {
   .cancel-btn, .save-btn {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* Profile Picture Section */
+.profile-picture-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e1e5e9;
+}
+
+.current-profile-pic {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #e1e5e9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  flex-shrink: 0;
+}
+
+.profile-pic-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-pic-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+.profile-pic-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upload-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #AF1E23;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.upload-profile-btn:hover {
+  background: #8b161a;
+}
+
+/* Documents Section */
+.documents-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.document-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e1e5e9;
+  border-radius: 12px;
+  transition: border-color 0.3s ease;
+}
+
+.document-card:hover {
+  border-color: #AF1E23;
+}
+
+.document-icon {
+  width: 48px;
+  height: 48px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0369a1;
+  flex-shrink: 0;
+}
+
+.document-info {
+  flex: 1;
+}
+
+.document-info h5 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.document-info p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.document-info p.missing {
+  color: #ef4444;
+}
+
+.view-doc-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  color: #666;
+  border: 1px solid #e1e5e9;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.view-doc-btn:hover {
+  background: #AF1E23;
+  color: white;
+  border-color: #AF1E23;
+}
+
+/* Document Modal Styles */
+.document-modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.document-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid #e1e5e9;
+}
+
+.document-modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.document-modal-content {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+}
+
+.document-image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .profile-picture-section {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+  
+  .documents-grid {
+    gap: 12px;
+  }
+  
+  .document-card {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .document-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .document-modal {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+  
+  .document-modal-header {
+    padding: 16px;
+  }
+  
+  .document-modal-content {
+    padding: 16px;
   }
 }
 </style>

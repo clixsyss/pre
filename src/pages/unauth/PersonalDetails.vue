@@ -163,16 +163,37 @@
             />
         </div>
 
+        <div class="form-group">
+          <label for="profilePicture" class="form-label">Profile Picture (Optional)</label>
+          <div class="file-upload">
+            <input
+              id="profilePicture"
+              type="file"
+              accept="image/*"
+              @change="handleProfilePictureUpload"
+              class="file-input"
+            />
+            <label for="profilePicture" class="file-label">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>{{ profilePictureFile ? profilePictureFile.name : 'Upload Profile Picture' }}</span>
+            </label>
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
-            <label for="frontId" class="form-label">Front National ID Picture</label>
-            <div class="file-upload">
+            <label for="frontId" class="form-label">Front National ID Picture <span class="required">*</span></label>
+            <div class="file-upload" :class="{ 'has-file': frontIdFile, 'required': true }">
               <input
                 id="frontId"
                 type="file"
                 accept="image/*"
                 @change="handleFrontIdUpload"
                 class="file-input"
+                required
               />
               <label for="frontId" class="file-label">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -183,17 +204,22 @@
                 <span>{{ frontIdFile ? frontIdFile.name : 'Upload Front ID' }}</span>
               </label>
             </div>
+            <div v-if="frontIdFile" class="file-preview">
+              <img :src="frontIdPreview" alt="Front ID Preview" class="preview-image" />
+              <button type="button" @click="removeFrontId" class="remove-file-btn">Remove</button>
+            </div>
           </div>
 
           <div class="form-group">
-            <label for="backId" class="form-label">Back National ID Picture</label>
-            <div class="file-upload">
+            <label for="backId" class="form-label">Back National ID Picture <span class="required">*</span></label>
+            <div class="file-upload" :class="{ 'has-file': backIdFile, 'required': true }">
               <input
                 id="backId"
                 type="file"
                 accept="image/*"
                 @change="handleBackIdUpload"
                 class="file-input"
+                required
               />
               <label for="backId" class="file-label">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -203,6 +229,10 @@
                 </svg>
                 <span>{{ backIdFile ? backIdFile.name : 'Upload Back ID' }}</span>
               </label>
+            </div>
+            <div v-if="backIdFile" class="file-preview">
+              <img :src="backIdPreview" alt="Back ID Preview" class="preview-image" />
+              <button type="button" @click="removeBackId" class="remove-file-btn">Remove</button>
             </div>
           </div>
         </div>
@@ -224,6 +254,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../../boot/firebase'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
+import fileUploadService from '../../services/fileUploadService'
 
 // Component name for ESLint
 defineOptions({
@@ -237,6 +268,9 @@ const notificationStore = useNotificationStore()
 const loading = ref(false)
 const frontIdFile = ref(null)
 const backIdFile = ref(null)
+const profilePictureFile = ref(null)
+const frontIdPreview = ref(null)
+const backIdPreview = ref(null)
 
 const formData = reactive({
   email: '',
@@ -329,6 +363,12 @@ const handleFrontIdUpload = (event) => {
   const file = event.target.files[0]
   if (file) {
     frontIdFile.value = file
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      frontIdPreview.value = e.target.result
+    }
+    reader.readAsDataURL(file)
   }
 }
 
@@ -336,7 +376,30 @@ const handleBackIdUpload = (event) => {
   const file = event.target.files[0]
   if (file) {
     backIdFile.value = file
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      backIdPreview.value = e.target.result
+    }
+    reader.readAsDataURL(file)
   }
+}
+
+const handleProfilePictureUpload = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    profilePictureFile.value = file
+  }
+}
+
+const removeFrontId = () => {
+  frontIdFile.value = null
+  frontIdPreview.value = null
+}
+
+const removeBackId = () => {
+  backIdFile.value = null
+  backIdPreview.value = null
 }
 
 const handleSubmit = async () => {
@@ -348,10 +411,33 @@ const handleSubmit = async () => {
     notificationStore.showError('Please fill in all required fields')
     return
   }
+
+  // Validate required file uploads
+  if (!frontIdFile.value || !backIdFile.value) {
+    notificationStore.showError('Please upload both front and back National ID pictures')
+    return
+  }
   
   loading.value = true
   
   try {
+    // Upload files to Firebase Storage first
+    const userId = auth.currentUser.uid
+    let uploadedDocuments = {}
+    
+    try {
+      uploadedDocuments = await fileUploadService.uploadUserDocuments(
+        userId,
+        frontIdFile.value,
+        backIdFile.value,
+        profilePictureFile.value
+      )
+      console.log('Files uploaded successfully:', uploadedDocuments)
+    } catch (uploadError) {
+      console.error('File upload error:', uploadError)
+      throw new Error(`File upload failed: ${uploadError.message}`)
+    }
+
     // Save user details to store
     registrationStore.setUserDetails({
       firstName: formData.firstName,
@@ -364,17 +450,16 @@ const handleSubmit = async () => {
     
     // Update the existing Firebase user's profile
     if (auth.currentUser) {
-      // Update the user's profile with personal information
+      // Update the user's profile with personal information and profile picture
       await updateProfile(auth.currentUser, {
         displayName: `${formData.firstName} ${formData.lastName}`,
-        photoURL: null
+        photoURL: uploadedDocuments.profilePicture || null
       })
       
       console.log('User profile updated successfully:', auth.currentUser)
       console.log('Complete registration data:', registrationStore.getRegistrationData())
       
-      // Save all user data to Firestore
-      const userId = auth.currentUser.uid
+      // Save all user data to Firestore including document URLs
       const userDetails = {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -382,6 +467,12 @@ const handleSubmit = async () => {
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender,
         nationalId: formData.nationalId,
+        // Include document URLs
+        documents: {
+          frontIdUrl: uploadedDocuments.frontId,
+          backIdUrl: uploadedDocuments.backId,
+          profilePictureUrl: uploadedDocuments.profilePicture || null
+        },
         // Include projects data from registration store
         projects: registrationStore.propertyData.projects || []
       }
@@ -389,9 +480,7 @@ const handleSubmit = async () => {
       await updateUserDetailsInFirestore(userId, userDetails)
       
       // Show success notification
-      notificationStore.showSuccess('Personal details saved successfully! Now let\'s complete your property information.')
-      
-      // TODO: Upload ID images to Firebase Storage
+      notificationStore.showSuccess('Personal details and documents saved successfully! Now let\'s complete your property information.')
       
       // Don't clear registration store or sign out yet - user needs to complete property details
       // registrationStore.resetRegistration()
@@ -769,6 +858,11 @@ const handleSubmit = async () => {
   font-size: 0.9rem;
 }
 
+.required {
+  color: #ef4444;
+  font-weight: 700;
+}
+
 .form-input {
   width: 100%;
   padding: 15px;
@@ -862,6 +956,48 @@ const handleSubmit = async () => {
 .file-label:hover {
   border-color: #AF1E23;
   color: #AF1E23;
+}
+
+.file-upload.required .file-label {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.file-upload.has-file .file-label {
+  border-color: #10b981;
+  background-color: #f0fdf4;
+  color: #059669;
+}
+
+.file-preview {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+}
+
+.preview-image {
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.remove-file-btn {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.remove-file-btn:hover {
+  background-color: #dc2626;
 }
 
 .continue-btn {

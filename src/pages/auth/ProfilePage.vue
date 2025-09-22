@@ -12,7 +12,13 @@
       <div class="hero-section">
         <div class="hero-content">
         <div class="profile-avatar">
-          <div class="avatar-initial">
+          <img 
+            v-if="userProfile.documents?.profilePictureUrl" 
+            :src="userProfile.documents.profilePictureUrl" 
+            alt="Profile Picture" 
+            class="avatar-image"
+          />
+          <div v-else class="avatar-initial">
             {{ getInitials(userProfile.firstName, userProfile.lastName) }}
           </div>
             <div class="avatar-status" :class="getStatusClass(userProfile.registrationStatus)">
@@ -297,6 +303,7 @@
           </div>
         </div>
       </div>
+
 
       <!-- Current Projects Accordion -->
       <div class="accordion-section">
@@ -675,6 +682,7 @@
       @close="showViolationsModal = false"
       @start-chat="handleViolationChat"
     />
+
 
     <!-- Logout Confirmation Modal -->
     <div v-if="showLogoutConfirm" class="modal-overlay" @click="showLogoutConfirm = false">
@@ -1089,6 +1097,7 @@ const complaintStats = ref({
   resolved: 0,
   closed: 0
 })
+
 
 // Computed properties
 const userProjects = computed(() => projectStore.userProjects)
@@ -1724,6 +1733,7 @@ const handleComplaintChat = () => {
   router.push('/complaints')
 }
 
+
 // Load profile on component mount
 onMounted(() => {
   loadProfile()
@@ -1801,6 +1811,15 @@ onMounted(() => {
 .profile-avatar {
   position: relative;
   flex-shrink: 0;
+}
+
+.avatar-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
 }
 
 .avatar-initial {
@@ -4165,6 +4184,7 @@ input:checked + .toggle-slider:before {
     height: 56px;
   }
 }
+
 
 /* Notification Badges */
 .notification-badge {

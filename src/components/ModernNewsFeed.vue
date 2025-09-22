@@ -177,6 +177,30 @@
               <div class="dialog-message" v-html="selectedNewsItem.message || selectedNewsItem.content"></div>
             </div>
 
+
+            <!-- External Link Section -->
+            <div v-if="selectedNewsItem.linkUrl && selectedNewsItem.linkUrl.trim() !== ''" class="dialog-link-section">
+              <a :href="selectedNewsItem.linkUrl" target="_blank" rel="noopener noreferrer" class="external-link">
+                <div class="link-content">
+                  <div class="link-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M10 13C10.4295 13.5741 10.9774 14.0491 11.6066 14.3929C12.2357 14.7367 12.9315 14.9411 13.6467 14.9923C14.3618 15.0435 15.0796 14.9403 15.7513 14.6897C16.4231 14.4392 17.0331 14.047 17.54 13.54L20.54 10.54C21.4508 9.59695 21.9548 8.33394 21.9434 7.02296C21.932 5.71198 21.4061 4.45791 20.4791 3.53087C19.5521 2.60383 18.298 2.07799 16.987 2.0666C15.676 2.0552 14.413 2.55918 13.47 3.47L11.75 5.18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M14 11C13.5705 10.4259 13.0226 9.95085 12.3934 9.60705C11.7643 9.26325 11.0685 9.05886 10.3533 9.00766C9.63816 8.95645 8.92037 9.05972 8.24861 9.31028C7.57685 9.56084 6.96684 9.95302 6.46 10.46L3.46 13.46C2.54918 14.403 2.04518 15.666 2.05659 16.977C2.068 18.288 2.59394 19.5421 3.52098 20.4691C4.44802 21.3962 5.70209 21.922 7.01307 21.9334C8.32405 21.9448 9.58706 21.4408 10.53 20.53L12.24 18.82" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <div class="link-text">
+                    <div class="link-title">{{ selectedNewsItem.linkTitle || 'Read More' }}</div>
+                    <div class="link-url">{{ selectedNewsItem.linkUrl }}</div>
+                  </div>
+                  <div class="link-arrow">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M7 17L17 7M17 7H7M17 7V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
+              </a>
+            </div>
+
             <!-- Compact Comments Section -->
             <div class="dialog-comments-compact">
               <NewsComments :news-id="selectedNewsItem.id" />
@@ -494,6 +518,8 @@ const fetchNews = async () => {
       mediaUrl: item.mediaUrl || null,
       mediaType: item.mediaType || 'image',
       thumbnailUrl: item.thumbnailUrl || null,
+      linkUrl: item.linkUrl || null,
+      linkTitle: item.linkTitle || null,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt
     }))
@@ -1015,6 +1041,24 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
+.news-link-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 12px 0;
+  padding: 6px 10px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+.news-link-indicator svg {
+  flex-shrink: 0;
+}
+
 .news-actions {
   margin-top: auto;
   padding-top: 8px;
@@ -1383,6 +1427,74 @@ onUnmounted(() => {
   margin: 0;
 }
 
+/* External Link Section */
+.dialog-link-section {
+  margin: 16px 24px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.external-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.external-link:hover {
+  transform: translateY(-1px);
+}
+
+.link-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.link-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  background: #AF1E23;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.link-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.link-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.link-url {
+  font-size: 0.8rem;
+  color: #64748b;
+  word-break: break-all;
+  line-height: 1.3;
+}
+
+.link-arrow {
+  flex-shrink: 0;
+  color: #64748b;
+  transition: transform 0.2s ease;
+}
+
+.external-link:hover .link-arrow {
+  transform: translate(2px, -2px);
+}
+
 .dialog-actions {
   padding: 16px 24px 24px 24px;
   border-top: 1px solid #f1f5f9;
@@ -1738,6 +1850,28 @@ onUnmounted(() => {
     font-size: 0.9rem;
   }
   
+  .dialog-link-section {
+    margin: 14px 20px;
+    padding: 14px;
+  }
+  
+  .link-content {
+    gap: 10px;
+  }
+  
+  .link-icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .link-title {
+    font-size: 0.9rem;
+  }
+  
+  .link-url {
+    font-size: 0.75rem;
+  }
+  
   .dialog-actions {
     padding: 14px 20px 20px 20px;
   }
@@ -1775,6 +1909,28 @@ onUnmounted(() => {
   
   .dialog-message {
     font-size: 0.85rem;
+  }
+  
+  .dialog-link-section {
+    margin: 12px 18px;
+    padding: 12px;
+  }
+  
+  .link-content {
+    gap: 8px;
+  }
+  
+  .link-icon {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .link-title {
+    font-size: 0.85rem;
+  }
+  
+  .link-url {
+    font-size: 0.7rem;
   }
   
   .dialog-actions {
