@@ -224,7 +224,7 @@ import { useSmartMirrorStore } from '../stores/smartMirrorStore'
 import { useSwipeNavigation } from '../composables/useSwipeNavigation'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import ViolationNotificationPopup from '../components/ViolationNotificationPopup.vue'
-import { checkForNewViolations, markViolationsAsShown } from '../services/violationNotificationService'
+import { markViolationsAsShown, hasActiveViolations, clearOldNotificationHistory } from '../services/violationNotificationService'
 
 // Component name for ESLint
 defineOptions({
@@ -285,15 +285,20 @@ const checkForViolations = async () => {
   if (!currentProject.value || !getAuth().currentUser) return
   
   try {
-    const result = await checkForNewViolations(currentProject.value.id, getAuth().currentUser.uid)
+    // Check for any active violations (issued or disputed) that need attention
+    const result = await hasActiveViolations(currentProject.value.id, getAuth().currentUser.uid)
     
-    if (result.hasNewViolations) {
+    if (result.hasActiveViolations) {
       violationCount.value = result.violationCount
       showViolationNotification.value = true
       
-      // Mark violations as shown
+      // Mark violations as shown to prevent repeated notifications in same session
       const violationIds = result.violations.map(v => v.id)
       markViolationsAsShown(violationIds)
+    } else {
+      // No active violations, hide notification if it was showing
+      showViolationNotification.value = false
+      violationCount.value = 0
     }
   } catch (error) {
     console.error('Error checking for violations:', error)
@@ -307,6 +312,13 @@ const closeViolationNotification = () => {
 
 const viewViolations = () => {
   router.push('/profile')
+}
+
+// Reset violation notification state (clear history so notifications show again)
+const resetViolationNotifications = () => {
+  clearOldNotificationHistory()
+  showViolationNotification.value = false
+  violationCount.value = 0
 }
 
 // Method to determine which tab should be active
@@ -363,6 +375,9 @@ watch(
     if (newProject && newProject.id !== oldProject?.id) {
       console.log('Project changed, triggering data refresh...')
       
+      // Reset violation notifications when switching projects
+      resetViolationNotifications()
+      
       // Force a small delay to ensure all stores are updated
       await new Promise(resolve => setTimeout(resolve, 100))
       
@@ -382,6 +397,9 @@ watch(
 
 // Load user projects when component mounts
 onMounted(async () => {
+  // Reset violation notifications when app starts
+  resetViolationNotifications()
+  
   const auth = getAuth()
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
     if (user) {

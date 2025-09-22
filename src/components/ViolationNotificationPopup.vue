@@ -414,7 +414,7 @@ onMounted(() => {
 }
 
 /* Dark mode support */
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   .notification-popup {
     background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
     color: white;
@@ -449,5 +449,5 @@ onMounted(() => {
     background: rgba(31, 41, 55, 1);
     color: white;
   }
-}
+} */
 </style>
