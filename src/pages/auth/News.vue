@@ -1,11 +1,17 @@
 <template>
   <div class="news-page">
+    <!-- Page Header -->
+    <PageHeader 
+      title="All News" 
+      subtitle="Stay updated with the latest community news"
+    />
+    
     <!-- News Feed -->
     <div class="news-content">
       <ModernNewsFeed 
         :project-id="currentProjectId" 
         :show-all="true" 
-        :back-button="true"
+        :back-button="false"
         @news-count-update="updateNewsCount" 
         @go-back="goBack"
       />
@@ -18,6 +24,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../../stores/projectStore'
 import ModernNewsFeed from '../../components/ModernNewsFeed.vue'
+import PageHeader from '../../components/PageHeader.vue'
 
 // Component name for ESLint
 defineOptions({

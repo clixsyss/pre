@@ -1,23 +1,11 @@
 <template>
   <div class="smart-devices-page">
     <!-- Page Header -->
-    <div class="page-header">
-      <div class="header-main">
-        <button class="back-button" @click="$router.go(-1)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        
-        <div class="header-content">
-          <h1>Smart Devices</h1>
-          <div class="header-status">
-            <div class="status-dot" :class="{ connected: isCurrentProjectConnected }"></div>
-            <span>{{ isCurrentProjectConnected ? 'Connected' : 'Not Connected' }}</span>
-          </div>
-        </div>
-        
+    <PageHeader 
+      title="Smart Devices" 
+      :subtitle="isCurrentProjectConnected ? 'Connected' : 'Not Connected'"
+    >
+      <template #actions>
         <button class="refresh-button" @click="refreshDevices" :disabled="loading">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 12A9 9 0 0 1 12 3A9 9 0 0 1 21 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -25,8 +13,8 @@
             <path d="M12 3V12L16.5 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- Not Connected State -->
     <div v-if="!isCurrentProjectConnected" class="not-connected-state">
@@ -325,6 +313,7 @@ import { useRoute } from 'vue-router'
 import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
 import { useNotificationStore } from '../../stores/notifications'
 import { useProjectStore } from '../../stores/projectStore'
+import PageHeader from '../../components/PageHeader.vue'
 
 // Component name for ESLint
 defineOptions({
@@ -1250,18 +1239,7 @@ onActivated(async () => {
     padding: 12px;
   }
   
-  .page-header {
-    padding: 12px;
-    margin-bottom: 16px;
-  }
-  
-  .header-main {
-    gap: 12px;
-  }
-  
-  .header-content h1 {
-    font-size: 1.125rem;
-  }
+  /* Page header responsive styles moved to PageHeader component */
   
   .devices-grid {
     grid-template-columns: 1fr;
@@ -1288,27 +1266,7 @@ onActivated(async () => {
     padding: 8px;
   }
   
-  .page-header {
-    padding: 10px;
-    margin-bottom: 12px;
-  }
-  
-  .header-main {
-    gap: 10px;
-  }
-  
-  .header-content h1 {
-    font-size: 1rem;
-  }
-  
-  .header-status {
-    font-size: 0.75rem;
-  }
-  
-  .back-button,
-  .refresh-button {
-    padding: 6px;
-  }
+  /* Page header responsive styles moved to PageHeader component */
   
   .devices-section {
     padding: 12px;

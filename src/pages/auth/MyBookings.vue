@@ -1,17 +1,9 @@
 <template>
   <div class="my-bookings-page">
-    <div class="page-header">
-      <div class="header-content">
-        <button class="back-button" @click="$router.go(-1)">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <h1>My Bookings</h1>
-      </div>
-      <p class="header-subtitle">{{ projectName ? `Bookings in ${projectName}` : 'View and manage all your bookings' }}</p>
-    </div>
+    <PageHeader 
+      title="My Bookings" 
+      :subtitle="projectName ? `Bookings in ${projectName}` : 'View and manage all your bookings'"
+    />
 
     <div class="bookings-content">
       <!-- Filter Tabs -->
@@ -318,6 +310,7 @@ import { useNotificationStore } from 'src/stores/notifications';
 import { useServiceBookingStore } from 'src/stores/serviceBookingStore';
 import bookingService from 'src/services/bookingService';
 import { getAuth } from 'firebase/auth';
+import PageHeader from '../../components/PageHeader.vue';
 
 // Component name for ESLint
 defineOptions({
@@ -647,44 +640,7 @@ const fetchUserBookings = async () => {
   margin: 0 auto;
 }
 
-.page-header {
-  margin-bottom: 32px;
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 8px;
-}
-
-.back-button {
-  background: none;
-  border: none;
-  color: #666;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-
-.back-button:hover {
-  background: #f5f5f5;
-  color: #333;
-}
-
-.page-header h1 {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #333;
-  margin: 0;
-}
-
-.header-subtitle {
-  color: #666;
-  font-size: 1rem;
-  margin: 0;
-}
+/* Page header styles moved to PageHeader component */
 
 .bookings-content {
   display: flex;
@@ -1221,9 +1177,7 @@ const fetchUserBookings = async () => {
 }
 
 @media (max-width: 480px) {
-  .page-header h1 {
-    font-size: 1.5rem;
-  }
+  /* Page header responsive styles moved to PageHeader component */
   
   .card-header {
     padding: 12px 16px;

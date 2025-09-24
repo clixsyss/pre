@@ -1,14 +1,10 @@
 <template>
   <div class="stores-shopping-page">
-    <!-- Hero Section -->
-    <div class="hero-section">
-      <div class="hero-content">
-        <div class="hero-text">
-          <h1 class="hero-title">Stores & Shopping</h1>
-          <p class="hero-subtitle">Discover local stores and track your orders</p>
-        </div>
-      </div>
-    </div>
+    <!-- Page Header -->
+    <PageHeader 
+      title="Stores & Shopping" 
+      subtitle="Discover local stores and track your orders"
+    />
 
     <!-- Cool Tab System -->
     <div class="tab-container">
@@ -743,6 +739,7 @@ import { getAuth } from 'firebase/auth';
 import { db } from 'src/boot/firebase';
 import { useProjectStore } from 'src/stores/projectStore';
 import { useNotificationStore } from 'src/stores/notifications';
+import PageHeader from '../../components/PageHeader.vue';
 
 // Component name for ESLint
 defineOptions({
@@ -1386,40 +1383,7 @@ watch(() => route.query.tab, (newTab) => {
   min-height: 100vh;
 }
 
-/* Hero Section */
-.hero-section {
-  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
-  color: #F6F6F6;
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 20px rgba(175, 30, 35, 0.2);
-}
-
-.hero-content {
-  width: 100%;
-}
-
-.hero-text {
-  flex-direction: column;
-  gap: 4px;
-}
-
-.hero-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin: 0;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-
-.hero-subtitle {
-  font-size: 0.9rem;
-  margin: 0;
-  opacity: 0.9;
-  font-weight: 400;
-  margin-top: 4px;
-}
+/* Hero section styles moved to PageHeader component */
 
 
 .tab-content {

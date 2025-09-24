@@ -1,17 +1,9 @@
 <template>
   <div class="calendar-page">
-    <div class="page-header">
-      <div class="header-content">
-        <button class="back-button" @click="$router.go(-1)">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <h1>Calendar</h1>
-      </div>
-      <p class="header-subtitle">View all your events and bookings</p>
-    </div>
+    <PageHeader 
+      title="Calendar" 
+      subtitle="View all your events and bookings"
+    />
 
     <div class="calendar-content">
       <!-- Minimalist Calendar Navigation -->
@@ -154,6 +146,7 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useServiceBookingStore } from '../../stores/serviceBookingStore';
 import { auth } from '../../boot/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import PageHeader from '../../components/PageHeader.vue';
 
 // Component name for ESLint
 defineOptions({
@@ -503,45 +496,7 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-.page-header {
-  margin-bottom: 24px;
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-
-.back-button {
-  background: none;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.back-button:hover {
-  background: #f5f5f5;
-  color: #333;
-}
-
-.page-header h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #333;
-  margin: 0;
-  letter-spacing: -0.3px;
-}
-
-.header-subtitle {
-  color: #666;
-  font-size: 0.9rem;
-  margin: 0;
-}
+/* Page header styles moved to PageHeader component */
 
 .calendar-content {
   display: flex;
@@ -1029,9 +984,7 @@ onMounted(async () => {
 }
 
 @media (max-width: 480px) {
-  .page-header h1 {
-    font-size: 1.5rem;
-  }
+  /* Page header responsive styles moved to PageHeader component */
   
   .calendar-navigation {
     flex-direction: column;
@@ -1072,7 +1025,6 @@ onMounted(async () => {
   
   .event-card,
   .upcoming-event-item {
-    flex-direction: column;
     text-align: center;
     gap: 12px;
   }

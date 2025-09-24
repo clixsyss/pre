@@ -1,17 +1,9 @@
 <template>
   <div class="academy-programs-page">
-    <div class="page-header">
-      <div class="header-content">
-        <button class="back-button" @click="$router.go(-1)">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <h1>Academy Programs</h1>
-      </div>
-      <p class="header-subtitle">{{ projectName ? `Join academies in ${projectName}` : 'Choose your academy and program' }}</p>
-    </div>
+    <PageHeader 
+      title="Academy Programs" 
+      :subtitle="projectName ? `Join academies in ${projectName}` : 'Choose your academy and program'"
+    />
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
@@ -217,6 +209,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAcademiesStore } from 'src/stores/academyStore';
 import { useProjectStore } from 'src/stores/projectStore';
+import PageHeader from '../../components/PageHeader.vue';
 
 // Component name for ESLint
 defineOptions({
@@ -337,44 +330,7 @@ watch(currentProject, (newProject) => {
   margin: 0 auto;
 }
 
-.page-header {
-  margin-bottom: 32px;
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 8px;
-}
-
-.back-button {
-  background: none;
-  border: none;
-  color: #666;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-
-.back-button:hover {
-  background: #f5f5f5;
-  color: #333;
-}
-
-.page-header h1 {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #333;
-  margin: 0;
-}
-
-.header-subtitle {
-  color: #666;
-  font-size: 1rem;
-  margin: 0;
-}
+/* Page header styles moved to PageHeader component */
 
 .programs-content {
   display: flex;
@@ -819,9 +775,7 @@ watch(currentProject, (newProject) => {
     padding: 16px 0;
   }
   
-  .page-header h1 {
-    font-size: 1.5rem;
-  }
+  /* Page header responsive styles moved to PageHeader component */
   
   .programs-section {
     padding: 20px;
