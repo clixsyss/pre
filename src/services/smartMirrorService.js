@@ -51,6 +51,7 @@ class SmartMirrorService {
         isConnected: true,
         projectId: projectId,
         email: email,
+        password: password, // Store password for re-authentication
         lastUpdated: Date.now()
       })
       
@@ -133,10 +134,10 @@ class SmartMirrorService {
         
         if (currentUserEmail !== connectionEmail) {
           console.log(`Switching from ${currentUserEmail} to ${connectionEmail} for project ${projectId}`)
-          // For now, we'll show stored data and let the user re-authenticate if they want fresh data
+          console.log(`Using stored data for project ${projectId} - no re-authentication needed`)
         }
         
-        // Project has Smart Mirror connection - restore its stored data
+        // Project has Smart Mirror connection - restore its data
         this.currentUser = connection.user
         this.userProfile = connection.userProfile
         this.rooms = connection.rooms
@@ -144,13 +145,11 @@ class SmartMirrorService {
         this.isConnected = connection.isConnected
         this.currentProjectId = projectId
         
-        // Only set up real-time listeners if we're authenticated with the correct account
-        if (currentUserEmail === connectionEmail) {
-          this.setupRealtimeListeners()
-          console.log(`Switched to project ${projectId} - Smart Mirror connected with real-time updates`)
-        } else {
-          console.log(`Switched to project ${projectId} - Smart Mirror connected (stored data only, no real-time updates)`)
-        }
+        console.log(`Switched to project ${projectId} - using user UID: ${this.currentUser.uid}`)
+        
+        // Set up real-time listeners with the correct user
+        this.setupRealtimeListeners()
+        console.log(`Switched to project ${projectId} - Smart Home connected with real-time updates`)
         
         return { success: true }
       } else {
@@ -162,7 +161,7 @@ class SmartMirrorService {
         this.isConnected = false
         this.currentProjectId = projectId
         
-        console.log(`Switched to project ${projectId} - no Smart Mirror connection, cleared data`)
+        console.log(`Switched to project ${projectId} - no Smart Home connection, cleared data`)
         
         return { success: true }
       }
@@ -313,12 +312,13 @@ class SmartMirrorService {
             // Restore connection data - now we check by email instead of userId
             // This allows different projects to have different smart home accounts
             this.projectConnections.set(projectId, {
-              user: this.currentUser, // This will be updated when we switch projects
+              user: { uid: connectionData.userId }, // Use the stored userId for this project
               userProfile: connectionData.userProfile,
               rooms: connectionData.rooms || [],
               devices: connectionData.devices || [],
               isConnected: true,
               email: connectionData.email, // Store the email for this project
+              password: connectionData.password, // Store the password for re-authentication
               projectId: projectId
             })
             console.log(`Restored connection for project ${projectId} with email ${connectionData.email}`)
@@ -346,6 +346,7 @@ class SmartMirrorService {
             rooms: connection.rooms,
             devices: connection.devices,
             email: connection.email, // Store email for this project
+            password: connection.password, // Store password for re-authentication
             lastUpdated: Date.now()
           }
         }
@@ -709,12 +710,30 @@ class SmartMirrorService {
 
   // Device control methods
   async toggleLight(roomId, deviceId, state) {
-    if (!this.currentUser) {
-      throw new Error('User not authenticated')
+    if (!this.currentProjectId) {
+      throw new Error('No project selected')
+    }
+
+    const connection = this.projectConnections.get(this.currentProjectId)
+    if (!connection || !connection.user) {
+      throw new Error('No smart home connection for this project')
     }
 
     try {
-      const deviceRef = doc(smartMirrorDb, 'users', this.currentUser.uid, 'rooms', roomId, 'devices', deviceId)
+      // Use the stored user's UID from the project connection
+      const userId = connection.user.uid
+      console.log(`toggleLight: Using user UID ${userId} for project ${this.currentProjectId}`)
+      const deviceRef = doc(smartMirrorDb, 'users', userId, 'rooms', roomId, 'devices', deviceId)
+      
+      // Check if the device document exists before trying to update it
+      const deviceSnap = await getDoc(deviceRef)
+      if (!deviceSnap.exists()) {
+        console.warn(`Device ${deviceId} not found in room ${roomId}. Device may have been removed.`)
+        // Update local state anyway for responsive UI, but don't try to update Firestore
+        this.updateLocalDeviceState(roomId, deviceId, { state })
+        return { success: true, warning: 'Device not found in database, updated locally only' }
+      }
+      
       await updateDoc(deviceRef, { state })
       
       // Update local state immediately for responsive UI
@@ -723,17 +742,36 @@ class SmartMirrorService {
       return { success: true }
     } catch (error) {
       console.error('Error toggling light:', error)
-      throw error
+      // Still update local state for responsive UI even if Firestore update fails
+      this.updateLocalDeviceState(roomId, deviceId, { state })
+      return { success: false, error: error.message }
     }
   }
 
   async setLightBrightness(roomId, deviceId, brightness) {
-    if (!this.currentUser) {
-      throw new Error('User not authenticated')
+    if (!this.currentProjectId) {
+      throw new Error('No project selected')
+    }
+
+    const connection = this.projectConnections.get(this.currentProjectId)
+    if (!connection || !connection.user) {
+      throw new Error('No smart home connection for this project')
     }
 
     try {
-      const deviceRef = doc(smartMirrorDb, 'users', this.currentUser.uid, 'rooms', roomId, 'devices', deviceId)
+      const userId = connection.user.uid
+      console.log(`setLightBrightness: Using user UID ${userId} for project ${this.currentProjectId}`)
+      const deviceRef = doc(smartMirrorDb, 'users', userId, 'rooms', roomId, 'devices', deviceId)
+      
+      // Check if the device document exists before trying to update it
+      const deviceSnap = await getDoc(deviceRef)
+      if (!deviceSnap.exists()) {
+        console.warn(`Device ${deviceId} not found in room ${roomId}. Device may have been removed.`)
+        // Update local state anyway for responsive UI, but don't try to update Firestore
+        this.updateLocalDeviceState(roomId, deviceId, { brightness })
+        return { success: true, warning: 'Device not found in database, updated locally only' }
+      }
+      
       await updateDoc(deviceRef, { brightness })
       
       // Update local state immediately for responsive UI
@@ -742,17 +780,36 @@ class SmartMirrorService {
       return { success: true }
     } catch (error) {
       console.error('Error setting light brightness:', error)
-      throw error
+      // Still update local state for responsive UI even if Firestore update fails
+      this.updateLocalDeviceState(roomId, deviceId, { brightness })
+      return { success: false, error: error.message }
     }
   }
 
   async setClimateState(roomId, deviceId, state) {
-    if (!this.currentUser) {
-      throw new Error('User not authenticated')
+    if (!this.currentProjectId) {
+      throw new Error('No project selected')
+    }
+
+    const connection = this.projectConnections.get(this.currentProjectId)
+    if (!connection || !connection.user) {
+      throw new Error('No smart home connection for this project')
     }
 
     try {
-      const deviceRef = doc(smartMirrorDb, 'users', this.currentUser.uid, 'rooms', roomId, 'devices', deviceId)
+      const userId = connection.user.uid
+      console.log(`setClimateState: Using user UID ${userId} for project ${this.currentProjectId}`)
+      const deviceRef = doc(smartMirrorDb, 'users', userId, 'rooms', roomId, 'devices', deviceId)
+      
+      // Check if the device document exists before trying to update it
+      const deviceSnap = await getDoc(deviceRef)
+      if (!deviceSnap.exists()) {
+        console.warn(`Device ${deviceId} not found in room ${roomId}. Device may have been removed.`)
+        // Update local state anyway for responsive UI, but don't try to update Firestore
+        this.updateLocalDeviceState(roomId, deviceId, { state })
+        return { success: true, warning: 'Device not found in database, updated locally only' }
+      }
+      
       await updateDoc(deviceRef, { state })
       
       // Update local state immediately for responsive UI
@@ -761,17 +818,36 @@ class SmartMirrorService {
       return { success: true }
     } catch (error) {
       console.error('Error setting climate state:', error)
-      throw error
+      // Still update local state for responsive UI even if Firestore update fails
+      this.updateLocalDeviceState(roomId, deviceId, { state })
+      return { success: false, error: error.message }
     }
   }
 
   async setClimateTemperature(roomId, deviceId, temperature) {
-    if (!this.currentUser) {
-      throw new Error('User not authenticated')
+    if (!this.currentProjectId) {
+      throw new Error('No project selected')
+    }
+
+    const connection = this.projectConnections.get(this.currentProjectId)
+    if (!connection || !connection.user) {
+      throw new Error('No smart home connection for this project')
     }
 
     try {
-      const deviceRef = doc(smartMirrorDb, 'users', this.currentUser.uid, 'rooms', roomId, 'devices', deviceId)
+      const userId = connection.user.uid
+      console.log(`setClimateTemperature: Using user UID ${userId} for project ${this.currentProjectId}`)
+      const deviceRef = doc(smartMirrorDb, 'users', userId, 'rooms', roomId, 'devices', deviceId)
+      
+      // Check if the device document exists before trying to update it
+      const deviceSnap = await getDoc(deviceRef)
+      if (!deviceSnap.exists()) {
+        console.warn(`Device ${deviceId} not found in room ${roomId}. Device may have been removed.`)
+        // Update local state anyway for responsive UI, but don't try to update Firestore
+        this.updateLocalDeviceState(roomId, deviceId, { temperature })
+        return { success: true, warning: 'Device not found in database, updated locally only' }
+      }
+      
       await updateDoc(deviceRef, { temperature })
       
       // Update local state immediately for responsive UI
@@ -780,17 +856,36 @@ class SmartMirrorService {
       return { success: true }
     } catch (error) {
       console.error('Error setting climate temperature:', error)
-      throw error
+      // Still update local state for responsive UI even if Firestore update fails
+      this.updateLocalDeviceState(roomId, deviceId, { temperature })
+      return { success: false, error: error.message }
     }
   }
 
   async setClimateMode(roomId, deviceId, mode) {
-    if (!this.currentUser) {
-      throw new Error('User not authenticated')
+    if (!this.currentProjectId) {
+      throw new Error('No project selected')
+    }
+
+    const connection = this.projectConnections.get(this.currentProjectId)
+    if (!connection || !connection.user) {
+      throw new Error('No smart home connection for this project')
     }
 
     try {
-      const deviceRef = doc(smartMirrorDb, 'users', this.currentUser.uid, 'rooms', roomId, 'devices', deviceId)
+      const userId = connection.user.uid
+      console.log(`setClimateMode: Using user UID ${userId} for project ${this.currentProjectId}`)
+      const deviceRef = doc(smartMirrorDb, 'users', userId, 'rooms', roomId, 'devices', deviceId)
+      
+      // Check if the device document exists before trying to update it
+      const deviceSnap = await getDoc(deviceRef)
+      if (!deviceSnap.exists()) {
+        console.warn(`Device ${deviceId} not found in room ${roomId}. Device may have been removed.`)
+        // Update local state anyway for responsive UI, but don't try to update Firestore
+        this.updateLocalDeviceState(roomId, deviceId, { mode })
+        return { success: true, warning: 'Device not found in database, updated locally only' }
+      }
+      
       await updateDoc(deviceRef, { mode })
       
       // Update local state immediately for responsive UI
@@ -799,24 +894,38 @@ class SmartMirrorService {
       return { success: true }
     } catch (error) {
       console.error('Error setting climate mode:', error)
-      throw error
+      // Still update local state for responsive UI even if Firestore update fails
+      this.updateLocalDeviceState(roomId, deviceId, { mode })
+      return { success: false, error: error.message }
     }
   }
 
   // Helper method to update local device state immediately
   updateLocalDeviceState(roomId, deviceId, updates) {
-    const roomIndex = this.rooms.findIndex(room => room.id === roomId)
+    if (!this.currentProjectId) return
+
+    const connection = this.projectConnections.get(this.currentProjectId)
+    if (!connection) return
+
+    const roomIndex = connection.rooms.findIndex(room => room.id === roomId)
     
     if (roomIndex !== -1) {
-      const deviceIndex = this.rooms[roomIndex].devices.findIndex(device => device.id === deviceId)
+      const deviceIndex = connection.rooms[roomIndex].devices.findIndex(device => device.id === deviceId)
       if (deviceIndex !== -1) {
-        this.rooms[roomIndex].devices[deviceIndex] = {
-          ...this.rooms[roomIndex].devices[deviceIndex],
+        connection.rooms[roomIndex].devices[deviceIndex] = {
+          ...connection.rooms[roomIndex].devices[deviceIndex],
           ...updates
         }
         
         // Update the devices array
-        this.devices = this.rooms.flatMap(room => room.devices || [])
+        connection.devices = connection.rooms.flatMap(room => room.devices || [])
+        
+        // Update the global state for UI consistency
+        this.rooms = connection.rooms
+        this.devices = connection.devices
+        
+        // Save updated connections
+        this.saveProjectConnections()
       }
     }
   }

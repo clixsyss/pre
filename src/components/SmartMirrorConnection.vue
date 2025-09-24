@@ -115,7 +115,7 @@
                   id="email"
                   v-model="loginForm.email" 
                   type="email" 
-                  placeholder="Enter your Smart Mirror email"
+                  placeholder="Enter your Smart Home email"
                   required
                   :disabled="smartMirrorStore.isConnecting"
                   autocomplete="email"
@@ -138,7 +138,7 @@
                   id="password"
                   v-model="loginForm.password" 
                   type="password" 
-                  placeholder="Enter your Smart Mirror password"
+                  placeholder="Enter your Smart Home password"
                   required
                   :disabled="smartMirrorStore.isConnecting"
                   autocomplete="current-password"
@@ -197,10 +197,10 @@
       <div v-if="showDisconnectConfirm" class="modal-overlay" @click="showDisconnectConfirm = false">
         <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>Disconnect Smart Mirror</h3>
+          <h3>Disconnect Smart Home</h3>
         </div>
         <div class="modal-body">
-          <p>Are you sure you want to disconnect Smart Mirror from this project?</p>
+          <p>Are you sure you want to disconnect Smart Home from this project?</p>
           <p class="modal-subtitle">You'll need to reconnect to control devices for this project again.</p>
         </div>
         <div class="modal-actions">

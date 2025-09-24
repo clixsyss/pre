@@ -94,7 +94,7 @@
         <div class="service-content">
           <h3 class="service-name">Smart Devices</h3>
           <p class="service-description">Control your smart home devices and automation</p>
-        </div>
+      </div>
         <div class="service-arrow">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -136,7 +136,7 @@
         <div class="service-content">
           <h3 class="service-name">My Bookings</h3>
           <p class="service-description">Manage your reservations and appointments</p>
-        </div>
+      </div>
         <div class="service-arrow">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -184,7 +184,7 @@
         <span class="service-name">Membership Plans</span>
         <span class="coming-soon-badge">Coming Soon</span>
       </div> -->
-        </div>
+    </div>
       </div>
 
       <!-- Open Bookings Tab -->

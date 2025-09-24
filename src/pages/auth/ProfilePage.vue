@@ -867,7 +867,7 @@
                     id="email"
                     v-model="loginForm.email" 
                     type="email" 
-                    placeholder="Enter your Smart Mirror email"
+                    placeholder="Enter your Smart Home email"
                     required
                     :disabled="smartMirrorStore.isConnecting"
                     autocomplete="email"
@@ -890,7 +890,7 @@
                     id="password"
                     v-model="loginForm.password" 
                     type="password" 
-                    placeholder="Enter your Smart Mirror password"
+                    placeholder="Enter your Smart Home password"
                     required
                     :disabled="smartMirrorStore.isConnecting"
                     autocomplete="current-password"

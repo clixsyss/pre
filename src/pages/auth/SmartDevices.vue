@@ -19,8 +19,8 @@
     <!-- Not Connected State -->
     <div v-if="!isCurrentProjectConnected" class="not-connected-state">
       <div class="not-connected-icon">🏠</div>
-      <h3>Smart Mirror Not Connected</h3>
-      <p>Please connect your Smart Mirror account for the current project in your profile to control devices.</p>
+      <h3>Smart Home Not Connected</h3>
+      <p>Please connect your Smart Home account for the current project in your profile to control devices.</p>
       <button @click="$router.push('/profile')" class="connect-btn">
         Go to Profile
       </button>
