@@ -608,13 +608,6 @@ onActivated(async () => {
   overflow-x: hidden;
 }
 
-.page-header {
-  background: #F6F6F6;
-  border-bottom: 1px solid #e8e8e8;
-  padding: 16px;
-  margin-bottom: 20px;
-}
-
 .header-main {
   display: flex;
   align-items: center;

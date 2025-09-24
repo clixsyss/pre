@@ -402,7 +402,7 @@
                 <span>Smart Home</span>
               </div>
               <div class="smart-mirror-status">
-                <span v-if="smartMirrorStore.isProjectConnected(project.id)" class="status-badge connected">
+                <span v-if="isProjectSmartHomeConnected(project.id)" class="status-badge connected">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
@@ -418,7 +418,7 @@
               </div>
             </div>
 
-            <div v-if="smartMirrorStore.isProjectConnected(project.id)" class="smart-mirror-connected">
+            <div v-if="isProjectSmartHomeConnected(project.id)" class="smart-mirror-connected">
               <div class="device-summary">
                 <span class="device-count">{{ getProjectDeviceCount(project.id) }} devices</span>
                 <span class="device-types">Lights, Climate, Plugs</span>
@@ -575,7 +575,7 @@
       </div>
 
       <!-- Smart Home Settings Accordion - Only show if current project has Smart Mirror connection -->
-      <div v-if="smartMirrorStore.isProjectConnected(currentProjectId)" class="accordion-section">
+      <div v-if="isProjectSmartHomeConnected(currentProjectId)" class="accordion-section">
         <button 
           @click="toggleAccordion('smartHome')" 
           class="accordion-header"
@@ -842,7 +842,7 @@
             <div class="project-details">
               <h4>{{ userProjects.find(p => p.id === selectedProjectId)?.name || 'Selected Project' }}</h4>
               <p>{{ userProjects.find(p => p.id === selectedProjectId)?.location || 'Location not set' }}</p>
-              <div v-if="smartMirrorStore.isProjectConnected(selectedProjectId)" class="existing-connection">
+              <div v-if="isProjectSmartHomeConnected(selectedProjectId)" class="existing-connection">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -1390,6 +1390,12 @@ const switchToProject = async (project) => {
 }
 
 // Smart Mirror related methods
+const isProjectSmartHomeConnected = (projectId) => {
+  // Check if project has a smart home connection regardless of current project
+  const status = smartMirrorStore.getProjectConnectionStatus(projectId)
+  return status.isConnected && status.devicesCount > 0
+}
+
 const getProjectDeviceCount = (projectId) => {
   const status = smartMirrorStore.getProjectConnectionStatus(projectId)
   return status.devicesCount
