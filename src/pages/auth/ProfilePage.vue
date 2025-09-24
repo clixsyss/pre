@@ -291,26 +291,6 @@
               </div>
             </button>
 
-            <!-- Support Button -->
-            <button @click="handleSupport" class="support-btn">
-              <div class="support-btn-content">
-                <div class="support-btn-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </div>
-                <div class="support-btn-text">
-                  <h4>Contact Support</h4>
-                  <p>Get help with any questions or issues</p>
-                </div>
-              </div>
-              <div class="support-btn-arrow">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-            </button>
-
             <div v-if="complaintStats.total === 0" class="no-complaints">
               <div class="no-complaints-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -324,6 +304,30 @@
         </div>
       </div>
 
+      <!-- Support Accordion -->
+      <div class="accordion-section">
+        <button 
+          @click="handleSupport" 
+          class="accordion-header support-header"
+        >
+          <div class="accordion-title">
+            <div class="section-icon support-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="section-text">
+              <h3>Support</h3>
+              <p>Get help with any questions or issues</p>
+            </div>
+          </div>
+          <div class="accordion-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </button>
+      </div>
 
       <!-- Current Projects Accordion -->
       <div class="accordion-section">
@@ -3887,8 +3891,8 @@ input:checked + .toggle-slider:before {
 
 /* Violations Styles */
 .violations-icon {
-  background: #fef3c7;
-  color: #d97706;
+  background: #AF1E23;
+  color: #f0fdf4;
 }
 
 .violations-container {
@@ -3958,12 +3962,12 @@ input:checked + .toggle-slider:before {
 .violations-btn-icon {
   width: 48px;
   height: 48px;
-  background: #fef3c7;
+  background: #AF1E23;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #d97706;
+  color: #f0fdf4;
   flex-shrink: 0;
   position: relative;
 }
@@ -4059,8 +4063,8 @@ input:checked + .toggle-slider:before {
 
 /* Complaints Styles */
 .complaints-icon {
-  background: #dbeafe;
-  color: #3b82f6;
+  background: #AF1E23;
+  color: #f0fdf4;
 }
 
 .complaints-container {
@@ -4095,11 +4099,6 @@ input:checked + .toggle-slider:before {
   text-align: left;
 }
 
-.complaints-btn:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
-}
-
 .complaints-btn-content {
   display: flex;
   align-items: center;
@@ -4109,12 +4108,12 @@ input:checked + .toggle-slider:before {
 .complaints-btn-icon {
   width: 48px;
   height: 48px;
-  background: #dbeafe;
+  background: #AF1E23;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #3b82f6;
+  color: #f0fdf4;
   flex-shrink: 0;
   position: relative;
 }
@@ -4141,65 +4140,10 @@ input:checked + .toggle-slider:before {
   transform: translateX(4px);
 }
 
-/* Support Button Styles */
-.support-btn {
-  background: white;
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 16px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  text-align: left;
-  margin-top: 12px;
-}
-
-.support-btn:hover {
-  border-color: #10b981;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
-}
-
-.support-btn-content {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.support-btn-icon {
-  width: 48px;
-  height: 48px;
-  background: #d1fae5;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #10b981;
-  flex-shrink: 0;
-  position: relative;
-}
-
-.support-btn-text h4 {
-  margin: 0 0 4px 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-.support-btn-text p {
-  margin: 0;
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-.support-btn-arrow {
-  color: #9ca3af;
-  transition: transform 0.2s ease;
-}
-
-.support-btn:hover .support-btn-arrow {
-  transform: translateX(4px);
+/* Support Icon Styles */
+.support-icon {
+  background: #AF1E23;
+  color: #f0fdf4;
 }
 
 .no-complaints {
@@ -4219,7 +4163,7 @@ input:checked + .toggle-slider:before {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #16a34a;
+  color: #AF1E23;
 }
 
 .no-complaints h4 {
@@ -4255,18 +4199,7 @@ input:checked + .toggle-slider:before {
     height: 40px;
   }
   
-  .support-btn {
-    padding: 12px;
-  }
-  
-  .support-btn-content {
-    gap: 12px;
-  }
-  
-  .support-btn-icon {
-    width: 40px;
-    height: 40px;
-  }
+  /* Support responsive styles handled by accordion styles */
   
   .no-complaints {
     padding: 30px 16px;

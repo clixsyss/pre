@@ -63,46 +63,35 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAuth } from 'firebase/auth'
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '../../boot/firebase'
+import { useSupportStore } from '../../stores/supportStore'
 
 defineOptions({
   name: 'AuthSupportPage'
 })
 
 const router = useRouter()
-const auth = getAuth()
-const supportChats = ref([])
-const loadingChats = ref(true)
-const errorChats = ref(null)
-let unsubscribe = null
+const supportStore = useSupportStore()
+
+// Computed properties
+const supportChats = computed(() => supportStore.userSupportChats)
+const loadingChats = computed(() => supportStore.loading)
+const errorChats = computed(() => supportStore.error)
 
 const goBack = () => {
   router.go(-1)
 }
 
 const startNewChat = async () => {
-  if (!auth.currentUser) {
-    router.push('/signin')
-    return
-  }
-
   try {
-    const newChatRef = await addDoc(collection(db, 'supportChats'), {
-      userId: auth.currentUser.uid,
-      status: 'open',
-      createdAt: serverTimestamp(),
-      lastMessageAt: serverTimestamp(),
+    const newChat = await supportStore.createSupportChat({
       title: `Support Chat - ${new Date().toLocaleString()}`,
-      messages: [] // Initialize with an empty array for messages
+      category: 'general'
     })
-    router.push(`/support-chat/${newChatRef.id}`)
+    router.push(`/support-chat/${newChat.id}`)
   } catch (error) {
     console.error('Error starting new chat:', error)
-    errorChats.value = 'Failed to start a new chat.'
   }
 }
 
@@ -116,31 +105,21 @@ const formatDate = (timestamp) => {
   return date.toLocaleString()
 }
 
-onMounted(() => {
-  if (auth.currentUser) {
-    const q = query(
-      collection(db, 'supportChats'),
-      where('userId', '==', auth.currentUser.uid),
-      orderBy('lastMessageAt', 'desc')
-    )
-
-    unsubscribe = onSnapshot(q, (snapshot) => {
-      supportChats.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-      loadingChats.value = false
-    }, (error) => {
-      console.error('Error fetching support chats:', error)
-      errorChats.value = 'Failed to load support chats.'
-      loadingChats.value = false
+onMounted(async () => {
+  try {
+    await supportStore.fetchSupportChats()
+    
+    // Set up real-time listener
+    const unsubscribe = supportStore.listenToUserSupportChats()
+    
+    // Clean up listener on unmount
+    onUnmounted(() => {
+      if (unsubscribe) {
+        unsubscribe()
+      }
     })
-  } else {
-    loadingChats.value = false
-    errorChats.value = 'User not authenticated.'
-  }
-})
-
-onUnmounted(() => {
-  if (unsubscribe) {
-    unsubscribe()
+  } catch (error) {
+    console.error('Error setting up support chats:', error)
   }
 })
 </script>

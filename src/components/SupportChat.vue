@@ -1,10 +1,11 @@
 <template>
-  <div class="support-chat">
+  <div class="complaint-chat">
     <!-- Header -->
     <div class="chat-header">
       <button @click="goBack" class="back-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
         </svg>
       </button>
       <div class="header-info">
@@ -20,7 +21,9 @@
         <div class="header-actions">
           <button @click="toggleFullscreen" class="action-btn" title="Toggle Fullscreen">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 3H5C3.89543 3 3 3.89543 3 5V8M21 3H19C17.8954 3 17 3.89543 17 5V8M3 16V19C3 20.1046 3.89543 21 5 21H8M16 21H19C20.1046 21 21 20.1046 21 19V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path
+                d="M8 3H5C3.89543 3 3 3.89543 3 5V8M21 3H19C17.8954 3 17 3.89543 17 5V8M3 16V19C3 20.1046 3.89543 21 5 21H8M16 21H19C20.1046 21 21 20.1046 21 19V16"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
         </div>
@@ -29,7 +32,7 @@
 
     <!-- Messages -->
     <div class="messages-container" ref="messagesContainer">
-      <div v-if="loading && !supportChat" class="loading-state">
+      <div v-if="supportStore.loading && !supportChat" class="loading-state">
         <div class="spinner"></div>
         <p>Loading conversation...</p>
       </div>
@@ -37,9 +40,9 @@
       <div v-else-if="!supportChat" class="error-state">
         <div class="error-icon">
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="#fbbf24" stroke-width="2"/>
-            <line x1="12" y1="8" x2="12" y2="12" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
-            <line x1="12" y1="16" x2="12.01" y2="16" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="12" r="10" stroke="#fbbf24" stroke-width="2" />
+            <line x1="12" y1="8" x2="12" y2="12" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" />
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" />
           </svg>
         </div>
         <h3 class="error-title">Support Chat Not Found</h3>
@@ -48,72 +51,26 @@
       </div>
 
       <div v-else class="messages-list">
-        <div v-if="messages.length === 0" class="empty-state">
-          <div class="empty-icon">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <h3>No messages yet</h3>
-          <p>Start the conversation by sending a message below.</p>
-        </div>
-
-        <div v-for="message in messages" :key="message.id" :class="['message-wrapper', getMessageSenderType(message)]">
-          <div class="message-avatar">
-            <div v-if="getMessageSenderType(message) === 'user'" class="user-avatar">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
-              </svg>
-            </div>
-            <div v-else class="admin-avatar">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-          </div>
-          
-          <div class="message-content">
-            <div class="message-header">
-              <span class="sender-name">{{ getSenderName(message) }}</span>
-              <span class="message-time">{{ formatMessageTime(message.timestamp) }}</span>
-            </div>
-            
-            <div class="message-bubble">
-              <div v-if="message.type === 'text'" class="message-text">
-                {{ message.content }}
+        <div v-for="message in supportChat.messages" :key="message.id" class="message-wrapper">
+          <div :class="['message', getMessageSenderType(message)]">
+            <div class="message-avatar">
+              <div :class="['avatar', getMessageSenderType(message)]">
+                <span>{{ getInitials(message.senderName) }}</span>
               </div>
-              
-              <div v-else-if="message.type === 'image'" class="message-image">
-                <img 
-                  :src="message.content" 
-                  :alt="message.alt || 'Image'" 
-                  @click="openImageModal(message.content)"
-                  class="image-preview"
-                />
+            </div>
+            <div class="message-content">
+              <div class="message-header">
+                <span class="sender-name">{{ message.senderName }}</span>
+                <span class="message-time">{{ formatTime(message.timestamp) }}</span>
               </div>
-              
-              <div v-else-if="message.type === 'file'" class="message-file">
-                <div class="file-info">
-                  <div class="file-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </div>
-                  <div class="file-details">
-                    <div class="file-name">{{ message.fileName || 'File' }}</div>
-                    <div class="file-size">{{ formatFileSize(message.fileSize) }}</div>
-                  </div>
-                  <a :href="message.content" :download="message.fileName" class="download-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </a>
+              <div class="message-body">
+                <div v-if="message.type === 'image' && message.imageUrl" class="message-image">
+                  <img :src="message.imageUrl" :alt="message.text || 'Image'" @click="openFullscreen(message.imageUrl)"
+                    class="image-preview" />
+                  <p v-if="message.text" class="image-caption">{{ message.text }}</p>
+                </div>
+                <div v-else class="message-text">
+                  <p>{{ message.text }}</p>
                 </div>
               </div>
             </div>
@@ -123,527 +80,306 @@
     </div>
 
     <!-- Input Area -->
-    <div class="input-area">
+    <div v-if="supportChat" class="input-area">
       <div class="input-container">
-        <button @click="toggleAttachmentMenu" class="attachment-btn" :disabled="uploading">
+        <button @click="toggleImageUpload" class="attach-btn" title="Attach Image">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.64 16.2a2 2 0 0 1-2.83-2.83l8.49-8.49" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path
+              d="M21.44 11.05L12.25 20.24C11.1242 21.3658 9.59722 21.9983 8.005 21.9983C6.41278 21.9983 4.88583 21.3658 3.76 20.24C2.63417 19.1142 2.00167 17.5872 2.00167 15.995C2.00167 14.4028 2.63417 12.8758 3.76 11.75L12.95 2.56C13.7006 1.80944 14.7186 1.38778 15.785 1.38778C16.8514 1.38778 17.8694 1.80944 18.62 2.56C19.3706 3.31056 19.7922 4.32856 19.7922 5.395C19.7922 6.46144 19.3706 7.47944 18.62 8.23L9.41 17.42C9.03472 17.7953 8.53127 18.0083 8.005 18.0083C7.47873 18.0083 6.97528 17.7953 6.6 17.42C6.22472 17.0447 6.01167 16.5413 6.01167 16.015C6.01167 15.4887 6.22472 14.9853 6.6 14.61L15.07 6.13"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </button>
-        
-        <div class="input-wrapper">
-          <textarea
-            v-model="newMessage"
-            @keydown.enter.prevent="handleKeyDown"
-            @input="handleInput"
-            placeholder="Type your message..."
-            class="message-input"
-            :disabled="uploading"
-            rows="1"
-            ref="messageInput"
-          ></textarea>
-        </div>
-        
-        <button 
-          @click="sendMessage" 
-          class="send-btn" 
-          :disabled="!canSend || uploading"
-          :class="{ 'sending': uploading }"
-        >
-          <svg v-if="!uploading" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <polygon points="22,2 15,22 11,13 2,9 22,2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+        <input ref="messageInput" v-model="newMessage" @keyup.enter="sendMessage" type="text"
+          placeholder="Type your message..." class="message-input" :disabled="sending" />
+
+        <button @click="sendMessage" :disabled="!newMessage.trim() || sending" class="send-btn"
+          :class="{ 'disabled': !newMessage.trim() || sending }">
+          <svg v-if="!sending" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            xmlns="http://www.w3.org/2000/svg">
+            <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-          <div v-else class="sending-spinner"></div>
+          <div v-else class="spinner-small"></div>
         </button>
       </div>
-      
-      <!-- Attachment Menu -->
-      <div v-if="showAttachmentMenu" class="attachment-menu">
-        <button @click="selectImage" class="attachment-option">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
-            <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
-          </svg>
-          <span>Photo</span>
-        </button>
-        <button @click="selectFile" class="attachment-option">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span>File</span>
-        </button>
+
+      <!-- Image Upload -->
+      <div v-if="showImageUpload" class="image-upload">
+        <input ref="imageInput" @change="handleImageSelect" type="file" accept="image/*" class="image-input" />
+        <div class="upload-actions">
+          <button @click="selectImage" class="btn-secondary">Select Image</button>
+          <button @click="cancelImageUpload" class="btn-outline">Cancel</button>
+        </div>
       </div>
     </div>
 
-    <!-- Hidden file inputs -->
-    <input
-      ref="imageInput"
-      type="file"
-      accept="image/*"
-      @change="handleImageSelect"
-      style="display: none"
-    />
-    <input
-      ref="fileInput"
-      type="file"
-      @change="handleFileSelect"
-      style="display: none"
-    />
-
-    <!-- Image Modal -->
-    <div v-if="showImageModal" class="image-modal" @click="closeImageModal">
-      <div class="image-modal-content" @click.stop>
-        <button @click="closeImageModal" class="close-image-btn">
+    <!-- Fullscreen Image Modal -->
+    <div v-if="fullscreenImage" class="fullscreen-modal" @click="closeFullscreen">
+      <div class="fullscreen-content">
+        <button @click="closeFullscreen" class="close-btn">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+            <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
           </svg>
         </button>
-        <img :src="selectedImage" alt="Full size image" class="modal-image" />
+        <img :src="fullscreenImage" alt="Fullscreen" class="fullscreen-image" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useNotificationStore } from '../stores/notifications'
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  addDoc, 
-  updateDoc, 
-  onSnapshot, 
-  orderBy, 
-  query, 
-  serverTimestamp
-} from 'firebase/firestore'
-import { db } from '../boot/firebase'
-import { getAuth } from 'firebase/auth'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useSupportStore } from '../stores/supportStore';
+import { useNotificationStore } from '../stores/notifications';
 
-// Component name for ESLint
-defineOptions({
-  name: 'SupportChat'
-})
+const router = useRouter();
+const route = useRoute();
+const supportStore = useSupportStore();
+const notificationStore = useNotificationStore();
 
-const router = useRouter()
-const route = useRoute()
-const notificationStore = useNotificationStore()
-
-// Props
-const props = defineProps({
-  supportChatId: {
-    type: String,
-    required: false
-  }
-})
+// Get support chat ID from route params
+const supportChatId = computed(() => route.params.id);
 
 // Reactive data
-const supportChat = ref(null)
-const messages = ref([])
-const newMessage = ref('')
-const loading = ref(true)
-const uploading = ref(false)
-const showAttachmentMenu = ref(false)
-const showImageModal = ref(false)
-const selectedImage = ref('')
-const isFullscreen = ref(false)
+const supportChat = computed(() => supportStore.currentSupportChat);
+const newMessage = ref('');
+const sending = ref(false);
+const showImageUpload = ref(false);
+const fullscreenImage = ref(null);
+const messagesContainer = ref(null);
+const messageInput = ref(null);
+const imageInput = ref(null);
 
-// Refs
-const messagesContainer = ref(null)
-const messageInput = ref(null)
-const imageInput = ref(null)
-const fileInput = ref(null)
-
-// Computed
-const canSend = computed(() => {
-  return newMessage.value.trim().length > 0 && !uploading.value
-})
-
-const currentSupportChatId = computed(() => {
-  return props.supportChatId || route.params.id
-})
+// Categories mapping
+const categories = {
+  'general': 'General Inquiry',
+  'technical': 'Technical Support',
+  'billing': 'Billing Issue',
+  'feature': 'Feature Request',
+  'bug': 'Bug Report',
+  'other': 'Other'
+};
 
 // Methods
 const goBack = () => {
-  router.go(-1)
-}
+  router.go(-1);
+};
+
+const getCategoryName = (category) => {
+  return categories[category] || 'General';
+};
+
+const getMessageSenderType = (message) => {
+  return message.senderType === 'admin' ? 'admin' : 'user';
+};
+
+const getInitials = (name) => {
+  if (!name) return 'U';
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+};
+
+const formatTime = (timestamp) => {
+  if (!timestamp) return '';
+
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const now = new Date();
+  const diff = now - date;
+
+  // Less than 1 minute
+  if (diff < 60000) {
+    return 'Just now';
+  }
+
+  // Less than 1 hour
+  if (diff < 3600000) {
+    const minutes = Math.floor(diff / 60000);
+    return `${minutes}m ago`;
+  }
+
+  // Less than 24 hours
+  if (diff < 86400000) {
+    const hours = Math.floor(diff / 3600000);
+    return `${hours}h ago`;
+  }
+
+  // More than 24 hours
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+const sendMessage = async () => {
+  if (!newMessage.value.trim() || sending.value || !supportChat.value) return;
+
+  try {
+    sending.value = true;
+
+    await supportStore.addMessage(supportChatId.value, {
+      text: newMessage.value.trim(),
+      type: 'text'
+    });
+
+    newMessage.value = '';
+    await nextTick();
+    scrollToBottom();
+  } catch (error) {
+    console.error('Error sending message:', error);
+    notificationStore.addNotification({
+      type: 'error',
+      message: 'Failed to send message. Please try again.'
+    });
+  } finally {
+    sending.value = false;
+  }
+};
+
+const toggleImageUpload = () => {
+  showImageUpload.value = !showImageUpload.value;
+};
+
+const selectImage = () => {
+  imageInput.value?.click();
+};
+
+const handleImageSelect = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    sending.value = true;
+
+    // Here you would upload the image to Firebase Storage
+    // For now, we'll just send a text message about the image
+    await supportStore.addMessage(supportChatId.value, {
+      text: `📷 Image: ${file.name}`,
+      type: 'text'
+    });
+
+    showImageUpload.value = false;
+    await nextTick();
+    scrollToBottom();
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    notificationStore.addNotification({
+      type: 'error',
+      message: 'Failed to upload image. Please try again.'
+    });
+  } finally {
+    sending.value = false;
+  }
+};
+
+const cancelImageUpload = () => {
+  showImageUpload.value = false;
+  if (imageInput.value) {
+    imageInput.value.value = '';
+  }
+};
+
+const openFullscreen = (imageUrl) => {
+  fullscreenImage.value = imageUrl;
+};
+
+const closeFullscreen = () => {
+  fullscreenImage.value = null;
+};
 
 const toggleFullscreen = () => {
   if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen()
-    isFullscreen.value = true
+    document.documentElement.requestFullscreen();
   } else {
-    document.exitFullscreen()
-    isFullscreen.value = false
+    document.exitFullscreen();
   }
-}
-
-const getCategoryName = (category) => {
-  const categories = {
-    'general': 'General',
-    'technical': 'Technical',
-    'billing': 'Billing',
-    'feature': 'Feature Request',
-    'suspension': 'Account Suspension',
-    'other': 'Other'
-  }
-  return categories[category] || 'General'
-}
-
-const getMessageSenderType = (message) => {
-  const auth = getAuth()
-  const currentUser = auth.currentUser
-  
-  if (!currentUser) return 'admin'
-  
-  // Check if message is from current user
-  if (message.senderId === currentUser.uid) {
-    return 'user'
-  }
-  
-  // Check if message is from admin
-  if (message.senderType === 'admin') {
-    return 'admin'
-  }
-  
-  return 'admin'
-}
-
-const getSenderName = (message) => {
-  if (getMessageSenderType(message) === 'user') {
-    return 'You'
-  }
-  return message.senderName || 'Support Team'
-}
-
-const formatMessageTime = (timestamp) => {
-  if (!timestamp) return ''
-  
-  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
-  const now = new Date()
-  const diff = now - date
-  
-  if (diff < 60000) { // Less than 1 minute
-    return 'Just now'
-  } else if (diff < 3600000) { // Less than 1 hour
-    const minutes = Math.floor(diff / 60000)
-    return `${minutes}m ago`
-  } else if (diff < 86400000) { // Less than 1 day
-    const hours = Math.floor(diff / 3600000)
-    return `${hours}h ago`
-  } else {
-    return date.toLocaleDateString()
-  }
-}
-
-const formatFileSize = (bytes) => {
-  if (!bytes) return ''
-  
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
-}
-
-const handleKeyDown = (event) => {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault()
-    sendMessage()
-  }
-}
-
-const handleInput = () => {
-  // Auto-resize textarea
-  nextTick(() => {
-    if (messageInput.value) {
-      messageInput.value.style.height = 'auto'
-      messageInput.value.style.height = messageInput.value.scrollHeight + 'px'
-    }
-  })
-}
-
-const sendMessage = async () => {
-  if (!canSend.value || !supportChat.value) return
-  
-  const messageText = newMessage.value.trim()
-  if (!messageText) return
-  
-  try {
-    const auth = getAuth()
-    const currentUser = auth.currentUser
-    
-    if (!currentUser) {
-      notificationStore.showError('You must be logged in to send messages')
-      return
-    }
-    
-    const messageData = {
-      content: messageText,
-      type: 'text',
-      senderId: currentUser.uid,
-      senderName: currentUser.displayName || 'User',
-      senderType: 'user',
-      timestamp: serverTimestamp(),
-      readBy: [currentUser.uid]
-    }
-    
-    // Add message to messages subcollection
-    const messagesRef = collection(db, 'supportChats', currentSupportChatId.value, 'messages')
-    await addDoc(messagesRef, messageData)
-    
-    // Update support chat last message and timestamp
-    const supportChatRef = doc(db, 'supportChats', currentSupportChatId.value)
-    await updateDoc(supportChatRef, {
-      lastMessage: messageText,
-      lastMessageTime: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    })
-    
-    newMessage.value = ''
-    
-    // Reset textarea height
-    if (messageInput.value) {
-      messageInput.value.style.height = 'auto'
-    }
-    
-  } catch (error) {
-    console.error('Error sending message:', error)
-    notificationStore.showError('Failed to send message. Please try again.')
-  }
-}
-
-const toggleAttachmentMenu = () => {
-  showAttachmentMenu.value = !showAttachmentMenu.value
-}
-
-const selectImage = () => {
-  imageInput.value?.click()
-  showAttachmentMenu.value = false
-}
-
-const selectFile = () => {
-  fileInput.value?.click()
-  showAttachmentMenu.value = false
-}
-
-const handleImageSelect = async (event) => {
-  const file = event.target.files[0]
-  if (!file) return
-  
-  if (!file.type.startsWith('image/')) {
-    notificationStore.showError('Please select an image file')
-    return
-  }
-  
-  if (file.size > 10 * 1024 * 1024) { // 10MB limit
-    notificationStore.showError('Image size must be less than 10MB')
-    return
-  }
-  
-  await uploadFile(file, 'image')
-}
-
-const handleFileSelect = async (event) => {
-  const file = event.target.files[0]
-  if (!file) return
-  
-  if (file.size > 50 * 1024 * 1024) { // 50MB limit
-    notificationStore.showError('File size must be less than 50MB')
-    return
-  }
-  
-  await uploadFile(file, 'file')
-}
-
-const uploadFile = async (file, type) => {
-  if (!supportChat.value) return
-  
-  uploading.value = true
-  
-  try {
-    // TODO: Implement file upload to Firebase Storage
-    // For now, we'll simulate the upload
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    const auth = getAuth()
-    const currentUser = auth.currentUser
-    
-    if (!currentUser) {
-      notificationStore.showError('You must be logged in to send files')
-      return
-    }
-    
-    const messageData = {
-      content: URL.createObjectURL(file), // Temporary URL for demo
-      type: type,
-      fileName: file.name,
-      fileSize: file.size,
-      senderId: currentUser.uid,
-      senderName: currentUser.displayName || 'User',
-      senderType: 'user',
-      timestamp: serverTimestamp(),
-      readBy: [currentUser.uid]
-    }
-    
-    // Add message to messages subcollection
-    const messagesRef = collection(db, 'supportChats', currentSupportChatId.value, 'messages')
-    await addDoc(messagesRef, messageData)
-    
-    // Update support chat last message and timestamp
-    const supportChatRef = doc(db, 'supportChats', currentSupportChatId.value)
-    await updateDoc(supportChatRef, {
-      lastMessage: type === 'image' ? '📷 Image' : `📎 ${file.name}`,
-      lastMessageTime: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    })
-    
-    notificationStore.showSuccess(`${type === 'image' ? 'Image' : 'File'} sent successfully`)
-    
-  } catch (error) {
-    console.error('Error uploading file:', error)
-    notificationStore.showError(`Failed to upload ${type}. Please try again.`)
-  } finally {
-    uploading.value = false
-  }
-}
-
-const openImageModal = (imageUrl) => {
-  selectedImage.value = imageUrl
-  showImageModal.value = true
-}
-
-const closeImageModal = () => {
-  showImageModal.value = false
-  selectedImage.value = ''
-}
+};
 
 const scrollToBottom = () => {
-  nextTick(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-    }
-  })
-}
-
-// Load support chat data
-const loadSupportChat = async () => {
-  if (!currentSupportChatId.value) {
-    loading.value = false
-    return
+  if (messagesContainer.value) {
+    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
   }
-  
-  try {
-    const supportChatRef = doc(db, 'supportChats', currentSupportChatId.value)
-    const supportChatSnap = await getDoc(supportChatRef)
-    
-    if (supportChatSnap.exists()) {
-      supportChat.value = {
-        id: supportChatSnap.id,
-        ...supportChatSnap.data()
-      }
-    } else {
-      supportChat.value = null
-    }
-  } catch (error) {
-    console.error('Error loading support chat:', error)
-    notificationStore.showError('Failed to load support chat')
-  } finally {
-    loading.value = false
-  }
-}
-
-// Load messages
-const loadMessages = () => {
-  if (!currentSupportChatId.value) return
-  
-  const messagesRef = collection(db, 'supportChats', currentSupportChatId.value, 'messages')
-  const q = query(messagesRef, orderBy('timestamp', 'asc'))
-  
-  return onSnapshot(q, (snapshot) => {
-    messages.value = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }))
-    
-    scrollToBottom()
-  })
-}
-
-// Watch for route changes
-watch(() => route.params.id, () => {
-  if (route.params.id) {
-    loadSupportChat()
-  }
-})
+};
 
 // Lifecycle
 onMounted(async () => {
-  await loadSupportChat()
-  
-  if (currentSupportChatId.value) {
-    loadMessages()
-  }
-})
+  if (supportChatId.value) {
+    try {
+      // Set up real-time listener (this will also load the initial data)
+      const unsubscribe = supportStore.listenToSupportChat(supportChatId.value);
 
-// Close attachment menu when clicking outside
-onMounted(() => {
-  const handleClickOutside = (event) => {
-    if (!event.target.closest('.input-area')) {
-      showAttachmentMenu.value = false
+      // Clean up listener on unmount
+      onUnmounted(() => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      });
+    } catch (error) {
+      console.error('Error loading support chat:', error);
+      notificationStore.addNotification({
+        type: 'error',
+        message: 'Failed to load support chat.'
+      });
     }
   }
-  
-  document.addEventListener('click', handleClickOutside)
-  
-  onUnmounted(() => {
-    document.removeEventListener('click', handleClickOutside)
-  })
-})
+
+  // Focus input
+  await nextTick();
+  messageInput.value?.focus();
+});
+
+// Watch for new messages to scroll to bottom
+watch(() => supportChat.value?.messages, () => {
+  nextTick(() => {
+    scrollToBottom();
+  });
+}, { deep: true });
 </script>
 
 <style scoped>
-.support-chat {
+.complaint-chat {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 150px - 0px);
-  background: #f8f9fa;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  /* Full height minus header and bottom nav */
+  background: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 80px;
+  /* Bottom nav height */
+  z-index: 100;
 }
 
 /* Header */
 .chat-header {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 1rem;
   display: flex;
   align-items: center;
-  padding: 16px 20px;
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  gap: 12px;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  z-index: 10;
 }
 
 .back-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: #f3f4f6;
-  border: none;
-  border-radius: 8px;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
 
 .back-btn:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: #f1f5f9;
+  color: #334155;
 }
 
 .header-info {
@@ -654,187 +390,204 @@ onMounted(() => {
 }
 
 .header-title h2 {
-  font-size: 1.1rem;
+  margin: 0;
+  font-size: 1.25rem;
   font-weight: 600;
-  color: #111827;
-  margin: 0 0 4px 0;
+  color: #1e293b;
 }
 
 .status-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
 }
 
 .status-badge {
-  padding: 4px 8px;
-  border-radius: 12px;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .status-badge.open {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-badge.in-progress {
   background: #fef3c7;
   color: #92400e;
 }
 
-.status-badge.resolved {
+.status-badge.in-progress {
   background: #dbeafe;
   color: #1e40af;
 }
 
+.status-badge.resolved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
 .status-badge.closed {
   background: #f3f4f6;
-  color: #6b7280;
+  color: #374151;
 }
 
 .category {
-  font-size: 0.75rem;
-  color: #6b7280;
-  font-weight: 500;
+  font-size: 0.875rem;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
 }
 
 .header-actions {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .action-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: #f3f4f6;
-  border: none;
-  border-radius: 6px;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
 
 .action-btn:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: #f1f5f9;
+  color: #334155;
 }
 
 /* Messages Container */
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
-  background: #f8f9fa;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .loading-state,
-.error-state,
-.empty-state {
+.error-state {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
   text-align: center;
-  color: #6b7280;
+  padding: 2rem;
 }
 
 .spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid #e5e7eb;
-  border-top: 3px solid #AF1E23;
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid #e2e8f0;
+  border-top: 2px solid #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
+}
+
+.spinner-small {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #e2e8f0;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.error-icon,
-.empty-icon {
-  margin-bottom: 16px;
-  opacity: 0.6;
+.error-icon {
+  margin-bottom: 1rem;
 }
 
-.error-title,
-.empty-state h3 {
-  font-size: 1.25rem;
+.error-title {
+  font-size: 1.5rem;
   font-weight: 600;
-  color: #374151;
-  margin: 0 0 8px 0;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
 }
 
-.error-message,
-.empty-state p {
-  color: #6b7280;
-  margin: 0 0 20px 0;
+.error-message {
+  color: #64748b;
+  margin-bottom: 1.5rem;
 }
 
 .btn-primary {
-  background: #AF1E23;
+  background: #3b82f6;
   color: white;
   border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s;
 }
 
 .btn-primary:hover {
-  background: #991b1b;
+  background: #2563eb;
 }
 
-/* Messages */
+/* Messages List */
 .messages-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .message-wrapper {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+}
+
+.message {
+  display: flex;
+  gap: 0.75rem;
   max-width: 80%;
 }
 
-.message-wrapper.user {
-  flex-direction: row-reverse;
+.message.user {
   align-self: flex-end;
+  flex-direction: row-reverse;
 }
 
-.message-wrapper.admin {
+.message.admin {
   align-self: flex-start;
 }
 
 .message-avatar {
-  width: 32px;
-  height: 32px;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 0.875rem;
 }
 
-.user-avatar {
-  background: #AF1E23;
+.avatar.user {
+  background: #3b82f6;
   color: white;
 }
 
-.admin-avatar {
-  background: #6b7280;
+.avatar.admin {
+  background: #10b981;
   color: white;
 }
 
@@ -846,18 +599,14 @@ onMounted(() => {
 .message-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.user .message-header {
-  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .sender-name {
-  font-size: 0.75rem;
   font-weight: 600;
   color: #374151;
+  font-size: 0.875rem;
 }
 
 .message-time {
@@ -865,169 +614,92 @@ onMounted(() => {
   color: #9ca3af;
 }
 
-.message-bubble {
+.message-body {
   background: white;
-  border-radius: 12px;
-  padding: 12px 16px;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  word-wrap: break-word;
 }
 
-.user .message-bubble {
-  background: #AF1E23;
+.message.user .message-body {
+  background: #3b82f6;
   color: white;
 }
 
-.message-text {
+.message-text p {
+  margin: 0;
   line-height: 1.5;
-  white-space: pre-wrap;
 }
 
 .message-image {
-  margin: -12px -16px;
-  border-radius: 12px;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .image-preview {
-  width: 100%;
-  max-width: 300px;
-  height: auto;
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 0.5rem;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s;
 }
 
 .image-preview:hover {
   transform: scale(1.02);
 }
 
-.message-file {
-  margin: -12px -16px;
-  padding: 12px 16px;
-}
-
-.file-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.file-icon {
-  width: 40px;
-  height: 40px;
-  background: #f3f4f6;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6b7280;
-  flex-shrink: 0;
-}
-
-.file-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.file-name {
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.file-size {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-.download-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: #f3f4f6;
-  border: none;
-  border-radius: 6px;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-decoration: none;
-}
-
-.download-btn:hover {
-  background: #e5e7eb;
-  color: #374151;
+.image-caption {
+  margin: 0;
+  font-size: 0.875rem;
+  opacity: 0.8;
 }
 
 /* Input Area */
 .input-area {
   background: white;
-  border-top: 1px solid #e5e7eb;
-  padding: 16px 20px;
-  position: relative;
+  border-top: 1px solid #e2e8f0;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .input-container {
   display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  background: #f8f9fa;
-  border-radius: 24px;
-  padding: 8px 12px;
-  border: 2px solid transparent;
-  transition: border-color 0.2s ease;
+  align-items: center;
+  gap: 0.75rem;
+  background: #f8fafc;
+  border-radius: 1rem;
+  padding: 0.5rem;
 }
 
-.input-container:focus-within {
-  border-color: #AF1E23;
-}
-
-.attachment-btn {
+.attach-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
 }
 
-.attachment-btn:hover:not(:disabled) {
-  background: #e5e7eb;
-  color: #374151;
-}
-
-.attachment-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.input-wrapper {
-  flex: 1;
-  min-width: 0;
+.attach-btn:hover {
+  background: #e2e8f0;
+  color: #334155;
 }
 
 .message-input {
-  width: 100%;
-  background: none;
+  flex: 1;
   border: none;
+  background: none;
   outline: none;
-  resize: none;
-  font-family: inherit;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  color: #374151;
-  max-height: 120px;
-  min-height: 20px;
+  padding: 0.5rem;
+  font-size: 1rem;
+  color: #1e293b;
 }
 
 .message-input::placeholder {
@@ -1035,146 +707,140 @@ onMounted(() => {
 }
 
 .send-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: #AF1E23;
-  border: none;
-  color: white;
-  cursor: pointer;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
+  min-width: 2.5rem;
+  height: 2.5rem;
 }
 
-.send-btn:hover:not(:disabled) {
-  background: #991b1b;
-  transform: scale(1.05);
+.send-btn:hover:not(.disabled) {
+  background: #2563eb;
 }
 
-.send-btn:disabled {
-  background: #d1d5db;
+.send-btn.disabled {
+  background: #9ca3af;
   cursor: not-allowed;
-  transform: none;
 }
 
-.sending-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.image-upload {
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  text-align: center;
 }
 
-/* Attachment Menu */
-.attachment-menu {
-  position: absolute;
-  bottom: 100%;
-  left: 20px;
-  right: 20px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  padding: 8px;
-  margin-bottom: 8px;
+.image-input {
+  display: none;
+}
+
+.upload-actions {
   display: flex;
-  gap: 8px;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 0.75rem;
 }
 
-.attachment-option {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 12px;
-  background: none;
+.btn-secondary {
+  background: #6b7280;
+  color: white;
   border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  color: #374151;
-}
-
-.attachment-option:hover {
-  background: #f3f4f6;
-}
-
-.attachment-option span {
-  font-size: 0.8rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
   font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-/* Image Modal */
-.image-modal {
+.btn-secondary:hover {
+  background: #4b5563;
+}
+
+.btn-outline {
+  background: none;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-outline:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Fullscreen Modal */
+.fullscreen-modal {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  cursor: pointer;
 }
 
-.image-modal-content {
+.fullscreen-content {
   position: relative;
-  max-width: 90%;
-  max-height: 90%;
+  max-width: 90vw;
+  max-height: 90vh;
 }
 
-.close-image-btn {
+.close-btn {
   position: absolute;
-  top: -40px;
+  top: -3rem;
   right: 0;
   background: rgba(255, 255, 255, 0.2);
-  border: none;
   color: white;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s;
 }
 
-.close-image-btn:hover {
+.close-btn:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
-.modal-image {
+.fullscreen-image {
   max-width: 100%;
   max-height: 100%;
-  border-radius: 8px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  object-fit: contain;
+  border-radius: 0.5rem;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .support-chat {
-    height: calc(100vh - 100px);
+  .chat-header {
+    padding: 0.75rem;
   }
-  
-  .message-wrapper {
+
+  .header-title h2 {
+    font-size: 1.125rem;
+  }
+
+  .message {
     max-width: 90%;
   }
-  
-  .attachment-menu {
-    left: 10px;
-    right: 10px;
-  }
-  
+
   .input-area {
-    padding: 12px 16px;
+    padding: 0.75rem;
   }
 }
 </style>

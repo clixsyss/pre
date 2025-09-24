@@ -385,7 +385,8 @@ const isActiveTab = (tabName) => {
              currentPath.startsWith('/complaints/') ||
              currentPath === '/violations' ||
              currentPath.startsWith('/violation-chat/') ||
-             currentPath === '/support'
+             currentPath === '/support' ||
+             currentPath.startsWith('/support-chat/')
     
     case 'services':
       // Services tab is active for smart devices and other service pages
