@@ -1,15 +1,6 @@
 <template>
   <div class="support-page">
-    <!-- Header -->
-    <div class="header">
-      <button @click="goBack" class="back-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 12H5M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-      <h1 class="page-title">Support</h1>
-      <div class="placeholder"></div>
-    </div>
+    <PageHeader title="Support" subtitle="Get help with any questions or issues" />
 
     <!-- Content -->
     <div class="content">
@@ -66,6 +57,7 @@
 import { onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSupportStore } from '../../stores/supportStore'
+import PageHeader from '../../components/PageHeader.vue'
 
 defineOptions({
   name: 'AuthSupportPage'
@@ -79,9 +71,6 @@ const supportChats = computed(() => supportStore.userSupportChats)
 const loadingChats = computed(() => supportStore.loading)
 const errorChats = computed(() => supportStore.error)
 
-const goBack = () => {
-  router.go(-1)
-}
 
 const startNewChat = async () => {
   try {
@@ -128,39 +117,6 @@ onMounted(async () => {
 .support-page {
   min-height: 100vh;
   background-color: #f8f9fa;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px;
-  background-color: #222222;
-  color: white;
-}
-
-.back-btn {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  transition: background-color 0.3s ease;
-}
-
-.back-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.page-title {
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.placeholder {
-  width: 40px;
 }
 
 .content {
