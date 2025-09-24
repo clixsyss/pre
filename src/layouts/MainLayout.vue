@@ -214,13 +214,14 @@
       @view-violations="viewViolations"
     />
 
-    <!-- Suspension Message -->
-    <SuspensionMessage
-      v-if="showSuspensionMessage"
-      :show="showSuspensionMessage"
-      :message="suspensionMessage"
-      @dismiss="handleSuspensionDismiss"
-    />
+      <!-- Suspension Message -->
+      <SuspensionMessage
+        v-if="showSuspensionMessage"
+        :show="showSuspensionMessage"
+        :message="suspensionMessage"
+        @dismiss="handleSuspensionDismiss"
+        @contactSupport="handleContactSupport"
+      />
   </div>
 </template>
 
@@ -351,9 +352,15 @@ const checkUserSuspensionStatus = async () => {
   }
 }
 
-const handleSuspensionDismiss = () => {
-  showSuspensionMessage.value = false
-}
+  const handleSuspensionDismiss = () => {
+    showSuspensionMessage.value = false
+  }
+
+  const handleContactSupport = () => {
+    // Navigate to support page
+    router.push('/support')
+    showSuspensionMessage.value = false
+  }
 
 // Removed unused canAccessCurrentRoute function
 
@@ -377,7 +384,8 @@ const isActiveTab = (tabName) => {
              currentPath === '/complaints' || 
              currentPath.startsWith('/complaints/') ||
              currentPath === '/violations' ||
-             currentPath.startsWith('/violation-chat/')
+             currentPath.startsWith('/violation-chat/') ||
+             currentPath === '/support'
     
     case 'services':
       // Services tab is active for smart devices and other service pages

@@ -107,7 +107,9 @@ export const canUserAccessRoute = async (userId, route) => {
     '/profile',
     '/access',
     '/gate-access',
-    '/gate'
+    '/gate',
+    '/support',
+    '/support-chat'
   ];
   
   return allowedRoutes.includes(route);

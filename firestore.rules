@@ -627,6 +627,24 @@ service cloud.firestore {
       allow list: if request.auth != null && 
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
+    
+    // Support Chats - users can create and read their own chats, admins can read all
+    match /supportChats/{chatId} {
+      allow read: if request.auth != null && 
+        (resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      allow create: if request.auth != null && 
+        request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && 
+        (resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      allow delete: if false; // No deletes allowed
+    }
+    
+    // Allow listing support chats
+    match /supportChats {
+      allow list: if request.auth != null;
+    }
   }
 }
 

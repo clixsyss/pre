@@ -11,10 +11,11 @@ import SignIn from '../pages/unauth/SignIn.vue'
 import Register from '../pages/unauth/Register.vue'
 import VerifyEmail from '../pages/unauth/VerifyEmail.vue'
 import PersonalDetails from '../pages/unauth/PersonalDetails.vue'
-import Support from '../pages/unauth/Support.vue'
 import Home from '../pages/auth/Home.vue'
 import Profile from '../pages/auth/ProfilePage.vue'
 import ProjectSelection from '../pages/auth/ProjectSelection.vue'
+import AuthSupport from '../pages/auth/Support.vue'
+import SupportChatPage from '../pages/auth/SupportChatPage.vue'
 
 const routes = [
   // Root redirects to onboarding
@@ -55,12 +56,6 @@ const routes = [
     meta: { requiresAuth: false }
   },
 
-  {
-    path: '/support',
-    name: 'Support',
-    component: Support,
-    meta: { requiresAuth: false }
-  },
   
   // Authorized user routes
   {
@@ -218,6 +213,24 @@ const routes = [
     path: '/smart-devices',
     name: 'SmartDevices',
     component: () => import('../pages/auth/SmartDevices.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/support',
+    name: 'AuthSupport',
+    component: AuthSupport,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/support-chat',
+    name: 'SupportChat',
+    component: SupportChatPage,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/support-chat/:id',
+    name: 'SupportChatById',
+    component: SupportChatPage,
     meta: { requiresAuth: true }
   },
   

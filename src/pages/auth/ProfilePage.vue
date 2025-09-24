@@ -291,6 +291,26 @@
               </div>
             </button>
 
+            <!-- Support Button -->
+            <button @click="handleSupport" class="support-btn">
+              <div class="support-btn-content">
+                <div class="support-btn-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="support-btn-text">
+                  <h4>Contact Support</h4>
+                  <p>Get help with any questions or issues</p>
+                </div>
+              </div>
+              <div class="support-btn-arrow">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </button>
+
             <div v-if="complaintStats.total === 0" class="no-complaints">
               <div class="no-complaints-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1731,6 +1751,11 @@ const handleViolationChat = () => {
 const handleComplaintChat = () => {
   // Navigate to complaints page
   router.push('/complaints')
+}
+
+const handleSupport = () => {
+  // Navigate to support page
+  router.push('/support')
 }
 
 
@@ -4116,6 +4141,67 @@ input:checked + .toggle-slider:before {
   transform: translateX(4px);
 }
 
+/* Support Button Styles */
+.support-btn {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  margin-top: 12px;
+}
+
+.support-btn:hover {
+  border-color: #10b981;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+}
+
+.support-btn-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.support-btn-icon {
+  width: 48px;
+  height: 48px;
+  background: #d1fae5;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #10b981;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.support-btn-text h4 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.support-btn-text p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.support-btn-arrow {
+  color: #9ca3af;
+  transition: transform 0.2s ease;
+}
+
+.support-btn:hover .support-btn-arrow {
+  transform: translateX(4px);
+}
+
 .no-complaints {
   display: flex;
   flex-direction: column;
@@ -4165,6 +4251,19 @@ input:checked + .toggle-slider:before {
   }
   
   .complaints-btn-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .support-btn {
+    padding: 12px;
+  }
+  
+  .support-btn-content {
+    gap: 12px;
+  }
+  
+  .support-btn-icon {
     width: 40px;
     height: 40px;
   }

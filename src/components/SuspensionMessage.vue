@@ -61,12 +61,20 @@
       </div>
 
       <div class="suspension-footer">
-        <button @click="handleDismiss" class="dismiss-button">
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          I Understand
-        </button>
+        <div class="button-group">
+          <button @click="handleContactSupport" class="support-button">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Contact Support
+          </button>
+          <button @click="handleDismiss" class="dismiss-button">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            I Understand
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -92,10 +100,14 @@ export default {
       })
     }
   },
-  emits: ['dismiss'],
+  emits: ['dismiss', 'contactSupport'],
   setup(props, { emit }) {
     const handleDismiss = () => {
       emit('dismiss')
+    }
+
+    const handleContactSupport = () => {
+      emit('contactSupport')
     }
 
     const formatEndDate = (endDate) => {
@@ -107,6 +119,7 @@ export default {
 
     return {
       handleDismiss,
+      handleContactSupport,
       formatEndDate
     }
   }
@@ -307,8 +320,43 @@ export default {
   border-top: 1px solid #f3f4f6;
 }
 
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.support-button {
+  flex: 1;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+  letter-spacing: 0.025em;
+}
+
+.support-button:hover {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(22, 163, 74, 0.4);
+}
+
+.support-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
+}
+
 .dismiss-button {
-  width: 100%;
+  flex: 1;
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   color: white;
   border: none;
@@ -325,8 +373,21 @@ export default {
   letter-spacing: 0.025em;
 }
 
-.dismiss-button svg {
-  width: 30px;
+.dismiss-button:hover {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+}
+
+.dismiss-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+.dismiss-button svg,
+.support-button svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* Responsive design */

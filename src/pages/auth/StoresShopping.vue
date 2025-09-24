@@ -1883,12 +1883,12 @@ watch(() => route.query.tab, (newTab) => {
 }
 
 .tab-btn.active {
-  background: #E88B65;
+  background: #AF1E23;
   color: white;
   font-weight: 700;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(232, 139, 101, 0.4);
-  border: 1px solid rgba(232, 139, 101, 0.3);
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.4);
+  border: 1px solid rgba(175, 30, 35, 0.3);
 }
 
 .tab-btn.active .tab-indicator {
@@ -1903,7 +1903,7 @@ watch(() => route.query.tab, (newTab) => {
   position: absolute;
   top: -8px;
   right: -8px;
-  background: #E88B65;
+  background: #AF1E23;
   color: white;
   border-radius: 50%;
   min-width: 24px;
@@ -1914,7 +1914,7 @@ watch(() => route.query.tab, (newTab) => {
   font-size: 0.8rem;
   font-weight: 700;
   border: 3px solid white;
-  box-shadow: 0 4px 12px rgba(232, 139, 101, 0.4);
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.4);
   z-index: 10;
   padding: 0 4px;
   line-height: 1;
