@@ -9,7 +9,6 @@
               <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
-          <h2 class="news-title">{{ showAll ? 'All News' : 'Latest News' }}</h2>
         </div>
         <div v-if="showAll" class="news-count">{{ filteredNews.length }} {{ filteredNews.length === 1 ? 'item' : 'items' }}</div>
       </div>
