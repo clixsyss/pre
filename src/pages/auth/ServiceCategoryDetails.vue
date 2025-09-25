@@ -3,30 +3,8 @@
     <!-- Page Header -->
     <PageHeader 
       :title="category?.englishTitle || 'Loading...'" 
-      :subtitle="category?.arabicTitle || ''" 
-    />
-
-    <!-- Category Info -->
-    <div v-if="category" class="category-info">
-      <div class="category-image">
-        <img 
-          v-if="category.imageUrl" 
-          :src="category.imageUrl" 
-          :alt="category.englishTitle"
-          class="category-img"
-        />
-        <div v-else class="default-image">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M14.7 6.3C14.7 4.4 13.3 3 11.4 3C9.5 3 8.1 4.4 8.1 6.3C8.1 8.2 9.5 9.6 11.4 9.6C13.3 9.6 14.7 8.2 14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M20 12C20 16.4 16.4 20 12 20C7.6 20 4 16.4 4 12C4 7.6 7.6 4 12 4C16.4 4 20 7.6 20 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 8V12L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-      </div>
-      <div class="category-details">
-        <h2 class="category-title">{{ category.englishTitle }}</h2>
-      </div>
-    </div>
+      />
+      <!-- :subtitle="category?.arabicTitle || ''"  -->
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
