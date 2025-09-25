@@ -1,14 +1,10 @@
 <template>
   <div class="service-category-details">
-    <!-- Header -->
-    <div class="page-header">
-      <button @click="goBack" class="back-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-      <h1 class="page-title">{{ category?.englishTitle || 'Loading...' }}</h1>
-    </div>
+    <!-- Page Header -->
+    <PageHeader 
+      :title="category?.englishTitle || 'Loading...'" 
+      :subtitle="category?.arabicTitle || ''" 
+    />
 
     <!-- Category Info -->
     <div v-if="category" class="category-info">
@@ -115,11 +111,38 @@
               </div>
             </div>
           </div>
+
+          <!-- Time Slot Selection -->
+          <div v-if="selectedDate" class="time-slots-section">
+            <h4 class="section-title">Select Time Slot</h4>
+            <div v-if="loadingTimeSlots" class="loading-time-slots">
+              <div class="spinner"></div>
+              <p>Loading available time slots...</p>
+            </div>
+            <div v-else-if="availableTimeSlots.length > 0" class="time-slots-grid">
+              <div 
+                v-for="slot in availableTimeSlots" 
+                :key="slot.time"
+                class="time-slot"
+                :class="{ 
+                  'selected': selectedTime === slot.time, 
+                  'unavailable': slot.isReserved 
+                }"
+                @click="!slot.isReserved && selectTime(slot.time)"
+              >
+                <div class="time-slot-time">{{ slot.time }}</div>
+                <div v-if="slot.isReserved" class="time-slot-status">Booked</div>
+              </div>
+            </div>
+            <div v-else class="no-time-slots">
+              <p>No time slots available for this date.</p>
+            </div>
+          </div>
           
           <div class="booking-actions">
             <button 
               @click="confirmBooking" 
-              :disabled="!selectedDate"
+              :disabled="!selectedDate || !selectedTime"
               class="book-btn"
             >
               Book Service
@@ -133,11 +156,13 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useNotificationStore } from '../../stores/notifications';
 import { useServiceBookingStore } from '../../stores/serviceBookingStore';
+import serviceTimeSlotService from '../../services/serviceTimeSlotService';
+import PageHeader from '../../components/PageHeader.vue';
 
 // Component name for ESLint
 defineOptions({
@@ -145,7 +170,6 @@ defineOptions({
 });
 
 const route = useRoute();
-const router = useRouter();
 const serviceCategoriesStore = useServiceCategoriesStore();
 const projectStore = useProjectStore();
 const notificationStore = useNotificationStore();
@@ -159,7 +183,10 @@ const error = ref(null);
 const showBookingDialog = ref(false);
 const selectedService = ref(null);
 const selectedDate = ref(null);
+const selectedTime = ref(null);
 const availableDays = ref([]);
+const availableTimeSlots = ref([]);
+const loadingTimeSlots = ref(false);
 
 // Computed
 const categoryId = computed(() => route.params.id);
@@ -200,6 +227,8 @@ const loadServices = async () => {
 const openBookingDialog = (service) => {
   selectedService.value = service;
   selectedDate.value = null;
+  selectedTime.value = null;
+  availableTimeSlots.value = [];
   generateAvailableDays();
   showBookingDialog.value = true;
 };
@@ -208,7 +237,9 @@ const closeBookingDialog = () => {
   showBookingDialog.value = false;
   selectedService.value = null;
   selectedDate.value = null;
+  selectedTime.value = null;
   availableDays.value = [];
+  availableTimeSlots.value = [];
 };
 
 const generateAvailableDays = () => {
@@ -240,12 +271,50 @@ const generateAvailableDays = () => {
   availableDays.value = days;
 };
 
-const selectDate = (date) => {
+const selectDate = async (date) => {
   selectedDate.value = date;
+  selectedTime.value = null; // Reset time when date changes
+  await loadTimeSlots(date);
+};
+
+const selectTime = (time) => {
+  selectedTime.value = time;
+};
+
+// Helper function to get day of week from date
+const getDayOfWeek = (dateString) => {
+  const date = new Date(dateString);
+  const dayOfWeek = date.toLocaleLowerCase().slice(0, 3);
+  return dayOfWeek === 'sun' ? 'sunday' : 
+         dayOfWeek === 'mon' ? 'monday' :
+         dayOfWeek === 'tue' ? 'tuesday' :
+         dayOfWeek === 'wed' ? 'wednesday' :
+         dayOfWeek === 'thu' ? 'thursday' :
+         dayOfWeek === 'fri' ? 'friday' : 'saturday';
+};
+
+const loadTimeSlots = async (date) => {
+  if (!selectedService.value || !projectStore.selectedProject?.id || !category.value?.id) return;
+  
+  try {
+    loadingTimeSlots.value = true;
+    const slots = await serviceTimeSlotService.getAvailableTimeSlots(
+      projectStore.selectedProject.id,
+      selectedService.value.id,
+      category.value.id,
+      date
+    );
+    availableTimeSlots.value = slots;
+  } catch (error) {
+    console.error('Error loading time slots:', error);
+    availableTimeSlots.value = [];
+  } finally {
+    loadingTimeSlots.value = false;
+  }
 };
 
 const confirmBooking = async () => {
-  if (!selectedDate.value || !selectedService.value || !projectStore.selectedProject?.id) return;
+  if (!selectedDate.value || !selectedTime.value || !selectedService.value || !projectStore.selectedProject?.id) return;
   
   try {
     // Prepare booking data
@@ -256,8 +325,12 @@ const confirmBooking = async () => {
       categoryName: category.value?.englishTitle || 'Service Category',
       servicePrice: selectedService.value.price,
       selectedDate: selectedDate.value,
-      selectedTime: null, // We can add time selection later if needed
-      notes: ''
+      selectedTime: selectedTime.value,
+      notes: '',
+      // Include category-level time slot configuration
+      categoryTimeSlotInterval: category.value?.timeSlotInterval || 30,
+      categoryStartTime: category.value?.availability?.[getDayOfWeek(selectedDate.value)]?.startTime || '09:00',
+      categoryEndTime: category.value?.availability?.[getDayOfWeek(selectedDate.value)]?.endTime || '17:00'
     };
 
     // Create the booking
@@ -276,9 +349,6 @@ const confirmBooking = async () => {
   }
 };
 
-const goBack = () => {
-  router.back();
-};
 </script>
 
 <style scoped>
@@ -288,38 +358,6 @@ const goBack = () => {
   min-height: 100%;
 }
 
-/* Page Header */
-.page-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding: 0 16px;
-}
-
-.back-btn {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.back-btn:hover {
-  background: #f9fafb;
-  border-color: #AF1E23;
-}
-
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #111827;
-  margin: 0;
-}
 
 /* Category Info */
 .category-info {
@@ -685,6 +723,81 @@ const goBack = () => {
   font-size: 0.75rem;
   color: #dc2626;
   font-weight: 500;
+}
+
+/* Time Slots Section */
+.time-slots-section {
+  margin-bottom: 24px;
+}
+
+.loading-time-slots {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  text-align: center;
+}
+
+.loading-time-slots .spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #f3f4f6;
+  border-top: 3px solid #AF1E23;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+.time-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+.time-slot {
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.time-slot:hover:not(.unavailable) {
+  border-color: #AF1E23;
+  background: #fef2f2;
+}
+
+.time-slot.selected {
+  border-color: #AF1E23;
+  background: #fef2f2;
+}
+
+.time-slot.unavailable {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f9fafb;
+}
+
+.time-slot-time {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.time-slot-status {
+  font-size: 0.75rem;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.no-time-slots {
+  text-align: center;
+  padding: 20px;
+  color: #6b7280;
 }
 
 .booking-actions {
