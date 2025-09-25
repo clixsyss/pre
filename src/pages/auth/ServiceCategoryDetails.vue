@@ -262,13 +262,8 @@ const selectTime = (time) => {
 // Helper function to get day of week from date
 const getDayOfWeek = (dateString) => {
   const date = new Date(dateString);
-  const dayOfWeek = date.toLocaleLowerCase().slice(0, 3);
-  return dayOfWeek === 'sun' ? 'sunday' : 
-         dayOfWeek === 'mon' ? 'monday' :
-         dayOfWeek === 'tue' ? 'tuesday' :
-         dayOfWeek === 'wed' ? 'wednesday' :
-         dayOfWeek === 'thu' ? 'thursday' :
-         dayOfWeek === 'fri' ? 'friday' : 'saturday';
+  const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  return dayOfWeek;
 };
 
 const loadTimeSlots = async (date) => {

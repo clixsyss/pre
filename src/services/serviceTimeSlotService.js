@@ -52,13 +52,8 @@ class ServiceTimeSlotService {
       if (categoryDoc && categoryDoc.timeSlotInterval) {
         // Use category-specific time slot configuration
         // Get the day of the week for the selected date
-        const dayOfWeek = new Date(date).toLocaleLowerCase().slice(0, 3);
-        const dayKey = dayOfWeek === 'sun' ? 'sunday' : 
-                     dayOfWeek === 'mon' ? 'monday' :
-                     dayOfWeek === 'tue' ? 'tuesday' :
-                     dayOfWeek === 'wed' ? 'wednesday' :
-                     dayOfWeek === 'thu' ? 'thursday' :
-                     dayOfWeek === 'fri' ? 'friday' : 'saturday';
+        const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        const dayKey = dayOfWeek;
         
         const daySchedule = categoryDoc.availability?.[dayKey];
         
