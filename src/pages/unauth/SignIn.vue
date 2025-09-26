@@ -111,14 +111,12 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { signInWithEmailAndPassword } from 'firebase/auth'
-import { auth } from '../../boot/firebase'
+import authService from '../../services/authService'
+import firestoreService from '../../services/firestoreService'
 import { useNotificationStore } from '../../stores/notifications'
 import { useRegistrationStore } from '../../stores/registration'
 import { validateProfileCompletion, getNextProfileStep } from '../../utils/profileValidation'
 import { attemptGoogleSignIn } from '../../utils/googleAuthHelper'
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '../../boot/firebase'
 import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
 
 // Component name for ESLint
@@ -149,8 +147,7 @@ const togglePassword = () => {
 // Check user approval status
 const checkUserApprovalStatus = async (userId) => {
   try {
-    const userDocRef = doc(db, 'users', userId)
-    const userDoc = await getDoc(userDocRef)
+    const userDoc = await firestoreService.getDoc(`users/${userId}`)
     
     if (userDoc.exists()) {
       const userData = userDoc.data()
@@ -172,7 +169,7 @@ const handleSignIn = async () => {
   loading.value = true
   
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password)
+    const userCredential = await authService.signInWithEmailAndPassword(formData.email, formData.password)
     const user = userCredential.user
     
     // Check user approval status
@@ -272,10 +269,9 @@ const signInWithGoogle = async () => {
     }
     
     // User is approved - update last login and proceed
-    const userDocRef = doc(db, 'users', userData.uid)
-    await setDoc(userDocRef, {
-      lastLogin: serverTimestamp(),
-      updatedAt: serverTimestamp()
+    await firestoreService.setDoc(`users/${userData.uid}`, {
+      lastLogin: new Date(),
+      updatedAt: new Date()
     }, { merge: true })
     
     notificationStore.showSuccess('Welcome back!')

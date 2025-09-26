@@ -15,6 +15,10 @@
     "postinstall": "quasar prepare"
   },
   "dependencies": {
+    "@capacitor-firebase/app": "^7.3.1",
+    "@capacitor-firebase/authentication": "^7.3.1",
+    "@capacitor-firebase/firestore": "^7.3.1",
+    "@capacitor-firebase/storage": "^7.3.1",
     "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "^7.4.3",
     "@capacitor/core": "^7.4.3",
@@ -22,7 +26,7 @@
     "@quasar/extras": "^1.16.4",
     "axios": "^1.2.1",
     "date-fns": "^4.1.0",
-    "firebase": "^12.1.0",
+    "firebase": "^11.10.0",
     "pinia": "^3.0.1",
     "qrcode": "^1.5.4",
     "quasar": "^2.16.0",

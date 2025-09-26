@@ -3,39 +3,75 @@ import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
+import { Capacitor } from '@capacitor/core'
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID 
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 }
+
+// Platform detection
+const isNative = Capacitor.isNativePlatform()
+const platform = Capacitor.getPlatform()
+
+console.log('Firebase Boot: Platform detected:', platform, 'Native:', isNative)
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig)
 
-// Initialize Firebase services
-const auth = getAuth(app)
-const db = getFirestore(app)
-const storage = getStorage(app)
+// Initialize Firebase services based on platform
+let auth, db, storage, googleProvider
 
 // Initialize Google Auth Provider
-const googleProvider = new GoogleAuthProvider()
+googleProvider = new GoogleAuthProvider()
 googleProvider.setCustomParameters({
   prompt: 'select_account'
 })
 
-export default defineBoot(({ app }) => {
+if (isNative) {
+  // Use Capacitor Firebase plugins for native platforms
+  console.log('Firebase Boot: Using Capacitor Firebase plugins')
+  
+  // For native platforms, we'll use the plugins directly in services
+  // These will be initialized when needed
+  auth = null
+  db = null
+  storage = null
+} else {
+  // Use Web SDK for web/PWA
+  console.log('Firebase Boot: Using Firebase Web SDK')
+  
+  auth = getAuth(app)
+  db = getFirestore(app)
+  storage = getStorage(app)
+}
+
+export default defineBoot(async ({ app }) => {
+  // Initialize Capacitor Firebase plugins for native platforms
+  if (isNative) {
+    try {
+      const { FirebaseApp } = await import('@capacitor-firebase/app')
+      await FirebaseApp.initializeApp()
+      console.log('Firebase Boot: Capacitor Firebase App initialized')
+    } catch (error) {
+      console.error('Firebase Boot: Failed to initialize Capacitor Firebase App:', error)
+    }
+  }
+
   // Make Firebase services available globally
   app.config.globalProperties.$firebase = app
   app.config.globalProperties.$auth = auth
   app.config.globalProperties.$db = db
   app.config.globalProperties.$storage = storage
   app.config.globalProperties.$googleProvider = googleProvider
+  app.config.globalProperties.$isNative = isNative
+  app.config.globalProperties.$platform = platform
 })
 
 // Export Firebase services for use in components
-export { app, auth, db, storage, googleProvider }
+export { app, auth, db, storage, googleProvider, isNative, platform }

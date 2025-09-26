@@ -1,8 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { auth, db } from '../boot/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
-import { validateProfileCompletion, getNextProfileStep } from '../utils/profileValidation'
+import authService from '../services/authService'
+import firestoreService from '../services/firestoreService'
 import { canUserAccessRoute, checkUserSuspension } from '../services/suspensionService'
 
 // Import pages
@@ -56,7 +54,7 @@ const routes = [
     meta: { requiresAuth: false }
   },
 
-  
+
   // Authorized user routes
   {
     path: '/project-selection',
@@ -154,7 +152,7 @@ const routes = [
     component: () => import('../pages/auth/Calendar.vue'),
     meta: { requiresAuth: true }
   },
-  
+
   {
     path: '/analytics',
     name: 'Analytics',
@@ -191,12 +189,12 @@ const routes = [
     component: () => import('../pages/auth/ViolationsPage.vue'),
     meta: { requiresAuth: true }
   },
-      {
-        path: '/violation-chat/:id',
-        name: 'ViolationChat',
-        component: () => import('../components/ViolationChat.vue'),
-        meta: { requiresAuth: true }
-      },
+  {
+    path: '/violation-chat/:id',
+    name: 'ViolationChat',
+    component: () => import('../components/ViolationChat.vue'),
+    meta: { requiresAuth: true }
+  },
   {
     path: '/service-booking-chat/:id',
     name: 'ServiceBookingChat',
@@ -233,7 +231,7 @@ const routes = [
     component: SupportChatPage,
     meta: { requiresAuth: true }
   },
-  
+
   // Catch all route - redirect to onboarding
   {
     path: '/:pathMatch(.*)*',
@@ -250,15 +248,102 @@ const router = createRouter({
   }
 })
 
+// Extract auth state processing logic
+async function processAuthState(user, to, from, next, resolve, requiresAuth) {
+  // Allow navigation to onboarding during registration process
+  if (to.path === '/onboarding' && from.path && from.path.startsWith('/register')) {
+    console.log('Allowing navigation to onboarding from registration')
+    next()
+    resolve()
+    return
+  }
+
+  if (requiresAuth && !user) {
+    // Route requires auth but user is not authenticated
+    next('/onboarding')
+    resolve()
+  } else if (!requiresAuth && user && to.path === '/onboarding') {
+    // User is authenticated but trying to access onboarding
+    // Only redirect if they're not in the middle of registration
+    if (!from.path || !from.path.startsWith('/register')) {
+      next('/home')
+      resolve()
+    } else {
+      next()
+      resolve()
+    }
+  } else if (user && requiresAuth) {
+    // User is authenticated and trying to access protected route
+    // Check if profile is complete
+    try {
+      const userDoc = await firestoreService.getDoc(`users/${user.uid}`)
+      if (userDoc.exists()) {
+        const userData = userDoc.data()
+        const isProfileComplete = userData.isProfileComplete
+        
+        if (!isProfileComplete) {
+          console.log('Profile incomplete, redirecting to onboarding')
+          next('/onboarding')
+          resolve()
+          return
+        }
+
+        // Check if user is suspended and can access this route
+        try {
+          const canAccess = await canUserAccessRoute(user.uid, to.path)
+          if (!canAccess) {
+            console.log('User is suspended and cannot access this route:', to.path)
+
+            // Check suspension details to show proper message
+            const suspensionStatus = await checkUserSuspension(user.uid)
+            if (suspensionStatus.isSuspended) {
+              // Emit event to show suspension message
+              window.dispatchEvent(new CustomEvent('showSuspensionMessage', {
+                detail: {
+                  suspensionDetails: suspensionStatus.suspensionDetails,
+                  attemptedRoute: to.path
+                }
+              }))
+            }
+
+            // Redirect to home page for suspended users
+            next('/home')
+            resolve()
+            return
+          }
+        } catch (error) {
+          console.error('Error checking suspension status:', error)
+          // On error, allow access but log the issue
+        }
+
+        // Profile complete or no profile data - allow access
+        next()
+        resolve()
+      } else {
+        console.log('No user document found in Firestore')
+      }
+    } catch (error) {
+      console.error('Error checking profile completion:', error)
+      // On error, allow access but log the issue
+      next()
+      resolve()
+    }
+  } else {
+    // Allow navigation for non-protected routes
+    next()
+    resolve()
+  }
+}
+
 // Navigation guard
 router.beforeEach(async (to, from, next) => {
   console.log('Navigation guard - to:', to.path, 'from:', from.path)
   const requiresAuth = to.meta.requiresAuth
-  
+
   // Check authentication status with timeout
   return new Promise((resolve) => {
     let resolved = false
-    
+
     // Set a timeout to prevent infinite loading
     const timeout = setTimeout(() => {
       if (!resolved) {
@@ -268,8 +353,29 @@ router.beforeEach(async (to, from, next) => {
         resolve()
       }
     }, 5000) // 5 second timeout
+
+    // Get current user using unified auth service
+    authService.getCurrentUser().then(currentUser => {
+      console.log('Current user from authService:', currentUser ? 'authenticated' : 'not authenticated')
+      
+      // If we have a current user, use it immediately
+      if (currentUser && !resolved) {
+        console.log('Using current user for immediate auth check')
+        clearTimeout(timeout)
+        resolved = true
+        
+        console.log('Auth state from currentUser - user:', currentUser ? 'authenticated' : 'not authenticated')
+        
+        // Process the auth state
+        processAuthState(currentUser, to, from, next, resolve, requiresAuth)
+        return
+      }
+    }).catch(error => {
+      console.error('Error getting current user:', error)
+    })
     
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    // Listen to auth state changes using unified auth service
+    const unsubscribe = authService.onAuthStateChanged(async (user) => {
       if (resolved) return
       
       unsubscribe()
@@ -278,130 +384,11 @@ router.beforeEach(async (to, from, next) => {
       
       console.log('Auth state changed - user:', user ? 'authenticated' : 'not authenticated')
       
-      // Allow navigation to onboarding during registration process
-      if (to.path === '/onboarding' && from.path && from.path.startsWith('/register')) {
-        console.log('Allowing navigation to onboarding from registration')
-        next()
-        resolve()
-        return
-      }
-      
-      if (requiresAuth && !user) {
-        // Route requires auth but user is not authenticated
-        next('/onboarding')
-        resolve()
-      } else if (!requiresAuth && user && to.path === '/onboarding') {
-        // User is authenticated but trying to access onboarding
-        // Only redirect if they're not in the middle of registration
-        if (!from.path || !from.path.startsWith('/register')) {
-          next('/home')
-          resolve()
-        } else {
-          next()
-          resolve()
-        }
-      } else if (user && requiresAuth) {
-        // User is authenticated and trying to access protected route
-                  // Check if profile is complete
-          try {
-            const userDocRef = doc(db, 'users', user.uid)
-            const userDoc = await getDoc(userDocRef)
-            
-            if (userDoc.exists()) {
-              const userData = userDoc.data()
-              console.log('User data from Firestore:', userData)
-              
-              const profileValidation = validateProfileCompletion(userData)
-              console.log('Profile validation result:', profileValidation)
-              
-              if (!profileValidation.isComplete) {
-                // Profile incomplete - redirect to appropriate completion step
-                const nextStep = getNextProfileStep(userData)
-                console.log('Next step for profile completion:', nextStep)
-                
-                switch (nextStep) {
-                  case 'email_verification':
-                    console.log('Redirecting to email verification')
-                    next('/register/verify-email')
-                    break
-                  case 'property_details':
-                    console.log('Redirecting to property details')
-                    next('/register')
-                    break
-                  case 'personal_details':
-                    console.log('Redirecting to personal details')
-                    next('/register/personal-details')
-                    break
-                  default:
-                    console.log('Redirecting to register (default)')
-                    next('/register')
-                }
-                resolve()
-                return
-              } else {
-                console.log('Profile is complete, allowing access to:', to.path)
-              }
-              
-              // Check if user has selected a project (except for project-selection page)
-              if (to.path !== '/project-selection') {
-                // Check localStorage for selected project
-                const selectedProjectId = localStorage.getItem('selectedProjectId')
-                
-                if (!selectedProjectId) {
-                  console.log('No project selected, redirecting to project selection')
-                  next('/project-selection')
-                  resolve()
-                  return
-                }
-              }
-            } else {
-              console.log('No user document found in Firestore')
-            }
-            
-            // Check if user is suspended and can access this route
-            try {
-              const canAccess = await canUserAccessRoute(user.uid, to.path)
-              if (!canAccess) {
-                console.log('User is suspended and cannot access this route:', to.path)
-                
-                // Check suspension details to show proper message
-                const suspensionStatus = await checkUserSuspension(user.uid)
-                if (suspensionStatus.isSuspended) {
-                  // Emit event to show suspension message
-                  window.dispatchEvent(new CustomEvent('showSuspensionMessage', {
-                    detail: {
-                      suspensionDetails: suspensionStatus.suspensionDetails,
-                      attemptedRoute: to.path
-                    }
-                  }))
-                }
-                
-                // Redirect to home page for suspended users
-                next('/home')
-                resolve()
-                return
-              }
-            } catch (error) {
-              console.error('Error checking suspension status:', error)
-              // On error, allow access but log the issue
-            }
-            
-            // Profile complete or no profile data - allow access
-            next()
-            resolve()
-          } catch (error) {
-            console.error('Error checking profile completion:', error)
-            // On error, allow access but log the issue
-            next()
-            resolve()
-          }
-      } else {
-        // Allow navigation for non-protected routes
-        next()
-        resolve()
-      }
+      // Process the auth state
+      processAuthState(user, to, from, next, resolve, requiresAuth)
     })
   })
 })
 
 export default router
+
