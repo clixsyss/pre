@@ -131,15 +131,17 @@ class ServiceBookingService {
   }
 
   /**
-   * Get service bookings by status
+   * Get user's service bookings by status
    * @param {string} projectId - Project ID
+   * @param {string} userId - User ID
    * @param {string} status - Booking status (open, processing, closed)
-   * @returns {Promise<Array>} Array of bookings with specified status
+   * @returns {Promise<Array>} Array of user's bookings with specified status
    */
-  async getServiceBookingsByStatus(projectId, status) {
+  async getServiceBookingsByStatus(projectId, userId, status) {
     try {
       const q = query(
         collection(db, `projects/${projectId}/serviceBookings`),
+        where('userId', '==', userId),
         where('status', '==', status),
         orderBy('lastMessageAt', 'desc')
       );

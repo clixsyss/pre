@@ -295,6 +295,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { getAuth } from 'firebase/auth';
 import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
 import serviceBookingService from '../../services/serviceBookingService';
@@ -383,11 +384,20 @@ const loadBookings = async () => {
   try {
     loadingBookings.value = true;
     
+    // Get current user
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+      console.error('User not authenticated');
+      return;
+    }
+    
     // Load open bookings (including processing)
     const [openResults, processingResults, closedResults] = await Promise.all([
-      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, 'open'),
-      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, 'processing'),
-      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, 'closed')
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'open'),
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'processing'),
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'closed')
     ]);
     
     openBookings.value = [...openResults, ...processingResults];
