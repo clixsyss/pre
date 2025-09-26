@@ -296,6 +296,16 @@ const updateUserDetailsInFirestore = async (userId, userDetails) => {
       gender: userDetails.gender,
       nationalId: userDetails.nationalId,
       
+      // Document URLs (if provided)
+      ...(userDetails.documents && {
+        documents: userDetails.documents
+      }),
+      
+      // Projects data (if provided)
+      ...(userDetails.projects && {
+        projects: userDetails.projects
+      }),
+      
       // Update registration status
       registrationStatus: 'completed',
       registrationStep: 'complete',

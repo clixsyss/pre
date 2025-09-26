@@ -481,19 +481,42 @@ const resendCode = async () => {
   try {
     // Resend verification email via Firebase
     if (auth.currentUser) {
+      console.log('Attempting to resend verification email to:', auth.currentUser.email)
+      console.log('User email verified status:', auth.currentUser.emailVerified)
+      console.log('User UID:', auth.currentUser.uid)
+      
       await sendEmailVerification(auth.currentUser)
-      console.log('Verification email resent to:', formData.email)
+      console.log('Verification email resent successfully to:', formData.email)
 
       // Restart countdown
       startResendCountdown()
 
       notificationStore.showSuccess('Verification email resent successfully!')
     } else {
+      console.error('No authenticated user found for resend')
       throw new Error('No user found. Please try again.')
     }
   } catch (error) {
-    console.error('Resend error:', error)
-    notificationStore.showError('Failed to resend email: ' + error.message)
+    console.error('Resend error details:', {
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    })
+    
+    let errorMessage = 'Failed to resend email'
+    if (error.code === 'auth/too-many-requests') {
+      errorMessage = 'Too many requests. Please wait before requesting another email.'
+    } else if (error.code === 'auth/user-not-found') {
+      errorMessage = 'User not found. Please try signing up again.'
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = 'Invalid email address.'
+    } else if (error.code === 'auth/network-request-failed') {
+      errorMessage = 'Network error. Please check your connection and try again.'
+    } else {
+      errorMessage = `Failed to resend email: ${error.message}`
+    }
+    
+    notificationStore.showError(errorMessage)
   }
 }
 </script>

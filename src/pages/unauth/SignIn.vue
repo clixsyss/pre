@@ -11,6 +11,13 @@
       <div class="placeholder"></div>
     </div>
 
+    <!-- Pending Approval Modal -->
+    <PendingApprovalModal 
+      v-if="showPendingModal" 
+      @close="showPendingModal = false"
+      @refresh="checkUserApprovalStatus"
+    />
+
     <!-- Content -->
     <div class="content">
       <div class="welcome-section">
@@ -127,8 +134,9 @@ import { useNotificationStore } from '../../stores/notifications'
 import { useRegistrationStore } from '../../stores/registration'
 import { validateProfileCompletion, getNextProfileStep } from '../../utils/profileValidation'
 import { attemptGoogleSignIn } from '../../utils/googleAuthHelper'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../boot/firebase'
+import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
 
 // Component name for ESLint
 defineOptions({
@@ -139,6 +147,7 @@ const router = useRouter()
 const notificationStore = useNotificationStore()
 const loading = ref(false)
 const showPassword = ref(false)
+const showPendingModal = ref(false)
 
 const formData = reactive({
   email: '',
@@ -154,14 +163,48 @@ const togglePassword = () => {
   showPassword.value = !showPassword.value
 }
 
+// Check user approval status
+const checkUserApprovalStatus = async (userId) => {
+  try {
+    const userDocRef = doc(db, 'users', userId)
+    const userDoc = await getDoc(userDocRef)
+    
+    if (userDoc.exists()) {
+      const userData = userDoc.data()
+      return {
+        approvalStatus: userData.approvalStatus || 'pending',
+        registrationStatus: userData.registrationStatus || 'pending'
+      }
+    }
+    return { approvalStatus: 'pending', registrationStatus: 'pending' }
+  } catch (error) {
+    console.error('Error checking user approval status:', error)
+    return { approvalStatus: 'pending', registrationStatus: 'pending' }
+  }
+}
+
 const handleSignIn = async () => {
   if (loading.value) return
   
   loading.value = true
   
   try {
-    await signInWithEmailAndPassword(auth, formData.email, formData.password)
-    // Redirect to home page after successful sign in
+    const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password)
+    const user = userCredential.user
+    
+    // Check user approval status
+    const status = await checkUserApprovalStatus(user.uid)
+    
+    if (status.approvalStatus === 'pending') {
+      // Show pending approval modal
+      showPendingModal.value = true
+      return
+    } else if (status.approvalStatus === 'rejected') {
+      notificationStore.showError('Your account has been rejected. Please contact support for more information.')
+      return
+    }
+    
+    // User is approved, proceed to home
     router.push('/home')
   } catch (error) {
     console.error('Sign in error:', error)
@@ -233,7 +276,19 @@ const signInWithGoogle = async () => {
       return
     }
     
-    // Profile complete - update last login and proceed
+    // Check user approval status
+    const status = await checkUserApprovalStatus(userData.uid)
+    
+    if (status.approvalStatus === 'pending') {
+      // Show pending approval modal
+      showPendingModal.value = true
+      return
+    } else if (status.approvalStatus === 'rejected') {
+      notificationStore.showError('Your account has been rejected. Please contact support for more information.')
+      return
+    }
+    
+    // User is approved - update last login and proceed
     const userDocRef = doc(db, 'users', userData.uid)
     await setDoc(userDocRef, {
       lastLogin: serverTimestamp(),

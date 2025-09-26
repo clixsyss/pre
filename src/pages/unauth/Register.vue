@@ -544,7 +544,8 @@ const saveUserDataToFirestore = async (userId, userData) => {
       nationalId: userData.userDetails?.nationalId || '',
 
       // Metadata
-      registrationStatus: 'pending', // pending, completed, verified
+      registrationStatus: 'pending', // pending, approved, suspended
+      approvalStatus: 'pending', // pending, approved, rejected
       registrationStep: 'personal', // personal, property, details, complete
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -696,7 +697,31 @@ const handlePersonalSubmit = async () => {
     )
 
     // Send verification email via Firebase
-    await sendEmailVerification(userCredential.user)
+    try {
+      console.log('Attempting to send verification email to:', personalForm.email)
+      console.log('User UID:', userCredential.user.uid)
+      console.log('User email verified status:', userCredential.user.emailVerified)
+      
+      await sendEmailVerification(userCredential.user)
+      console.log('Verification email sent successfully to:', personalForm.email)
+    } catch (emailError) {
+      console.error('Error sending verification email:', {
+        code: emailError.code,
+        message: emailError.message,
+        stack: emailError.stack
+      })
+      
+      let warningMessage = 'Account created but verification email failed to send. Please try signing in and request a new verification email.'
+      
+      if (emailError.code === 'auth/too-many-requests') {
+        warningMessage = 'Account created but too many verification emails sent. Please wait before requesting another email.'
+      } else if (emailError.code === 'auth/network-request-failed') {
+        warningMessage = 'Account created but network error prevented email sending. Please check your connection and try signing in to request a new verification email.'
+      }
+      
+      // Don't fail the entire registration if email sending fails
+      notificationStore.showWarning(warningMessage)
+    }
 
     // Store the user ID for later use
     registrationStore.setTempUserId(userCredential.user.uid)
@@ -710,8 +735,8 @@ const handlePersonalSubmit = async () => {
 
     await saveUserDataToFirestore(userCredential.user.uid, initialUserData)
 
-    console.log('Verification email sent to:', personalForm.email)
-    notificationStore.showSuccess('Verification email sent! Please check your inbox and click the verification link.')
+    console.log('User registration completed for:', personalForm.email)
+    notificationStore.showSuccess('Account created successfully! Please check your email for verification instructions.')
 
     // Clear password fields for security
     personalForm.password = ''
