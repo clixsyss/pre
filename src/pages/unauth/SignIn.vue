@@ -312,6 +312,7 @@ const goToSignUp = () => {
   padding: 20px;
   background-color: #222222;
   color: white;
+  padding-top: 60px;
 }
 
 .back-btn {
@@ -322,10 +323,6 @@ const goToSignUp = () => {
   padding: 8px;
   border-radius: 50%;
   transition: background-color 0.3s ease;
-}
-
-.back-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .page-title {
@@ -496,10 +493,6 @@ const goToSignUp = () => {
   transition: all 0.3s ease;
 }
 
-.signin-btn:hover:not(:disabled) {
-  background-color: #AF1E23;
-}
-
 .signin-btn:disabled {
   background-color: #ccc;
   cursor: not-allowed;
@@ -569,11 +562,6 @@ const goToSignUp = () => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-}
-
-.social-btn:hover {
-  border-color: #AF1E23;
-  background-color: #f8f9fa;
 }
 
 .signup-prompt {

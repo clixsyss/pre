@@ -701,7 +701,7 @@ const handlePersonalSubmit = async () => {
       console.log('Attempting to send verification email to:', personalForm.email)
       console.log('User UID:', userCredential.user.uid)
       console.log('User email verified status:', userCredential.user.emailVerified)
-      
+
       await sendEmailVerification(userCredential.user)
       console.log('Verification email sent successfully to:', personalForm.email)
     } catch (emailError) {
@@ -710,15 +710,15 @@ const handlePersonalSubmit = async () => {
         message: emailError.message,
         stack: emailError.stack
       })
-      
+
       let warningMessage = 'Account created but verification email failed to send. Please try signing in and request a new verification email.'
-      
+
       if (emailError.code === 'auth/too-many-requests') {
         warningMessage = 'Account created but too many verification emails sent. Please wait before requesting another email.'
       } else if (emailError.code === 'auth/network-request-failed') {
         warningMessage = 'Account created but network error prevented email sending. Please check your connection and try signing in to request a new verification email.'
       }
-      
+
       // Don't fail the entire registration if email sending fails
       notificationStore.showWarning(warningMessage)
     }
@@ -866,10 +866,6 @@ const goToSignIn = () => {
   transition: background-color 0.3s ease;
 }
 
-.back-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
 .back-btn svg {
   stroke: white;
 }
@@ -889,10 +885,6 @@ const goToSignIn = () => {
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.3s ease;
-}
-
-.signin-header-btn:hover {
-  background-color: #AF1E23;
 }
 
 .separator-line {
@@ -1111,19 +1103,9 @@ const goToSignIn = () => {
   gap: 10px;
 }
 
-.social-btn:hover {
-  border-color: #AF1E23;
-  background-color: #fff5f2;
-}
-
 .google-btn {
   border-color: #4285F4;
   color: #4285F4;
-}
-
-.google-btn:hover {
-  background-color: #4285F4;
-  color: white;
 }
 
 .google-btn svg {
@@ -1250,11 +1232,6 @@ select.form-input:disabled {
   transition: all 0.3s ease;
 }
 
-.proceed-btn:hover:not(:disabled),
-.verify-btn:hover:not(:disabled) {
-  background-color: #AF1E23;
-}
-
 .proceed-btn:disabled,
 .verify-btn:disabled {
   background-color: #ccc;
@@ -1279,11 +1256,6 @@ select.form-input:disabled {
   transition: all 0.3s ease;
 }
 
-.back-action-btn:hover {
-  border-color: #AF1E23;
-  color: #AF1E23;
-}
-
 .verify-btn {
   flex: 2;
 }
@@ -1305,10 +1277,6 @@ select.form-input:disabled {
   gap: 10px;
 }
 
-.add-project-btn:hover:not(:disabled) {
-  background-color: #1976D2;
-}
-
 .add-project-btn:disabled {
   background-color: #ccc;
   cursor: not-allowed;
@@ -1323,10 +1291,6 @@ select.form-input:disabled {
   padding: 8px;
   border-radius: 50%;
   transition: background-color 0.3s ease;
-}
-
-.remove-project-btn:hover {
-  background-color: #f0f0f0;
 }
 
 .remove-project-btn svg {
@@ -1377,11 +1341,6 @@ select.form-input:disabled {
   transition: color 0.3s ease;
   padding: 8px 12px;
   border-radius: 4px;
-}
-
-.nav-link:hover {
-  color: #AF1E23;
-  background-color: rgba(255, 107, 53, 0.1);
 }
 
 @keyframes fadeIn {
@@ -1541,12 +1500,6 @@ select.form-input:disabled {
   color: white;
 }
 
-.role-btn:hover:not(.active) {
-  border-color: #AF1E23;
-  color: #AF1E23;
-  background-color: rgba(255, 107, 53, 0.05);
-}
-
 .role-btn svg {
   stroke: currentColor;
 }
@@ -1568,11 +1521,6 @@ select.form-input:disabled {
   border-radius: 8px;
   margin-bottom: 12px;
   transition: all 0.3s ease;
-}
-
-.project-item:hover {
-  border-color: #AF1E23;
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.1);
 }
 
 .project-item:last-child {
@@ -1632,12 +1580,6 @@ select.form-input:disabled {
   gap: 10px;
 }
 
-.add-another-btn:hover {
-  background-color: rgba(33, 150, 243, 0.1);
-  border-color: #1976D2;
-  color: #1976D2;
-}
-
 .additional-property-form {
   background-color: white;
   border: 1px solid #e1e5e9;
@@ -1669,10 +1611,6 @@ select.form-input:disabled {
   gap: 8px;
 }
 
-.add-property-btn:hover:not(:disabled) {
-  background-color: #1976D2;
-}
-
 .add-property-btn:disabled {
   background-color: #ccc;
   cursor: not-allowed;
@@ -1689,11 +1627,6 @@ select.form-input:disabled {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-}
-
-.cancel-btn:hover {
-  border-color: #AF1E23;
-  color: #AF1E23;
 }
 
 /* Primary Property Display */
@@ -1715,10 +1648,6 @@ select.form-input:disabled {
 .property-card.primary {
   border-color: #4CAF50;
   background-color: #f8fff8;
-}
-
-.property-card:hover {
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
 }
 
 .property-info {

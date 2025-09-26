@@ -254,10 +254,6 @@ const handleSubmit = async () => {
   transition: background-color 0.3s ease;
 }
 
-.back-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
 .page-title {
   font-size: 1.2rem;
   font-weight: 600;
@@ -312,10 +308,6 @@ const handleSubmit = async () => {
   transition: transform 0.3s ease;
 }
 
-.support-card:hover {
-  transform: translateY(-5px);
-}
-
 .card-icon {
   width: 60px;
   height: 60px;
@@ -350,10 +342,6 @@ const handleSubmit = async () => {
   border: none;
   cursor: pointer;
   font-size: 0.95rem;
-}
-
-.support-link:hover {
-  text-decoration: underline;
 }
 
 .contact-form {
@@ -422,10 +410,6 @@ textarea.form-input {
   transition: all 0.3s ease;
 }
 
-.submit-btn:hover:not(:disabled) {
-  background-color: #AF1E23;
-}
-
 .submit-btn:disabled {
   background-color: #ccc;
   cursor: not-allowed;
@@ -479,10 +463,6 @@ textarea.form-input {
   transition: background-color 0.3s ease;
 }
 
-.close-btn:hover {
-  background-color: #f5f5f5;
-}
-
 .faq-list {
   padding: 0 30px 30px;
 }
@@ -505,10 +485,6 @@ textarea.form-input {
   align-items: center;
   justify-content: space-between;
   transition: color 0.3s ease;
-}
-
-.faq-question:hover {
-  color: #AF1E23;
 }
 
 .faq-arrow {

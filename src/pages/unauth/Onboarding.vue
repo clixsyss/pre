@@ -244,12 +244,6 @@ const goToSupport = () => {
   min-width: 200px;
 }
 
-.register-btn:hover {
-  background-color: #AF1E23;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(255, 107, 53, 0.4);
-}
-
 .signin-section {
   display: flex;
   align-items: center;
@@ -272,10 +266,6 @@ const goToSupport = () => {
   transition: color 0.3s ease;
 }
 
-.signin-btn:hover {
-  color: #AF1E23;
-}
-
 .support-link {
   margin-top: 10px;
 }
@@ -288,10 +278,6 @@ const goToSupport = () => {
   cursor: pointer;
   text-decoration: underline;
   transition: color 0.3s ease;
-}
-
-.support-btn:hover {
-  color: #AF1E23;
 }
 
 /* Responsive design */

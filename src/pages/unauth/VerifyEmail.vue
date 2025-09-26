@@ -78,7 +78,8 @@
           <p>We've sent a verification email to:</p>
           <p class="email-display">{{ formData.email }}</p>
           <p v-if="formData.email === 'Example@gmail.com'" class="debug-info">
-            <small>Debug: Using fallback email. Store email: {{ registrationStore.personalData.email || 'Not set' }}</small>
+            <small>Debug: Using fallback email. Store email: {{ registrationStore.personalData.email || 'Not set'
+              }}</small>
           </p>
           <p>Please check your inbox and click the verification link in the email.</p>
           <p class="note">If you don't see the email, check your spam folder.</p>
@@ -182,7 +183,8 @@
         <div class="verification-instructions">
           <h3>Property Information</h3>
           <p v-if="!isEmailVerified">You need to verify your email address first before you can add properties.</p>
-          <p v-else-if="!isPersonalDetailsCompleted()">You need to complete your personal information before you can add properties.</p>
+          <p v-else-if="!isPersonalDetailsCompleted()">You need to complete your personal information before you can add
+            properties.</p>
           <p v-else>Great! You can now add your properties.</p>
           <div class="verification-tips">
             <p><strong>Next steps:</strong></p>
@@ -205,9 +207,11 @@
               <h3>Ready to Add Properties?</h3>
             </div>
             <p v-if="!isEmailVerified">Switch to the Personal tab to verify your email first.</p>
-            <p v-else-if="!isPersonalDetailsCompleted()">Switch to the Personal tab to complete your personal information first.</p>
+            <p v-else-if="!isPersonalDetailsCompleted()">Switch to the Personal tab to complete your personal
+              information first.</p>
             <p v-else>You're all set! Add your properties below.</p>
-            <button v-if="!isEmailVerified || !isPersonalDetailsCompleted()" @click="activeTab = 'personal'" class="action-btn primary">
+            <button v-if="!isEmailVerified || !isPersonalDetailsCompleted()" @click="activeTab = 'personal'"
+              class="action-btn primary">
               Go to Personal Tab
             </button>
           </div>
@@ -274,7 +278,7 @@ const updateEmailVerificationInFirestore = async (userId) => {
 onMounted(() => {
   // Get email from multiple sources in order of priority
   let email = ''
-  
+
   // First try to get from registration store
   if (registrationStore.personalData.email) {
     email = registrationStore.personalData.email
@@ -289,13 +293,13 @@ onMounted(() => {
   else {
     email = 'Example@gmail.com'
   }
-  
+
   formData.email = email
   console.log('Email loaded:', email, 'from store:', registrationStore.personalData.email)
-  
+
   // Start countdown for resend
   startResendCountdown()
-  
+
   // Check if user is already verified
   if (registrationStore.tempUserId || auth.currentUser) {
     // Immediate check for current verification status
@@ -304,9 +308,9 @@ onMounted(() => {
       handleEmailVerified(auth.currentUser.uid)
       return
     }
-    
+
     checkEmailVerification()
-    
+
     console.log('Setting up periodic email verification check every 3 seconds')
     // Set up periodic check for email verification
     const verificationCheckInterval = setInterval(async () => {
@@ -314,11 +318,11 @@ onMounted(() => {
         // Reload the current user to get latest verification status
         if (auth.currentUser) {
           await auth.currentUser.reload()
-          
+
           if (auth.currentUser.emailVerified) {
             console.log('Periodic check: Email verified, proceeding to next step')
             clearInterval(verificationCheckInterval)
-            
+
             // Use the helper function to handle verification
             handleEmailVerified(auth.currentUser.uid)
           }
@@ -327,12 +331,12 @@ onMounted(() => {
         console.error('Error in periodic check:', error)
       }
     }, 3000) // Check every 3 seconds
-    
+
     // Set up countdown for next check
     const countdownInterval = setInterval(() => {
       nextCheckIn.value = nextCheckIn.value > 1 ? nextCheckIn.value - 1 : 3
     }, 1000)
-    
+
     // Clean up intervals when component unmounts
     onUnmounted(() => {
       if (verificationCheckInterval) clearInterval(verificationCheckInterval)
@@ -368,7 +372,7 @@ const goToSignIn = () => {
 
 const checkEmailVerification = () => {
   console.log('checkEmailVerification called, current user:', auth.currentUser?.email, 'verified:', auth.currentUser?.emailVerified)
-  
+
   // First, check if current user is already verified
   if (auth.currentUser && auth.currentUser.emailVerified) {
     console.log('Current user already verified, proceeding to next step')
@@ -399,10 +403,10 @@ const handleEmailVerified = async (userId) => {
   // Update store and local state
   registrationStore.setEmailVerified(true)
   isEmailVerified.value = true
-  
+
   // Show success message
   notificationStore.showSuccess('Email verified! Redirecting to personal details...')
-  
+
   // Redirect to PersonalDetails.vue to complete personal information
   setTimeout(() => {
     router.push('/register/personal-details')
@@ -417,7 +421,7 @@ const checkVerificationStatus = async () => {
     const currentUser = auth.currentUser
     if (currentUser && currentUser.emailVerified) {
       console.log('Manual check: Email verified, proceeding to next step')
-      
+
       // Use the helper function to handle verification
       handleEmailVerified(currentUser.uid)
     } else {
@@ -439,8 +443,8 @@ const goToPersonalDetails = () => {
 // Check if personal details are completed
 const isPersonalDetailsCompleted = () => {
   const userDetails = registrationStore.userDetails
-  return userDetails.firstName && userDetails.lastName && userDetails.mobile && 
-         userDetails.dateOfBirth && userDetails.nationalId
+  return userDetails.firstName && userDetails.lastName && userDetails.mobile &&
+    userDetails.dateOfBirth && userDetails.nationalId
 }
 
 // Function to manually check verification status (useful for testing)
@@ -454,7 +458,7 @@ const manualCheckVerification = async () => {
 const handlePropertyTabClick = () => {
   if (!isEmailVerified.value) {
     notificationStore.showInfo('Please verify your email first before accessing the Property tab.')
-    
+
     // Add shake animation to the disabled tab
     const propertyTab = document.querySelector('.progress-step.disabled')
     if (propertyTab) {
@@ -465,13 +469,13 @@ const handlePropertyTabClick = () => {
     }
     return
   }
-  
+
   if (!isPersonalDetailsCompleted()) {
     notificationStore.showInfo('Please complete your personal information first before accessing the Property tab.')
     activeTab.value = 'personal'
     return
   }
-  
+
   activeTab.value = 'property'
 }
 
@@ -484,7 +488,7 @@ const resendCode = async () => {
       console.log('Attempting to resend verification email to:', auth.currentUser.email)
       console.log('User email verified status:', auth.currentUser.emailVerified)
       console.log('User UID:', auth.currentUser.uid)
-      
+
       await sendEmailVerification(auth.currentUser)
       console.log('Verification email resent successfully to:', formData.email)
 
@@ -502,7 +506,7 @@ const resendCode = async () => {
       message: error.message,
       stack: error.stack
     })
-    
+
     let errorMessage = 'Failed to resend email'
     if (error.code === 'auth/too-many-requests') {
       errorMessage = 'Too many requests. Please wait before requesting another email.'
@@ -515,7 +519,7 @@ const resendCode = async () => {
     } else {
       errorMessage = `Failed to resend email: ${error.message}`
     }
-    
+
     notificationStore.showError(errorMessage)
   }
 }
@@ -546,10 +550,6 @@ const resendCode = async () => {
   transition: background-color 0.3s ease;
 }
 
-.back-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
 .page-title {
   font-size: 1.2rem;
   font-weight: 600;
@@ -571,10 +571,6 @@ const resendCode = async () => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-}
-
-.signin-header-btn:hover {
-  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .placeholder {
@@ -697,12 +693,6 @@ const resendCode = async () => {
 .progress-step.disabled .step-label {
   color: #ccc;
 }
-
-.progress-step.disabled:hover {
-  transform: none;
-}
-
-
 
 .step-icon {
   border: 2px solid #e1e5e9;
@@ -910,10 +900,6 @@ const resendCode = async () => {
   transition: all 0.3s ease;
 }
 
-.verify-btn:hover:not(:disabled) {
-  background-color: #AF1E23;
-}
-
 .verify-btn:disabled {
   background-color: #ccc;
   cursor: not-allowed;
@@ -931,10 +917,6 @@ const resendCode = async () => {
   cursor: pointer;
   text-decoration: underline;
   transition: color 0.3s ease;
-}
-
-.resend-btn:hover:not(:disabled) {
-  color: #AF1E23;
 }
 
 .resend-btn:disabled {
@@ -957,10 +939,6 @@ const resendCode = async () => {
   border-radius: 8px;
   padding: 16px;
   transition: border-color 0.2s ease;
-}
-
-.action-section:hover {
-  border-color: #AF1E23;
 }
 
 .section-header {
@@ -1005,17 +983,9 @@ const resendCode = async () => {
   color: white;
 }
 
-.action-btn.primary:hover {
-  background-color: #43A047;
-}
-
 .action-btn.secondary {
   background-color: #FF9800;
   color: white;
-}
-
-.action-btn.secondary:hover:not(:disabled) {
-  background-color: #F57C00;
 }
 
 .action-btn:disabled {

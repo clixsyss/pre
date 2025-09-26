@@ -672,10 +672,6 @@ const handleSubmit = async () => {
   transition: background-color 0.3s ease;
 }
 
-.back-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
 .page-title {
   font-size: 1.2rem;
   font-weight: 600;
@@ -701,10 +697,6 @@ const handleSubmit = async () => {
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.3s ease;
-}
-
-.signin-header-btn:hover {
-  background-color: #AF1E23;
 }
 
 .tabs {
@@ -820,11 +812,6 @@ const handleSubmit = async () => {
   color: #666;
 }
 
-.nav-btn.secondary:hover {
-  border-color: #AF1E23;
-  color: #AF1E23;
-}
-
 .content {
   padding: 40px 20px;
   max-width: 500px;
@@ -932,11 +919,6 @@ const handleSubmit = async () => {
   color: white;
 }
 
-.gender-btn:hover:not(.active) {
-  border-color: #AF1E23;
-  color: #AF1E23;
-}
-
 .file-upload {
   position: relative;
 }
@@ -961,11 +943,6 @@ const handleSubmit = async () => {
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s ease;
-}
-
-.file-label:hover {
-  border-color: #AF1E23;
-  color: #AF1E23;
 }
 
 .file-upload.required .file-label {
@@ -1006,10 +983,6 @@ const handleSubmit = async () => {
   transition: background-color 0.3s ease;
 }
 
-.remove-file-btn:hover {
-  background-color: #dc2626;
-}
-
 .continue-btn {
   width: 100%;
   background-color: #AF1E23;
@@ -1021,10 +994,6 @@ const handleSubmit = async () => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-}
-
-.continue-btn:hover:not(:disabled) {
-  background-color: #AF1E23;
 }
 
 .continue-btn:disabled {
