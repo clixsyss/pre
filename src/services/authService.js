@@ -118,8 +118,13 @@ class AuthService {
     if (this.isNative) {
       // Use Capacitor Firebase Authentication
       this.initialize().then(() => {
-        return this.capacitorAuth.addListener('authStateChange', callback)
+        return this.capacitorAuth.addListener('authStateChange', (result) => {
+          console.log('AuthService: Auth state changed, user:', result.user ? 'authenticated' : 'not authenticated')
+          callback(result.user)
+        })
       })
+      // Return a dummy unsubscribe function for native
+      return () => {}
     } else {
       // Use Firebase Web SDK
       return onAuthStateChanged(this.auth, callback)

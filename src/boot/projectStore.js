@@ -8,8 +8,9 @@ export default boot(async ({ app }) => {
   
   // Listen for auth state changes and rehydrate project store
   const unsubscribe = authService.onAuthStateChanged(async (user) => {
+    console.log('App boot: Auth state changed, user:', user ? 'authenticated' : 'not authenticated')
     if (user) {
-      console.log('App boot: User authenticated, rehydrating project store...')
+      console.log('App boot: User authenticated, rehydrating project store...', 'User ID:', user.uid)
       try {
         const restored = await projectStore.rehydrateStore(user.uid)
         if (restored) {
