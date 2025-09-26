@@ -41,10 +41,15 @@ class FirestoreService {
         const result = await this.capacitorFirestore.getDocument({
           reference: path
         })
+        console.log('🔍 FirestoreService getDoc result:', result)
+        
+        // Check if the snapshot exists and has data
+        const exists = result.snapshot && result.snapshot.data && Object.keys(result.snapshot.data).length > 0
+        
         return {
-          exists: () => result.snapshot.exists,
-          data: () => result.snapshot.data,
-          id: result.snapshot.id
+          exists: () => exists,
+          data: () => result.snapshot.data || {},
+          id: result.snapshot.id || path.split('/').pop()
         }
       } else {
         const docRef = doc(this.db, path)

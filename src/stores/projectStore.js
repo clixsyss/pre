@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { db } from '../boot/firebase'
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore'
+import firestoreService from '../services/firestoreService'
 
 export const useProjectStore = defineStore('project', () => {
   // State
@@ -37,14 +36,15 @@ export const useProjectStore = defineStore('project', () => {
       error.value = null
       
       // Get user document to find their projects
-      const userDocRef = doc(db, 'users', userId)
-      const userDoc = await getDoc(userDocRef)
+      console.log('ProjectStore: Fetching user document from Firestore...')
+      const userDoc = await firestoreService.getDoc(`users/${userId}`)
       
       if (!userDoc.exists()) {
         throw new Error('User not found')
       }
       
       const userData = userDoc.data()
+      console.log('ProjectStore: User document data:', userData)
       
       // Check if user has projects in the projects array
       const userProjectsArray = userData.projects || []
@@ -63,29 +63,18 @@ export const useProjectStore = defineStore('project', () => {
           const projectIds = userProjectsArray.map(up => up.projectId || up.id).filter(Boolean)
           
           if (projectIds.length > 0) {
-            // Use getDocs with 'in' query for much faster batch fetching
-            const { query, where, getDocs } = await import('firebase/firestore')
+            console.log('ProjectStore: Fetching projects using REST API...')
             
-            // Split into chunks of 10 (Firestore 'in' query limit)
-            const chunkSize = 10
-            const projectChunks = []
-            for (let i = 0; i < projectIds.length; i += chunkSize) {
-              projectChunks.push(projectIds.slice(i, i + chunkSize))
-            }
-            
-            // Fetch all chunks in parallel
-            const chunkPromises = projectChunks.map(async (chunk) => {
+            // Fetch projects one by one using the unified firestoreService
+            const projectPromises = projectIds.map(async (projectId) => {
               try {
-                const projectsRef = collection(db, 'projects')
-                const q = query(projectsRef, where('__name__', 'in', chunk))
-                const snapshot = await getDocs(q)
-                
-                return snapshot.docs.map(doc => {
-                  const projectData = doc.data()
-                  const userProject = userProjectsArray.find(up => (up.projectId || up.id) === doc.id)
+                const projectDoc = await firestoreService.getDoc(`projects/${projectId}`)
+                if (projectDoc.exists()) {
+                  const projectData = projectDoc.data()
+                  const userProject = userProjectsArray.find(up => (up.projectId || up.id) === projectId)
                   
                   return {
-                    id: doc.id,
+                    id: projectId,
                     name: projectData.name || 'Unnamed Project',
                     description: projectData.description || 'No description available',
                     location: projectData.location || 'Location not set',
@@ -98,32 +87,31 @@ export const useProjectStore = defineStore('project', () => {
                     registrationStep: userProject?.registrationStep || 'unknown',
                     updatedAt: userProject?.updatedAt || null
                   }
-                })
+                }
+                return null
               } catch (err) {
-                console.error(`Failed to fetch project chunk:`, err)
-                // Fallback to individual fetches for failed chunks
-                return chunk.map(projectId => {
-                  const userProject = userProjectsArray.find(up => (up.projectId || up.id) === projectId)
-                  return {
-                    id: projectId,
-                    name: `Project ${projectId.slice(-6)}`,
-                    description: 'Project details not available',
-                    location: 'Location not set',
-                    status: 'unknown',
-                    type: 'unknown',
-                    userRole: userProject?.role || 'member',
-                    userUnit: userProject?.unit || 'N/A',
-                    registrationStatus: userProject?.registrationStatus || 'unknown',
-                    registrationStep: userProject?.registrationStep || 'unknown',
-                    updatedAt: userProject?.updatedAt || null
-                  }
-                })
+                console.error(`Failed to fetch project ${projectId}:`, err)
+                // Return fallback project data
+                const userProject = userProjectsArray.find(up => (up.projectId || up.id) === projectId)
+                return {
+                  id: projectId,
+                  name: `Project ${projectId.slice(-6)}`,
+                  description: 'Project details not available',
+                  location: 'Location not set',
+                  status: 'unknown',
+                  type: 'unknown',
+                  userRole: userProject?.role || 'member',
+                  userUnit: userProject?.unit || 'N/A',
+                  registrationStatus: userProject?.registrationStatus || 'unknown',
+                  registrationStep: userProject?.registrationStep || 'unknown',
+                  updatedAt: userProject?.updatedAt || null
+                }
               }
             })
             
-            // Wait for all chunks to be fetched and flatten results
-            const chunkResults = await Promise.all(chunkPromises)
-            projectsData.push(...chunkResults.flat())
+            // Wait for all projects to be fetched and filter out nulls
+            const projectResults = await Promise.all(projectPromises)
+            projectsData.push(...projectResults.filter(Boolean))
           }
         } catch (err) {
           console.error('Error fetching projects in batch:', err)
@@ -133,10 +121,12 @@ export const useProjectStore = defineStore('project', () => {
       // Set the projects in the store
       userProjects.value = projectsData
       lastFetchTime.value = Date.now()
+      console.log('ProjectStore: Successfully set projects in store:', projectsData.length, 'projects')
       
       // If user has only one project, auto-select it
       if (projectsData.length === 1) {
         selectedProject.value = projectsData[0]
+        console.log('ProjectStore: Auto-selected single project:', projectsData[0].name)
       }
       
     } catch (err) {
@@ -152,8 +142,7 @@ export const useProjectStore = defineStore('project', () => {
       loading.value = true
       error.value = null
       
-      const projectsRef = collection(db, 'projects')
-      const snapshot = await getDocs(projectsRef)
+      const snapshot = await firestoreService.getDocs('projects')
       
       availableProjects.value = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -176,6 +165,9 @@ export const useProjectStore = defineStore('project', () => {
     localStorage.setItem('selectedProjectId', project.id)
     localStorage.setItem('selectedProjectTimestamp', Date.now().toString())
     console.log('Project selected and saved to localStorage:', project.name)
+    
+    // Trigger data refresh for the new project
+    console.log('Project changed, triggering data refresh...')
   }
 
   const validateSavedProject = (savedProjectId) => {
@@ -227,6 +219,8 @@ export const useProjectStore = defineStore('project', () => {
 
   const rehydrateStore = async (userId) => {
     try {
+      console.log('ProjectStore: Starting rehydration for user:', userId)
+      
       // First try to load from localStorage if we have projects
       if (userProjects.value.length > 0) {
         const restored = loadSelectedProject()
@@ -234,6 +228,7 @@ export const useProjectStore = defineStore('project', () => {
       }
       
       // If no projects or couldn't restore, fetch projects
+      console.log('ProjectStore: No cached projects, fetching from Firestore...')
       await fetchUserProjects(userId)
       
       // Try to restore again after fetching
@@ -243,10 +238,11 @@ export const useProjectStore = defineStore('project', () => {
       // If still no project selected and user has only one project, auto-select it
       if (userProjects.value.length === 1) {
         selectProject(userProjects.value[0])
-        console.log('Auto-selected single project:', userProjects.value[0].name)
+        console.log('ProjectStore: Auto-selected single project:', userProjects.value[0].name)
         return true
       }
       
+      console.log('ProjectStore: Rehydration completed, projects available:', userProjects.value.length)
       return false
     } catch (error) {
       console.error('Error rehydrating project store:', error)

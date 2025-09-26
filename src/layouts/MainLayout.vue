@@ -529,10 +529,8 @@ onUnmounted(() => {
   background-color: #F6F6F6;
   width: 100%;
   overflow-x: hidden; /* Prevent horizontal overflow */
-  padding-top: 60px;
+  padding-top: 40px;
 }
-
-
 
 /* Header Styles */
 .app-header {
@@ -545,7 +543,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   z-index: 1000;
-  padding-top: 60px;
+  padding-top: 60px !important;
 }
 
 .header-content {

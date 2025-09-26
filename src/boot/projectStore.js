@@ -1,14 +1,13 @@
 import { boot } from 'quasar/wrappers'
 import { useProjectStore } from 'src/stores/projectStore'
-import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import authService from 'src/services/authService'
 
 export default boot(async ({ app }) => {
   // Initialize project store when app starts
   const projectStore = useProjectStore()
   
   // Listen for auth state changes and rehydrate project store
-  const auth = getAuth()
-  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+  const unsubscribe = authService.onAuthStateChanged(async (user) => {
     if (user) {
       console.log('App boot: User authenticated, rehydrating project store...')
       try {

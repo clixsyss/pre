@@ -147,18 +147,28 @@ const togglePassword = () => {
 // Check user approval status
 const checkUserApprovalStatus = async (userId) => {
   try {
+    console.log('🔍 Checking approval status for user:', userId)
     const userDoc = await firestoreService.getDoc(`users/${userId}`)
     
     if (userDoc.exists()) {
       const userData = userDoc.data()
-      return {
+      console.log('📋 User document data:', userData)
+      console.log('✅ Approval status field:', userData.approvalStatus)
+      console.log('✅ Registration status field:', userData.registrationStatus)
+      
+      const result = {
         approvalStatus: userData.approvalStatus || 'pending',
         registrationStatus: userData.registrationStatus || 'pending'
       }
+      
+      console.log('🎯 Final approval check result:', result)
+      return result
     }
+    
+    console.log('❌ User document does not exist')
     return { approvalStatus: 'pending', registrationStatus: 'pending' }
   } catch (error) {
-    console.error('Error checking user approval status:', error)
+    console.error('❌ Error checking user approval status:', error)
     return { approvalStatus: 'pending', registrationStatus: 'pending' }
   }
 }
@@ -174,16 +184,20 @@ const handleSignIn = async () => {
     
     // Check user approval status
     const status = await checkUserApprovalStatus(user.uid)
+    console.log('🚀 Sign-in approval check result:', status)
     
     if (status.approvalStatus === 'pending') {
+      console.log('⏳ User is pending approval, showing modal')
       // Show pending approval modal
       showPendingModal.value = true
       return
     } else if (status.approvalStatus === 'rejected') {
+      console.log('❌ User is rejected')
       notificationStore.showError('Your account has been rejected. Please contact support for more information.')
       return
     }
     
+    console.log('✅ User is approved, proceeding to home')
     // User is approved, proceed to home
     router.push('/home')
   } catch (error) {
@@ -258,12 +272,15 @@ const signInWithGoogle = async () => {
     
     // Check user approval status
     const status = await checkUserApprovalStatus(userData.uid)
+    console.log('🚀 Google sign-in approval check result:', status)
     
     if (status.approvalStatus === 'pending') {
+      console.log('⏳ User is pending approval, showing modal')
       // Show pending approval modal
       showPendingModal.value = true
       return
     } else if (status.approvalStatus === 'rejected') {
+      console.log('❌ User is rejected')
       notificationStore.showError('Your account has been rejected. Please contact support for more information.')
       return
     }
