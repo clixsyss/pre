@@ -1,5 +1,5 @@
-import { collection, query, where, orderBy, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '../boot/firebase'
+import firestoreService from './firestoreService'
+import collectionQueryService from './collectionQueryService'
 
 class NewsService {
   /**
@@ -26,32 +26,33 @@ class NewsService {
       const collectionPath = `projects/${projectId}/news`
       console.log('📂 Collection path:', collectionPath)
       
-      let q = query(
-        collection(db, collectionPath)
-      )
+           // Build query options
+           const queryOptions = {
+             where: []
+           }
 
-      if (publishedOnly) {
-        q = query(q, where('isPublished', '==', true))
-      }
+           if (publishedOnly) {
+             queryOptions.where.push({ field: 'isPublished', operator: '==', value: true })
+           }
 
-      if (category) {
-        q = query(q, where('category', '==', category))
-      }
+           if (category) {
+             queryOptions.where.push({ field: 'category', operator: '==', value: category })
+           }
 
-      // Order by creation date (newest first)
-      try {
-        q = query(q, orderBy('createdAt', 'desc'))
-      } catch (orderByError) {
-        console.log('⚠️ OrderBy failed, trying without it:', orderByError)
-        // Continue without orderBy
-      }
+           // Order by creation date (newest first)
+           queryOptions.orderBy = { field: 'createdAt', direction: 'desc' }
 
-      console.log('🔄 Executing Firestore query...')
-      const querySnapshot = await getDocs(q)
+           // Add limit if specified
+           if (limit) {
+             queryOptions.limit = limit
+           }
+
+           console.log('🔄 Executing Firestore query...')
+           const querySnapshot = await collectionQueryService.getDocsWithOptions(collectionPath, queryOptions)
       
       const newsItems = []
 
-      querySnapshot.forEach((doc) => {
+      querySnapshot.docs.forEach((doc) => {
         const data = doc.data()
         newsItems.push({
           id: doc.id,
@@ -109,12 +110,12 @@ class NewsService {
         mediaFileName: newsData.mediaFileName || null,
         authorId: newsData.authorId,
         authorName: newsData.authorName,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        publishedAt: newsData.isPublished ? serverTimestamp() : null
+        createdAt: firestoreService.serverTimestamp(),
+        updatedAt: firestoreService.serverTimestamp(),
+        publishedAt: newsData.isPublished ? firestoreService.serverTimestamp() : null
       }
 
-      const docRef = await addDoc(collection(db, `projects/${projectId}/news`), newsItem)
+      const docRef = await firestoreService.addDoc(`projects/${projectId}/news`, newsItem)
       console.log('✅ News item created with ID:', docRef.id)
       return docRef.id
     } catch (error) {
@@ -134,15 +135,15 @@ class NewsService {
     try {
       const updateData = {
         ...updates,
-        updatedAt: serverTimestamp()
+        updatedAt: firestoreService.serverTimestamp()
       }
 
       // If publishing for the first time, set publishedAt
       if (updates.isPublished && !updates.publishedAt) {
-        updateData.publishedAt = serverTimestamp()
+        updateData.publishedAt = firestoreService.serverTimestamp()
       }
 
-      await updateDoc(doc(db, `projects/${projectId}/news`, newsId), updateData)
+      await firestoreService.updateDoc(`projects/${projectId}/news/${newsId}`, updateData)
       console.log('✅ News item updated:', newsId)
     } catch (error) {
       console.error('❌ Error updating news item:', error)
@@ -158,7 +159,7 @@ class NewsService {
    */
   async deleteNews(projectId, newsId) {
     try {
-      await deleteDoc(doc(db, `projects/${projectId}/news`, newsId))
+      await firestoreService.deleteDoc(`projects/${projectId}/news/${newsId}`)
       console.log('✅ News item deleted:', newsId)
     } catch (error) {
       console.error('❌ Error deleting news item:', error)
@@ -174,8 +175,7 @@ class NewsService {
    */
   async getNewsItem(projectId, newsId) {
     try {
-      const docRef = doc(db, `projects/${projectId}/news`, newsId)
-      const docSnap = await getDoc(docRef)
+      const docSnap = await firestoreService.getDoc(`projects/${projectId}/news/${newsId}`)
 
       if (docSnap.exists()) {
         const data = docSnap.data()
@@ -206,14 +206,14 @@ class NewsService {
     try {
       const updateData = {
         isPublished,
-        updatedAt: serverTimestamp()
+        updatedAt: firestoreService.serverTimestamp()
       }
 
       if (isPublished) {
-        updateData.publishedAt = serverTimestamp()
+        updateData.publishedAt = firestoreService.serverTimestamp()
       }
 
-      await updateDoc(doc(db, `projects/${projectId}/news`, newsId), updateData)
+      await firestoreService.updateDoc(`projects/${projectId}/news/${newsId}`, updateData)
       console.log('✅ News visibility toggled:', newsId, isPublished)
     } catch (error) {
       console.error('❌ Error toggling news visibility:', error)
@@ -319,9 +319,8 @@ class NewsService {
       const newsWithCounts = await Promise.all(
         newsItems.map(async (newsItem) => {
           try {
-            // Get reactions for this news item
-            const reactionsRef = collection(db, `projects/${projectId}/news/${newsItem.id}/reactions`)
-            const reactionsSnapshot = await getDocs(reactionsRef)
+           // Get reactions for this news item
+           const reactionsSnapshot = await collectionQueryService.getCollectionDocs(`projects/${projectId}/news/${newsItem.id}/reactions`)
             
             const reactionCounts = {
               likeCount: 0,
@@ -334,7 +333,7 @@ class NewsService {
             }
             
             // Count reactions
-            reactionsSnapshot.forEach((doc) => {
+            reactionsSnapshot.docs.forEach((doc) => {
               const reaction = doc.data()
               switch (reaction.emoji) {
                 case 'like':
@@ -364,14 +363,13 @@ class NewsService {
               }
             })
             
-            // Get comment count
-            try {
-              const commentsRef = collection(db, `projects/${projectId}/news/${newsItem.id}/comments`)
-              const commentsSnapshot = await getDocs(commentsRef)
-              reactionCounts.commentCount = commentsSnapshot.size
-            } catch (commentError) {
-              console.log('Error fetching comment count:', commentError)
-            }
+                   // Get comment count
+                   try {
+                     const commentsSnapshot = await collectionQueryService.getCollectionDocs(`projects/${projectId}/news/${newsItem.id}/comments`)
+                     reactionCounts.commentCount = commentsSnapshot.docs.length
+                   } catch (commentError) {
+                     console.log('Error fetching comment count:', commentError)
+                   }
             
             return {
               ...newsItem,

@@ -7,11 +7,11 @@
           <h2 class="guidelines-title">Project Guidelines</h2>
           <p class="guidelines-subtitle">Important rules and procedures for our community</p>
         </div>
-        <button @click="closeDialog" class="close-btn">
+        <!-- <button @click="closeDialog" class="close-btn">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-        </button>
+        </button> -->
       </div>
 
       <!-- Loading State -->
@@ -263,8 +263,8 @@ watch(() => projectStore.selectedProject?.id, (newProjectId) => {
 .guidelines-dialog {
   background: #F6F6F6;
   border-radius: 20px;
-  width: 95%;
-  height: 90%;
+  width: 90%;
+  height: auto;
   max-width: 1000px;
   max-height: 800px;
   box-shadow: 
@@ -618,17 +618,17 @@ watch(() => projectStore.selectedProject?.id, (newProjectId) => {
 /* Responsive Design */
 @media (max-width: 768px) {
   .guidelines-dialog {
-    width: 98%;
-    height: 95%;
+    width: 90%;
+    height: auto;
     border-radius: 16px;
   }
   
   .guidelines-header {
-    padding: 20px 24px;
+    padding: 20px 12px;
   }
   
   .guidelines-content {
-    padding: 20px 24px;
+    padding: 20px 12px;
   }
   
   .pdf-guideline-card {

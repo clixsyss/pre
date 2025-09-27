@@ -1,5 +1,4 @@
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../boot/firebase';
+import firestoreService from './firestoreService';
 
 /**
  * Check if a user is currently suspended
@@ -8,8 +7,7 @@ import { db } from '../boot/firebase';
  */
 export const checkUserSuspension = async (userId) => {
   try {
-    const userRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userRef);
+    const userDoc = await firestoreService.getDoc(`users/${userId}`);
     
     if (!userDoc.exists()) {
       return {
@@ -71,8 +69,7 @@ export const checkUserSuspension = async (userId) => {
  */
 const unsuspendUser = async (userId) => {
   try {
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
+    await firestoreService.updateDoc(`users/${userId}`, {
       isSuspended: false,
       suspensionReason: null,
       suspensionType: null,

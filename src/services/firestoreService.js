@@ -1,13 +1,13 @@
 import { db, isNative } from '../boot/firebase'
-import { 
-  doc, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  collection, 
-  getDocs, 
-  query, 
+import errorHandlingService from './errorHandlingService'
+import collectionQueryService from './collectionQueryService'
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  collection,
   addDoc,
   serverTimestamp
 } from 'firebase/firestore'
@@ -29,6 +29,8 @@ class FirestoreService {
         console.log('FirestoreService: Capacitor Firebase Firestore initialized')
       } catch (error) {
         console.error('FirestoreService: Failed to initialize Capacitor Firebase Firestore:', error)
+        errorHandlingService.handleFirestoreError(error, 'FirestoreService.initialize')
+        throw error
       }
     }
   }
@@ -157,77 +159,41 @@ class FirestoreService {
   // Get documents from collection
   async getDocs(collectionPath, queryConstraints = []) {
     try {
-      if (this.isNative) {
-        await this.initialize()
-        
-        // Convert query constraints to native format
-        const nativeQuery = {
-          reference: collectionPath
-        }
-
-        // Add where clauses
-        const whereClauses = queryConstraints.filter(c => c.type === 'where')
-        if (whereClauses.length > 0) {
-          nativeQuery.where = whereClauses.map(w => ({
-            fieldPath: w.field,
-            opStr: w.operator,
-            value: w.value
-          }))
-        }
-
-        // Add order by
-        const orderByClause = queryConstraints.find(c => c.type === 'orderBy')
-        if (orderByClause) {
-          nativeQuery.orderBy = [{
-            fieldPath: orderByClause.field,
-            direction: orderByClause.direction
-          }]
-        }
-
-        // Add limit
-        const limitClause = queryConstraints.find(c => c.type === 'limit')
-        if (limitClause) {
-          nativeQuery.limit = limitClause.limit
-        }
-
-        const result = await this.capacitorFirestore.getDocuments(nativeQuery)
-        
-        return {
-          docs: result.snapshots.map(snapshot => ({
-            exists: () => snapshot.exists,
-            data: () => snapshot.data,
-            id: snapshot.id
-          })),
-          empty: result.snapshots.length === 0,
-          size: result.snapshots.length
-        }
-      } else {
-        const collectionRef = collection(this.db, collectionPath)
-        const q = query(collectionRef, ...queryConstraints)
-        return await getDocs(q)
-      }
+      console.log('FirestoreService: Getting collection docs for:', collectionPath)
+      
+      // Always use Firebase Web SDK for collection queries
+      // since Capacitor Firebase Firestore plugin doesn't support getDocuments
+      return await collectionQueryService.getCollectionDocs(collectionPath, queryConstraints)
     } catch (error) {
       console.error('Get documents error:', error)
+      errorHandlingService.handleFirestoreError(error, `getDocs(${collectionPath})`)
       throw error
     }
   }
 
   // Helper methods for common queries
-  where(field, operator, value) {
-    return { type: 'where', field, operator, value }
+  async where(field, operator, value) {
+    // Always use Firebase Web SDK functions for consistency
+    const { where } = await import('firebase/firestore')
+    return where(field, operator, value)
   }
 
-  orderBy(field, direction = 'asc') {
-    return { type: 'orderBy', field, direction }
+  async orderBy(field, direction = 'asc') {
+    // Always use Firebase Web SDK functions for consistency
+    const { orderBy } = await import('firebase/firestore')
+    return orderBy(field, direction)
   }
 
-  limitToFirst(limitCount) {
-    return { type: 'limit', limit: limitCount }
+  async limitToFirst(limitCount) {
+    // Always use Firebase Web SDK functions for consistency
+    const { limit } = await import('firebase/firestore')
+    return limit(limitCount)
   }
 
   // Server timestamp helper
   serverTimestamp() {
     if (this.isNative) {
+      // For iOS, use Firebase Web SDK functions
       return new Date().toISOString() // Fallback for native
     } else {
       return serverTimestamp()

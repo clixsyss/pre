@@ -1,30 +1,21 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDocs, 
-  query, 
-  orderBy, 
-  where,
-  serverTimestamp,
-  getDoc
-} from 'firebase/firestore';
+import firestoreService from './firestoreService';
+import collectionQueryService from './collectionQueryService';
 import { 
   ref, 
   uploadBytes, 
   getDownloadURL, 
   deleteObject 
 } from 'firebase/storage';
-import { db, storage } from '../boot/firebase';
+import { storage } from '../boot/firebase';
 
 // Get all ads for a project
 export const getAds = async (projectId) => {
   try {
-    const adsRef = collection(db, 'projects', projectId, 'ads');
-    const q = query(adsRef, orderBy('createdAt', 'desc'));
-    const snapshot = await getDocs(q);
+    const snapshot = await collectionQueryService.getDocsOrderedBy(
+      `projects/${projectId}/ads`,
+      'createdAt',
+      'desc'
+    );
     
     return snapshot.docs.map(doc => ({
       id: doc.id,
@@ -39,13 +30,13 @@ export const getAds = async (projectId) => {
 // Get active ads for a project (for display)
 export const getActiveAds = async (projectId) => {
   try {
-    const adsRef = collection(db, 'projects', projectId, 'ads');
-    const q = query(
-      adsRef, 
-      where('isActive', '==', true),
-      orderBy('order', 'asc')
+    const snapshot = await collectionQueryService.getDocsWithOptions(
+      `projects/${projectId}/ads`,
+      {
+        where: [{ field: 'isActive', operator: '==', value: true }],
+        orderBy: { field: 'order', direction: 'asc' }
+      }
     );
-    const snapshot = await getDocs(q);
     
     return snapshot.docs.map(doc => ({
       id: doc.id,
@@ -60,11 +51,10 @@ export const getActiveAds = async (projectId) => {
 // Create a new ad
 export const createAd = async (projectId, adData) => {
   try {
-    const adsRef = collection(db, 'projects', projectId, 'ads');
-    const adDoc = await addDoc(adsRef, {
+    const adDoc = await firestoreService.addDoc(`projects/${projectId}/ads`, {
       ...adData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      createdAt: firestoreService.serverTimestamp(),
+      updatedAt: firestoreService.serverTimestamp()
     });
     
     return adDoc.id;
@@ -77,10 +67,9 @@ export const createAd = async (projectId, adData) => {
 // Update an existing ad
 export const updateAd = async (projectId, adId, updates) => {
   try {
-    const adRef = doc(db, 'projects', projectId, 'ads', adId);
-    await updateDoc(adRef, {
+    await firestoreService.updateDoc(`projects/${projectId}/ads/${adId}`, {
       ...updates,
-      updatedAt: serverTimestamp()
+      updatedAt: firestoreService.serverTimestamp()
     });
   } catch (error) {
     console.error('Error updating ad:', error);
@@ -92,8 +81,7 @@ export const updateAd = async (projectId, adId, updates) => {
 export const deleteAd = async (projectId, adId) => {
   try {
     // First get the ad to check if it has an image
-    const adRef = doc(db, 'projects', projectId, 'ads', adId);
-    const adDoc = await getDoc(adRef);
+    const adDoc = await firestoreService.getDoc(`projects/${projectId}/ads/${adId}`);
     
     if (adDoc.exists()) {
       const adData = adDoc.data();
@@ -110,7 +98,7 @@ export const deleteAd = async (projectId, adId) => {
       }
       
       // Delete the ad document
-      await deleteDoc(adRef);
+      await firestoreService.deleteDoc(`projects/${projectId}/ads/${adId}`);
     }
   } catch (error) {
     console.error('Error deleting ad:', error);
@@ -152,10 +140,9 @@ export const deleteAdImage = async (imagePath) => {
 // Toggle ad active status
 export const toggleAdStatus = async (projectId, adId, isActive) => {
   try {
-    const adRef = doc(db, 'projects', projectId, 'ads', adId);
-    await updateDoc(adRef, {
+    await firestoreService.updateDoc(`projects/${projectId}/ads/${adId}`, {
       isActive,
-      updatedAt: serverTimestamp()
+      updatedAt: firestoreService.serverTimestamp()
     });
   } catch (error) {
     console.error('Error toggling ad status:', error);
@@ -166,10 +153,9 @@ export const toggleAdStatus = async (projectId, adId, isActive) => {
 // Update ad order
 export const updateAdOrder = async (projectId, adId, newOrder) => {
   try {
-    const adRef = doc(db, 'projects', projectId, 'ads', adId);
-    await updateDoc(adRef, {
+    await firestoreService.updateDoc(`projects/${projectId}/ads/${adId}`, {
       order: newOrder,
-      updatedAt: serverTimestamp()
+      updatedAt: firestoreService.serverTimestamp()
     });
   } catch (error) {
     console.error('Error updating ad order:', error);

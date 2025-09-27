@@ -35,16 +35,17 @@ googleProvider.setCustomParameters({
 
 if (isNative) {
   // Use Capacitor Firebase plugins for native platforms
-  console.log('Firebase Boot: Using Capacitor Firebase plugins')
+  console.log('Firebase Boot: Using Capacitor Firebase plugins for native platform')
   
   // For native platforms, we'll use the plugins directly in services
-  // These will be initialized when needed
+  // Keep auth and storage as null - they'll be handled by Capacitor plugins
+  // But we need Web SDK db for collection queries since Capacitor plugin doesn't support getDocuments
   auth = null
-  db = null
-  storage = null
+  db = getFirestore(app) // Web SDK for collection queries
+  storage = null // Capacitor plugin will handle Storage
 } else {
   // Use Web SDK for web/PWA
-  console.log('Firebase Boot: Using Firebase Web SDK')
+  console.log('Firebase Boot: Using Firebase Web SDK for web platform')
   
   auth = getAuth(app)
   db = getFirestore(app)

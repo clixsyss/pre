@@ -702,7 +702,7 @@
     <!-- Violations Modal -->
     <ViolationsModal
       :is-open="showViolationsModal"
-      :user-id="auth.currentUser?.uid || ''"
+      :user-id="userProfile?.id || ''"
       @close="showViolationsModal = false"
       @start-chat="handleViolationChat"
     />
@@ -1034,17 +1034,14 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { signOut } from 'firebase/auth'
-import { auth } from '../../boot/firebase'
-import { getUserDocument } from '../../utils/firestore'
+import authService from '../../services/authService'
+import firestoreService from '../../services/firestoreService'
 import { useNotificationStore } from '../../stores/notifications'
 import { useProjectStore } from '../../stores/projectStore'
 import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
 import ProjectGuidelinesDialog from '../../components/ProjectGuidelinesDialog.vue'
 import EditProfileDialog from '../../components/EditProfileDialog.vue'
 import ViolationsModal from '../../components/ViolationsModal.vue'
-import { collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore'
-import { db } from '../../boot/firebase'
 import { getUserFines } from '../../services/finesService'
 import complaintService from '../../services/complaintService'
 
@@ -1158,28 +1155,34 @@ const filteredGroupedDevices = computed(() => {
 
 // Load user profile from Firestore
 const loadProfile = async () => {
-  if (!auth.currentUser) {
+  try {
+    const currentUser = await authService.getCurrentUser()
+    if (!currentUser) {
     error.value = 'No authenticated user found'
     loading.value = false
     return
   }
 
-  try {
     loading.value = true
     error.value = null
     
-    const profile = await getUserDocument(auth.currentUser.uid)
-    if (profile) {
-      userProfile.value = profile
+    console.log('ProfilePage: Loading profile for user:', currentUser.uid)
+    const profileDoc = await firestoreService.getDoc(`users/${currentUser.uid}`)
+    
+    if (profileDoc.exists()) {
+      const profileData = profileDoc.data()
+      userProfile.value = { id: currentUser.uid, ...profileData }
+      console.log('ProfilePage: Profile loaded successfully:', userProfile.value)
       
       // Also load user projects and available projects
-      await projectStore.fetchUserProjects(auth.currentUser.uid)
+      await projectStore.fetchUserProjects(currentUser.uid)
       await fetchAvailableProjects()
     } else {
       error.value = 'Profile not found'
+      console.error('ProfilePage: Profile document does not exist')
     }
   } catch (err) {
-    console.error('Error loading profile:', err)
+    console.error('ProfilePage: Error loading profile:', err)
     error.value = 'Failed to load profile. Please try again.'
   } finally {
     loading.value = false
@@ -1187,10 +1190,11 @@ const loadProfile = async () => {
 }
 
 const loadViolationStats = async () => {
-  if (!auth.currentUser || !projectStore.selectedProject) return
+  const currentUser = await authService.getCurrentUser()
+  if (!currentUser || !projectStore.selectedProject) return
   
   try {
-    const userViolations = await getUserFines(projectStore.selectedProject.id, auth.currentUser.uid)
+    const userViolations = await getUserFines(projectStore.selectedProject.id, currentUser.uid)
     
     const stats = userViolations.reduce((acc, violation) => {
       acc.total++
@@ -1208,13 +1212,14 @@ const loadViolationStats = async () => {
 }
 
 const loadComplaintStats = async () => {
-  if (!auth.currentUser || !projectStore.selectedProject) return
+  const currentUser = await authService.getCurrentUser()
+  if (!currentUser || !projectStore.selectedProject) return
   
   try {
     const userComplaints = await complaintService.getComplaints(projectStore.selectedProject.id)
     
     // Filter complaints for current user
-    const myComplaints = userComplaints.filter(complaint => complaint.userId === auth.currentUser.uid)
+    const myComplaints = userComplaints.filter(complaint => complaint.userId === currentUser.uid)
     
     const stats = myComplaints.reduce((acc, complaint) => {
       acc.total++
@@ -1235,7 +1240,7 @@ const handleLogout = async () => {
   try {
     logoutLoading.value = true
     
-    await signOut(auth)
+    await authService.signOut()
     
     notificationStore.showSuccess('Logged out successfully')
     
@@ -1274,8 +1279,7 @@ const toggleAccordion = (section) => {
 const fetchAvailableProjects = async () => {
   try {
     loadingAvailableProjects.value = true
-    const projectsRef = collection(db, 'projects')
-    const snapshot = await getDocs(projectsRef)
+    const snapshot = await firestoreService.getDocs('projects')
     
     availableProjects.value = snapshot.docs.map(doc => ({
       id: doc.id,
@@ -1290,7 +1294,8 @@ const fetchAvailableProjects = async () => {
 }
 
 const addNewProject = async () => {
-  if (!auth.currentUser) {
+  const currentUser = await authService.getCurrentUser()
+  if (!currentUser) {
     notificationStore.showError('You must be logged in to join a project')
     return
   }
@@ -1311,8 +1316,15 @@ const addNewProject = async () => {
       return
     }
 
-    // Update the user's document in Firestore to add the new project
-    const userRef = doc(db, 'users', auth.currentUser.uid)
+    // Get current user document to add project to existing projects array
+    const userDoc = await firestoreService.getDoc(`users/${currentUser.uid}`)
+    if (!userDoc.exists()) {
+      notificationStore.showError('User document not found')
+      return
+    }
+    
+    const userData = userDoc.data()
+    const currentProjects = userData.projects || []
     
     // Create the project object to add to the user's projects array
     const newUserProject = {
@@ -1323,8 +1335,9 @@ const addNewProject = async () => {
     }
     
     // Add the new project to the user's projects array
-    await updateDoc(userRef, {
-      projects: arrayUnion(newUserProject)
+    await firestoreService.updateDoc(`users/${currentUser.uid}`, {
+      projects: [...currentProjects, newUserProject],
+      updatedAt: firestoreService.serverTimestamp()
     })
     
     notificationStore.showSuccess(`Successfully joined ${selectedProject.name}!`)
@@ -1338,7 +1351,7 @@ const addNewProject = async () => {
     }, 1500)
     
     // Refresh user's projects
-    await projectStore.fetchUserProjects(auth.currentUser.uid)
+    await projectStore.fetchUserProjects(currentUser.uid)
     
   } catch (err) {
     console.error('Error joining project:', err)
