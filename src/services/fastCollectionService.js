@@ -73,19 +73,24 @@ class FastCollectionService {
     if (useCache) {
       const cachedNews = cacheService.getCollectionData(`projects/${projectId}/news`, options)
       if (cachedNews) {
-        console.log(`🚀 FastCollection: Using cached news for project ${projectId}`)
+        console.log(`🚀 FastCollection: Using cached news for project ${projectId} (${cachedNews.length} items)`)
         return cachedNews
       }
     }
 
     try {
-      console.log(`🚀 FastCollection: Fetching real news for project ${projectId}`)
+      console.log(`🚀 FastCollection: Fetching fresh news for project ${projectId} (cache disabled: ${!useCache})`)
       
-      // Use the optimized firestoreService with timeout handling
-      const snapshot = await firestoreService.getDocs(`projects/${projectId}/news`, 6000) // 6 second timeout
+      const snapshot = await firestoreService.getDocs(`projects/${projectId}/news`, 6000)
+      
+      console.log(`🚀 FastCollection: Snapshot result:`, {
+        empty: snapshot.empty,
+        size: snapshot.size,
+        docsCount: snapshot.docs ? snapshot.docs.length : 0
+      })
       
       if (snapshot.empty) {
-        console.log(`🚀 FastCollection: No news found for project ${projectId}`)
+        console.log(`🚀 FastCollection: No news found for project ${projectId} - collection is empty`)
         const emptyResult = []
         cacheService.setCollectionData(`projects/${projectId}/news`, options, emptyResult)
         return emptyResult
@@ -265,6 +270,14 @@ class FastCollectionService {
    */
   getCacheStats() {
     return cacheService.getStats()
+  }
+
+  /**
+   * Clear all caches (for debugging)
+   */
+  clearAllCaches() {
+    console.log('🗑️ FastCollection: Clearing all caches')
+    cacheService.clear()
   }
 }
 

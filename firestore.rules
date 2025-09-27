@@ -572,9 +572,10 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
     
-    // Allow listing project news (only published for users, all for admins)
+    // Allow listing project news (collection queries work for all authenticated users)
+    // This allows the Capacitor plugin to perform collection queries
     match /projects/{projectId}/news {
-      allow list: if request.auth != null;
+      allow list, get: if request.auth != null;
     }
     
     // Project News Comments - allow authenticated users to read/write comments within project

@@ -1,4 +1,4 @@
-import { db, isNative } from '../boot/firebase'
+import { db, auth, isNative } from '../boot/firebase'
 import errorHandlingService from './errorHandlingService'
 import cacheService from './cacheService'
 import {
@@ -16,22 +16,27 @@ class FirestoreService {
   constructor() {
     this.isNative = isNative
     this.db = db
+    this.auth = auth
     this.capacitorFirestore = null
     this.initialized = false
   }
 
   async initialize() {
+    console.log('🔧 FirestoreService.initialize called:', { isNative: this.isNative, initialized: this.initialized })
     if (this.isNative && !this.initialized) {
       try {
+        console.log('📦 Importing Capacitor Firebase Firestore...')
         const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
         this.capacitorFirestore = FirebaseFirestore
         this.initialized = true
-        console.log('FirestoreService: Capacitor Firebase Firestore initialized')
+        console.log('✅ FirestoreService: Capacitor Firebase Firestore initialized successfully')
       } catch (error) {
-        console.error('FirestoreService: Failed to initialize Capacitor Firebase Firestore:', error)
+        console.error('❌ FirestoreService: Failed to initialize Capacitor Firebase Firestore:', error)
         errorHandlingService.handleFirestoreError(error, 'FirestoreService.initialize')
         throw error
       }
+    } else {
+      console.log('⏭️ FirestoreService: Skipping initialization - not native or already initialized')
     }
   }
 
@@ -187,7 +192,14 @@ class FirestoreService {
   // Get documents from collection with timeout and fallback
   async getDocs(collectionPath, timeoutMs = 8000) {
     try {
-      console.log('FirestoreService: Getting collection docs for:', collectionPath)
+      console.log('🔍 FirestoreService.getDocs called with:', { 
+        collectionPath, 
+        timeoutMs, 
+        isNative: this.isNative, 
+        initialized: this.initialized,
+        hasCapacitorFirestore: !!this.capacitorFirestore
+      })
+      console.log('🚀 FirestoreService: Getting collection docs for:', collectionPath)
       
       // Check cache first
       const cacheKey = `collection:${collectionPath}`
@@ -235,7 +247,31 @@ class FirestoreService {
           
           return collectionData
         } catch (queryError) {
-          console.warn('FirestoreService: Collection query failed for:', collectionPath, queryError.message)
+          console.error('FirestoreService: Collection query failed for:', collectionPath)
+          console.error('FirestoreService: Error details:', {
+            code: queryError.code,
+            message: queryError.message,
+            errorMessage: queryError.errorMessage,
+            fullError: queryError
+          })
+          
+          // Check if it's a permission error specifically
+          if (queryError.code === 'firestore/permission-denied' || 
+              queryError.message?.includes('permission') ||
+              queryError.errorMessage?.includes('permission')) {
+            console.error('🚨 PERMISSION ERROR: This suggests the Firestore rules are not working properly')
+            
+            // Get current user from optimized auth service for native platforms
+            try {
+              const { default: optimizedAuthService } = await import('./optimizedAuthService.js')
+              const currentUser = await optimizedAuthService.getCurrentUser()
+              console.error('🚨 Current user auth state:', currentUser?.uid || 'undefined')
+            } catch (authError) {
+              console.error('🚨 Could not get current user:', authError.message)
+            }
+            
+            console.error('🚨 Collection path:', collectionPath)
+          }
           
           // Return empty result instead of throwing
           const emptyResult = {

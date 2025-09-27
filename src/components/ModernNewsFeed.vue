@@ -20,6 +20,7 @@
       </button>
     </div>
 
+
     <!-- Filter Tabs -->
     <div v-if="showAll" class="filter-section">
       <div class="filter-tabs">
@@ -226,7 +227,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { getDownloadURL, ref as storageRef } from 'firebase/storage'
-import { storage } from '../boot/firebase'
+import { storage, isNative } from '../boot/firebase'
 import NewsComments from './NewsComments.vue'
 
 // Component name for ESLint
@@ -379,7 +380,12 @@ const formatTime = (timestamp) => {
 
 const handleMediaError = (event) => {
   console.log('Media error, using default logo')
-  event.target.src = defaultLogoUrl.value
+  if (defaultLogoUrl.value) {
+    event.target.src = defaultLogoUrl.value
+  } else {
+    // Ultimate fallback - use a data URI for a simple placeholder
+    event.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik01MCAzMEM2Mi4xNTM4IDMwIDcyIDM5Ljg0NjIgNzIgNTJDNzIgNjQuMTUzOCA2Mi4xNTM4IDc0IDUwIDc0QzM3Ljg0NjIgNzQgMjggNjQuMTUzOCAyOCA1MkMyOCAzOS44NDYyIDM3Ljg0NjIgMzAgNTAgMzBaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='
+  }
 }
 
 const handleVideoLoadStart = (itemId) => {
@@ -481,13 +487,30 @@ watch(() => props.projectId, async (newProjectId, oldProjectId) => {
 
 const loadDefaultLogo = async () => {
   try {
-    const logoRef = storageRef(storage, 'logo.png')
+    let storageInstance = storage
+    
+    // On native platforms, storage might be null, so we need to get it from the app
+    if (!storageInstance && isNative) {
+      console.log('📱 Native platform detected, getting storage instance from app')
+      const { getStorage } = await import('firebase/storage')
+      const { app } = await import('../boot/firebase')
+      storageInstance = getStorage(app)
+    }
+    
+    if (!storageInstance) {
+      throw new Error('Firebase Storage not available')
+    }
+    
+    const logoRef = storageRef(storageInstance, 'logo.png')
     defaultLogoUrl.value = await getDownloadURL(logoRef)
-  } catch {
-    console.log('Default logo not found, will use placeholder')
-    defaultLogoUrl.value = '/default-logo.png' // Fallback
+    console.log('✅ Default logo loaded from Firebase Storage:', defaultLogoUrl.value)
+  } catch (error) {
+    console.log('Default logo not found in Firebase Storage, using local fallback:', error.message)
+    // Try multiple fallback paths
+    defaultLogoUrl.value = '/default-logo.png' // Primary fallback
   }
 }
+
 
 const fetchNews = async () => {
   // Use project store as primary source, prop as fallback

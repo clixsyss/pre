@@ -1378,7 +1378,7 @@ watch(() => route.query.tab, (newTab) => {
 
 <style scoped>
 .stores-shopping-page {
-  padding: 20px 16px;
+  padding: 14px;
   background: #fafafa;
   min-height: 100vh;
 }
@@ -1782,9 +1782,6 @@ watch(() => route.query.tab, (newTab) => {
 
 /* Responsive Design */
 @media (min-width: 768px) {
-  .stores-shopping-page {
-    padding: 32px 24px;
-  }
   
   .stores-grid {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -1805,7 +1802,7 @@ watch(() => route.query.tab, (newTab) => {
 .tab-container {
   background: #fff;
   border-radius: 20px;
-  padding: 20px;
+  padding: 4px;
   margin-bottom: 32px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
