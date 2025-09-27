@@ -1,17 +1,7 @@
-import { 
-  signInWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged 
-} from 'firebase/auth'
-import { 
-  collection, 
-  query, 
-  getDocs, 
-  doc, 
-  getDoc, 
-  onSnapshot, 
-  updateDoc 
-} from 'firebase/firestore'
+import performanceService from './performanceService'
+import errorHandlingService from './errorHandlingService'
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
+import { collection, query, getDocs, doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore'
 import { smartMirrorAuth, smartMirrorDb } from '../boot/smartMirrorFirebase'
 
 class SmartMirrorService {
@@ -32,22 +22,23 @@ class SmartMirrorService {
 
   // Authentication methods
   async login(email, password, projectId) {
-    try {
-      console.log(`Connecting project ${projectId} to smart home account ${email}`)
-      
-      // Authenticate with Firebase
-      const result = await signInWithEmailAndPassword(smartMirrorAuth, email, password)
-      
-      // Fetch user profile and devices for this specific project
-      const userProfile = await this.fetchUserProfileForUser(result.user)
-      const { rooms, devices } = await this.fetchDevicesForUser(result.user)
-      
-      // Store connection for this project with project-specific data
-      this.projectConnections.set(projectId, {
-        user: result.user,
-        userProfile: userProfile,
-        rooms: rooms,
-        devices: devices,
+    return performanceService.timeOperation('smartMirrorLogin', async () => {
+      try {
+        console.log('🚀 Smart mirror login:', { projectId, email })
+        
+        // Authenticate with Firebase
+        const result = await signInWithEmailAndPassword(smartMirrorAuth, email, password)
+        
+        // Fetch user profile and devices for this specific project
+        const userProfile = await this.fetchUserProfileForUser(result.user)
+        const { rooms, devices } = await this.fetchDevicesForUser(result.user)
+        
+        // Store connection for this project with project-specific data
+        this.projectConnections.set(projectId, {
+          user: result.user,
+          userProfile: userProfile,
+          rooms: rooms,
+          devices: devices,
         isConnected: true,
         projectId: projectId,
         email: email,
@@ -69,12 +60,14 @@ class SmartMirrorService {
       // Set up real-time listeners for this project
       this.setupRealtimeListeners()
       
-      console.log(`Successfully connected project ${projectId} to smart home account ${email}`)
+      console.log(`✅ Successfully connected project ${projectId} to smart home account ${email}`)
       return { success: true, user: result.user }
-    } catch (error) {
-      console.error('Smart Mirror login error:', error)
-      throw error
-    }
+      } catch (error) {
+        console.error('❌ Smart Mirror login error:', error)
+        errorHandlingService.handleFirestoreError(error, 'smartMirrorLogin')
+        throw error
+      }
+    })
   }
 
   async logout(projectId = null) {

@@ -1,11 +1,8 @@
-import { 
-  collection, 
-  getDocs, 
-  query, 
-  orderBy, 
-  where 
-} from 'firebase/firestore';
-import { db } from '../boot/firebase';
+import firestoreService from './firestoreService'
+import performanceService from './performanceService'
+import errorHandlingService from './errorHandlingService'
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore'
+import { db } from '../boot/firebase'
 
 const COLLECTION_NAME = 'projectGuidelines';
 
@@ -15,38 +12,42 @@ const COLLECTION_NAME = 'projectGuidelines';
  * @returns {Promise<Array>} Array of active guidelines
  */
 export const getProjectGuidelines = async (projectId) => {
-  try {
-    console.log('Fetching guidelines for project:', projectId);
-    const guidelinesRef = collection(db, 'projects', projectId, COLLECTION_NAME);
-    
-    // First try a simple query without complex ordering
-    const q = query(
-      guidelinesRef, 
-      where('isActive', '==', true)
-    );
-    const querySnapshot = await getDocs(q);
-    
-    const guidelines = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    
-    // Sort in JavaScript to avoid composite index requirements
-    return guidelines.sort((a, b) => {
-      // First by priority (high = 3, medium = 2, low = 1)
-      const priorityOrder = { high: 3, medium: 2, low: 1 };
-      const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
-      if (priorityDiff !== 0) return priorityDiff;
+  return performanceService.timeOperation('getProjectGuidelines', async () => {
+    try {
+      console.log('🔍 Fetching guidelines for project:', projectId);
       
-      // Then by creation date
-      const aDate = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
-      const bDate = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
-      return bDate - aDate;
-    });
-  } catch (error) {
-    console.error('Error fetching project guidelines:', error);
-    throw error;
-  }
+      const collectionPath = `projects/${projectId}/${COLLECTION_NAME}`
+      const filters = {
+        isActive: { operator: '==', value: true }
+      }
+      
+      const result = await firestoreService.getDocs(collectionPath, filters)
+      const guidelines = result.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Sort in JavaScript to avoid composite index requirements
+      const sortedGuidelines = guidelines.sort((a, b) => {
+        // First by priority (high = 3, medium = 2, low = 1)
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+        if (priorityDiff !== 0) return priorityDiff;
+        
+        // Then by creation date
+        const aDate = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+        const bDate = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+        return bDate - aDate;
+      });
+      
+      console.log('✅ Project guidelines retrieved:', { count: sortedGuidelines.length })
+      return sortedGuidelines;
+    } catch (error) {
+      console.error('❌ Error fetching project guidelines:', error);
+      errorHandlingService.handleFirestoreError(error, 'getProjectGuidelines')
+      throw error;
+    }
+  })
 };
 
 /**

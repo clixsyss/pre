@@ -295,7 +295,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { getAuth } from 'firebase/auth';
+import optimizedAuthService from 'src/services/optimizedAuthService';
 import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
 import serviceBookingService from '../../services/serviceBookingService';
@@ -385,8 +385,7 @@ const loadBookings = async () => {
     loadingBookings.value = true;
     
     // Get current user
-    const auth = getAuth();
-    const user = auth.currentUser;
+    const user = await optimizedAuthService.getCurrentUser();
     
     if (!user) {
       console.error('User not authenticated');

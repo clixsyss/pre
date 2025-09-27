@@ -1,19 +1,10 @@
-import { db } from "boot/firebase";
-import {
-    collection,
-    doc,
-    setDoc,
-    getDocs,
-    query,
-    where,
-    orderBy,
-    serverTimestamp,
-    updateDoc
-} from "firebase/firestore";
+import firestoreService from './firestoreService'
+import performanceService from './performanceService'
+import errorHandlingService from './errorHandlingService'
 
 export class BookingService {
     constructor() {
-        this.db = db;
+        // No need for db reference - using firestoreService
     }
 
     // Generate available time slots for a given day
@@ -57,213 +48,262 @@ export class BookingService {
 
     // Check if a time slot is available for a specific court in a project
     async checkSlotAvailability(projectId, courtId, date, time) {
-        try {
-            const q = query(
-                collection(this.db, `projects/${projectId}/bookings`),
-                where("courtId", "==", courtId),
-                where("date", "==", date),
-                where("timeSlots", "array-contains", time),
-                where("status", "in", ["confirmed", "pending"])
-            );
-            
-            const querySnapshot = await getDocs(q);
-            return querySnapshot.empty;
-        } catch (error) {
-            console.error("Error checking slot availability:", error);
-            return false;
-        }
+        return performanceService.timeOperation('checkSlotAvailability', async () => {
+            try {
+                console.log('🔍 Checking slot availability:', { projectId, courtId, date, time })
+                
+                const collectionPath = `projects/${projectId}/bookings`
+                const filters = {
+                    courtId: { operator: '==', value: courtId },
+                    date: { operator: '==', value: date },
+                    timeSlots: { operator: 'array-contains', value: time },
+                    status: { operator: 'in', value: ["confirmed", "pending"] }
+                }
+                
+                const result = await firestoreService.getDocs(collectionPath, filters)
+                const isAvailable = result.docs.length === 0
+                
+                console.log('✅ Slot availability check result:', { isAvailable, bookingsFound: result.docs.length })
+                return isAvailable
+            } catch (error) {
+                console.error("❌ Error checking slot availability:", error)
+                errorHandlingService.handleFirestoreError(error, 'checkSlotAvailability')
+                return false
+            }
+        })
     }
 
     // Get available time slots for a specific court and date
     async getAvailableTimeSlots(projectId, courtId, date) {
-        try {
-            const baseSlots = this.generateTimeSlots();
-            
-            // Check which slots are already booked
-            const q = query(
-                collection(this.db, `projects/${projectId}/bookings`),
-                where("courtId", "==", courtId),
-                where("date", "==", date),
-                where("status", "in", ["confirmed", "pending"])
-            );
-            
-            const querySnapshot = await getDocs(q);
-            const bookedSlots = [];
-            
-            querySnapshot.forEach((doc) => {
-                const booking = doc.data();
-                if (booking.timeSlots) {
-                    bookedSlots.push(...booking.timeSlots);
+        return performanceService.timeOperation('getAvailableTimeSlots', async () => {
+            try {
+                console.log('🔍 Getting available time slots:', { projectId, courtId, date })
+                
+                const baseSlots = this.generateTimeSlots();
+                
+                // Check which slots are already booked
+                const collectionPath = `projects/${projectId}/bookings`
+                const filters = {
+                    courtId: { operator: '==', value: courtId },
+                    date: { operator: '==', value: date },
+                    status: { operator: 'in', value: ["confirmed", "pending"] }
                 }
-            });
-            
-            // Filter out booked slots
-            return baseSlots.map(slot => ({
-                ...slot,
-                isReserved: bookedSlots.includes(slot.time)
-            }));
-        } catch (error) {
-            console.error("Error getting available time slots:", error);
-            return this.generateTimeSlots();
-        }
+                
+                const result = await firestoreService.getDocs(collectionPath, filters)
+                const bookedSlots = [];
+                
+                result.docs.forEach((doc) => {
+                    const booking = doc.data();
+                    if (booking.timeSlots) {
+                        bookedSlots.push(...booking.timeSlots);
+                    }
+                });
+                
+                // Filter out booked slots
+                const availableSlots = baseSlots.map(slot => ({
+                    ...slot,
+                    isReserved: bookedSlots.includes(slot.time)
+                }));
+                
+                console.log('✅ Available time slots retrieved:', { 
+                    totalSlots: availableSlots.length, 
+                    bookedSlots: bookedSlots.length,
+                    availableCount: availableSlots.filter(s => !s.isReserved).length
+                })
+                
+                return availableSlots;
+            } catch (error) {
+                console.error("❌ Error getting available time slots:", error);
+                errorHandlingService.handleFirestoreError(error, 'getAvailableTimeSlots')
+                return this.generateTimeSlots();
+            }
+        })
     }
 
     // Create a court booking in a specific project
     async createCourtBooking(projectId, bookingData) {
-        try {
-            // Validate required fields
-            if (!projectId) {
-                throw new Error('Project ID is required');
-            }
-            if (!bookingData.userId) {
-                throw new Error('User ID is required');
-            }
-            if (!bookingData.courtId) {
-                throw new Error('Court ID is required');
-            }
-            if (!bookingData.date) {
-                throw new Error('Date is required');
-            }
-            if (!bookingData.timeSlots || bookingData.timeSlots.length === 0) {
-                throw new Error('Time slots are required');
-            }
+        return performanceService.timeOperation('createCourtBooking', async () => {
+            try {
+                // Validate required fields
+                if (!projectId) {
+                    throw new Error('Project ID is required');
+                }
+                if (!bookingData.userId) {
+                    throw new Error('User ID is required');
+                }
+                if (!bookingData.courtId) {
+                    throw new Error('Court ID is required');
+                }
+                if (!bookingData.date) {
+                    throw new Error('Date is required');
+                }
+                if (!bookingData.timeSlots || bookingData.timeSlots.length === 0) {
+                    throw new Error('Time slots are required');
+                }
 
-            const bookingRef = doc(collection(this.db, `projects/${projectId}/bookings`));
-            const newBooking = {
-                id: bookingRef.id,
-                ...bookingData,
-                projectId: projectId,
-                createdAt: serverTimestamp(),
-                status: "confirmed",
-                type: "court"
-            };
+                const newBooking = {
+                    ...bookingData,
+                    projectId: projectId,
+                    createdAt: new Date(),
+                    status: "confirmed",
+                    type: "court"
+                };
 
-            console.log('Creating court booking:', newBooking);
-            await setDoc(bookingRef, newBooking);
-            return { success: true, bookingId: bookingRef.id, booking: newBooking };
-        } catch (error) {
-            console.error("Error creating court booking:", error);
-            throw error;
-        }
+                console.log('🚀 Creating court booking:', newBooking);
+                
+                const collectionPath = `projects/${projectId}/bookings`
+                const result = await firestoreService.addDoc(collectionPath, newBooking)
+                
+                console.log('✅ Court booking created successfully:', { bookingId: result.id })
+                return { success: true, bookingId: result.id, booking: { ...newBooking, id: result.id } };
+            } catch (error) {
+                console.error("❌ Error creating court booking:", error);
+                errorHandlingService.handleFirestoreError(error, 'createCourtBooking')
+                throw error;
+            }
+        })
     }
 
     // Create an academy program booking in a specific project
     async createAcademyBooking(projectId, bookingData) {
-        try {
-            // Validate required fields
-            if (!projectId) {
-                throw new Error('Project ID is required');
-            }
-            if (!bookingData.userId) {
-                throw new Error('User ID is required');
-            }
-            if (!bookingData.academyId) {
-                throw new Error('Academy ID is required');
-            }
-            if (!bookingData.programId) {
-                throw new Error('Program ID is required');
-            }
+        return performanceService.timeOperation('createAcademyBooking', async () => {
+            try {
+                // Validate required fields
+                if (!projectId) {
+                    throw new Error('Project ID is required');
+                }
+                if (!bookingData.userId) {
+                    throw new Error('User ID is required');
+                }
+                if (!bookingData.academyId) {
+                    throw new Error('Academy ID is required');
+                }
+                if (!bookingData.programId) {
+                    throw new Error('Program ID is required');
+                }
 
-            const bookingRef = doc(collection(this.db, `projects/${projectId}/bookings`));
-            const newBooking = {
-                id: bookingRef.id,
-                ...bookingData,
-                projectId: projectId,
-                createdAt: serverTimestamp(),
-                status: "confirmed",
-                type: "academy"
-            };
+                const newBooking = {
+                    ...bookingData,
+                    projectId: projectId,
+                    createdAt: new Date(),
+                    status: "confirmed",
+                    type: "academy"
+                };
 
-            console.log('Creating academy booking:', newBooking);
-            await setDoc(bookingRef, newBooking);
-            return { success: true, bookingId: bookingRef.id, booking: newBooking };
-        } catch (error) {
-            console.error("Error creating academy booking:", error);
-            throw error;
-        }
+                console.log('🚀 Creating academy booking:', newBooking);
+                
+                const collectionPath = `projects/${projectId}/bookings`
+                const result = await firestoreService.addDoc(collectionPath, newBooking)
+                
+                console.log('✅ Academy booking created successfully:', { bookingId: result.id })
+                return { success: true, bookingId: result.id, booking: { ...newBooking, id: result.id } };
+            } catch (error) {
+                console.error("❌ Error creating academy booking:", error);
+                errorHandlingService.handleFirestoreError(error, 'createAcademyBooking')
+                throw error;
+            }
+        })
     }
 
     // Get user's bookings from a specific project
     async getUserBookings(projectId, userId) {
-        try {
-            const q = query(
-                collection(this.db, `projects/${projectId}/bookings`),
-                where("userId", "==", userId),
-                orderBy("createdAt", "desc")
-            );
-            
-            const querySnapshot = await getDocs(q);
-            const bookings = [];
-            
-            querySnapshot.forEach((doc) => {
-                bookings.push({
+        return performanceService.timeOperation('getUserBookings', async () => {
+            try {
+                console.log('🔍 Getting user bookings:', { projectId, userId })
+                
+                const collectionPath = `projects/${projectId}/bookings`
+                const filters = {
+                    userId: { operator: '==', value: userId }
+                }
+                const orderBy = { field: 'createdAt', direction: 'desc' }
+                
+                const result = await firestoreService.getDocs(collectionPath, filters, orderBy)
+                const bookings = result.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
-                });
-            });
-            
-            return bookings;
-        } catch (error) {
-            console.error("Error fetching user bookings:", error);
-            throw error;
-        }
+                }));
+                
+                console.log('✅ User bookings retrieved:', { count: bookings.length })
+                return bookings;
+            } catch (error) {
+                console.error("❌ Error fetching user bookings:", error);
+                errorHandlingService.handleFirestoreError(error, 'getUserBookings')
+                throw error;
+            }
+        })
     }
 
     // Get all bookings for a specific project (admin view)
     async getProjectBookings(projectId) {
-        try {
-            const q = query(
-                collection(this.db, `projects/${projectId}/bookings`),
-                orderBy("createdAt", "desc")
-            );
-            
-            const querySnapshot = await getDocs(q);
-            const bookings = [];
-            
-            querySnapshot.forEach((doc) => {
-                bookings.push({
+        return performanceService.timeOperation('getProjectBookings', async () => {
+            try {
+                console.log('🔍 Getting project bookings:', { projectId })
+                
+                const collectionPath = `projects/${projectId}/bookings`
+                const orderBy = { field: 'createdAt', direction: 'desc' }
+                
+                const result = await firestoreService.getDocs(collectionPath, null, orderBy)
+                const bookings = result.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
-                });
-            });
-            
-            return bookings;
-        } catch (error) {
-            console.error("Error fetching project bookings:", error);
-            throw error;
-        }
+                }));
+                
+                console.log('✅ Project bookings retrieved:', { count: bookings.length })
+                return bookings;
+            } catch (error) {
+                console.error("❌ Error fetching project bookings:", error);
+                errorHandlingService.handleFirestoreError(error, 'getProjectBookings')
+                throw error;
+            }
+        })
     }
 
     // Update booking status
     async updateBookingStatus(projectId, bookingId, newStatus) {
-        try {
-            const bookingRef = doc(this.db, `projects/${projectId}/bookings`, bookingId);
-            await updateDoc(bookingRef, {
-                status: newStatus,
-                updatedAt: serverTimestamp()
-            });
-            
-            return { success: true };
-        } catch (error) {
-            console.error("Error updating booking status:", error);
-            throw error;
-        }
+        return performanceService.timeOperation('updateBookingStatus', async () => {
+            try {
+                console.log('🔍 Updating booking status:', { projectId, bookingId, newStatus })
+                
+                const docPath = `projects/${projectId}/bookings/${bookingId}`
+                const updateData = {
+                    status: newStatus,
+                    updatedAt: new Date()
+                };
+                
+                await firestoreService.updateDoc(docPath, updateData)
+                
+                console.log('✅ Booking status updated successfully')
+                return { success: true };
+            } catch (error) {
+                console.error("❌ Error updating booking status:", error);
+                errorHandlingService.handleFirestoreError(error, 'updateBookingStatus')
+                throw error;
+            }
+        })
     }
 
     // Cancel a booking
     async cancelBooking(projectId, bookingId) {
-        try {
-            const bookingRef = doc(this.db, `projects/${projectId}/bookings`, bookingId);
-            await updateDoc(bookingRef, {
-                status: "cancelled",
-                updatedAt: serverTimestamp()
-            });
-            
-            return { success: true };
-        } catch (error) {
-            console.error("Error cancelling booking:", error);
-            throw error;
-        }
+        return performanceService.timeOperation('cancelBooking', async () => {
+            try {
+                console.log('🔍 Cancelling booking:', { projectId, bookingId })
+                
+                const docPath = `projects/${projectId}/bookings/${bookingId}`
+                const updateData = {
+                    status: "cancelled",
+                    updatedAt: new Date()
+                };
+                
+                await firestoreService.updateDoc(docPath, updateData)
+                
+                console.log('✅ Booking cancelled successfully')
+                return { success: true };
+            } catch (error) {
+                console.error("❌ Error cancelling booking:", error);
+                errorHandlingService.handleFirestoreError(error, 'cancelBooking')
+                throw error;
+            }
+        })
     }
 
     // Calculate price for selected time slots

@@ -734,9 +734,8 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { collection, getDocs, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { db } from 'src/boot/firebase';
+import firestoreService from 'src/services/firestoreService';
+import optimizedAuthService from 'src/services/optimizedAuthService';
 import { useProjectStore } from 'src/stores/projectStore';
 import { useNotificationStore } from 'src/stores/notifications';
 import PageHeader from '../../components/PageHeader.vue';
@@ -750,7 +749,6 @@ const router = useRouter();
 const route = useRoute();
 const projectStore = useProjectStore();
 const notificationStore = useNotificationStore();
-const auth = getAuth();
 
 // Reactive data
 const stores = ref([]);
@@ -866,24 +864,29 @@ const fetchStores = async () => {
   
   try {
     loading.value = true;
-    const storesRef = collection(db, `projects/${projectStore.selectedProject.id}/stores`);
-    console.log('Stores collection path:', `projects/${projectStore.selectedProject.id}/stores`);
+    const collectionPath = `projects/${projectStore.selectedProject.id}/stores`;
+    console.log('Stores collection path:', collectionPath);
     
-    const querySnapshot = await getDocs(storesRef);
-    console.log('Stores query result:', querySnapshot.docs.length, 'stores found');
+    const queryResult = await firestoreService.getDocs(collectionPath);
+    console.log('Stores query result:', queryResult.docs.length, 'stores found');
     
     // Fetch stores with their rating data
     const storesWithRatings = await Promise.all(
-      querySnapshot.docs.map(async (doc) => {
-        const storeData = doc.data();
+      queryResult.docs.map(async (doc) => {
+        const storeData = doc.data;
         
         // Fetch ratings for this store
         try {
-          const ratingsRef = collection(db, `projects/${projectStore.selectedProject.id}/ratings`);
-          const ratingsQuery = query(ratingsRef, where('storeId', '==', doc.id));
-          const ratingsSnapshot = await getDocs(ratingsQuery);
+          const ratingsPath = `projects/${projectStore.selectedProject.id}/ratings`;
+          const ratingsQueryOptions = {
+            filters: [
+              { field: 'storeId', operator: '==', value: doc.id }
+            ],
+            timeoutMs: 6000
+          };
+          const ratingsResult = await firestoreService.getDocs(ratingsPath, ratingsQueryOptions);
           
-          const ratings = ratingsSnapshot.docs.map(ratingDoc => ratingDoc.data().rating);
+          const ratings = ratingsResult.docs.map(ratingDoc => ratingDoc.data.rating);
           const averageRating = ratings.length > 0 
             ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length 
             : 0;
@@ -918,36 +921,42 @@ const fetchStores = async () => {
 const fetchUserOrders = async () => {
   console.log('Fetching user orders...');
   console.log('Selected project:', projectStore.selectedProject);
-  console.log('Current user:', auth.currentUser);
+  
+  const user = await optimizedAuthService.getCurrentUser();
+  console.log('Current user:', user);
   
   if (!projectStore.selectedProject?.id) {
     console.log('No project selected, cannot fetch orders');
     return;
   }
   
-  if (!auth.currentUser) {
+  if (!user) {
     console.log('No user authenticated, cannot fetch orders');
     return;
   }
   
   try {
     ordersLoading.value = true;
-    const ordersRef = collection(db, `projects/${projectStore.selectedProject.id}/orders`);
-    console.log('Orders collection path:', `projects/${projectStore.selectedProject.id}/orders`);
+    const ordersPath = `projects/${projectStore.selectedProject.id}/orders`;
+    console.log('Orders collection path:', ordersPath);
     
-    const ordersQuery = query(
-      ordersRef,
-      where('userId', '==', auth.currentUser.uid),
-      orderBy('createdAt', 'desc')
-    );
+    const ordersQueryOptions = {
+      filters: [
+        { field: 'userId', operator: '==', value: user.uid }
+      ],
+      orderBy: [
+        { field: 'createdAt', direction: 'desc' }
+      ],
+      timeoutMs: 6000
+    };
     
-    const querySnapshot = await getDocs(ordersQuery);
-    console.log('Orders query result:', querySnapshot.docs.length, 'orders found');
+    const queryResult = await firestoreService.getDocs(ordersPath, ordersQueryOptions);
+    console.log('Orders query result:', queryResult.docs.length, 'orders found');
     
     // Fetch orders with store details
     const ordersWithStoreDetails = await Promise.all(
-      querySnapshot.docs.map(async (orderDoc) => {
-        const orderData = orderDoc.data();
+      queryResult.docs.map(async (orderDoc) => {
+        const orderData = orderDoc.data;
         
         // If order already has store details, return as is
         if (orderData.storePhone && orderData.storeLocation) {
@@ -961,12 +970,17 @@ const fetchUserOrders = async () => {
         try {
           if (orderData.storeId) {
             console.log('Fetching store details for storeId:', orderData.storeId);
-            const storeRef = collection(db, `projects/${projectStore.selectedProject.id}/stores`);
-            const storeQuery = query(storeRef, where('__name__', '==', orderData.storeId));
-            const storeSnapshot = await getDocs(storeQuery);
+            const storePath = `projects/${projectStore.selectedProject.id}/stores`;
+            const storeQueryOptions = {
+              filters: [
+                { field: '__name__', operator: '==', value: orderData.storeId }
+              ],
+              timeoutMs: 6000
+            };
+            const storeResult = await firestoreService.getDocs(storePath, storeQueryOptions);
             
-            if (!storeSnapshot.empty) {
-              const storeData = storeSnapshot.docs[0].data();
+            if (storeResult.docs.length > 0) {
+              const storeData = storeResult.docs[0].data;
               console.log('Store data found:', storeData);
               return {
                 id: orderDoc.id,
@@ -1109,12 +1123,17 @@ const fetchStoreDetailsForOrder = async (order) => {
     
     // If not found in stores array, try to fetch from Firestore
     if (order.storeId) {
-      const storeRef = collection(db, `projects/${projectStore.selectedProject.id}/stores`);
-      const storeQuery = query(storeRef, where('__name__', '==', order.storeId));
-      const storeSnapshot = await getDocs(storeQuery);
+      const storePath = `projects/${projectStore.selectedProject.id}/stores`;
+      const storeQueryOptions = {
+        filters: [
+          { field: '__name__', operator: '==', value: order.storeId }
+        ],
+        timeoutMs: 6000
+      };
+      const storeResult = await firestoreService.getDocs(storePath, storeQueryOptions);
       
-      if (!storeSnapshot.empty) {
-        const firestoreStoreData = storeSnapshot.docs[0].data();
+      if (storeResult.docs.length > 0) {
+        const firestoreStoreData = storeResult.docs[0].data;
         console.log('Found store data in Firestore:', firestoreStoreData);
         return {
           ...order,
@@ -1242,7 +1261,7 @@ const confirmCancellation = async () => {
   
   try {
     // Update order in Firestore database
-    const orderRef = doc(db, `projects/${projectStore.selectedProject.id}/orders`, orderToCancel.value.id);
+    const orderPath = `projects/${projectStore.selectedProject.id}/orders/${orderToCancel.value.id}`;
     
     const cancellationData = {
       status: 'cancelled',
@@ -1256,7 +1275,7 @@ const confirmCancellation = async () => {
       cancellationData.customCancellationReason = customReasonText.value.trim();
     }
     
-    await updateDoc(orderRef, cancellationData);
+    await firestoreService.updateDoc(orderPath, cancellationData);
     
     // Update local state
     const orderIndex = userOrders.value.findIndex(order => order.id === orderToCancel.value.id);
@@ -1357,8 +1376,7 @@ const loadFavorites = () => {
 // Lifecycle
 onMounted(() => {
   loadFavorites();
-  fetchStores();
-  fetchUserOrders();
+  // fetchStores and fetchUserOrders will be called by the watcher with immediate: true
 });
 
 watch(() => projectStore.selectedProject, (newProject, oldProject) => {

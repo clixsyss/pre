@@ -360,7 +360,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { collection, addDoc, serverTimestamp, getDocs, query, where, updateDoc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import optimizedAuthService from 'src/services/optimizedAuthService';
 import { db } from 'src/boot/firebase';
 import { useProjectStore } from 'src/stores/projectStore';
 import { useCartStore } from 'src/stores/cartStore';
@@ -374,7 +374,6 @@ defineOptions({
 const router = useRouter();
 const projectStore = useProjectStore();
 const notificationStore = useNotificationStore();
-const auth = getAuth();
 const cartStore = useCartStore();
 
 // Reactive data
@@ -448,7 +447,8 @@ const removeItem = (item) => {
 };
 
 const placeOrder = async () => {
-  if (!projectStore.selectedProject?.id || !auth.currentUser) {
+  const user = await optimizedAuthService.getCurrentUser();
+  if (!projectStore.selectedProject?.id || !user) {
     console.error('Missing project or user information');
     return;
   }
@@ -500,8 +500,8 @@ const placeOrder = async () => {
     // Create order in Firestore
     const orderData = {
       orderNumber: orderNumber.value,
-      userId: auth.currentUser.uid,
-      userEmail: auth.currentUser.email,
+      userId: user.uid,
+      userEmail: user.email,
       projectId: projectStore.selectedProject.id,
       items: cartStore.items.map(item => ({
         productId: item.id,
@@ -598,14 +598,20 @@ const submitRating = async () => {
   if (currentRating.value === 0) return;
   
   try {
+    const user = await optimizedAuthService.getCurrentUser();
+    if (!user) {
+      console.error('User not authenticated');
+      return;
+    }
+    
     const store = storesToRate.value[currentStoreIndex.value];
     
     // Add rating to Firestore
     const ratingData = {
       storeId: store.id,
       storeName: store.name,
-      userId: auth.currentUser.uid,
-      userEmail: auth.currentUser.email,
+      userId: user.uid,
+      userEmail: user.email,
       rating: currentRating.value,
       comment: ratingComment.value,
       orderNumber: orderNumber.value,

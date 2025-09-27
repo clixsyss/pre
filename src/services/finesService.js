@@ -1,81 +1,90 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  getDocs, 
-  getDoc, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot
-} from 'firebase/firestore';
-import { 
-  ref, 
-  uploadBytes, 
-  getDownloadURL, 
-  deleteObject 
-} from 'firebase/storage';
-import { db, storage } from '../boot/firebase';
+import firestoreService from './firestoreService'
+import performanceService from './performanceService'
+import errorHandlingService from './errorHandlingService'
+import { collection, query, where, orderBy, getDocs, doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore'
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
+import { db, storage } from '../boot/firebase'
 
 // Create a new fine/violation
 export const createFine = async (projectId, fineData) => {
-  try {
-    const finesCollection = collection(db, 'projects', projectId, 'fines');
-    
-    const fine = {
-      ...fineData,
-      status: 'issued', // issued, paid, disputed, cancelled
-      messages: [],
-      lastMessageAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+  return performanceService.timeOperation('createFine', async () => {
+    try {
+      console.log('🚀 Creating fine:', { projectId, fineData })
+      
+      const collectionPath = `projects/${projectId}/fines`
+      
+      const fine = {
+        ...fineData,
+        status: 'issued', // issued, paid, disputed, cancelled
+        messages: [],
+        lastMessageAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
 
-    const docRef = await addDoc(finesCollection, fine);
-    return { id: docRef.id, ...fine };
-  } catch (error) {
-    console.error('Error creating fine:', error);
-    throw error;
-  }
+      const result = await firestoreService.addDoc(collectionPath, fine)
+      
+      console.log('✅ Fine created successfully:', { fineId: result.id })
+      return { id: result.id, ...fine };
+    } catch (error) {
+      console.error('❌ Error creating fine:', error);
+      errorHandlingService.handleFirestoreError(error, 'createFine')
+      throw error;
+    }
+  })
 };
 
 // Get all fines for a project
 export const getFines = async (projectId) => {
-  try {
-    const finesCollection = collection(db, 'projects', projectId, 'fines');
-    const q = query(finesCollection, orderBy('createdAt', 'desc'));
-    const snapshot = await getDocs(q);
-    
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-  } catch (error) {
-    console.error('Error fetching fines:', error);
-    throw error;
-  }
+  return performanceService.timeOperation('getFines', async () => {
+    try {
+      console.log('🔍 Getting fines:', { projectId })
+      
+      const collectionPath = `projects/${projectId}/fines`
+      const orderBy = { field: 'createdAt', direction: 'desc' }
+      
+      const result = await firestoreService.getDocs(collectionPath, null, orderBy)
+      const fines = result.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      console.log('✅ Fines retrieved:', { count: fines.length })
+      return fines;
+    } catch (error) {
+      console.error('❌ Error fetching fines:', error);
+      errorHandlingService.handleFirestoreError(error, 'getFines')
+      throw error;
+    }
+  })
 };
 
 // Get fines for a specific user
 export const getUserFines = async (projectId, userId) => {
-  try {
-    const finesCollection = collection(db, 'projects', projectId, 'fines');
-    const q = query(
-      finesCollection, 
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
-    );
-    const snapshot = await getDocs(q);
-    
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-  } catch (error) {
-    console.error('Error fetching user fines:', error);
-    throw error;
-  }
+  return performanceService.timeOperation('getUserFines', async () => {
+    try {
+      console.log('🔍 Getting user fines:', { projectId, userId })
+      
+      const collectionPath = `projects/${projectId}/fines`
+      const filters = {
+        userId: { operator: '==', value: userId }
+      }
+      const orderBy = { field: 'createdAt', direction: 'desc' }
+      
+      const result = await firestoreService.getDocs(collectionPath, filters, orderBy)
+      const fines = result.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      console.log('✅ User fines retrieved:', { count: fines.length })
+      return fines;
+    } catch (error) {
+      console.error('❌ Error fetching user fines:', error);
+      errorHandlingService.handleFirestoreError(error, 'getUserFines')
+      throw error;
+    }
+  })
 };
 
 // Get fines by status

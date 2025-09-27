@@ -54,8 +54,9 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAcademiesStore } from 'src/stores/academyStore';
+import { useServiceBookingStore } from 'src/stores/serviceBookingStore';
 import { useProjectStore } from 'src/stores/projectStore';
-import { getAuth } from 'firebase/auth';
+import optimizedAuthService from '../services/optimizedAuthService';
 
 // Component name for ESLint
 defineOptions({
@@ -64,6 +65,7 @@ defineOptions({
 
 const router = useRouter();
 const academiesStore = useAcademiesStore();
+const serviceBookingStore = useServiceBookingStore();
 const projectStore = useProjectStore();
 
 // Reactive data
@@ -137,16 +139,17 @@ const goToBookings = () => {
 const fetchBookings = async () => {
   try {
     loading.value = true;
-    const auth = getAuth();
-    if (auth.currentUser && projectStore.selectedProject?.id) {
+    const user = await optimizedAuthService.getCurrentUser();
+    if (user && projectStore.selectedProject?.id) {
       console.log('Fetching user bookings for:', {
-        userId: auth.currentUser.uid,
+        userId: user.uid,
         projectId: projectStore.selectedProject.id
       });
-      await academiesStore.fetchUserBookings(auth.currentUser.uid, projectStore.selectedProject.id);
+      await academiesStore.fetchUserBookings(user.uid, projectStore.selectedProject.id);
+      await serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid);
     } else {
       console.log('Cannot fetch bookings - missing user or project:', {
-        hasUser: !!auth.currentUser,
+        hasUser: !!user,
         hasProject: !!projectStore.selectedProject?.id,
         projectId: projectStore.selectedProject?.id
       });
@@ -166,9 +169,23 @@ watch(() => projectStore.selectedProject?.id, (newProjectId, oldProjectId) => {
   }
 });
 
+// Watch for both user and project to be available
+watch([() => projectStore.selectedProject?.id, () => projectStore.userProjects.length], ([projectId, projectsCount]) => {
+  if (projectId && projectsCount > 0) {
+    console.log('Project and user available, fetching bookings:', { projectId, projectsCount });
+    fetchBookings();
+  }
+});
+
 // Lifecycle
 onMounted(() => {
-  fetchBookings();
+  // Only fetch if we have both user and project
+  const user = optimizedAuthService.getCurrentUser();
+  if (user && projectStore.selectedProject?.id) {
+    fetchBookings();
+  } else {
+    console.log('Waiting for user and project to be available...');
+  }
 });
 </script>
 

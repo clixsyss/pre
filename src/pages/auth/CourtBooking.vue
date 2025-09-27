@@ -198,7 +198,7 @@ import { useSportsStore } from 'src/stores/sportsStore';
 import { useProjectStore } from 'src/stores/projectStore';
 import { useNotificationStore } from 'src/stores/notifications';
 import bookingService from 'src/services/bookingService';
-import { getAuth } from 'firebase/auth';
+import optimizedAuthService from 'src/services/optimizedAuthService';
 import PageHeader from '../../components/PageHeader.vue';
 
 // Component name for ESLint
@@ -310,8 +310,8 @@ const confirmBooking = async () => {
   }
 
   // Check if user is authenticated
-  const auth = getAuth();
-  if (!auth.currentUser) {
+  const user = await optimizedAuthService.getCurrentUser();
+  if (!user) {
     notificationStore.showWarning('Please log in to book a court.');
     return;
   }
@@ -325,7 +325,7 @@ const confirmBooking = async () => {
     isSubmitting.value = true;
 
     const bookingData = {
-      userId: auth.currentUser.uid,
+      userId: user.uid,
       sport: selectedSport.value,
       courtId: selectedCourt.value.id,
       courtName: selectedCourt.value.name,
@@ -339,7 +339,7 @@ const confirmBooking = async () => {
     };
 
     console.log('Creating booking with data:', bookingData);
-    console.log('User ID:', auth.currentUser.uid);
+    console.log('User ID:', user.uid);
     console.log('Project ID:', projectId.value);
 
     const result = await bookingService.createCourtBooking(projectId.value, bookingData);

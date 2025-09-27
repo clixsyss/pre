@@ -309,7 +309,7 @@ import { useProjectStore } from 'src/stores/projectStore';
 import { useNotificationStore } from 'src/stores/notifications';
 import { useServiceBookingStore } from 'src/stores/serviceBookingStore';
 import bookingService from 'src/services/bookingService';
-import { getAuth } from 'firebase/auth';
+import optimizedAuthService from 'src/services/optimizedAuthService';
 import PageHeader from '../../components/PageHeader.vue';
 
 // Component name for ESLint
@@ -547,7 +547,14 @@ const cancelBooking = async (booking) => {
   try {
     if (confirm('Are you sure you want to cancel this booking?')) {
       await bookingService.cancelBooking(booking.id);
-      await academiesStore.fetchUserBookings('current-user-id'); // This should come from auth store
+      
+      // Refresh bookings after cancellation
+      const user = await optimizedAuthService.getCurrentUser();
+      if (user && projectId.value) {
+        await academiesStore.fetchUserBookings(user.uid, projectId.value);
+        await serviceBookingStore.fetchUserBookings(projectId.value, user.uid);
+      }
+      
       notificationStore.showSuccess('Booking cancelled successfully');
       closeModal();
     }
@@ -599,30 +606,22 @@ const fetchUserBookings = async () => {
   try {
     loading.value = true;
     
-    const auth = getAuth();
+    const user = await optimizedAuthService.getCurrentUser();
     
-    let userId;
-    if (auth.currentUser) {
-      userId = auth.currentUser.uid;
-    } else {
-      // Try to get user ID from existing bookings first
-      if (academiesStore.userBookings.length > 0) {
-        userId = academiesStore.userBookings[0].userId;
-      } else {
-        // Fall back to localStorage
-        userId = localStorage.getItem('currentUserId');
-      }
-      
-      if (!userId) {
-        error.value = 'No user ID found. Please try registering for an academy first.';
-        return;
-      }
+    if (!user) {
+      error.value = 'User not authenticated. Please sign in again.';
+      return;
     }
     
-    await academiesStore.fetchUserBookings(userId, projectId.value);
+    console.log('Fetching user bookings for:', {
+      userId: user.uid,
+      projectId: projectId.value
+    });
+    
+    await academiesStore.fetchUserBookings(user.uid, projectId.value);
     
     // Also fetch service bookings
-    await serviceBookingStore.fetchUserBookings(projectId.value, userId);
+    await serviceBookingStore.fetchUserBookings(projectId.value, user.uid);
     
   } catch (error) {
     console.error('Error fetching user bookings:', error);

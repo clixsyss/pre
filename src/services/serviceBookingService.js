@@ -1,18 +1,10 @@
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy, 
-  serverTimestamp,
-  doc,
-  updateDoc,
-  getDoc,
-  onSnapshot
-} from 'firebase/firestore';
-import { db } from '../boot/firebase';
-import { getAuth } from 'firebase/auth';
+import firestoreService from './firestoreService'
+import performanceService from './performanceService'
+import errorHandlingService from './errorHandlingService'
+import optimizedAuthService from './optimizedAuthService'
+import { collection, query, where, orderBy, getDocs, doc, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore'
+import { getAuth } from 'firebase/auth'
+import { db } from '../boot/firebase'
 
 class ServiceBookingService {
   /**
@@ -22,60 +14,65 @@ class ServiceBookingService {
    * @returns {Promise<string>} Booking ID
    */
   async createServiceBooking(projectId, bookingData) {
-    try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
+    return performanceService.timeOperation('createServiceBooking', async () => {
+      try {
+        console.log('🚀 Creating service booking:', { projectId, bookingData })
+        
+        const user = await optimizedAuthService.getCurrentUser()
+        console.log('🚀 ServiceBookingService: Current user:', user ? 'authenticated' : 'not authenticated', user ? user.uid : 'no user')
+        
+        if (!user) {
+          console.error('❌ ServiceBookingService: User not authenticated - cannot create booking')
+          throw new Error('User not authenticated');
+        }
 
-      // Validate required fields
-      if (!projectId) {
-        throw new Error('Project ID is required');
-      }
-      if (!bookingData.serviceId) {
-        throw new Error('Service ID is required');
-      }
-      if (!bookingData.categoryId) {
-        throw new Error('Category ID is required');
-      }
-      if (!bookingData.selectedDate) {
-        throw new Error('Selected date is required');
-      }
+        // Validate required fields
+        if (!projectId) {
+          throw new Error('Project ID is required');
+        }
+        if (!bookingData.serviceId) {
+          throw new Error('Service ID is required');
+        }
+        if (!bookingData.categoryId) {
+          throw new Error('Category ID is required');
+        }
+        if (!bookingData.selectedDate) {
+          throw new Error('Selected date is required');
+        }
 
-      const booking = {
-        userId: user.uid,
-        userName: user.displayName || 'User',
-        userEmail: user.email,
-        projectId: projectId,
-        serviceId: bookingData.serviceId,
-        categoryId: bookingData.categoryId,
-        serviceName: bookingData.serviceName,
-        categoryName: bookingData.categoryName,
-        servicePrice: bookingData.servicePrice,
-        selectedDate: bookingData.selectedDate,
-        selectedTime: bookingData.selectedTime || null,
-        status: 'open', // open, processing, closed
-        paymentStatus: 'pending', // pending, paid, refunded
-        notes: bookingData.notes || '',
-        messages: [], // Chat messages array
-        lastMessageAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      };
+        const now = new Date()
+        const booking = {
+          userId: user.uid,
+          userName: user.displayName || 'User',
+          userEmail: user.email,
+          projectId: projectId,
+          serviceId: bookingData.serviceId,
+          categoryId: bookingData.categoryId,
+          serviceName: bookingData.serviceName,
+          categoryName: bookingData.categoryName,
+          servicePrice: bookingData.servicePrice,
+          selectedDate: bookingData.selectedDate,
+          selectedTime: bookingData.selectedTime || null,
+          status: 'open', // open, processing, closed
+          paymentStatus: 'pending', // pending, paid, refunded
+          notes: bookingData.notes || '',
+          messages: [], // Chat messages array
+          lastMessageAt: now,
+          createdAt: now,
+          updatedAt: now
+        };
 
-      const docRef = await addDoc(
-        collection(db, `projects/${projectId}/serviceBookings`), 
-        booking
-      );
+        const collectionPath = `projects/${projectId}/serviceBookings`
+        const result = await firestoreService.addDoc(collectionPath, booking)
 
-      console.log('Service booking created successfully:', docRef.id);
-      return docRef.id;
-    } catch (error) {
-      console.error('Error creating service booking:', error);
-      throw error;
-    }
+        console.log('✅ Service booking created successfully:', { bookingId: result.id });
+        return result.id;
+      } catch (error) {
+        console.error('❌ Error creating service booking:', error);
+        errorHandlingService.handleFirestoreError(error, 'createServiceBooking')
+        throw error;
+      }
+    })
   }
 
   /**
@@ -85,24 +82,30 @@ class ServiceBookingService {
    * @returns {Promise<Array>} Array of user's bookings
    */
   async getUserServiceBookings(projectId, userId) {
-    try {
-      const q = query(
-        collection(db, `projects/${projectId}/serviceBookings`),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      );
-      
-      const querySnapshot = await getDocs(q);
-      const bookings = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+    return performanceService.timeOperation('getUserServiceBookings', async () => {
+      try {
+        console.log('🔍 Getting user service bookings:', { projectId, userId })
+        
+        const collectionPath = `projects/${projectId}/serviceBookings`
+        const filters = {
+          userId: { operator: '==', value: userId }
+        }
+        const orderBy = { field: 'createdAt', direction: 'desc' }
+        
+        const result = await firestoreService.getDocs(collectionPath, filters, orderBy)
+        const bookings = result.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
 
-      return bookings;
-    } catch (error) {
-      console.error('Error fetching user service bookings:', error);
-      throw error;
-    }
+        console.log('✅ User service bookings retrieved:', { count: bookings.length })
+        return bookings;
+      } catch (error) {
+        console.error('❌ Error fetching user service bookings:', error);
+        errorHandlingService.handleFirestoreError(error, 'getUserServiceBookings')
+        throw error;
+      }
+    })
   }
 
   /**
@@ -111,23 +114,27 @@ class ServiceBookingService {
    * @returns {Promise<Array>} Array of all bookings
    */
   async getAllServiceBookings(projectId) {
-    try {
-      const q = query(
-        collection(db, `projects/${projectId}/serviceBookings`),
-        orderBy('createdAt', 'desc')
-      );
-      
-      const querySnapshot = await getDocs(q);
-      const bookings = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+    return performanceService.timeOperation('getAllServiceBookings', async () => {
+      try {
+        console.log('🔍 Getting all service bookings:', { projectId })
+        
+        const collectionPath = `projects/${projectId}/serviceBookings`
+        const orderBy = { field: 'createdAt', direction: 'desc' }
+        
+        const result = await firestoreService.getDocs(collectionPath, null, orderBy)
+        const bookings = result.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
 
-      return bookings;
-    } catch (error) {
-      console.error('Error fetching all service bookings:', error);
-      throw error;
-    }
+        console.log('✅ All service bookings retrieved:', { count: bookings.length })
+        return bookings;
+      } catch (error) {
+        console.error('❌ Error fetching all service bookings:', error);
+        errorHandlingService.handleFirestoreError(error, 'getAllServiceBookings')
+        throw error;
+      }
+    })
   }
 
   /**
@@ -166,22 +173,29 @@ class ServiceBookingService {
    * @returns {Promise<Object>} Booking data
    */
   async getServiceBooking(projectId, bookingId) {
-    try {
-      const docRef = doc(db, `projects/${projectId}/serviceBookings`, bookingId);
-      const docSnap = await getDoc(docRef);
-      
-      if (docSnap.exists()) {
-        return {
-          id: docSnap.id,
-          ...docSnap.data()
-        };
-      } else {
-        throw new Error('Service booking not found');
+    return performanceService.timeOperation('getServiceBooking', async () => {
+      try {
+        console.log('🔍 Getting service booking:', { projectId, bookingId })
+        
+        const docPath = `projects/${projectId}/serviceBookings/${bookingId}`
+        const result = await firestoreService.getDoc(docPath)
+        
+        if (result.exists) {
+          const booking = {
+            id: result.id,
+            ...result.data()
+          }
+          console.log('✅ Service booking retrieved successfully')
+          return booking;
+        } else {
+          throw new Error('Service booking not found');
+        }
+      } catch (error) {
+        console.error('❌ Error fetching service booking:', error);
+        errorHandlingService.handleFirestoreError(error, 'getServiceBooking')
+        throw error;
       }
-    } catch (error) {
-      console.error('Error fetching service booking:', error);
-      throw error;
-    }
+    })
   }
 
   /**

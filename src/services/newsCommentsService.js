@@ -1,19 +1,7 @@
-import { db } from '../boot/firebase';
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  doc, 
-  getDoc, 
-  updateDoc, 
-  deleteDoc,
-  query, 
-  orderBy, 
-  limit, 
-  onSnapshot,
-  where,
-  increment
-} from 'firebase/firestore';
+import performanceService from './performanceService'
+import errorHandlingService from './errorHandlingService'
+import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, orderBy, limit, onSnapshot, where, increment } from 'firebase/firestore'
+import { db } from '../boot/firebase'
 
 /**
  * News Comments Service
@@ -22,7 +10,7 @@ import {
 
 class NewsCommentsService {
   constructor() {
-    this.db = db;
+    // No need for db reference - using firestoreService
   }
 
   /**
@@ -34,20 +22,23 @@ class NewsCommentsService {
    * @returns {Promise<string>} - Comment ID
    */
   async addComment(projectId, newsId, userId, commentData) {
-    try {
-      const commentsRef = collection(this.db, `projects/${projectId}/news/${newsId}/comments`);
-      const now = new Date();
-      
-      const comment = {
-        id: '', // Will be set after creation
-        userId,
-        userName: commentData.userName || 'Anonymous',
-        userEmail: commentData.userEmail || '',
-        text: commentData.text.trim(),
-        parentCommentId: commentData.parentCommentId || null, // For replies
-        reactions: {}, // { emoji: { count: number, users: [userId] } }
-        isDeleted: false,
-        deletedBy: null,
+    return performanceService.timeOperation('addComment', async () => {
+      try {
+        console.log('🚀 Adding comment:', { projectId, newsId, userId, commentData })
+        
+        // const collectionPath = `projects/${projectId}/news/${newsId}/comments` // Not used in this method
+        const now = new Date();
+        
+        const comment = {
+          id: '', // Will be set after creation
+          userId,
+          userName: commentData.userName || 'Anonymous',
+          userEmail: commentData.userEmail || '',
+          text: commentData.text.trim(),
+          parentCommentId: commentData.parentCommentId || null, // For replies
+          reactions: {}, // { emoji: { count: number, users: [userId] } }
+          isDeleted: false,
+          deletedBy: null,
         deletedAt: null,
         deletionReason: null,
         createdAt: now,
@@ -57,6 +48,7 @@ class NewsCommentsService {
         userProject: commentData.userProject || null,
       };
 
+      const commentsRef = collection(db, `projects/${projectId}/news/${newsId}/comments`);
       const docRef = await addDoc(commentsRef, comment);
       
       // Update the comment with its ID
@@ -66,10 +58,12 @@ class NewsCommentsService {
       await this.updateNewsCommentCount(projectId, newsId, 1);
       
       return docRef.id;
-    } catch (error) {
-      console.error('Error adding comment:', error);
-      throw error;
-    }
+      } catch (error) {
+        console.error('❌ Error adding comment:', error);
+        errorHandlingService.handleFirestoreError(error, 'addComment')
+        throw error;
+      }
+    })
   }
 
   /**

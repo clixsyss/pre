@@ -1,5 +1,6 @@
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../boot/firebase';
+import firestoreService from './firestoreService'
+import performanceService from './performanceService'
+import errorHandlingService from './errorHandlingService'
 
 /**
  * Update user profile data in Firestore
@@ -8,17 +9,22 @@ import { db } from '../boot/firebase';
  * @returns {Promise<void>}
  */
 export const updateUserProfile = async (userId, updateData) => {
-  try {
-    const userRef = doc(db, 'users', userId);
-    
-    // Update the document
-    await updateDoc(userRef, updateData);
-    
-    console.log('User profile updated successfully');
-  } catch (error) {
-    console.error('Error updating user profile:', error);
-    throw new Error('Failed to update user profile');
-  }
+  return performanceService.timeOperation('updateUserProfile', async () => {
+    try {
+      console.log('🔍 Updating user profile:', { userId, updateData })
+      
+      const docPath = `users/${userId}`
+      
+      // Update the document
+      await firestoreService.updateDoc(docPath, updateData);
+      
+      console.log('✅ User profile updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating user profile:', error);
+      errorHandlingService.handleFirestoreError(error, 'updateUserProfile')
+      throw new Error('Failed to update user profile');
+    }
+  })
 };
 
 /**
@@ -27,20 +33,30 @@ export const updateUserProfile = async (userId, updateData) => {
  * @returns {Promise<Object|null>}
  */
 export const getUserProfile = async (userId) => {
-  try {
-    const userRef = doc(db, 'users', userId);
-    const userSnap = await getDoc(userRef);
-    
-    if (userSnap.exists()) {
-      return userSnap.data();
-    } else {
-      console.log('No user document found');
-      return null;
+  return performanceService.timeOperation('getUserProfile', async () => {
+    try {
+      console.log('🔍 Getting user profile:', { userId })
+      
+      const docPath = `users/${userId}`
+      const result = await firestoreService.getDoc(docPath)
+      
+      if (result.exists) {
+        const userData = {
+          id: result.id,
+          ...result.data()
+        }
+        console.log('✅ User profile retrieved successfully')
+        return userData;
+      } else {
+        console.log('No user document found');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error getting user profile:', error);
+      errorHandlingService.handleFirestoreError(error, 'getUserProfile')
+      throw new Error('Failed to get user profile');
     }
-  } catch (error) {
-    console.error('Error getting user profile:', error);
-    throw new Error('Failed to get user profile');
-  }
+  })
 };
 
 /**

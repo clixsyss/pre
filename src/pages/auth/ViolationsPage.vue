@@ -152,7 +152,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../../stores/projectStore'
 import { getUserFines } from '../../services/finesService'
-import { getAuth } from 'firebase/auth'
+import optimizedAuthService from 'src/services/optimizedAuthService'
 import ViolationDetailModal from '../../components/ViolationDetailModal.vue'
 
 // Component name for ESLint
@@ -179,7 +179,13 @@ const showDetailModal = ref(false)
 const selectedViolation = ref(null)
 
 // Computed properties
-const currentUserId = computed(() => getAuth().currentUser?.uid)
+const currentUserId = ref(null)
+
+// Initialize current user ID
+const initializeUserId = async () => {
+  const user = await optimizedAuthService.getCurrentUser();
+  currentUserId.value = user?.uid;
+}
 
 const statusFilters = [
   { value: 'all', label: 'All' },
@@ -295,7 +301,8 @@ const getUnreadCount = (violation) => {
 }
 
 // Load violations on mount
-onMounted(() => {
+onMounted(async () => {
+  await initializeUserId()
   loadViolations()
 })
 </script>

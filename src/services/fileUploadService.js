@@ -1,5 +1,7 @@
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { storage } from '../boot/firebase'
+import performanceService from './performanceService'
+import errorHandlingService from './errorHandlingService'
 
 class FileUploadService {
   /**
@@ -10,40 +12,45 @@ class FileUploadService {
    * @returns {Promise<string>} - The download URL
    */
   async uploadFile(file, path, fileName) {
-    try {
-      // Validate file
-      if (!file) {
-        throw new Error('No file provided')
+    return performanceService.timeOperation('uploadFile', async () => {
+      try {
+        console.log('🚀 Uploading file:', { path, fileName, fileSize: file?.size })
+        
+        // Validate file
+        if (!file) {
+          throw new Error('No file provided')
+        }
+
+        // Validate file type (images only)
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+        if (!allowedTypes.includes(file.type)) {
+          throw new Error('Only JPEG, PNG, and WebP images are allowed')
+        }
+
+        // Validate file size (max 10MB)
+        const maxSize = 10 * 1024 * 1024 // 10MB
+        if (file.size > maxSize) {
+          throw new Error('File size must be less than 10MB')
+        }
+
+        // Create storage reference
+        const fullPath = `${path}${fileName}`
+        const fileRef = storageRef(storage, fullPath)
+
+        // Upload file
+        const snapshot = await uploadBytes(fileRef, file)
+        
+        // Get download URL
+        const downloadURL = await getDownloadURL(snapshot.ref)
+        
+        console.log('✅ File uploaded successfully:', downloadURL)
+        return downloadURL
+      } catch (error) {
+        console.error('❌ Error uploading file:', error)
+        errorHandlingService.handleFirestoreError(error, 'uploadFile')
+        throw error
       }
-
-      // Validate file type (images only)
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-      if (!allowedTypes.includes(file.type)) {
-        throw new Error('Only JPEG, PNG, and WebP images are allowed')
-      }
-
-      // Validate file size (max 10MB)
-      const maxSize = 10 * 1024 * 1024 // 10MB
-      if (file.size > maxSize) {
-        throw new Error('File size must be less than 10MB')
-      }
-
-      // Create storage reference
-      const fullPath = `${path}${fileName}`
-      const fileRef = storageRef(storage, fullPath)
-
-      // Upload file
-      const snapshot = await uploadBytes(fileRef, file)
-      
-      // Get download URL
-      const downloadURL = await getDownloadURL(snapshot.ref)
-      
-      console.log('File uploaded successfully:', downloadURL)
-      return downloadURL
-    } catch (error) {
-      console.error('Error uploading file:', error)
-      throw error
-    }
+    })
   }
 
   /**

@@ -1,183 +1,202 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDocs, 
-  getDoc,
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  onSnapshot,
-  serverTimestamp
-} from 'firebase/firestore';
-import { db } from 'boot/firebase';
-import { storage } from 'boot/firebase';
-import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import firestoreService from './firestoreService'
+import performanceService from './performanceService'
+import errorHandlingService from './errorHandlingService'
+import { doc, updateDoc, serverTimestamp, collection, query, where, orderBy, onSnapshot, deleteDoc } from 'firebase/firestore'
+import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
+// import { db, storage } from '../boot/firebase' // Not used in updated methods
 
 class ComplaintService {
   constructor() {
-    this.db = db;
-    this.storage = storage;
+    // No need for db and storage references - using services
   }
 
   // Create a new complaint
   async createComplaint(projectId, userId, complaintData) {
-    try {
-      const complaintRef = collection(this.db, `projects/${projectId}/complaints`);
-      const now = new Date();
-      const complaint = {
-        userId,
-        adminId: null,
-        title: complaintData.title,
-        category: complaintData.category,
-        status: 'Open',
-        priority: complaintData.priority || 'Medium',
-        messages: [{
-          id: Date.now().toString(),
-          senderType: 'user',
-          senderId: userId,
-          text: complaintData.initialMessage,
-          timestamp: now,
-          imageUrl: complaintData.imageUrl || null,
-          imageFileName: complaintData.imageFileName || null
-        }],
-        createdAt: now,
-        updatedAt: now,
-        lastMessageAt: now
-      };
+    return performanceService.timeOperation('createComplaint', async () => {
+      try {
+        console.log('🚀 Creating complaint:', { projectId, userId, complaintData })
+        
+        const now = new Date();
+        const complaint = {
+          userId,
+          adminId: null,
+          title: complaintData.title,
+          category: complaintData.category,
+          status: 'Open',
+          priority: complaintData.priority || 'Medium',
+          messages: [{
+            id: Date.now().toString(),
+            senderType: 'user',
+            senderId: userId,
+            text: complaintData.initialMessage,
+            timestamp: now,
+            imageUrl: complaintData.imageUrl || null,
+            imageFileName: complaintData.imageFileName || null
+          }],
+          createdAt: now,
+          updatedAt: now,
+          lastMessageAt: now
+        };
 
-      const docRef = await addDoc(complaintRef, complaint);
-      return { id: docRef.id, ...complaint };
-    } catch (error) {
-      console.error('Error creating complaint:', error);
-      throw error;
-    }
+        const collectionPath = `projects/${projectId}/complaints`
+        const result = await firestoreService.addDoc(collectionPath, complaint)
+        
+        console.log('✅ Complaint created successfully:', { complaintId: result.id })
+        return { id: result.id, ...complaint };
+      } catch (error) {
+        console.error('❌ Error creating complaint:', error);
+        errorHandlingService.handleFirestoreError(error, 'createComplaint')
+        throw error;
+      }
+    })
   }
 
   // Get all complaints for a project (with optional filters)
   async getComplaints(projectId, filters = {}) {
-    try {
-      const complaintsRef = collection(this.db, `projects/${projectId}/complaints`);
-      let q = query(complaintsRef, orderBy('lastMessageAt', 'desc'));
+    return performanceService.timeOperation('getComplaints', async () => {
+      try {
+        console.log('🔍 Getting complaints:', { projectId, filters })
+        
+        const collectionPath = `projects/${projectId}/complaints`
+        const queryFilters = {}
+        const orderByClause = { field: 'lastMessageAt', direction: 'desc' }
 
-      // Apply filters
-      if (filters.status) {
-        q = query(q, where('status', '==', filters.status));
-      }
-      if (filters.userId) {
-        q = query(q, where('userId', '==', filters.userId));
-      }
-      if (filters.adminId) {
-        q = query(q, where('adminId', '==', filters.adminId));
-      }
-      if (filters.category) {
-        q = query(q, where('category', '==', filters.category));
-      }
-      if (filters.limit) {
-        q = query(q, limit(filters.limit));
-      }
+        // Apply filters
+        if (filters.status) {
+          queryFilters.status = { operator: '==', value: filters.status }
+        }
+        if (filters.userId) {
+          queryFilters.userId = { operator: '==', value: filters.userId }
+        }
+        if (filters.adminId) {
+          queryFilters.adminId = { operator: '==', value: filters.adminId }
+        }
+        if (filters.category) {
+          queryFilters.category = { operator: '==', value: filters.category }
+        }
 
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    } catch (error) {
-      console.error('Error fetching complaints:', error);
-      throw error;
-    }
+        const result = await firestoreService.getDocs(collectionPath, queryFilters, orderByClause)
+        const complaints = result.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        // Apply limit if specified
+        const finalComplaints = filters.limit ? complaints.slice(0, filters.limit) : complaints
+        
+        console.log('✅ Complaints retrieved:', { count: finalComplaints.length })
+        return finalComplaints;
+      } catch (error) {
+        console.error('❌ Error fetching complaints:', error);
+        errorHandlingService.handleFirestoreError(error, 'getComplaints')
+        throw error;
+      }
+    })
   }
 
   // Get a specific complaint by ID
   async getComplaint(projectId, complaintId) {
-    try {
-      console.log('Fetching complaint:', { projectId, complaintId });
-      
-      if (!projectId) {
-        throw new Error('Project ID is required');
+    return performanceService.timeOperation('getComplaint', async () => {
+      try {
+        console.log('🔍 Getting complaint:', { projectId, complaintId });
+        
+        if (!projectId) {
+          throw new Error('Project ID is required');
+        }
+        
+        if (!complaintId) {
+          throw new Error('Complaint ID is required');
+        }
+        
+        const docPath = `projects/${projectId}/complaints/${complaintId}`
+        const result = await firestoreService.getDoc(docPath)
+        
+        if (result.exists) {
+          const data = result.data();
+          console.log('✅ Complaint found:', { id: result.id, ...data });
+          return { id: result.id, ...data };
+        } else {
+          console.log('Complaint not found in database');
+          throw new Error('Complaint not found');
+        }
+      } catch (error) {
+        console.error('❌ Error fetching complaint:', error);
+        errorHandlingService.handleFirestoreError(error, 'getComplaint')
+        throw error;
       }
-      
-      if (!complaintId) {
-        throw new Error('Complaint ID is required');
-      }
-      
-      const complaintRef = doc(this.db, `projects/${projectId}/complaints`, complaintId);
-      const complaintSnap = await getDoc(complaintRef);
-      
-      if (complaintSnap.exists()) {
-        const data = complaintSnap.data();
-        console.log('Complaint found:', { id: complaintSnap.id, ...data });
-        return { id: complaintSnap.id, ...data };
-      } else {
-        console.log('Complaint not found in database');
-        throw new Error('Complaint not found');
-      }
-    } catch (error) {
-      console.error('Error fetching complaint:', error);
-      throw error;
-    }
+    })
   }
 
   // Add a message to a complaint
   async addMessage(projectId, complaintId, messageData) {
-    try {
-      const complaintRef = doc(this.db, `projects/${projectId}/complaints`, complaintId);
-      
-      const now = new Date();
-      const message = {
-        id: Date.now().toString(),
-        senderType: messageData.senderType, // 'user' or 'admin'
-        senderId: messageData.senderId,
-        text: messageData.text,
-        timestamp: now,
-        imageUrl: messageData.imageUrl || null,
-        imageFileName: messageData.imageFileName || null
-      };
+    return performanceService.timeOperation('addMessage', async () => {
+      try {
+        console.log('🚀 Adding message to complaint:', { projectId, complaintId, messageData })
+        
+        const docPath = `projects/${projectId}/complaints/${complaintId}`
+        
+        const now = new Date();
+        const message = {
+          id: Date.now().toString(),
+          senderType: messageData.senderType, // 'user' or 'admin'
+          senderId: messageData.senderId,
+          text: messageData.text,
+          timestamp: now,
+          imageUrl: messageData.imageUrl || null,
+          imageFileName: messageData.imageFileName || null
+        };
 
-      // Get current complaint to add message to array
-      const complaintSnap = await getDoc(complaintRef);
-      if (!complaintSnap.exists()) {
-        throw new Error('Complaint not found');
+        // Get current complaint to add message to array
+        const complaintResult = await firestoreService.getDoc(docPath);
+        if (!complaintResult.exists) {
+          throw new Error('Complaint not found');
+        }
+
+        const currentComplaint = complaintResult.data();
+        const updatedMessages = [...currentComplaint.messages, message];
+
+        await firestoreService.updateDoc(docPath, {
+          messages: updatedMessages,
+          updatedAt: now,
+          lastMessageAt: now
+        });
+
+        console.log('✅ Message added successfully')
+        return message;
+      } catch (error) {
+        console.error('❌ Error adding message:', error);
+        errorHandlingService.handleFirestoreError(error, 'addMessage')
+        throw error;
       }
-
-      const currentComplaint = complaintSnap.data();
-      const updatedMessages = [...currentComplaint.messages, message];
-
-      await updateDoc(complaintRef, {
-        messages: updatedMessages,
-        updatedAt: now,
-        lastMessageAt: now
-      });
-
-      return message;
-    } catch (error) {
-      console.error('Error adding message:', error);
-      throw error;
-    }
+    })
   }
 
   // Update complaint status
   async updateComplaintStatus(projectId, complaintId, status, adminId = null) {
-    try {
-      const complaintRef = doc(this.db, `projects/${projectId}/complaints`, complaintId);
-      const updateData = {
-        status,
-        updatedAt: serverTimestamp()
-      };
+    return performanceService.timeOperation('updateComplaintStatus', async () => {
+      try {
+        console.log('🚀 Updating complaint status:', { projectId, complaintId, status, adminId })
+        
+        const docPath = `projects/${projectId}/complaints/${complaintId}`
+        const updateData = {
+          status,
+          updatedAt: new Date()
+        };
 
-      if (adminId) {
-        updateData.adminId = adminId;
+        if (adminId) {
+          updateData.adminId = adminId;
+        }
+
+        await firestoreService.updateDoc(docPath, updateData);
+        
+        console.log('✅ Complaint status updated successfully')
+        return true;
+      } catch (error) {
+        console.error('❌ Error updating complaint status:', error);
+        errorHandlingService.handleFirestoreError(error, 'updateComplaintStatus')
+        throw error;
       }
-
-      await updateDoc(complaintRef, updateData);
-      return true;
-    } catch (error) {
-      console.error('Error updating complaint status:', error);
-      throw error;
-    }
+    })
   }
 
   // Assign complaint to admin

@@ -45,14 +45,15 @@ class OptimizedAuthService {
         await this.initialize()
         const result = await this.capacitorAuth.getCurrentUser()
         this.currentUser = result.user
+        console.log('🚀 OptimizedAuthService: Fetched fresh current user from Capacitor:', this.currentUser ? 'authenticated' : 'not authenticated')
       } else {
         this.currentUser = this.auth.currentUser
+        console.log('🚀 OptimizedAuthService: Fetched fresh current user from Web SDK:', this.currentUser ? 'authenticated' : 'not authenticated')
       }
       
-      console.log('🚀 OptimizedAuthService: Fetched fresh current user')
       return this.currentUser
     } catch (error) {
-      console.error('Get current user error:', error)
+      console.error('❌ Get current user error:', error)
       return null
     }
   }
