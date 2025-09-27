@@ -308,7 +308,7 @@ import UpcomingBookingsCard from '../../components/UpcomingBookingsCard.vue'
 import ModernNewsFeed from '../../components/ModernNewsFeed.vue'
 import SmartDeviceWidget from '../../components/SmartDeviceWidget.vue'
 import AdsCarousel from '../../components/AdsCarousel.vue'
-import sampleDataService from '../../services/sampleDataService.js'
+// import sampleDataService from '../../services/sampleDataService.js' // Disabled - using real Firebase data only
 import notificationService from '../../services/notificationService.js'
 
 // Component name for ESLint
@@ -588,14 +588,14 @@ onMounted(async () => {
         console.error('Error initializing Smart Mirror app:', error)
       }
 
-      // Initialize sample data for testing
-      try {
-        if (projectStore.selectedProject?.id) {
-          await sampleDataService.initializeAllSampleData(projectStore.selectedProject.id)
-        }
-      } catch (error) {
-        console.error('Error initializing sample data:', error)
-      }
+      // Sample data initialization disabled - using real Firebase data only
+      // try {
+      //   if (projectStore.selectedProject?.id) {
+      //     await sampleDataService.initializeAllSampleData(projectStore.selectedProject.id)
+      //   }
+      // } catch (error) {
+      //   console.error('Error initializing sample data:', error)
+      // }
 
       // Fetch notifications
       await fetchNotifications()

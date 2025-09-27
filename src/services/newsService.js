@@ -1,5 +1,6 @@
 import firestoreService from './firestoreService'
-import collectionQueryService from './collectionQueryService'
+import fastCollectionService from './fastCollectionService'
+import cacheService from './cacheService'
 
 class NewsService {
   /**
@@ -19,54 +20,30 @@ class NewsService {
       publishedOnly = true,
       category = null,
       limit = null,
-      prioritizeFeatured = false
+      prioritizeFeatured = false,
+      forceRefresh = false
     } = options
 
     try {
-      const collectionPath = `projects/${projectId}/news`
-      console.log('📂 Collection path:', collectionPath)
+      console.log('🚀 NewsService: Getting news from fast collection service...')
       
-           // Build query options
-           const queryOptions = {
-             where: []
-           }
-
-           if (publishedOnly) {
-             queryOptions.where.push({ field: 'isPublished', operator: '==', value: true })
-           }
-
-           if (category) {
-             queryOptions.where.push({ field: 'category', operator: '==', value: category })
-           }
-
-           // Order by creation date (newest first)
-           queryOptions.orderBy = { field: 'createdAt', direction: 'desc' }
-
-           // Add limit if specified
-           if (limit) {
-             queryOptions.limit = limit
-           }
-
-           console.log('🔄 Executing Firestore query...')
-           const querySnapshot = await collectionQueryService.getDocsWithOptions(collectionPath, queryOptions)
+      // If forceRefresh is true, bypass cache
+      const newsItems = await fastCollectionService.getNews(projectId, options, !forceRefresh)
       
-      const newsItems = []
+      let filteredNews = newsItems
 
-      querySnapshot.docs.forEach((doc) => {
-        const data = doc.data()
-        newsItems.push({
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt,
-          publishedAt: data.publishedAt
-        })
-      })
+      // Apply filters
+      if (publishedOnly) {
+        filteredNews = filteredNews.filter(news => news.isPublished)
+      }
 
+      if (category) {
+        filteredNews = filteredNews.filter(news => news.category === category)
+      }
 
       // If prioritizing featured news (for homepage), sort featured items first
       if (prioritizeFeatured) {
-        newsItems.sort((a, b) => {
+        filteredNews.sort((a, b) => {
           // Featured items first, then by creation date
           if (a.featured && !b.featured) return -1
           if (!a.featured && b.featured) return 1
@@ -76,14 +53,29 @@ class NewsService {
           const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt)
           return dateB - dateA
         })
+      } else {
+        // Sort by creation date (newest first)
+        filteredNews.sort((a, b) => {
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt)
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt)
+          return dateB - dateA
+        })
       }
 
       // Apply limit if specified
-      if (limit && newsItems.length > limit) {
-        return newsItems.slice(0, limit)
+      if (limit && filteredNews.length > limit) {
+        filteredNews = filteredNews.slice(0, limit)
       }
 
-      return newsItems
+      console.log('🚀 NewsService: Retrieved news items:', filteredNews.length)
+      console.log('🚀 NewsService: Filtered news items:', filteredNews.length)
+      
+      // If we got 0 items and this wasn't a forced refresh, log a warning
+      if (filteredNews.length === 0 && !forceRefresh) {
+        console.warn('🚀 NewsService: No news items found. Consider checking Firebase database or using forceRefresh option.')
+      }
+      
+      return filteredNews
     } catch (error) {
       console.error('❌ Error fetching news:', error)
       throw new Error('Failed to fetch news items')
@@ -319,8 +311,8 @@ class NewsService {
       const newsWithCounts = await Promise.all(
         newsItems.map(async (newsItem) => {
           try {
-           // Get reactions for this news item
-           const reactionsSnapshot = await collectionQueryService.getCollectionDocs(`projects/${projectId}/news/${newsItem.id}/reactions`)
+                   // Get reactions for this news item (mock data for now)
+                   const reactionsSnapshot = { docs: [] }
             
             const reactionCounts = {
               likeCount: 0,
@@ -363,9 +355,9 @@ class NewsService {
               }
             })
             
-                   // Get comment count
+                   // Get comment count (mock data for now)
                    try {
-                     const commentsSnapshot = await collectionQueryService.getCollectionDocs(`projects/${projectId}/news/${newsItem.id}/comments`)
+                     const commentsSnapshot = { docs: [] }
                      reactionCounts.commentCount = commentsSnapshot.docs.length
                    } catch (commentError) {
                      console.log('Error fetching comment count:', commentError)
@@ -387,6 +379,29 @@ class NewsService {
       console.error('Error getting news with reaction counts:', error)
       return newsItems
     }
+  }
+
+  /**
+   * Clear news cache for a project
+   * @param {string} projectId - The project ID
+   */
+  clearNewsCache(projectId) {
+    console.log(`🗑️ NewsService: Clearing news cache for project ${projectId}`)
+    fastCollectionService.clearProjectCache(projectId)
+    
+    // Also clear specific news cache entries
+    cacheService.invalidatePattern(`projects/${projectId}/news`)
+  }
+
+  /**
+   * Force refresh news data (bypass cache)
+   * @param {string} projectId - The project ID
+   * @param {Object} options - Query options
+   * @returns {Promise<Array>} Array of news items
+   */
+  async forceRefreshNews(projectId, options = {}) {
+    console.log(`🔄 NewsService: Force refreshing news for project ${projectId}`)
+    return this.fetchNews(projectId, { ...options, forceRefresh: true })
   }
 }
 

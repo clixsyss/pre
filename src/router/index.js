@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import authService from '../services/authService'
+import optimizedAuthService from '../services/optimizedAuthService'
 import firestoreService from '../services/firestoreService'
 import { canUserAccessRoute, checkUserSuspension } from '../services/suspensionService'
 
@@ -354,8 +354,8 @@ router.beforeEach(async (to, from, next) => {
       }
     }, 5000) // 5 second timeout
 
-    // Get current user using unified auth service
-    authService.getCurrentUser().then(currentUser => {
+          // Get current user using optimized auth service
+          optimizedAuthService.getCurrentUser().then(currentUser => {
       console.log('Current user from authService:', currentUser ? 'authenticated' : 'not authenticated')
       
       // If we have a current user, use it immediately
@@ -374,8 +374,8 @@ router.beforeEach(async (to, from, next) => {
       console.error('Error getting current user:', error)
     })
     
-    // Listen to auth state changes using unified auth service
-    const unsubscribe = authService.onAuthStateChanged(async (user) => {
+          // Listen to auth state changes using optimized auth service
+          const unsubscribe = optimizedAuthService.onAuthStateChanged(async (user) => {
       if (resolved) return
       
       unsubscribe()

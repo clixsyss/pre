@@ -11,47 +11,44 @@
       <!-- Hero Section -->
       <div class="hero-section">
         <div class="hero-content">
-        <div class="profile-avatar">
-          <img 
-            v-if="userProfile.documents?.profilePictureUrl" 
-            :src="userProfile.documents.profilePictureUrl" 
-            alt="Profile Picture" 
-            class="avatar-image"
-          />
-          <div v-else class="avatar-initial">
-            {{ getInitials(userProfile.firstName, userProfile.lastName) }}
-          </div>
+          <div class="profile-avatar">
+            <img v-if="userProfile.documents?.profilePictureUrl" :src="userProfile.documents.profilePictureUrl"
+              alt="Profile Picture" class="avatar-image" />
+            <div v-else class="avatar-initial">
+              {{ getInitials(userProfile.firstName, userProfile.lastName) }}
+            </div>
             <div class="avatar-status" :class="getStatusClass(userProfile.registrationStatus)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
-        </div>
+            </div>
           </div>
           <div class="hero-text">
             <h1 class="hero-title">{{ getFullName(userProfile.firstName, userProfile.lastName) }}</h1>
             <p class="hero-subtitle">{{ userProfile.email }}</p>
-            <div class="profile-badges">
-          <span class="status-badge" :class="getStatusClass(userProfile.registrationStatus)">
-            {{ formatStatus(userProfile.registrationStatus) }}
-          </span>
-            </div>
+            <!-- <div class="profile-badges">
+              <span class="status-badge" :class="getStatusClass(userProfile.registrationStatus)">
+                {{ formatStatus(userProfile.registrationStatus) }}
+              </span>
+            </div> -->
           </div>
         </div>
       </div>
 
       <!-- Personal Information Accordion -->
       <div class="accordion-section">
-        <button 
-          @click="toggleAccordion('personal')" 
-          class="accordion-header"
-          :class="{ active: activeAccordion === 'personal' }"
-        >
+        <button @click="toggleAccordion('personal')" class="accordion-header"
+          :class="{ active: activeAccordion === 'personal' }">
           <div class="accordion-title">
             <div class="section-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
             </div>
             <div class="section-text">
               <h3>Personal Information</h3>
@@ -60,28 +57,34 @@
           </div>
           <div class="accordion-arrow">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </div>
         </button>
         <div class="accordion-content" :class="{ active: activeAccordion === 'personal' }">
-        <div class="info-grid">
+          <div class="info-grid">
             <div class="info-card">
               <div class="info-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
-          </div>
+              </div>
               <div class="info-content">
                 <label>Full Name</label>
                 <span>{{ getFullName(userProfile.firstName, userProfile.lastName) || 'Not provided' }}</span>
-          </div>
+              </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M22 16.92V19C22 19.5304 21.7893 20.0391 21.4142 20.4142C21.0391 20.7893 20.5304 21 20 21H4C3.46957 21 2.96086 20.7893 2.58579 20.4142C2.21071 20.0391 2 19.5304 2 19V16.92L8.5 10.92C9.5 9.92 11 9.92 12 10.92L22 16.92Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M22 16.92V19C22 19.5304 21.7893 20.0391 21.4142 20.4142C21.0391 20.7893 20.5304 21 20 21H4C3.46957 21 2.96086 20.7893 2.58579 20.4142C2.21071 20.0391 2 19.5304 2 19V16.92L8.5 10.92C9.5 9.92 11 9.92 12 10.92L22 16.92Z"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
               <div class="info-content">
@@ -92,54 +95,59 @@
             <div class="info-card">
               <div class="info-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M22 16.92V19C22 19.5304 21.7893 20.0391 21.4142 20.4142C21.0391 20.7893 20.5304 21 20 21H4C3.46957 21 2.96086 20.7893 2.58579 20.4142C2.21071 20.0391 2 19.5304 2 19V16.92L8.5 10.92C9.5 9.92 11 9.92 12 10.92L22 16.92Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M22 16.92V19C22 19.5304 21.7893 20.0391 21.4142 20.4142C21.0391 20.7893 20.5304 21 20 21H4C3.46957 21 2.96086 20.7893 2.58579 20.4142C2.21071 20.0391 2 19.5304 2 19V16.92L8.5 10.92C9.5 9.92 11 9.92 12 10.92L22 16.92Z"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
               <div class="info-content">
-            <label>Mobile</label>
-            <span>{{ userProfile.mobile || 'Not provided' }}</span>
-          </div>
+                <label>Mobile</label>
+                <span>{{ userProfile.mobile || 'Not provided' }}</span>
+              </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
-                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/>
-                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" />
+                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" />
+                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" />
                 </svg>
               </div>
               <div class="info-content">
-            <label>Date of Birth</label>
-            <span>{{ formatDate(userProfile.dateOfBirth) || 'Not provided' }}</span>
-          </div>
+                <label>Date of Birth</label>
+                <span>{{ formatDate(userProfile.dateOfBirth) || 'Not provided' }}</span>
+              </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                  <path d="M8 14S9.5 16 12 16S16 14 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <line x1="9" y1="9" x2="9.01" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <line x1="15" y1="9" x2="15.01" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                  <path d="M8 14S9.5 16 12 16S16 14 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <line x1="9" y1="9" x2="9.01" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <line x1="15" y1="9" x2="15.01" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
               </div>
               <div class="info-content">
-            <label>Gender</label>
-            <span>{{ formatGender(userProfile.gender) || 'Not provided' }}</span>
-          </div>
+                <label>Gender</label>
+                <span>{{ formatGender(userProfile.gender) || 'Not provided' }}</span>
+              </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
-                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/>
-                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" />
+                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" />
+                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" />
                 </svg>
               </div>
               <div class="info-content">
-            <label>National ID</label>
-            <span>{{ userProfile.nationalId || 'Not provided' }}</span>
+                <label>National ID</label>
+                <span>{{ userProfile.nationalId || 'Not provided' }}</span>
               </div>
             </div>
           </div>
@@ -148,16 +156,15 @@
 
       <!-- Violations & Fines Accordion -->
       <div class="accordion-section">
-        <button 
-          @click="toggleAccordion('violations')" 
-          class="accordion-header"
-          :class="{ active: activeAccordion === 'violations' }"
-        >
+        <button @click="toggleAccordion('violations')" class="accordion-header"
+          :class="{ active: activeAccordion === 'violations' }">
           <div class="accordion-title">
             <div class="section-icon violations-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
             </div>
             <div class="section-text">
               <h3>Violations & Fines</h3>
@@ -166,7 +173,8 @@
           </div>
           <div class="accordion-arrow">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </div>
         </button>
@@ -193,7 +201,9 @@
               <div class="violations-btn-content">
                 <div class="violations-btn-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path
+                      d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
                   <!-- Notification Badge for Pending Violations -->
                   <div v-if="violationStats.pending > 0" class="notification-badge violations-badge">
@@ -207,7 +217,8 @@
               </div>
               <div class="violations-btn-arrow">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
               </div>
             </button>
@@ -215,7 +226,8 @@
             <div v-if="violationStats.total === 0" class="no-violations">
               <div class="no-violations-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
               </div>
               <h4>No Violations</h4>
@@ -227,15 +239,14 @@
 
       <!-- Complaints & Support Accordion -->
       <div class="accordion-section">
-        <button 
-          @click="toggleAccordion('complaints')" 
-          class="accordion-header"
-          :class="{ active: activeAccordion === 'complaints' }"
-        >
+        <button @click="toggleAccordion('complaints')" class="accordion-header"
+          :class="{ active: activeAccordion === 'complaints' }">
           <div class="accordion-title">
             <div class="section-icon complaints-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path
+                  d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </div>
             <div class="section-text">
@@ -245,7 +256,8 @@
           </div>
           <div class="accordion-arrow">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </div>
         </button>
@@ -272,7 +284,9 @@
               <div class="complaints-btn-content">
                 <div class="complaints-btn-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path
+                      d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
                   <!-- Notification Badge for Open Complaints -->
                   <div v-if="complaintStats.open > 0" class="notification-badge complaints-badge">
@@ -286,7 +300,8 @@
               </div>
               <div class="complaints-btn-arrow">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
               </div>
             </button>
@@ -294,7 +309,8 @@
             <div v-if="complaintStats.total === 0" class="no-complaints">
               <div class="no-complaints-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
               </div>
               <h4>No Complaints</h4>
@@ -306,14 +322,13 @@
 
       <!-- Support Accordion -->
       <div class="accordion-section">
-        <button 
-          @click="handleSupport" 
-          class="accordion-header support-header"
-        >
+        <button @click="handleSupport" class="accordion-header support-header">
           <div class="accordion-title">
             <div class="section-icon support-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </div>
             <div class="section-text">
@@ -323,7 +338,8 @@
           </div>
           <div class="accordion-arrow">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </div>
         </button>
@@ -331,16 +347,16 @@
 
       <!-- Current Projects Accordion -->
       <div class="accordion-section">
-        <button 
-          @click="toggleAccordion('projects')" 
-          class="accordion-header"
-          :class="{ active: activeAccordion === 'projects' }"
-        >
+        <button @click="toggleAccordion('projects')" class="accordion-header"
+          :class="{ active: activeAccordion === 'projects' }">
           <div class="accordion-title">
             <div class="section-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path
+                  d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
             </div>
             <div class="section-text">
@@ -350,158 +366,177 @@
           </div>
           <div class="accordion-arrow">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </div>
         </button>
         <div class="accordion-content" :class="{ active: activeAccordion === 'projects' }">
           <!-- Join Project Button -->
           <div class="join-project-section">
-          <button @click="showAddProjectModal = true" class="add-project-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-              Add aUnit
-          </button>
-        </div>
-        
-      <!-- Unified Project Management -->
-      <div v-if="userProjects.length > 0" class="unified-projects-section">
-        <div 
-          v-for="project in userProjects" 
-          :key="project.id"
-          :class="['unified-project-card', { 'current': project.id === currentProjectId }]"
-        >
-          <!-- Project Header -->
-          <div class="project-header">
-            <div class="project-main-info">
-              <div class="project-title-section">
-                <h4 class="project-name">{{ project.name || 'Unnamed Project' }}</h4>
-                <p class="project-location">{{ project.location || 'Location not set' }}</p>
-              </div>
-              <div class="project-status-badges">
-                <span class="project-status" :class="project.status">{{ project.status || 'active' }}</span>
-                <span v-if="project.id === currentProjectId" class="current-badge">Current</span>
-              </div>
-            </div>
-            <div class="project-role-info">
-              <span class="project-unit">Unit {{ project.userUnit || 'N/A' }}</span>
-              <span class="project-role">{{ project.userRole || 'Member' }}</span>
-            </div>
-          </div>
-
-          <!-- Smart Mirror Integration Section -->
-          <div class="smart-mirror-section">
-            <div class="smart-mirror-header">
-              <div class="smart-mirror-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span>Smart Home</span>
-              </div>
-              <div class="smart-mirror-status">
-                <span v-if="isProjectSmartHomeConnected(project.id)" class="status-badge connected">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Connected
-                </span>
-                <span v-else class="status-badge disconnected">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Not Connected
-                </span>
-              </div>
-            </div>
-
-            <div v-if="isProjectSmartHomeConnected(project.id)" class="smart-mirror-connected">
-              <div class="device-summary">
-                <span class="device-count">{{ getProjectDeviceCount(project.id) }} devices</span>
-                <span class="device-types">Lights, Climate, Plugs</span>
-              </div>
-              <div class="smart-mirror-actions">
-                <button @click="goToDevices" class="control-devices-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Control Devices
-                </button>
-                <button @click="disconnectSmartMirror(project.id)" class="disconnect-btn" :disabled="disconnectingProject === project.id">
-                  <svg v-if="disconnectingProject === project.id" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="spinning">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                    <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z" fill="currentColor"/>
-                  </svg>
-                  <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  {{ disconnectingProject === project.id ? 'Disconnecting...' : 'Disconnect' }}
-                </button>
-              </div>
-            </div>
-
-            <div v-else class="smart-mirror-disconnected">
-              <p class="disconnected-message">Connect your smart home devices to control them from this app!</p>
-              <button @click="showLoginModal(project.id)" class="connect-smart-mirror-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Connect Smart Home
-              </button>
-            </div>
-          </div>
-
-          <!-- Project Actions -->
-          <div class="project-actions">
-            <button 
-              v-if="project.id !== currentProjectId"
-              @click="switchToProject(project)"
-              class="switch-project-btn"
-            >
+            <button @click="showAddProjectModal = true" class="add-project-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 7H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M8 3L4 7L8 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M16 13L20 17L16 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
-              Switch to Project
+              Add aUnit
+            </button>
+          </div>
+
+          <!-- Unified Project Management -->
+          <div v-if="userProjects.length > 0" class="unified-projects-section">
+            <div v-for="project in userProjects" :key="project.id"
+              :class="['unified-project-card', { 'current': project.id === currentProjectId }]">
+              <!-- Project Header -->
+              <div class="project-header">
+                <div class="project-main-info">
+                  <div class="project-title-section">
+                    <h4 class="project-name">{{ project.name || 'Unnamed Project' }}</h4>
+                    <p class="project-location">{{ project.location || 'Location not set' }}</p>
+                  </div>
+                  <div class="project-status-badges">
+                    <span class="project-status" :class="project.status">{{ project.status || 'active' }}</span>
+                    <span v-if="project.id === currentProjectId" class="current-badge">Current</span>
+                  </div>
+                </div>
+                <div class="project-role-info">
+                  <span class="project-unit">Unit {{ project.userUnit || 'N/A' }}</span>
+                  <span class="project-role">{{ project.userRole || 'Member' }}</span>
+                </div>
+              </div>
+
+              <!-- Smart Mirror Integration Section -->
+              <div class="smart-mirror-section">
+                <div class="smart-mirror-header">
+                  <div class="smart-mirror-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                      <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                      <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    </svg>
+                    <span>Smart Home</span>
+                  </div>
+                  <div class="smart-mirror-status">
+                    <span v-if="isProjectSmartHomeConnected(project.id)" class="status-badge connected">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" />
+                      </svg>
+                      Connected
+                    </span>
+                    <span v-else class="status-badge disconnected">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" />
+                        <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" />
+                      </svg>
+                      Not Connected
+                    </span>
+                  </div>
+                </div>
+
+                <div v-if="isProjectSmartHomeConnected(project.id)" class="smart-mirror-connected">
+                  <div class="device-summary">
+                    <span class="device-count">{{ getProjectDeviceCount(project.id) }} devices</span>
+                    <span class="device-types">Lights, Climate, Plugs</span>
+                  </div>
+                  <div class="smart-mirror-actions">
+                    <button @click="goToDevices" class="control-devices-btn">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2"
+                          stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" />
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" />
+                      </svg>
+                      Control Devices
+                    </button>
+                    <button @click="disconnectSmartMirror(project.id)" class="disconnect-btn"
+                      :disabled="disconnectingProject === project.id">
+                      <svg v-if="disconnectingProject === project.id" width="16" height="16" viewBox="0 0 24 24"
+                        fill="none" xmlns="http://www.w3.org/2000/svg" class="spinning">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                        <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z"
+                          fill="currentColor" />
+                      </svg>
+                      <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                      {{ disconnectingProject === project.id ? 'Disconnecting...' : 'Disconnect' }}
+                    </button>
+                  </div>
+                </div>
+
+                <div v-else class="smart-mirror-disconnected">
+                  <p class="disconnected-message">Connect your smart home devices to control them from this app!</p>
+                  <button @click="showLoginModal(project.id)" class="connect-smart-mirror-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                      <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                      <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    </svg>
+                    Connect Smart Home
+                  </button>
+                </div>
+              </div>
+
+              <!-- Project Actions -->
+              <div class="project-actions">
+                <button v-if="project.id !== currentProjectId" @click="switchToProject(project)"
+                  class="switch-project-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 7H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <path d="M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <path d="M8 3L4 7L8 11" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <path d="M16 13L20 17L16 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                  </svg>
+                  Switch to Project
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- No Projects State -->
+          <div v-else class="no-projects">
+            <div class="no-projects-icon">🏠</div>
+            <p>You don't have any projects yet.</p>
+            <button @click="showAddProjectModal = true" class="add-first-project-btn">
+              Join Your First Project
             </button>
           </div>
         </div>
       </div>
-      
-      <!-- No Projects State -->
-      <div v-else class="no-projects">
-        <div class="no-projects-icon">🏠</div>
-        <p>You don't have any projects yet.</p>
-        <button @click="showAddProjectModal = true" class="add-first-project-btn">
-          Join Your First Project
-        </button>
-          </div>
-      </div>
-    </div>
 
       <!-- Account Information Accordion -->
       <div class="accordion-section">
-        <button 
-          @click="toggleAccordion('account')" 
-          class="accordion-header"
-          :class="{ active: activeAccordion === 'account' }"
-        >
+        <button @click="toggleAccordion('account')" class="accordion-header"
+          :class="{ active: activeAccordion === 'account' }">
           <div class="accordion-title">
             <div class="section-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
             </div>
             <div class="section-text">
               <h3>Account Information</h3>
@@ -510,64 +545,75 @@
           </div>
           <div class="accordion-arrow">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </div>
         </button>
         <div class="accordion-content" :class="{ active: activeAccordion === 'account' }">
-        <div class="info-grid">
+          <div class="info-grid">
             <div class="info-card">
               <div class="info-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path
+                    d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
               <div class="info-content">
-            <label>Email Verified</label>
-            <span class="verification-status" :class="{ verified: userProfile.emailVerified, unverified: !userProfile.emailVerified }">
+                <label>Email Verified</label>
+                <span class="verification-status"
+                  :class="{ verified: userProfile.emailVerified, unverified: !userProfile.emailVerified }">
                   {{ userProfile.emailVerified ? 'Verified' : 'Not Verified' }}
-            </span>
-          </div>
+                </span>
+              </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
-                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/>
-                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" />
+                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" />
+                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" />
                 </svg>
               </div>
               <div class="info-content">
                 <label>Member Since</label>
-            <span>{{ formatDate(userProfile.createdAt) || 'Not available' }}</span>
-          </div>
+                <span>{{ formatDate(userProfile.createdAt) || 'Not available' }}</span>
+              </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
               </div>
               <div class="info-content">
-            <label>Last Updated</label>
-            <span>{{ formatDate(userProfile.updatedAt) || 'Not available' }}</span>
-          </div>
+                <label>Last Updated</label>
+                <span>{{ formatDate(userProfile.updatedAt) || 'Not available' }}</span>
+              </div>
             </div>
             <div class="info-card">
               <div class="info-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path
+                    d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
               <div class="info-content">
-            <label>Profile Complete</label>
-            <span class="completion-status" :class="{ complete: userProfile.isProfileComplete, incomplete: !userProfile.isProfileComplete }">
+                <label>Profile Complete</label>
+                <span class="completion-status"
+                  :class="{ complete: userProfile.isProfileComplete, incomplete: !userProfile.isProfileComplete }">
                   {{ userProfile.isProfileComplete ? 'Complete' : 'Incomplete' }}
-            </span>
+                </span>
               </div>
             </div>
           </div>
@@ -576,18 +622,18 @@
 
       <!-- Smart Home Settings Accordion - Only show if current project has Smart Mirror connection -->
       <div v-if="isProjectSmartHomeConnected(currentProjectId)" class="accordion-section">
-        <button 
-          @click="toggleAccordion('smartHome')" 
-          class="accordion-header"
-          :class="{ active: activeAccordion === 'smartHome' }"
-        >
+        <button @click="toggleAccordion('smartHome')" class="accordion-header"
+          :class="{ active: activeAccordion === 'smartHome' }">
           <div class="accordion-title">
             <div class="section-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
             </div>
             <div class="section-text">
               <h3>Smart Home Settings</h3>
@@ -596,29 +642,36 @@
           </div>
           <div class="accordion-arrow">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </div>
         </button>
         <div class="accordion-content" :class="{ active: activeAccordion === 'smartHome' }">
-        <div class="smart-home-settings">
+          <div class="smart-home-settings">
             <div class="settings-card">
               <div class="settings-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
-          </div>
+              </div>
               <div class="settings-content">
                 <h4>Device Management</h4>
                 <p>Choose which devices appear on your home page dashboard</p>
-          <button @click="openDeviceManagementModal" class="manage-devices-btn">
+                <button @click="openDeviceManagementModal" class="manage-devices-btn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                  </svg>
                   Manage Devices
                 </button>
               </div>
@@ -633,8 +686,11 @@
           <div class="section-title">
             <div class="section-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path
+                  d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
             </div>
             <div class="section-text">
@@ -644,7 +700,8 @@
           </div>
           <button @click="showGuidelinesDialog = true" class="guidelines-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
             View Guidelines
           </button>
@@ -656,18 +713,24 @@
         <div class="compact-actions">
           <button @click="editProfile" class="compact-btn primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Edit Profile
-        </button>
-        
+              <path
+                d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path
+                d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Edit Profile
+          </button>
+
           <button @click="showLogoutConfirm = true" class="compact-btn secondary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Logout
-        </button>
+              <path
+                d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Logout
+          </button>
         </div>
       </div>
     </div>
@@ -676,8 +739,9 @@
     <div v-else-if="error" class="error-container">
       <div class="error-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="12" r="10" stroke="#ef4444" stroke-width="2"/>
-          <path d="M15 9L9 15M9 9L15 15" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="12" cy="12" r="10" stroke="#ef4444" stroke-width="2" />
+          <path d="M15 9L9 15M9 9L15 15" stroke="#ef4444" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
         </svg>
       </div>
       <h3>Failed to Load Profile</h3>
@@ -686,26 +750,15 @@
     </div>
 
     <!-- Project Guidelines Dialog -->
-    <ProjectGuidelinesDialog 
-      :isOpen="showGuidelinesDialog" 
-      @close="showGuidelinesDialog = false" 
-    />
+    <ProjectGuidelinesDialog :isOpen="showGuidelinesDialog" @close="showGuidelinesDialog = false" />
 
     <!-- Edit Profile Dialog -->
-    <EditProfileDialog 
-      :isOpen="showEditProfileDialog" 
-      :userProfile="userProfile"
-      @close="showEditProfileDialog = false"
-      @saved="handleProfileSaved"
-    />
+    <EditProfileDialog :isOpen="showEditProfileDialog" :userProfile="userProfile" @close="showEditProfileDialog = false"
+      @saved="handleProfileSaved" />
 
     <!-- Violations Modal -->
-    <ViolationsModal
-      :is-open="showViolationsModal"
-      :user-id="userProfile?.id || ''"
-      @close="showViolationsModal = false"
-      @start-chat="handleViolationChat"
-    />
+    <ViolationsModal :is-open="showViolationsModal" :user-id="userProfile?.id || ''"
+      @close="showViolationsModal = false" @start-chat="handleViolationChat" />
 
 
     <!-- Logout Confirmation Modal -->
@@ -738,21 +791,12 @@
           <form @submit.prevent="addNewProject" class="add-project-form">
             <div class="form-group">
               <label for="projectSelection">Select Project</label>
-              <select 
-                id="projectSelection"
-                v-model="newProject.projectId" 
-                required
-                @change="onProjectChange"
-                :disabled="loadingAvailableProjects"
-              >
+              <select id="projectSelection" v-model="newProject.projectId" required @change="onProjectChange"
+                :disabled="loadingAvailableProjects">
                 <option value="">
                   {{ loadingAvailableProjects ? 'Loading projects...' : 'Choose a project to join' }}
                 </option>
-                <option 
-                  v-for="project in availableProjects" 
-                  :key="project.id" 
-                  :value="project.id"
-                >
+                <option v-for="project in availableProjects" :key="project.id" :value="project.id">
                   {{ project.name }} - {{ project.location }}
                 </option>
               </select>
@@ -764,18 +808,13 @@
                 </div>
               </div>
             </div>
-            
+
             <div class="form-group">
               <label for="userUnit">Your Unit</label>
-              <input 
-                id="userUnit"
-                v-model="newProject.userUnit" 
-                type="text" 
-                placeholder="e.g., A1, B2, etc."
-                required
-              />
+              <input id="userUnit" v-model="newProject.userUnit" type="text" placeholder="e.g., A1, B2, etc."
+                required />
             </div>
-            
+
             <div class="form-group">
               <label for="userRole">Your Role</label>
               <select id="userRole" v-model="newProject.userRole" required>
@@ -792,7 +831,7 @@
           <h3>Successfully Joined Project!</h3>
           <p>You can now access your new project from the home page.</p>
         </div>
-        
+
         <!-- Form Actions -->
         <div v-else class="modal-actions">
           <button @click="showAddProjectModal = false" class="cancel-btn">Cancel</button>
@@ -813,128 +852,125 @@
             <div class="header-content">
               <div class="header-icon">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 17L12 22L22 17" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 12L12 17L22 12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path d="M2 17L12 22L22 17" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path d="M2 12L12 17L22 12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
               </div>
               <div class="header-text">
                 <h3>Connect Smart Home Account</h3>
-                <p>Link your smart home devices to {{ userProjects.find(p => p.id === selectedProjectId)?.name || 'this project' }}</p>
+                <p>Link your smart home devices to {{userProjects.find(p => p.id === selectedProjectId)?.name || 'this project' }}</p>
               </div>
             </div>
             <button class="close-btn" @click="closeLoginModal" :disabled="smartMirrorStore.isConnecting">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
             </button>
           </div>
-          
+
           <!-- Project Selection Card -->
           <div class="project-selection-card">
             <div class="project-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M9 22V12H15V22" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path
+                  d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+                  stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M9 22V12H15V22" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
             </div>
             <div class="project-details">
-              <h4>{{ userProjects.find(p => p.id === selectedProjectId)?.name || 'Selected Project' }}</h4>
-              <p>{{ userProjects.find(p => p.id === selectedProjectId)?.location || 'Location not set' }}</p>
+              <h4>{{userProjects.find(p => p.id === selectedProjectId)?.name || 'Selected Project'}}</h4>
+              <p>{{userProjects.find(p => p.id === selectedProjectId)?.location || 'Location not set'}}</p>
               <div v-if="isProjectSmartHomeConnected(selectedProjectId)" class="existing-connection">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
                 <span>Already connected to a different account</span>
               </div>
             </div>
           </div>
-          
+
           <!-- Login Form -->
           <div class="modal-body">
             <form @submit.prevent="handleLogin" class="login-form">
               <div class="form-group">
                 <label for="email">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path
+                      d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
                   </svg>
                   Email Address
                 </label>
                 <div class="input-wrapper">
-                  <input 
-                    id="email"
-                    v-model="loginForm.email" 
-                    type="email" 
-                    placeholder="Enter your Smart Home email"
-                    required
-                    :disabled="smartMirrorStore.isConnecting"
-                    autocomplete="email"
-                  />
+                  <input id="email" v-model="loginForm.email" type="email" placeholder="Enter your Smart Home email"
+                    required :disabled="smartMirrorStore.isConnecting" autocomplete="email" />
                   <div class="input-focus-indicator"></div>
                 </div>
               </div>
-              
+
               <div class="form-group">
                 <label for="password">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                    <circle cx="12" cy="16" r="1" fill="currentColor"/>
-                    <path d="M7 11V7A5 5 0 0 1 17 7V11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+                    <circle cx="12" cy="16" r="1" fill="currentColor" />
+                    <path d="M7 11V7A5 5 0 0 1 17 7V11" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
                   </svg>
                   Password
                 </label>
                 <div class="input-wrapper">
-                  <input 
-                    id="password"
-                    v-model="loginForm.password" 
-                    type="password" 
-                    placeholder="Enter your Smart Home password"
-                    required
-                    :disabled="smartMirrorStore.isConnecting"
-                    autocomplete="current-password"
-                  />
+                  <input id="password" v-model="loginForm.password" type="password"
+                    placeholder="Enter your Smart Home password" required :disabled="smartMirrorStore.isConnecting"
+                    autocomplete="current-password" />
                   <div class="input-focus-indicator"></div>
                 </div>
               </div>
-              
+
               <div v-if="smartMirrorStore.connectionError" class="error-message">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                  <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
-                  <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                  <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" />
+                  <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" />
                 </svg>
                 {{ smartMirrorStore.connectionError }}
               </div>
             </form>
           </div>
-          
+
           <!-- Modal Footer -->
           <div class="modal-footer">
-            <button 
-              @click="closeLoginModal" 
-              class="cancel-btn" 
-              :disabled="smartMirrorStore.isConnecting"
-              type="button"
-            >
+            <button @click="closeLoginModal" class="cancel-btn" :disabled="smartMirrorStore.isConnecting" type="button">
               Cancel
             </button>
-            <button 
-              @click="handleLogin" 
-              class="connect-btn" 
-              :disabled="smartMirrorStore.isConnecting || !loginForm.email || !loginForm.password"
-              type="submit"
-            >
-              <svg v-if="smartMirrorStore.isConnecting" class="loading-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="31.416" stroke-dashoffset="31.416">
-                  <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
-                  <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+            <button @click="handleLogin" class="connect-btn"
+              :disabled="smartMirrorStore.isConnecting || !loginForm.email || !loginForm.password" type="submit">
+              <svg v-if="smartMirrorStore.isConnecting" class="loading-spinner" width="16" height="16"
+                viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" stroke-linecap="round"
+                  stroke-dasharray="31.416" stroke-dashoffset="31.416">
+                  <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416"
+                    repeatCount="indefinite" />
+                  <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416"
+                    repeatCount="indefinite" />
                 </circle>
               </svg>
               <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22 11.08V12A10 10 0 1 1 5.93 5.93" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <polyline points="22,4 12,14.01 9,11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M22 11.08V12A10 10 0 1 1 5.93 5.93" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" />
+                <polyline points="22,4 12,14.01 9,11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
               <span v-if="smartMirrorStore.isConnecting">Connecting...</span>
               <span v-else>Connect Account</span>
@@ -952,20 +988,21 @@
             <h3>Manage Home Page Devices</h3>
             <p>Select which devices to display on your home page dashboard</p>
           </div>
-          
+
           <div class="modal-body">
             <!-- Device Categories -->
             <div class="device-categories">
               <!-- Dynamic Device Categories -->
-              <div 
-                v-for="(categoryDevices, categoryType) in filteredGroupedDevices" 
-                :key="categoryType"
-                class="device-category"
-              >
+              <div v-for="(categoryDevices, categoryType) in filteredGroupedDevices" :key="categoryType"
+                class="device-category">
                 <div class="category-header">
                   <div :class="['category-icon', categoryType]">
-                    <svg :width="20" :height="20" :viewBox="getCategoryIcon(categoryType).viewBox" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path v-for="(path, index) in getCategoryIcon(categoryType).paths" :key="index" :d="path.d" :stroke="path.stroke || 'currentColor'" :stroke-width="path.strokeWidth || '2'" :stroke-linecap="path.strokeLinecap || 'round'" :stroke-linejoin="path.strokeLinejoin || 'round'" :fill="path.fill"/>
+                    <svg :width="20" :height="20" :viewBox="getCategoryIcon(categoryType).viewBox" fill="none"
+                      xmlns="http://www.w3.org/2000/svg">
+                      <path v-for="(path, index) in getCategoryIcon(categoryType).paths" :key="index" :d="path.d"
+                        :stroke="path.stroke || 'currentColor'" :stroke-width="path.strokeWidth || '2'"
+                        :stroke-linecap="path.strokeLinecap || 'round'"
+                        :stroke-linejoin="path.strokeLinejoin || 'round'" :fill="path.fill" />
                     </svg>
                   </div>
                   <div class="category-info">
@@ -974,22 +1011,16 @@
                   </div>
                 </div>
                 <div class="device-list">
-                  <div 
-                    v-for="device in categoryDevices" 
-                    :key="device.id"
-                    class="device-item"
-                  >
+                  <div v-for="device in categoryDevices" :key="device.id" class="device-item">
                     <div class="device-info">
                       <div class="device-name">{{ device.name }}</div>
                       <div class="device-room">{{ device.roomName || 'Unknown Room' }}</div>
                       <div class="device-type">{{ device.type }}</div>
                     </div>
                     <label class="toggle-switch">
-                        <input 
-                          type="checkbox" 
-                          :checked="selectedDevices[categoryType] && selectedDevices[categoryType].includes(device.id)"
-                          @change="toggleDevice(categoryType, device.id, $event.target.checked)"
-                        >
+                      <input type="checkbox"
+                        :checked="selectedDevices[categoryType] && selectedDevices[categoryType].includes(device.id)"
+                        @change="toggleDevice(categoryType, device.id, $event.target.checked)">
                       <span class="toggle-slider"></span>
                     </label>
                   </div>
@@ -1001,9 +1032,12 @@
             <div v-if="totalDevices === 0" class="no-devices-message">
               <div class="no-devices-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
               </div>
               <h4>No Devices Available</h4>
@@ -1014,13 +1048,18 @@
           <div class="modal-actions">
             <button @click="closeDeviceManagementModal" class="cancel-btn">Cancel</button>
             <button @click="saveDeviceSettings" class="save-btn" :disabled="savingSettings">
-              <svg v-if="savingSettings" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="spinning">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z" fill="currentColor"/>
+              <svg v-if="savingSettings" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg" class="spinning">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2Z"
+                  fill="currentColor" />
               </svg>
               <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path
+                  d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
               {{ savingSettings ? 'Saving...' : 'Save' }}
             </button>
@@ -1034,7 +1073,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import authService from '../../services/authService'
+import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
 import { useNotificationStore } from '../../stores/notifications'
 import { useProjectStore } from '../../stores/projectStore'
@@ -1156,24 +1195,24 @@ const filteredGroupedDevices = computed(() => {
 // Load user profile from Firestore
 const loadProfile = async () => {
   try {
-    const currentUser = await authService.getCurrentUser()
+    const currentUser = await optimizedAuthService.getCurrentUser()
     if (!currentUser) {
-    error.value = 'No authenticated user found'
-    loading.value = false
-    return
-  }
+      error.value = 'No authenticated user found'
+      loading.value = false
+      return
+    }
 
     loading.value = true
     error.value = null
-    
+
     console.log('ProfilePage: Loading profile for user:', currentUser.uid)
     const profileDoc = await firestoreService.getDoc(`users/${currentUser.uid}`)
-    
+
     if (profileDoc.exists()) {
       const profileData = profileDoc.data()
       userProfile.value = { id: currentUser.uid, ...profileData }
       console.log('ProfilePage: Profile loaded successfully:', userProfile.value)
-      
+
       // Also load user projects and available projects
       await projectStore.fetchUserProjects(currentUser.uid)
       await fetchAvailableProjects()
@@ -1190,12 +1229,12 @@ const loadProfile = async () => {
 }
 
 const loadViolationStats = async () => {
-  const currentUser = await authService.getCurrentUser()
+  const currentUser = await optimizedAuthService.getCurrentUser()
   if (!currentUser || !projectStore.selectedProject) return
-  
+
   try {
     const userViolations = await getUserFines(projectStore.selectedProject.id, currentUser.uid)
-    
+
     const stats = userViolations.reduce((acc, violation) => {
       acc.total++
       if (violation.status === 'issued') acc.pending++
@@ -1204,7 +1243,7 @@ const loadViolationStats = async () => {
       else if (violation.status === 'cancelled') acc.cancelled++
       return acc
     }, { total: 0, pending: 0, paid: 0, disputed: 0, cancelled: 0 })
-    
+
     violationStats.value = stats
   } catch (error) {
     console.error('Error loading violation stats:', error)
@@ -1212,15 +1251,15 @@ const loadViolationStats = async () => {
 }
 
 const loadComplaintStats = async () => {
-  const currentUser = await authService.getCurrentUser()
+  const currentUser = await optimizedAuthService.getCurrentUser()
   if (!currentUser || !projectStore.selectedProject) return
-  
+
   try {
     const userComplaints = await complaintService.getComplaints(projectStore.selectedProject.id)
-    
+
     // Filter complaints for current user
     const myComplaints = userComplaints.filter(complaint => complaint.userId === currentUser.uid)
-    
+
     const stats = myComplaints.reduce((acc, complaint) => {
       acc.total++
       if (complaint.status === 'Open') acc.open++
@@ -1228,7 +1267,7 @@ const loadComplaintStats = async () => {
       else if (complaint.status === 'Closed') acc.closed++
       return acc
     }, { total: 0, open: 0, resolved: 0, closed: 0 })
-    
+
     complaintStats.value = stats
   } catch (error) {
     console.error('Error loading complaint stats:', error)
@@ -1239,11 +1278,11 @@ const loadComplaintStats = async () => {
 const handleLogout = async () => {
   try {
     logoutLoading.value = true
-    
-    await authService.signOut()
-    
+
+    await optimizedAuthService.signOut()
+
     notificationStore.showSuccess('Logged out successfully')
-    
+
     // Redirect to login/register page
     router.push('/onboarding')
   } catch (err) {
@@ -1265,7 +1304,7 @@ const handleProfileSaved = (updatedData) => {
   if (userProfile.value) {
     Object.assign(userProfile.value, updatedData)
   }
-  
+
   // Show success message
   notificationStore.showSuccess('Profile updated successfully!')
 }
@@ -1280,7 +1319,7 @@ const fetchAvailableProjects = async () => {
   try {
     loadingAvailableProjects.value = true
     const snapshot = await firestoreService.getDocs('projects')
-    
+
     availableProjects.value = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -1294,7 +1333,7 @@ const fetchAvailableProjects = async () => {
 }
 
 const addNewProject = async () => {
-  const currentUser = await authService.getCurrentUser()
+  const currentUser = await optimizedAuthService.getCurrentUser()
   if (!currentUser) {
     notificationStore.showError('You must be logged in to join a project')
     return
@@ -1307,10 +1346,10 @@ const addNewProject = async () => {
 
   try {
     addProjectLoading.value = true
-    
+
     // Get the selected project details
     const selectedProject = availableProjects.value.find(p => p.id === newProject.value.projectId)
-    
+
     if (!selectedProject) {
       notificationStore.showError('Selected project not found')
       return
@@ -1322,10 +1361,10 @@ const addNewProject = async () => {
       notificationStore.showError('User document not found')
       return
     }
-    
+
     const userData = userDoc.data()
     const currentProjects = userData.projects || []
-    
+
     // Create the project object to add to the user's projects array
     const newUserProject = {
       projectId: newProject.value.projectId,
@@ -1333,15 +1372,15 @@ const addNewProject = async () => {
       unit: newProject.value.userUnit,
       updatedAt: new Date()
     }
-    
+
     // Add the new project to the user's projects array
     await firestoreService.updateDoc(`users/${currentUser.uid}`, {
       projects: [...currentProjects, newUserProject],
       updatedAt: firestoreService.serverTimestamp()
     })
-    
+
     notificationStore.showSuccess(`Successfully joined ${selectedProject.name}!`)
-    
+
     // Show success state briefly before closing
     projectJoinSuccess.value = true
     setTimeout(() => {
@@ -1349,10 +1388,10 @@ const addNewProject = async () => {
       showAddProjectModal.value = false
       resetNewProjectForm()
     }, 1500)
-    
+
     // Refresh user's projects
     await projectStore.fetchUserProjects(currentUser.uid)
-    
+
   } catch (err) {
     console.error('Error joining project:', err)
     notificationStore.showError('Failed to join project. Please try again.')
@@ -1378,24 +1417,24 @@ const onProjectChange = () => {
 const switchToProject = async (project) => {
   try {
     projectStore.selectProject(project)
-    
+
     // Check if we need to re-authenticate for a different smart home account
     if (smartMirrorStore.needsReAuthentication(project.id)) {
       // Show login modal for this project
       showLoginModal(project.id)
       return
     }
-    
+
     // Switch Smart Mirror data to the new project
     await smartMirrorStore.switchToProject(project.id)
-    
+
     notificationStore.showSuccess(`Switched to ${project.name}`)
-    
+
     // Redirect to home page after a short delay
     setTimeout(() => {
       router.push('/home')
     }, 1000)
-    
+
   } catch (err) {
     console.error('Error switching project:', err)
     notificationStore.showError('Failed to switch project. Please try again.')
@@ -1441,7 +1480,7 @@ const handleLogin = async () => {
   }
 
   const result = await smartMirrorStore.connect(loginForm.value.email, loginForm.value.password, selectedProjectId.value)
-  
+
   if (result.success) {
     const project = userProjects.value.find(p => p.id === selectedProjectId.value)
     notificationStore.showSuccess(`Successfully connected Smart Mirror to ${project?.name}!`)
@@ -1454,9 +1493,9 @@ const handleLogin = async () => {
 const disconnectSmartMirror = async (projectId) => {
   try {
     disconnectingProject.value = projectId
-    
+
     const result = await smartMirrorStore.disconnect(projectId)
-    
+
     if (result.success) {
       const project = userProjects.value.find(p => p.id === projectId)
       notificationStore.showSuccess(`Successfully disconnected Smart Mirror from ${project?.name}`)
@@ -1489,33 +1528,33 @@ const getFullName = (firstName, lastName) => {
   return 'User'
 }
 
-const formatStatus = (status) => {
-  if (!status) return 'Unknown'
-  
-  const statusMap = {
-    'pending': 'Pending',
-    'completed': 'Completed',
-    'verified': 'Verified'
-  }
-  
-  return statusMap[status] || status
-}
+// const formatStatus = (status) => {
+//   if (!status) return 'Unknown'
+
+//   const statusMap = {
+//     'pending': 'Pending',
+//     'completed': 'Completed',
+//     'verified': 'Verified'
+//   }
+
+//   return statusMap[status] || status
+// }
 
 const getStatusClass = (status) => {
   if (!status) return 'status-unknown'
-  
+
   const classMap = {
     'pending': 'status-pending',
     'completed': 'status-completed',
     'verified': 'status-verified'
   }
-  
+
   return classMap[status] || 'status-unknown'
 }
 
 const formatDate = (date) => {
   if (!date) return null
-  
+
   try {
     if (date.toDate) {
       // Firestore timestamp
@@ -1535,19 +1574,19 @@ const formatDate = (date) => {
   } catch (err) {
     console.warn('Error formatting date:', err)
   }
-  
+
   return date
 }
 
 const formatGender = (gender) => {
   if (!gender) return null
-  
+
   const genderMap = {
     'male': 'Male',
     'female': 'Female',
     'other': 'Other'
   }
-  
+
   return genderMap[gender] || gender
 }
 
@@ -1716,7 +1755,7 @@ const loadDeviceSettings = () => {
       plugs: []
     }
     const currentProjectDevices = smartMirrorStore.devices || []
-    
+
     currentProjectDevices.forEach(device => {
       const categoryType = getDeviceCategory(device.type)
       if (!selectedDevices.value[categoryType]) {
@@ -1724,7 +1763,7 @@ const loadDeviceSettings = () => {
       }
       selectedDevices.value[categoryType].push(device.id)
     })
-    
+
     // Save the default selection
     localStorage.setItem(`deviceSettings_${currentProjectId.value}`, JSON.stringify(selectedDevices.value))
   }
@@ -1735,7 +1774,7 @@ const toggleDevice = (category, deviceId, isSelected) => {
   if (!selectedDevices.value[category]) {
     selectedDevices.value[category] = []
   }
-  
+
   if (isSelected) {
     if (!selectedDevices.value[category].includes(deviceId)) {
       selectedDevices.value[category].push(deviceId)
@@ -1748,16 +1787,16 @@ const toggleDevice = (category, deviceId, isSelected) => {
 const saveDeviceSettings = async () => {
   try {
     savingSettings.value = true
-    
+
     // Save settings to localStorage
     localStorage.setItem(`deviceSettings_${currentProjectId.value}`, JSON.stringify(selectedDevices.value))
-    
+
     // Update Smart Mirror store with selected devices
     smartMirrorStore.setSelectedDevices(selectedDevices.value)
-    
+
     notificationStore.showSuccess('Device settings saved successfully!')
     closeDeviceManagementModal()
-    
+
   } catch (err) {
     console.error('Error saving device settings:', err)
     notificationStore.showError('Failed to save device settings. Please try again.')
@@ -1816,8 +1855,13 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .profile-content {
@@ -1830,7 +1874,7 @@ onMounted(() => {
   background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: #F6F6F6;
   border-radius: 16px;
-  padding: 32px;
+  padding: 20px;
   margin-bottom: 24px;
   box-shadow: 0 4px 20px rgba(175, 30, 35, 0.2);
   position: relative;
@@ -1927,7 +1971,7 @@ onMounted(() => {
 
 .hero-subtitle {
   font-size: 1rem;
-  margin: 0 0 16px 0;
+  margin: 0;
   opacity: 0.9;
   font-weight: 400;
 }
@@ -2426,59 +2470,59 @@ onMounted(() => {
 }
 
 /* Responsive Design */
-@media (max-width: 768px) { 
-  
+@media (max-width: 768px) {
+
   .hero-content {
-  flex-direction: column;
+    flex-direction: column;
     text-align: center;
     gap: 16px;
   }
-  
+
   .hero-title {
     font-size: 1.75rem;
   }
-  
+
   .info-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .compact-actions {
     flex-direction: column;
-  gap: 8px;
+    gap: 8px;
   }
-  
+
   .compact-btn {
     width: 100%;
   }
-  
+
   .action-buttons {
     grid-template-columns: 1fr;
   }
-  
+
   .accordion-header {
     padding: 16px 20px;
   }
-  
+
   .accordion-content.active {
     padding: 12px 12px 12px 12px;
   }
-  
+
   .accordion-title {
     gap: 12px;
   }
-  
+
   .accordion-actions {
     flex-direction: column;
-  gap: 8px;
+    gap: 8px;
     align-items: flex-end;
   }
-  
+
   .section-header {
     flex-direction: column;
     gap: 16px;
     align-items: flex-start;
   }
-  
+
   .section-title {
     gap: 12px;
   }
@@ -2632,9 +2676,17 @@ onMounted(() => {
 }
 
 @keyframes success-bounce {
-  0% { transform: scale(0); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 .add-project-form {
@@ -2795,15 +2847,27 @@ onMounted(() => {
   animation: dot-bounce 1.4s ease-in-out infinite both;
 }
 
-.dot:nth-child(1) { animation-delay: -0.32s; }
-.dot:nth-child(2) { animation-delay: -0.16s; }
-.dot:nth-child(3) { animation-delay: 0s; }
+.dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0s;
+}
 
 @keyframes dot-bounce {
-  0%, 80%, 100% {
+
+  0%,
+  80%,
+  100% {
     transform: scale(0);
     opacity: 0.5;
   }
+
   40% {
     transform: scale(1);
     opacity: 1;
@@ -2812,19 +2876,19 @@ onMounted(() => {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  
+
   .info-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .profile-header {
     padding: 30px 16px;
   }
-  
+
   .profile-name {
     font-size: 1.5rem;
   }
-  
+
   .info-section {
     padding: 20px;
   }
@@ -2921,7 +2985,8 @@ onMounted(() => {
   align-items: center;
 }
 
-.project-unit, .project-role {
+.project-unit,
+.project-role {
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 0.75rem;
@@ -3204,8 +3269,13 @@ onMounted(() => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-content {
@@ -3216,7 +3286,7 @@ onMounted(() => {
   width: 90%;
   max-height: 90vh;
   overflow: hidden;
-  box-shadow: 
+  box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.25),
     0 0 0 1px rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -3231,6 +3301,7 @@ onMounted(() => {
     opacity: 0;
     transform: translateY(30px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -3414,7 +3485,7 @@ onMounted(() => {
   border-color: #AF1E23;
   background: #fefefe;
   transform: translateY(-1px);
-  box-shadow: 
+  box-shadow:
     0 0 0 4px rgba(255, 107, 53, 0.1),
     0 4px 12px rgba(255, 107, 53, 0.15);
 }
@@ -3437,7 +3508,7 @@ onMounted(() => {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.form-group input:focus + .input-focus-indicator {
+.form-group input:focus+.input-focus-indicator {
   transform: scaleX(1);
 }
 
@@ -3456,9 +3527,19 @@ onMounted(() => {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-4px);
+  }
+
+  75% {
+    transform: translateX(4px);
+  }
 }
 
 .modal-footer {
@@ -3531,8 +3612,13 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive Design */
@@ -3540,33 +3626,33 @@ onMounted(() => {
   .unified-project-card {
     padding: 16px;
   }
-  
+
   .project-main-info {
     flex-direction: column;
     gap: 8px;
     align-items: flex-start;
   }
-  
+
   .smart-mirror-connected {
     flex-direction: column;
     gap: 12px;
     align-items: flex-start;
   }
-  
+
   .smart-mirror-actions {
     width: 100%;
   }
-  
+
   .control-devices-btn,
   .connect-smart-mirror-btn {
     width: 100%;
     justify-content: center;
   }
-  
+
   .project-actions {
     justify-content: center;
   }
-  
+
   .switch-project-btn {
     width: 100%;
     justify-content: center;
@@ -3803,11 +3889,11 @@ onMounted(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-input:checked + .toggle-slider {
+input:checked+.toggle-slider {
   background-color: #AF1E23;
 }
 
-input:checked + .toggle-slider:before {
+input:checked+.toggle-slider:before {
   transform: translateX(20px);
 }
 
@@ -4052,28 +4138,28 @@ input:checked + .toggle-slider:before {
   .violations-stats {
     gap: 12px;
   }
-  
+
   .stat-number {
     font-size: 1.25rem;
   }
-  
+
   .violations-btn {
     padding: 12px;
   }
-  
+
   .violations-btn-content {
     gap: 12px;
   }
-  
+
   .violations-btn-icon {
     width: 40px;
     height: 40px;
   }
-  
+
   .no-violations {
     padding: 30px 16px;
   }
-  
+
   .no-violations-icon {
     width: 56px;
     height: 56px;
@@ -4204,26 +4290,26 @@ input:checked + .toggle-slider:before {
   .complaints-stats {
     gap: 12px;
   }
-  
+
   .complaints-btn {
     padding: 12px;
   }
-  
+
   .complaints-btn-content {
     gap: 12px;
   }
-  
+
   .complaints-btn-icon {
     width: 40px;
     height: 40px;
   }
-  
+
   /* Support responsive styles handled by accordion styles */
-  
+
   .no-complaints {
     padding: 30px 16px;
   }
-  
+
   .no-complaints-icon {
     width: 56px;
     height: 56px;
@@ -4259,9 +4345,12 @@ input:checked + .toggle-slider:before {
 }
 
 @keyframes badge-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.1);
   }

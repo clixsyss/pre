@@ -1,5 +1,5 @@
 import firestoreService from './firestoreService';
-import collectionQueryService from './collectionQueryService';
+import fastCollectionService from './fastCollectionService';
 import { 
   ref, 
   uploadBytes, 
@@ -8,40 +8,27 @@ import {
 } from 'firebase/storage';
 import { storage } from '../boot/firebase';
 
-// Get all ads for a project
+// Get all ads for a project (optimized)
 export const getAds = async (projectId) => {
   try {
-    const snapshot = await collectionQueryService.getDocsOrderedBy(
-      `projects/${projectId}/ads`,
-      'createdAt',
-      'desc'
-    );
-    
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    console.log('🚀 AdsService: Getting ads for project:', projectId);
+    const ads = await fastCollectionService.getAds(projectId);
+    console.log('🚀 AdsService: Retrieved ads:', ads.length);
+    return ads;
   } catch (error) {
     console.error('Error fetching ads:', error);
     throw error;
   }
 };
 
-// Get active ads for a project (for display)
+// Get active ads for a project (for display) - optimized
 export const getActiveAds = async (projectId) => {
   try {
-    const snapshot = await collectionQueryService.getDocsWithOptions(
-      `projects/${projectId}/ads`,
-      {
-        where: [{ field: 'isActive', operator: '==', value: true }],
-        orderBy: { field: 'order', direction: 'asc' }
-      }
-    );
-    
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    console.log('🚀 AdsService: Getting active ads for project:', projectId);
+    const ads = await fastCollectionService.getAds(projectId);
+    const activeAds = ads.filter(ad => ad.isActive).sort((a, b) => a.order - b.order);
+    console.log('🚀 AdsService: Retrieved active ads:', activeAds.length);
+    return activeAds;
   } catch (error) {
     console.error('Error fetching active ads:', error);
     throw error;

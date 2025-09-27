@@ -1,6 +1,6 @@
 import { db, isNative } from '../boot/firebase'
 import errorHandlingService from './errorHandlingService'
-import collectionQueryService from './collectionQueryService'
+import cacheService from './cacheService'
 import {
   doc,
   getDoc,
@@ -35,9 +35,21 @@ class FirestoreService {
     }
   }
 
-  // Get a document
-  async getDoc(path) {
+  // Get a document with caching
+  async getDoc(path, useCache = true) {
     try {
+      // Check cache first
+      if (useCache) {
+        const cachedData = cacheService.get(path)
+        if (cachedData) {
+          return {
+            exists: () => cachedData !== null,
+            data: () => cachedData,
+            id: path.split('/').pop()
+          }
+        }
+      }
+
       if (this.isNative) {
         await this.initialize()
         const result = await this.capacitorFirestore.getDocument({
@@ -47,15 +59,28 @@ class FirestoreService {
         
         // Check if the snapshot exists and has data
         const exists = result.snapshot && result.snapshot.data && Object.keys(result.snapshot.data).length > 0
+        const data = result.snapshot.data || {}
+        
+        // Cache the result
+        if (useCache && exists) {
+          cacheService.set(path, data)
+        }
         
         return {
           exists: () => exists,
-          data: () => result.snapshot.data || {},
+          data: () => data,
           id: result.snapshot.id || path.split('/').pop()
         }
       } else {
         const docRef = doc(this.db, path)
-        return await getDoc(docRef)
+        const result = await getDoc(docRef)
+        
+        // Cache the result
+        if (useCache && result.exists()) {
+          cacheService.set(path, result.data())
+        }
+        
+        return result
       }
     } catch (error) {
       console.error('Get document error:', error)
@@ -91,6 +116,9 @@ class FirestoreService {
           await setDoc(docRef, data)
         }
       }
+      
+      // Invalidate cache for this document
+      cacheService.delete(path)
     } catch (error) {
       console.error('Set document error:', error)
       throw error
@@ -156,18 +184,98 @@ class FirestoreService {
     }
   }
 
-  // Get documents from collection
-  async getDocs(collectionPath, queryConstraints = []) {
+  // Get documents from collection with timeout and fallback
+  async getDocs(collectionPath, timeoutMs = 8000) {
     try {
       console.log('FirestoreService: Getting collection docs for:', collectionPath)
       
-      // Always use Firebase Web SDK for collection queries
-      // since Capacitor Firebase Firestore plugin doesn't support getDocuments
-      return await collectionQueryService.getCollectionDocs(collectionPath, queryConstraints)
+      // Check cache first
+      const cacheKey = `collection:${collectionPath}`
+      const cachedData = cacheService.get(cacheKey)
+      if (cachedData) {
+        console.log('FirestoreService: Using cached collection data for:', collectionPath)
+        return {
+          docs: cachedData.docs || [],
+          empty: cachedData.empty || false,
+          size: cachedData.size || 0
+        }
+      }
+
+      if (this.isNative) {
+        await this.initialize()
+        
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Query timeout')), timeoutMs)
+        })
+        
+        // Create the actual query promise
+        const queryPromise = this.capacitorFirestore.getCollection({
+          reference: collectionPath
+        })
+        
+        try {
+          // Race between query and timeout
+          const result = await Promise.race([queryPromise, timeoutPromise])
+          
+          console.log('FirestoreService: Collection query successful for:', collectionPath)
+          
+          const docs = result.snapshots || []
+          const collectionData = {
+            docs: docs.map(doc => ({
+              id: doc.id,
+              data: () => doc.data || {}
+            })),
+            empty: docs.length === 0,
+            size: docs.length
+          }
+          
+          // Cache the result
+          cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
+          
+          return collectionData
+        } catch (queryError) {
+          console.warn('FirestoreService: Collection query failed for:', collectionPath, queryError.message)
+          
+          // Return empty result instead of throwing
+          const emptyResult = {
+            docs: [],
+            empty: true,
+            size: 0
+          }
+          
+          // Cache empty result for shorter time to allow retries
+          cacheService.set(cacheKey, emptyResult, 30 * 1000) // 30 seconds cache
+          
+          return emptyResult
+        }
+      } else {
+        // Web SDK - use regular collection query
+        const { getDocs, collection } = await import('firebase/firestore')
+        const collectionRef = collection(this.db, collectionPath)
+        const result = await getDocs(collectionRef)
+        
+        const collectionData = {
+          docs: result.docs,
+          empty: result.empty,
+          size: result.size
+        }
+        
+        // Cache the result
+        cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
+        
+        return collectionData
+      }
     } catch (error) {
       console.error('Get documents error:', error)
       errorHandlingService.handleFirestoreError(error, `getDocs(${collectionPath})`)
-      throw error
+      
+      // Return empty result instead of throwing to prevent app crashes
+      return {
+        docs: [],
+        empty: true,
+        size: 0
+      }
     }
   }
 

@@ -1,4 +1,4 @@
-import collectionQueryService from './collectionQueryService';
+import fastCollectionService from './fastCollectionService';
 
 class ServiceCategoriesService {
   /**
@@ -9,26 +9,9 @@ class ServiceCategoriesService {
    */
   async getServiceCategories(projectId, availableOnly = true) {
     try {
-      const queryOptions = {
-        orderBy: { field: 'createdAt', direction: 'desc' }
-      };
-
-      // If we want only available categories, add a where clause
-      if (availableOnly) {
-        queryOptions.where = [{ field: 'status', operator: '==', value: 'available' }];
-      }
-
-      const querySnapshot = await collectionQueryService.getDocsWithOptions(
-        `projects/${projectId}/serviceCategories`,
-        queryOptions
-      );
-
-      const categories = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      console.log('Service categories fetched:', categories.length);
+      console.log('🚀 ServiceCategoriesService: Getting categories for project:', projectId);
+      const categories = await fastCollectionService.getServiceCategories(projectId, availableOnly);
+      console.log('🚀 ServiceCategoriesService: Retrieved categories:', categories.length);
       return categories;
     } catch (error) {
       console.error('Error fetching service categories:', error);
@@ -45,26 +28,9 @@ class ServiceCategoriesService {
    */
   async getServicesByCategory(projectId, categoryId, availableOnly = true) {
     try {
-      const queryOptions = {
-        orderBy: { field: 'createdAt', direction: 'desc' }
-      };
-
-      // If we want only available services, add a where clause
-      if (availableOnly) {
-        queryOptions.where = [{ field: 'status', operator: '==', value: 'available' }];
-      }
-
-      const querySnapshot = await collectionQueryService.getDocsWithOptions(
-        `projects/${projectId}/serviceCategories/${categoryId}/services`,
-        queryOptions
-      );
-
-      const services = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      console.log('Services by category fetched:', services.length);
+      console.log('🚀 ServiceCategoriesService: Getting services for category:', categoryId);
+      const services = await fastCollectionService.getServicesByCategory(projectId, categoryId, availableOnly);
+      console.log('🚀 ServiceCategoriesService: Retrieved services:', services.length);
       return services;
     } catch (error) {
       console.error('Error fetching services by category:', error);

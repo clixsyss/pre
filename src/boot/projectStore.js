@@ -1,13 +1,13 @@
 import { boot } from 'quasar/wrappers'
 import { useProjectStore } from 'src/stores/projectStore'
-import authService from 'src/services/authService'
+import optimizedAuthService from 'src/services/optimizedAuthService'
 
 export default boot(async ({ app }) => {
   // Initialize project store when app starts
   const projectStore = useProjectStore()
   
   // Listen for auth state changes and rehydrate project store
-  const unsubscribe = authService.onAuthStateChanged(async (user) => {
+  const unsubscribe = optimizedAuthService.onAuthStateChanged(async (user) => {
     console.log('App boot: Auth state changed, user:', user ? 'authenticated' : 'not authenticated')
     if (user) {
       console.log('App boot: User authenticated, rehydrating project store...', 'User ID:', user.uid)

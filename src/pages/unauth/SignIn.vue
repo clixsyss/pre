@@ -111,7 +111,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import authService from '../../services/authService'
+import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
 import { useNotificationStore } from '../../stores/notifications'
 import { useRegistrationStore } from '../../stores/registration'
@@ -179,7 +179,7 @@ const handleSignIn = async () => {
   loading.value = true
   
   try {
-    const userCredential = await authService.signInWithEmailAndPassword(formData.email, formData.password)
+    const userCredential = await optimizedAuthService.signInWithEmailAndPassword(formData.email, formData.password)
     const user = userCredential.user
     
     // Check user approval status
