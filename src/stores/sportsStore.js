@@ -1,13 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import { db } from "boot/firebase";
-import {
-    collection,
-    getDocs,
-    updateDoc,
-    doc, 
-    setDoc,
-} from "firebase/firestore";
+import firestoreService from "../services/firestoreService";
 
 export const useSportsStore = defineStore("sportsStore", () => {
     const sportsOptions = ref([]);
@@ -28,16 +21,21 @@ export const useSportsStore = defineStore("sportsStore", () => {
             loading.value = true;
             error.value = null;
 
+            console.log('🚀 SportsStore: Fetching courts for project:', projectId);
+
             // First, fetch all courts from the project to see what sports are referenced
-            const courtsRef = collection(db, `projects/${projectId}/courts`);
-            const courtsSnapshot = await getDocs(courtsRef);
+            const courtsPath = `projects/${projectId}/courts`;
+            const courtsQueryOptions = {
+                timeoutMs: 6000
+            };
+            const courtsResult = await firestoreService.getDocs(courtsPath, courtsQueryOptions);
             
             const courtsData = {};
             const sportIds = new Set();
             
             // Process courts and collect unique sport IDs
-            courtsSnapshot.forEach((docSnap) => {
-                const courtData = docSnap.data();
+            courtsResult.docs.forEach((docSnap) => {
+                const courtData = docSnap.data(); // Call the function to get actual data
                 const sportId = courtData.sport;
                 
                 console.log('Processing court:', docSnap.id, 'with sport ID:', sportId);
@@ -68,16 +66,19 @@ export const useSportsStore = defineStore("sportsStore", () => {
             console.log('Courts data structure:', courtsData);
 
             // Now fetch sports data for the collected sport IDs
-            const sportsRef = collection(db, `projects/${projectId}/sports`);
-            const sportsSnapshot = await getDocs(sportsRef);
+            const sportsPath = `projects/${projectId}/sports`;
+            const sportsQueryOptions = {
+                timeoutMs: 6000
+            };
+            const sportsResult = await firestoreService.getDocs(sportsPath, sportsQueryOptions);
             
-            console.log('Sports snapshot size:', sportsSnapshot.size);
+            console.log('Sports result size:', sportsResult.docs.length);
             
             const sportsData = [];
             const existingSportIds = new Set();
             
-            sportsSnapshot.forEach((docSnap) => {
-                const sportData = docSnap.data();
+            sportsResult.docs.forEach((docSnap) => {
+                const sportData = docSnap.data(); // Call the function to get actual data
                 const sportId = docSnap.id;
                 existingSportIds.add(sportId);
                 
@@ -134,13 +135,11 @@ export const useSportsStore = defineStore("sportsStore", () => {
     const addSport = async (projectId, sport) => {
         if (!projectId || !sport.trim()) return;
 
-        const sportRef = doc(db, `projects/${projectId}/sports`, sport);
-
         try {
-            await setDoc(sportRef, { 
+            await firestoreService.setDoc(`projects/${projectId}/sports/${sport}`, { 
                 name: sport,
                 courts: [] 
-            }, { merge: true });
+            });
 
             if (!sportsOptions.value.includes(sport)) {
                 sportsOptions.value.push(sport);
@@ -161,8 +160,7 @@ export const useSportsStore = defineStore("sportsStore", () => {
 
         courtsBySport.value[sport].push(court);
 
-        const sportRef = doc(db, `projects/${projectId}/sports`, sport);
-        await updateDoc(sportRef, { courts: courtsBySport.value[sport] });
+        await firestoreService.updateDoc(`projects/${projectId}/sports/${sport}`, { courts: courtsBySport.value[sport] });
     };
 
     const updateCourt = async (projectId, sport, courtId, updatedCourt) => {
@@ -172,8 +170,7 @@ export const useSportsStore = defineStore("sportsStore", () => {
         if (index !== -1) {
             courtsBySport.value[sport][index] = updatedCourt;
 
-            const sportRef = doc(db, `projects/${projectId}/sports`, sport);
-            await updateDoc(sportRef, { courts: courtsBySport.value[sport] });
+            await firestoreService.updateDoc(`projects/${projectId}/sports/${sport}`, { courts: courtsBySport.value[sport] });
         }
     };
 
@@ -217,8 +214,7 @@ export const useSportsStore = defineStore("sportsStore", () => {
     // Method to create a sport from court data if it doesn't exist
     const createSportFromCourt = async (projectId, sportId, courtData) => {
         try {
-            const sportRef = doc(db, `projects/${projectId}/sports`, sportId);
-            await setDoc(sportRef, {
+            await firestoreService.setDoc(`projects/${projectId}/sports/${sportId}`, {
                 name: sportId, // Use the ID as name for now
                 description: `Sport for ${courtData.name || 'court'}`,
                 category: 'General',

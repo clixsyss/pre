@@ -515,8 +515,16 @@ const loadDefaultLogo = async () => {
 const fetchNews = async () => {
   // Use project store as primary source, prop as fallback
   const projectId = projectStore.selectedProject?.id || props.projectId
-  if (!projectId) return
+  console.log('🔍 ModernNewsFeed.fetchNews called with projectId:', projectId)
+  console.log('🔍 Project store selectedProject:', projectStore.selectedProject)
+  console.log('🔍 Props projectId:', props.projectId)
+  
+  if (!projectId) {
+    console.log('❌ ModernNewsFeed: No project ID available, skipping news fetch')
+    return
+  }
 
+  console.log('🚀 ModernNewsFeed: Starting news fetch for project:', projectId)
   loading.value = true
   try {
     // Import news service dynamically to avoid circular imports
@@ -586,6 +594,10 @@ const observeVideo = (videoElement, itemId) => {
 }
 
 onMounted(async () => {
+  console.log('🔍 ModernNewsFeed: onMounted called')
+  console.log('🔍 Project store selectedProject on mount:', projectStore.selectedProject)
+  console.log('🔍 Props projectId on mount:', props.projectId)
+  
   await loadDefaultLogo()
   await fetchNews()
   setupVideoLazyLoading()

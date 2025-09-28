@@ -15,7 +15,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import SplashScreen from './components/SplashScreen.vue'
 import NotificationPopup from './components/NotificationPopup.vue'
@@ -32,21 +32,27 @@ const isRouterLoading = ref(true)
 const splashStore = useSplashStore()
 
 onMounted(async () => {
-  // Show splash screen with loading
-  splashStore.showSplash()
-  splashStore.setLoading(true)
-  
-  // Simulate app initialization
-  await new Promise(resolve => setTimeout(resolve, 2000))
-  
-  // Hide loading indicator
-  splashStore.setLoading(false)
-  
-  // Hide splash screen after a short delay
-  setTimeout(() => {
+  try {
+    console.log('🚀 App.vue: Starting app initialization...')
+    
+    // Wait for Vue to be fully ready
+    await nextTick()
+    console.log('🚀 App.vue: Vue app mounted')
+    
+    // Small delay to ensure everything is ready
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // Hide splash screen and show app content
     splashStore.hideSplash()
     isRouterLoading.value = false
-  }, 500)
+    console.log('🚀 App.vue: App ready, splash hidden')
+    
+  } catch (error) {
+    console.error('❌ App.vue: Error during initialization:', error)
+    // Hide splash even if there's an error
+    splashStore.hideSplash()
+    isRouterLoading.value = false
+  }
 })
 
 // Define which routes should show the main layout (authenticated pages)
@@ -80,17 +86,25 @@ const authenticatedRoutes = [
 
 // Check if current route should show main layout
 const isAuthenticatedPage = computed(() => {
+  console.log('🔍 App.vue: Checking route:', { 
+    currentPath: route.path, 
+    isRouterLoading: isRouterLoading.value 
+  })
+  
   // Check exact matches first
   if (authenticatedRoutes.includes(route.path)) {
+    console.log('🔍 App.vue: Exact match found, showing main layout')
     return true
   }
   
   // Check dynamic routes
   if (route.path.startsWith('/academy-details/')) {
+    console.log('🔍 App.vue: Academy details route, showing main layout')
     return true
   }
   
   if (route.path.startsWith('/academy-registration/')) {
+    console.log('🔍 App.vue: Academy registration route, showing main layout')
     return true
   }
   

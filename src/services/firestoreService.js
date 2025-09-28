@@ -189,11 +189,22 @@ class FirestoreService {
     }
   }
 
+  // Helper method to get nested values from objects
+  getNestedValue(obj, path) {
+    return path.split('.').reduce((current, key) => {
+      return current && current[key] !== undefined ? current[key] : undefined
+    }, obj)
+  }
+
   // Get documents from collection with timeout and fallback
-  async getDocs(collectionPath, timeoutMs = 8000) {
+  async getDocs(collectionPath, queryOptions = {}) {
     try {
+      // Extract timeout from queryOptions or use default
+      const timeoutMs = queryOptions.timeoutMs || 8000
+      
       console.log('🔍 FirestoreService.getDocs called with:', { 
         collectionPath, 
+        queryOptions,
         timeoutMs, 
         isNative: this.isNative, 
         initialized: this.initialized,
@@ -222,6 +233,8 @@ class FirestoreService {
         })
         
         // Create the actual query promise
+        // Note: Capacitor Firebase plugin doesn't support complex queries with filters
+        // We'll get all documents and filter client-side
         const queryPromise = this.capacitorFirestore.getCollection({
           reference: collectionPath
         })
@@ -231,16 +244,95 @@ class FirestoreService {
           const result = await Promise.race([queryPromise, timeoutPromise])
           
           console.log('FirestoreService: Collection query successful for:', collectionPath)
+          console.log('FirestoreService: Raw result:', result)
           
           const docs = result.snapshots || []
-          const collectionData = {
-            docs: docs.map(doc => ({
-              id: doc.id,
-              data: () => doc.data || {}
-            })),
-            empty: docs.length === 0,
-            size: docs.length
+          console.log('FirestoreService: Raw docs count:', docs.length)
+          console.log('FirestoreService: First doc sample:', docs[0])
+          
+          let filteredDocs = docs
+          
+          // Apply client-side filtering if queryOptions has filters
+          if (queryOptions.filters && Array.isArray(queryOptions.filters)) {
+            console.log('FirestoreService: Applying filters:', queryOptions.filters)
+            filteredDocs = docs.filter(doc => {
+              return queryOptions.filters.every(filter => {
+                // Handle different data structures from Capacitor Firebase
+                const docData = doc.data || doc
+                const fieldValue = this.getNestedValue(docData, filter.field)
+                console.log('FirestoreService: Filter check:', { field: filter.field, value: fieldValue, expected: filter.value, operator: filter.operator })
+                
+                // For debugging, let's be more lenient with filtering
+                if (fieldValue === undefined) {
+                  console.log('FirestoreService: Field not found, skipping filter')
+                  return true
+                }
+                
+                switch (filter.operator) {
+                  case '==':
+                    return fieldValue === filter.value
+                  case '!=':
+                    return fieldValue !== filter.value
+                  case '>':
+                    return fieldValue > filter.value
+                  case '>=':
+                    return fieldValue >= filter.value
+                  case '<':
+                    return fieldValue < filter.value
+                  case '<=':
+                    return fieldValue <= filter.value
+                  case 'in':
+                    return Array.isArray(filter.value) && filter.value.includes(fieldValue)
+                  case 'not-in':
+                    return Array.isArray(filter.value) && !filter.value.includes(fieldValue)
+                  case 'array-contains':
+                    return Array.isArray(fieldValue) && fieldValue.includes(filter.value)
+                  case 'array-contains-any':
+                    return Array.isArray(fieldValue) && filter.value.some(v => fieldValue.includes(v))
+                  default:
+                    return true
+                }
+              })
+            })
+          } else {
+            console.log('FirestoreService: No filters applied, returning all docs')
           }
+          
+          // Apply client-side ordering if queryOptions has orderBy
+          if (queryOptions.orderBy && Array.isArray(queryOptions.orderBy)) {
+            filteredDocs.sort((a, b) => {
+              for (const order of queryOptions.orderBy) {
+                const aValue = this.getNestedValue(a.data, order.field)
+                const bValue = this.getNestedValue(b.data, order.field)
+                
+                if (aValue < bValue) return order.direction === 'asc' ? -1 : 1
+                if (aValue > bValue) return order.direction === 'asc' ? 1 : -1
+              }
+              return 0
+            })
+          }
+          
+          // Apply limit if specified
+          if (queryOptions.limit) {
+            filteredDocs = filteredDocs.slice(0, queryOptions.limit)
+          }
+          
+          console.log('FirestoreService: After filtering, docs count:', filteredDocs.length)
+          
+          const collectionData = {
+            docs: filteredDocs.map(doc => {
+              // Handle different data structures from Capacitor Firebase
+              const docData = doc.data || doc
+              return {
+                id: doc.id,
+                data: () => docData || {}
+              }
+            }),
+            empty: filteredDocs.length === 0,
+            size: filteredDocs.length
+          }
+          
+          console.log('FirestoreService: Final collection data:', { empty: collectionData.empty, size: collectionData.size })
           
           // Cache the result
           cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
