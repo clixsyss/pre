@@ -228,6 +228,36 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
         userBookings.value = [];
     };
 
+    const completeBooking = async (projectId, bookingId) => {
+        return performanceService.timeOperation('completeBooking', async () => {
+            try {
+                console.log('🔍 AcademyStore: Completing booking:', { projectId, bookingId });
+                
+                const docPath = `projects/${projectId}/bookings/${bookingId}`;
+                const updateData = {
+                    status: "completed",
+                    updatedAt: new Date()
+                };
+                
+                await firestoreService.updateDoc(docPath, updateData);
+                
+                // Update local state
+                const bookingIndex = userBookings.value.findIndex(booking => booking.id === bookingId);
+                if (bookingIndex !== -1) {
+                    userBookings.value[bookingIndex].status = "completed";
+                    userBookings.value[bookingIndex].updatedAt = updateData.updatedAt;
+                }
+                
+                console.log('✅ AcademyStore: Booking completed successfully');
+                return { success: true };
+            } catch (error) {
+                console.error('❌ AcademyStore: Error completing booking:', error);
+                errorHandlingService.handleFirestoreError(error, 'completeBooking');
+                throw error;
+            }
+        });
+    };
+
     const fetchAcademies = async (projectId) => {
         return performanceService.timeOperation('fetchAcademies', async () => {
             try {
@@ -284,5 +314,6 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
         clearUserBookings,
         createTestBooking,
         fetchAcademies,
+        completeBooking,
     };
 });

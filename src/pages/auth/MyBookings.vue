@@ -168,6 +168,13 @@
                 View
               </button>
               <button 
+                v-if="canComplete(booking)"
+                class="action-btn complete-btn"
+                @click="completeBooking(booking)"
+              >
+                Complete
+              </button>
+              <button 
                 v-if="canCancel(booking)"
                 class="action-btn cancel-btn"
                 @click="cancelBooking(booking)"
@@ -285,6 +292,13 @@
           </div>
         </div>
         <div class="modal-footer">
+          <button 
+            v-if="canComplete(selectedBooking)"
+            class="complete-booking-btn"
+            @click="completeBooking(selectedBooking)"
+          >
+            Complete Booking
+          </button>
           <button 
             v-if="canCancel(selectedBooking)"
             class="cancel-booking-btn"
@@ -535,6 +549,10 @@ const canCancel = (booking) => {
   return ['confirmed', 'pending', 'enrolled'].includes(booking.status);
 };
 
+const canComplete = (booking) => {
+  return ['confirmed', 'pending', 'enrolled', 'open', 'processing'].includes(booking.status);
+};
+
 const viewBookingDetails = (booking) => {
   selectedBooking.value = booking;
 };
@@ -546,7 +564,7 @@ const closeModal = () => {
 const cancelBooking = async (booking) => {
   try {
     if (confirm('Are you sure you want to cancel this booking?')) {
-      await bookingService.cancelBooking(booking.id);
+      await bookingService.cancelBooking(projectId.value, booking.id);
       
       // Refresh bookings after cancellation
       const user = await optimizedAuthService.getCurrentUser();
@@ -561,6 +579,34 @@ const cancelBooking = async (booking) => {
   } catch (error) {
     console.error('Error cancelling booking:', error);
     notificationStore.showError('Failed to cancel booking. Please try again.');
+  }
+};
+
+const completeBooking = async (booking) => {
+  try {
+    if (confirm('Are you sure you want to mark this booking as completed?')) {
+      const user = await optimizedAuthService.getCurrentUser();
+      if (!user || !projectId.value) {
+        notificationStore.showError('Unable to complete booking. Please try again.');
+        return;
+      }
+
+      if (isServiceBooking(booking)) {
+        await serviceBookingStore.completeBooking(projectId.value, booking.id);
+      } else {
+        await academiesStore.completeBooking(projectId.value, booking.id);
+      }
+      
+      // Refresh bookings after completion
+      await academiesStore.fetchUserBookings(user.uid, projectId.value);
+      await serviceBookingStore.fetchUserBookings(projectId.value, user.uid);
+      
+      notificationStore.showSuccess('Booking completed successfully');
+      closeModal();
+    }
+  } catch (error) {
+    console.error('Error completing booking:', error);
+    notificationStore.showError('Failed to complete booking. Please try again.');
   }
 };
 
@@ -1002,6 +1048,15 @@ const fetchUserBookings = async () => {
   background: #c82333;
 }
 
+.complete-btn {
+  background: #28a745;
+  color: white;
+}
+
+.complete-btn:hover {
+  background: #218838;
+}
+
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
@@ -1120,6 +1175,21 @@ const fetchUserBookings = async () => {
 
 .cancel-booking-btn:hover {
   background: #c82333;
+}
+
+.complete-booking-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.complete-booking-btn:hover {
+  background: #218838;
 }
 
 .close-modal-btn {

@@ -13,6 +13,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Initialize Firebase
         FirebaseApp.configure()
         
+        // Initialize Capacitor with traditional approach
+        self.window = UIWindow(frame: UIScreen.main.bounds)
+        let bridge = CAPBridgeViewController()
+        self.window?.rootViewController = bridge
+        self.window?.makeKeyAndVisible()
+        
         return true
     }
 

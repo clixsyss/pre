@@ -93,6 +93,30 @@ export const useServiceBookingStore = defineStore('serviceBooking', () => {
     bookings.value = [];
   };
 
+  const completeBooking = async (projectId, bookingId, reason = '') => {
+    try {
+      loading.value = true;
+      error.value = null;
+      
+      await serviceBookingService.completeBooking(projectId, bookingId, reason);
+      
+      // Update local state
+      const bookingIndex = bookings.value.findIndex(booking => booking.id === bookingId);
+      if (bookingIndex !== -1) {
+        bookings.value[bookingIndex].status = 'closed';
+        bookings.value[bookingIndex].updatedAt = new Date();
+      }
+      
+      console.log('Service booking completed successfully');
+    } catch (err) {
+      console.error('Error completing service booking:', err);
+      error.value = err.message || 'Failed to complete booking';
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     // State
     bookings,
@@ -110,6 +134,7 @@ export const useServiceBookingStore = defineStore('serviceBooking', () => {
     createBooking,
     fetchUserBookings,
     clearError,
-    clearBookings
+    clearBookings,
+    completeBooking
   };
 });

@@ -244,6 +244,48 @@ class ServiceBookingService {
   }
 
   /**
+   * Complete a service booking
+   * @param {string} projectId - Project ID
+   * @param {string} bookingId - Booking ID
+   * @param {string} reason - Reason for completion
+   * @returns {Promise<void>}
+   */
+  async completeBooking(projectId, bookingId, reason = '') {
+    return performanceService.timeOperation('completeBooking', async () => {
+      try {
+        console.log('🔍 Completing service booking:', { projectId, bookingId, reason })
+        
+        const docRef = doc(db, `projects/${projectId}/serviceBookings`, bookingId);
+        
+        // Add system message for completion
+        const now = new Date();
+        const systemMessage = {
+          id: Date.now().toString(),
+          text: `Booking completed${reason ? `. Reason: ${reason}` : ''}`,
+          senderType: 'system',
+          timestamp: now,
+          messageType: 'completion'
+        };
+
+        const currentBooking = await this.getServiceBooking(projectId, bookingId);
+        await updateDoc(docRef, {
+          status: 'closed',
+          updatedAt: serverTimestamp(),
+          lastMessageAt: serverTimestamp(),
+          messages: [...(currentBooking.messages || []), systemMessage]
+        });
+        
+        console.log('✅ Service booking completed successfully')
+        return { success: true };
+      } catch (error) {
+        console.error('❌ Error completing service booking:', error);
+        errorHandlingService.handleFirestoreError(error, 'completeBooking')
+        throw error;
+      }
+    })
+  }
+
+  /**
    * Update service booking details (price, date, etc.)
    * @param {string} projectId - Project ID
    * @param {string} bookingId - Booking ID

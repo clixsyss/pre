@@ -197,6 +197,7 @@ import { useRouter } from 'vue-router';
 import { useSportsStore } from 'src/stores/sportsStore';
 import { useProjectStore } from 'src/stores/projectStore';
 import { useNotificationStore } from 'src/stores/notifications';
+import { useAcademiesStore } from 'src/stores/academyStore';
 import bookingService from 'src/services/bookingService';
 import optimizedAuthService from 'src/services/optimizedAuthService';
 import PageHeader from '../../components/PageHeader.vue';
@@ -210,6 +211,7 @@ const router = useRouter();
 const sportsStore = useSportsStore();
 const projectStore = useProjectStore();
 const notificationStore = useNotificationStore();
+const academiesStore = useAcademiesStore();
 
 // Reactive data
 const selectedSport = ref(null);
@@ -344,9 +346,17 @@ const confirmBooking = async () => {
 
     const result = await bookingService.createCourtBooking(projectId.value, bookingData);
     
+    console.log('🔍 Court booking result:', result);
+    
     if (result.success) {
+      // Refresh the academy store to show the new booking
+      await academiesStore.fetchUserBookings(user.uid, projectId.value);
+      
       notificationStore.showSuccess('Booking confirmed successfully!');
       router.push('/my-bookings');
+    } else {
+      console.error('❌ Court booking failed:', result);
+      notificationStore.showError('Failed to create booking. Please try again.');
     }
   } catch (error) {
     console.error('Error confirming booking:', error);

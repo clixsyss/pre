@@ -190,10 +190,7 @@ service cloud.firestore {
     
     // Allow listing project orders (users only see their own, admins see all)
     match /projects/{projectId}/orders {
-      allow list: if request.auth != null && 
-        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || 
-         // Users can only list their own orders - this will be filtered in the query
-         request.auth != null);
+      allow list, get: if request.auth != null;
     }
     
     // Project Gate Passes - users can read/write their own gate passes within project
@@ -221,10 +218,7 @@ service cloud.firestore {
     
     // Allow listing project bookings (users only see their own, admins see all)
     match /projects/{projectId}/bookings {
-      allow list: if request.auth != null && 
-        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || 
-         // Users can only list their own bookings - this will be filtered in the query
-         request.auth != null);
+      allow list, get: if request.auth != null;
     }
     
     // Project Service Bookings - users can only read/write their own service bookings
@@ -237,10 +231,7 @@ service cloud.firestore {
     
     // Allow listing project service bookings (users only see their own, admins see all)
     match /projects/{projectId}/serviceBookings {
-      allow list: if request.auth != null && 
-        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || 
-         // Users can only list their own bookings - this will be filtered in the query
-         request.auth != null);
+      allow list, get: if request.auth != null;
     }
     
     // Project Service Bookings (alternative naming) - users can read/write their own service bookings within project

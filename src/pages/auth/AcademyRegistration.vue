@@ -181,8 +181,9 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAcademiesStore } from 'src/stores/academyStore';
 import { useProjectStore } from 'src/stores/projectStore';
-import { db } from 'boot/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { serverTimestamp } from 'firebase/firestore';
+import optimizedAuthService from 'src/services/optimizedAuthService';
+import firestoreService from 'src/services/firestoreService';
 
 // Component name for ESLint
 defineOptions({
@@ -203,17 +204,7 @@ const registrationId = ref(null);
 const academy = ref(null);
 const program = ref(null);
 
-// Get current user ID - this should be replaced with proper auth when available
-const getCurrentUserId = () => {
-  // First, try to get from localStorage
-  const userId = localStorage.getItem('currentUserId');
-  if (userId) return userId;
-  
-  // If no user ID found, generate a temporary one (this should be replaced with proper auth)
-  const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  localStorage.setItem('currentUserId', tempUserId);
-  return tempUserId;
-};
+// User ID is now obtained from authenticated user via optimizedAuthService
 
 // Form data
 const formData = ref({
@@ -324,11 +315,16 @@ const submitRegistration = async () => {
   error.value = null;
   
   try {
-    const userId = getCurrentUserId();
+    // Get authenticated user
+    const user = await optimizedAuthService.getCurrentUser();
+    if (!user) {
+      error.value = 'Please log in to register for academy programs.';
+      return;
+    }
     
     // Create the registration data
     const registrationData = {
-      userId: userId,
+      userId: user.uid,
       projectId: currentProject.value.id,
       academyId: academy.value.id,
       academyName: academy.value.name,
@@ -358,18 +354,29 @@ const submitRegistration = async () => {
       updatedAt: serverTimestamp()
     };
     
-    // Save to the project's bookings collection
-    const bookingsRef = collection(db, `projects/${currentProject.value.id}/bookings`);
-    const docRef = await addDoc(bookingsRef, registrationData);
+    // Save to the project's bookings collection using firestoreService
+    const collectionPath = `projects/${currentProject.value.id}/bookings`;
+    const result = await firestoreService.addDoc(collectionPath, registrationData);
+    
+    console.log('🔍 Academy registration addDoc result:', result);
+    const bookingId = result.id || result.documentId || result;
+    
+    if (!bookingId) {
+      console.error('❌ No booking ID returned from addDoc:', result);
+      throw new Error('Failed to create academy registration - no ID returned');
+    }
     
     // Also save to the academy store for local state management
     await academiesStore.addUserBooking({
       ...registrationData,
-      id: docRef.id
+      id: bookingId
     });
     
+    // Refresh the academy store to show the new booking
+    await academiesStore.fetchUserBookings(user.uid, currentProject.value.id);
+    
     // Set success state
-    registrationId.value = docRef.id;
+    registrationId.value = bookingId;
     success.value = true;
     
     // Don't redirect immediately, show success message first

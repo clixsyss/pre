@@ -154,8 +154,17 @@ export class BookingService {
                 const collectionPath = `projects/${projectId}/bookings`
                 const result = await firestoreService.addDoc(collectionPath, newBooking)
                 
-                console.log('✅ Court booking created successfully:', { bookingId: result.id })
-                return { success: true, bookingId: result.id, booking: { ...newBooking, id: result.id } };
+                console.log('🔍 Firestore addDoc result:', result);
+                const bookingId = result.id || result.documentId || result;
+                console.log('✅ Court booking created successfully:', { bookingId })
+                
+                // Check if the result has the expected structure
+                if (!bookingId) {
+                    console.error('❌ No booking ID returned from addDoc:', result);
+                    throw new Error('Failed to create booking - no ID returned');
+                }
+                
+                return { success: true, bookingId, booking: { ...newBooking, id: bookingId } };
             } catch (error) {
                 console.error("❌ Error creating court booking:", error);
                 errorHandlingService.handleFirestoreError(error, 'createCourtBooking')
@@ -195,8 +204,10 @@ export class BookingService {
                 const collectionPath = `projects/${projectId}/bookings`
                 const result = await firestoreService.addDoc(collectionPath, newBooking)
                 
-                console.log('✅ Academy booking created successfully:', { bookingId: result.id })
-                return { success: true, bookingId: result.id, booking: { ...newBooking, id: result.id } };
+                console.log('🔍 Firestore addDoc result:', result);
+                const bookingId = result.id || result.documentId || result;
+                console.log('✅ Academy booking created successfully:', { bookingId })
+                return { success: true, bookingId, booking: { ...newBooking, id: bookingId } };
             } catch (error) {
                 console.error("❌ Error creating academy booking:", error);
                 errorHandlingService.handleFirestoreError(error, 'createAcademyBooking')
@@ -301,6 +312,30 @@ export class BookingService {
             } catch (error) {
                 console.error("❌ Error cancelling booking:", error);
                 errorHandlingService.handleFirestoreError(error, 'cancelBooking')
+                throw error;
+            }
+        })
+    }
+
+    // Complete a booking
+    async completeBooking(projectId, bookingId) {
+        return performanceService.timeOperation('completeBooking', async () => {
+            try {
+                console.log('🔍 Completing booking:', { projectId, bookingId })
+                
+                const docPath = `projects/${projectId}/bookings/${bookingId}`
+                const updateData = {
+                    status: "completed",
+                    updatedAt: new Date()
+                };
+                
+                await firestoreService.updateDoc(docPath, updateData)
+                
+                console.log('✅ Booking completed successfully')
+                return { success: true };
+            } catch (error) {
+                console.error("❌ Error completing booking:", error);
+                errorHandlingService.handleFirestoreError(error, 'completeBooking')
                 throw error;
             }
         })

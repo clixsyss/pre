@@ -89,7 +89,7 @@ const getIconColor = (type) => {
 <style scoped>
 .notification-container {
   position: fixed;
-  top: 20px;
+  top: 60px;
   right: 20px;
   z-index: 9999;
   pointer-events: none;
@@ -207,7 +207,7 @@ const getIconColor = (type) => {
 /* Responsive design */
 @media (max-width: 768px) {
   .notification-container {
-    top: 10px;
+    top: 60px;
     right: 10px;
     left: 10px;
   }
