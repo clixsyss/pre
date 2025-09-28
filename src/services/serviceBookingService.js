@@ -87,12 +87,17 @@ class ServiceBookingService {
         console.log('🔍 Getting user service bookings:', { projectId, userId })
         
         const collectionPath = `projects/${projectId}/serviceBookings`
-        const filters = {
-          userId: { operator: '==', value: userId }
+        const queryOptions = {
+          filters: [
+            { field: 'userId', operator: '==', value: userId }
+          ],
+          orderBy: [
+            { field: 'createdAt', direction: 'desc' }
+          ],
+          timeoutMs: 6000
         }
-        const orderBy = { field: 'createdAt', direction: 'desc' }
         
-        const result = await firestoreService.getDocs(collectionPath, filters, orderBy)
+        const result = await firestoreService.getDocs(collectionPath, queryOptions)
         const bookings = result.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -119,9 +124,14 @@ class ServiceBookingService {
         console.log('🔍 Getting all service bookings:', { projectId })
         
         const collectionPath = `projects/${projectId}/serviceBookings`
-        const orderBy = { field: 'createdAt', direction: 'desc' }
+        const queryOptions = {
+          orderBy: [
+            { field: 'createdAt', direction: 'desc' }
+          ],
+          timeoutMs: 6000
+        }
         
-        const result = await firestoreService.getDocs(collectionPath, null, orderBy)
+        const result = await firestoreService.getDocs(collectionPath, queryOptions)
         const bookings = result.docs.map(doc => ({
           id: doc.id,
           ...doc.data()

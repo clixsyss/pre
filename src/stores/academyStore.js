@@ -211,7 +211,7 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
                 
                 const bookings = result.docs.map(doc => ({
                     id: doc.id,
-                    ...doc.data
+                    ...doc.data()
                 }));
                 
                 userBookings.value = bookings;
@@ -239,7 +239,7 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
                 const result = await firestoreService.getDocs(`projects/${projectId}/academies`, queryOptions);
                 
                 const academies = result.docs.map(doc => {
-                    const data = doc.data;
+                    const data = doc.data();
                     return {
                         id: doc.id,
                         ...data,

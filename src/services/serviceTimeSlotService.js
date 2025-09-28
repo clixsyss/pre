@@ -77,7 +77,7 @@ class ServiceTimeSlotService {
         
         if (queryResult.docs && queryResult.docs.length > 0) {
           queryResult.docs.forEach((doc) => {
-            const booking = doc.data;
+            const booking = doc.data();
             if (booking.selectedTime) {
               bookedSlots.push(booking.selectedTime);
             }
@@ -111,7 +111,7 @@ class ServiceTimeSlotService {
         
         if (result.exists) {
           console.log('🚀 ServiceTimeSlotService: Retrieved category details')
-          return result.data;
+          return result.data();
         } else {
           console.log('🚀 ServiceTimeSlotService: Category not found')
           return null;

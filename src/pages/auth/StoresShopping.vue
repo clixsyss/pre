@@ -873,7 +873,7 @@ const fetchStores = async () => {
     // Fetch stores with their rating data
     const storesWithRatings = await Promise.all(
       queryResult.docs.map(async (doc) => {
-        const storeData = doc.data;
+        const storeData = doc.data();
         
         // Fetch ratings for this store
         try {
@@ -886,7 +886,7 @@ const fetchStores = async () => {
           };
           const ratingsResult = await firestoreService.getDocs(ratingsPath, ratingsQueryOptions);
           
-          const ratings = ratingsResult.docs.map(ratingDoc => ratingDoc.data.rating);
+          const ratings = ratingsResult.docs.map(ratingDoc => ratingDoc.data().rating);
           const averageRating = ratings.length > 0 
             ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length 
             : 0;
@@ -956,7 +956,7 @@ const fetchUserOrders = async () => {
     // Fetch orders with store details
     const ordersWithStoreDetails = await Promise.all(
       queryResult.docs.map(async (orderDoc) => {
-        const orderData = orderDoc.data;
+        const orderData = orderDoc.data();
         
         // If order already has store details, return as is
         if (orderData.storePhone && orderData.storeLocation) {
@@ -980,7 +980,7 @@ const fetchUserOrders = async () => {
             const storeResult = await firestoreService.getDocs(storePath, storeQueryOptions);
             
             if (storeResult.docs.length > 0) {
-              const storeData = storeResult.docs[0].data;
+              const storeData = storeResult.docs[0].data();
               console.log('Store data found:', storeData);
               return {
                 id: orderDoc.id,
@@ -1133,7 +1133,7 @@ const fetchStoreDetailsForOrder = async (order) => {
       const storeResult = await firestoreService.getDocs(storePath, storeQueryOptions);
       
       if (storeResult.docs.length > 0) {
-        const firestoreStoreData = storeResult.docs[0].data;
+        const firestoreStoreData = storeResult.docs[0].data();
         console.log('Found store data in Firestore:', firestoreStoreData);
         return {
           ...order,

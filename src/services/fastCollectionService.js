@@ -31,7 +31,7 @@ class FastCollectionService {
         console.log(`🚀 FastCollection: Fetching real ads for project ${projectId}`)
         
         // Use the optimized firestoreService with timeout handling
-        const snapshot = await firestoreService.getDocs(`projects/${projectId}/ads`, 6000) // 6 second timeout
+        const snapshot = await firestoreService.getDocs(`projects/${projectId}/ads`, { timeoutMs: 6000 }) // 6 second timeout
         
         if (snapshot.empty) {
           console.log(`🚀 FastCollection: No ads found for project ${projectId}`)
@@ -81,7 +81,7 @@ class FastCollectionService {
     try {
       console.log(`🚀 FastCollection: Fetching fresh news for project ${projectId} (cache disabled: ${!useCache})`)
       
-      const snapshot = await firestoreService.getDocs(`projects/${projectId}/news`, 6000)
+      const snapshot = await firestoreService.getDocs(`projects/${projectId}/news`, { timeoutMs: 6000 })
       
       console.log(`🚀 FastCollection: Snapshot result:`, {
         empty: snapshot.empty,
@@ -158,7 +158,7 @@ class FastCollectionService {
       console.log(`🚀 FastCollection: Fetching real service categories for project ${projectId}`)
       
       // Use the optimized firestoreService with timeout handling
-      const snapshot = await firestoreService.getDocs(`projects/${projectId}/serviceCategories`, 6000) // 6 second timeout
+      const snapshot = await firestoreService.getDocs(`projects/${projectId}/serviceCategories`, { timeoutMs: 6000 }) // 6 second timeout
       
       if (snapshot.empty) {
         console.log(`🚀 FastCollection: No service categories found for project ${projectId}`)
@@ -216,7 +216,7 @@ class FastCollectionService {
       console.log(`🚀 FastCollection: Fetching real services for category ${categoryId}`)
       
       // Use the optimized firestoreService with timeout handling
-      const snapshot = await firestoreService.getDocs(`projects/${projectId}/serviceCategories/${categoryId}/services`, 6000) // 6 second timeout
+      const snapshot = await firestoreService.getDocs(`projects/${projectId}/serviceCategories/${categoryId}/services`, { timeoutMs: 6000 }) // 6 second timeout
       
       if (snapshot.empty) {
         console.log(`🚀 FastCollection: No services found for category ${categoryId}`)
