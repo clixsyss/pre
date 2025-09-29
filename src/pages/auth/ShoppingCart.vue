@@ -93,7 +93,6 @@
               </div>
               
               <div class="item-total">
-                <span class="total-label">Total</span>
                 <span class="total-amount">EGP {{ (item.price * item.quantity).toFixed(2) }}</span>
               </div>
               
@@ -359,9 +358,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { collection, addDoc, serverTimestamp, getDocs, query, where, updateDoc } from 'firebase/firestore';
+import firestoreService from 'src/services/firestoreService';
 import optimizedAuthService from 'src/services/optimizedAuthService';
-import { db } from 'src/boot/firebase';
 import { useProjectStore } from 'src/stores/projectStore';
 import { useCartStore } from 'src/stores/cartStore';
 import { useNotificationStore } from 'src/stores/notifications';
@@ -453,25 +451,36 @@ const placeOrder = async () => {
     return;
   }
 
+  console.log('🔍 Starting order placement process...');
+  console.log('🔍 User:', user.uid);
+  console.log('🔍 Project:', projectStore.selectedProject.id);
+  console.log('🔍 Cart items:', cartStore.items.length);
+
   // Validate that all stores are active
   if (cartStore.items.length > 0) {
     const storeIds = [...new Set(cartStore.items.map(item => item.storeId))];
+    console.log('🔍 Validating store status for stores:', storeIds);
     
     for (const storeId of storeIds) {
       try {
-        const storeRef = collection(db, `projects/${projectStore.selectedProject.id}/stores`);
-        const storeQuery = query(storeRef, where('__name__', '==', storeId));
-        const storeSnapshot = await getDocs(storeQuery);
+        const storeDocPath = `projects/${projectStore.selectedProject.id}/stores/${storeId}`;
+        const storeDoc = await firestoreService.getDoc(storeDocPath);
         
-        if (!storeSnapshot.empty) {
-          const storeData = storeSnapshot.docs[0].data();
+        if (storeDoc.exists) {
+          const storeData = storeDoc.data();
+          console.log('🔍 Store status check:', { storeId, status: storeData.status, name: storeData.name });
+          
           if (storeData.status && storeData.status !== 'active') {
             notificationStore.showError(`Cannot place order: ${storeData.name} is currently inactive and not accepting orders.`);
             return;
           }
+        } else {
+          console.error('❌ Store not found:', storeId);
+          notificationStore.showError('Store not found. Please try again.');
+          return;
         }
       } catch (error) {
-        console.error('Error checking store status:', error);
+        console.error('❌ Error checking store status:', error);
         notificationStore.showError('Error validating store status. Please try again.');
         return;
       }
@@ -480,6 +489,7 @@ const placeOrder = async () => {
 
   try {
     placingOrder.value = true;
+    console.log('🔍 Order validation passed, creating order...');
     
     // Generate order number
     orderNumber.value = 'ORD-' + Date.now().toString().slice(-6);
@@ -515,11 +525,16 @@ const placeOrder = async () => {
       deliveryFee: deliveryFee.value,
       total: total.value,
       status: 'pending',
-      createdAt: serverTimestamp(),
+      createdAt: new Date(), // Use regular Date instead of serverTimestamp for consistency
       estimatedDelivery: estimatedDelivery.value
     };
 
-    await addDoc(collection(db, `projects/${projectStore.selectedProject.id}/orders`), orderData);
+    console.log('🔍 Order data prepared:', orderData);
+    
+    const collectionPath = `projects/${projectStore.selectedProject.id}/orders`;
+    const result = await firestoreService.addDoc(collectionPath, orderData);
+    
+    console.log('✅ Order created successfully:', result);
     
     // Store the order data for rating before clearing cart
     const orderStores = [...new Set(cartStore.items.map(item => ({
@@ -536,9 +551,11 @@ const placeOrder = async () => {
     // Show confirmation
     showOrderConfirmation.value = true;
     
+    notificationStore.showSuccess('Order placed successfully!');
+    
   } catch (error) {
-    console.error('Error placing order:', error);
-    // You can add error handling here
+    console.error('❌ Error placing order:', error);
+    notificationStore.showError('Failed to place order. Please try again.');
   } finally {
     placingOrder.value = false;
   }
@@ -615,10 +632,11 @@ const submitRating = async () => {
       rating: currentRating.value,
       comment: ratingComment.value,
       orderNumber: orderNumber.value,
-      createdAt: serverTimestamp()
+      createdAt: new Date() // Use regular Date instead of serverTimestamp
     };
     
-    await addDoc(collection(db, `projects/${projectStore.selectedProject.id}/ratings`), ratingData);
+    const collectionPath = `projects/${projectStore.selectedProject.id}/ratings`;
+    await firestoreService.addDoc(collectionPath, ratingData);
     
     // Update store's average rating
     await updateStoreRating(store.id);
@@ -647,27 +665,34 @@ const skipRating = () => {
 const updateStoreRating = async (storeId) => {
   try {
     // Get current store data
-    const storeRef = collection(db, `projects/${projectStore.selectedProject.id}/stores`);
-    const storeQuery = query(storeRef, where('__name__', '==', storeId));
-    const storeSnapshot = await getDocs(storeQuery);
+    const storeDocPath = `projects/${projectStore.selectedProject.id}/stores/${storeId}`;
+    const storeDoc = await firestoreService.getDoc(storeDocPath);
     
-    if (!storeSnapshot.empty) {
-      const storeDoc = storeSnapshot.docs[0];
-      
+    if (storeDoc.exists) {
       // Get all ratings for this store
-      const ratingsRef = collection(db, `projects/${projectStore.selectedProject.id}/ratings`);
-      const ratingsQuery = query(ratingsRef, where('storeId', '==', storeId));
-      const ratingsSnapshot = await getDocs(ratingsQuery);
+      const ratingsPath = `projects/${projectStore.selectedProject.id}/ratings`;
+      const ratingsQueryOptions = {
+        filters: [
+          { field: 'storeId', operator: '==', value: storeId }
+        ],
+        timeoutMs: 6000
+      };
+      const ratingsResult = await firestoreService.getDocs(ratingsPath, ratingsQueryOptions);
       
-      const ratings = ratingsSnapshot.docs.map(doc => doc.data().rating);
+      const ratings = ratingsResult.docs.map(doc => {
+        const ratingData = doc.data();
+        return ratingData.rating;
+      });
       const averageRating = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
       
       // Update store with new average rating
-      await updateDoc(storeDoc.ref, {
+      const updateData = {
         rating: parseFloat(averageRating.toFixed(1)),
         reviewCount: ratings.length,
-        updatedAt: serverTimestamp()
-      });
+        updatedAt: new Date() // Use regular Date instead of serverTimestamp
+      };
+      
+      await firestoreService.updateDoc(storeDocPath, updateData);
     }
   } catch (error) {
     console.error('Error updating store rating:', error);

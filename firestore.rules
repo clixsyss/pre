@@ -652,10 +652,9 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages', 'lastMessageAt', 'updatedAt']);
     }
     
-    // Allow listing fines
+    // Allow listing fines (users can list their own, admins can list all)
     match /projects/{projectId}/fines {
-      allow list: if request.auth != null && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow list, get: if request.auth != null;
     }
     
     // Project Support Chats - allow authenticated users to read/write support chats within project

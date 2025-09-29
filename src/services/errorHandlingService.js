@@ -1,5 +1,3 @@
-import { Notify } from 'quasar'
-
 class ErrorHandlingService {
   // Handle Firebase/Firestore errors
   handleFirestoreError(error, context = '') {
@@ -20,20 +18,8 @@ class ErrorHandlingService {
     // Show user-friendly message based on error code
     let userMessage = this.getUserFriendlyMessage(errorCode, errorMessage)
     
-    // Display notification to user
-    Notify.create({
-      type: 'negative',
-      message: userMessage,
-      position: 'top',
-      timeout: 5000,
-      actions: [
-        {
-          label: 'Dismiss',
-          color: 'white',
-          handler: () => {}
-        }
-      ]
-    })
+    // Log the error instead of showing notification (to avoid Notify dependency issues)
+    console.error('User-friendly error message:', userMessage)
     
     return {
       code: errorCode,
@@ -52,12 +38,8 @@ class ErrorHandlingService {
     
     let userMessage = this.getAuthErrorMessage(errorCode, errorMessage)
     
-    Notify.create({
-      type: 'negative',
-      message: userMessage,
-      position: 'top',
-      timeout: 5000
-    })
+    // Log the error instead of showing notification
+    console.error('Auth error message:', userMessage)
     
     return {
       code: errorCode,
@@ -70,17 +52,13 @@ class ErrorHandlingService {
   handleNetworkError(error, context = '') {
     console.error(`Network Error${context ? ` in ${context}` : ''}:`, error)
     
-    Notify.create({
-      type: 'negative',
-      message: 'Network error. Please check your connection and try again.',
-      position: 'top',
-      timeout: 5000
-    })
+    const userMessage = 'Network error. Please check your connection and try again.'
+    console.error('Network error message:', userMessage)
     
     return {
       code: 'network-error',
       message: 'Network connection failed',
-      userMessage: 'Network error. Please check your connection and try again.'
+      userMessage: userMessage
     }
   }
 
@@ -180,18 +158,14 @@ class ErrorHandlingService {
     console.error(`Generic Error${context ? ` in ${context}` : ''}:`, error)
     
     const errorMessage = error.message || 'An unexpected error occurred'
+    const userMessage = 'Something went wrong. Please try again.'
     
-    Notify.create({
-      type: 'negative',
-      message: 'Something went wrong. Please try again.',
-      position: 'top',
-      timeout: 5000
-    })
+    console.error('Generic error message:', userMessage)
     
     return {
       code: 'generic-error',
       message: errorMessage,
-      userMessage: 'Something went wrong. Please try again.'
+      userMessage: userMessage
     }
   }
 

@@ -325,6 +325,7 @@ const confirmBooking = async () => {
     }
 
     isSubmitting.value = true;
+    notificationStore.showInfo('Creating your booking...');
 
     const bookingData = {
       userId: user.uid,
@@ -348,19 +349,23 @@ const confirmBooking = async () => {
     
     console.log('🔍 Court booking result:', result);
     
-    if (result.success) {
+    if (result.success && result.bookingId) {
       // Refresh the academy store to show the new booking
       await academiesStore.fetchUserBookings(user.uid, projectId.value);
       
-      notificationStore.showSuccess('Booking confirmed successfully!');
-      router.push('/my-bookings');
+      notificationStore.showSuccess(`Court booking confirmed! Booking ID: ${result.bookingId}`);
+      
+      // Show success for 2 seconds before redirecting
+      setTimeout(() => {
+        router.push('/my-bookings');
+      }, 2000);
     } else {
       console.error('❌ Court booking failed:', result);
       notificationStore.showError('Failed to create booking. Please try again.');
     }
   } catch (error) {
     console.error('Error confirming booking:', error);
-    notificationStore.showError('Failed to confirm booking. Please try again.');
+    notificationStore.showError(`Failed to confirm booking: ${error.message || 'Please try again.'}`);
   } finally {
     isSubmitting.value = false;
   }

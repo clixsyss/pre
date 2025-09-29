@@ -219,8 +219,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from 'src/boot/firebase';
+import firestoreService from 'src/services/firestoreService';
 import { useProjectStore } from 'src/stores/projectStore';
 import { useCartStore } from 'src/stores/cartStore';
 
@@ -278,35 +277,46 @@ const fetchStore = async () => {
   
   try {
     loading.value = true;
-    const storeRef = collection(db, `projects/${projectStore.selectedProject.id}/stores`);
-    const storeQuery = query(storeRef, where('__name__', '==', route.params.storeId));
-    const storeSnapshot = await getDocs(storeQuery);
+    console.log('🔍 Fetching store details for store:', route.params.storeId);
     
-    if (!storeSnapshot.empty) {
-      const storeDoc = storeSnapshot.docs[0];
+    // Get the specific store document
+    const storeDocPath = `projects/${projectStore.selectedProject.id}/stores/${route.params.storeId}`;
+    const storeDoc = await firestoreService.getDoc(storeDocPath);
+    
+    if (storeDoc.exists) {
       const storeData = storeDoc.data();
+      console.log('✅ Store data found:', storeData);
       
       // Fetch ratings for this store
       try {
-        const ratingsRef = collection(db, `projects/${projectStore.selectedProject.id}/ratings`);
-        const ratingsQuery = query(ratingsRef, where('storeId', '==', storeDoc.id));
-        const ratingsSnapshot = await getDocs(ratingsQuery);
+        const ratingsPath = `projects/${projectStore.selectedProject.id}/ratings`;
+        const ratingsQueryOptions = {
+          filters: [
+            { field: 'storeId', operator: '==', value: route.params.storeId }
+          ],
+          timeoutMs: 6000
+        };
+        const ratingsResult = await firestoreService.getDocs(ratingsPath, ratingsQueryOptions);
         
-        const ratings = ratingsSnapshot.docs.map(ratingDoc => ratingDoc.data().rating);
+        const ratings = ratingsResult.docs.map(ratingDoc => {
+          const ratingData = ratingDoc.data();
+          return ratingData.rating;
+        });
         const averageRating = ratings.length > 0 
           ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length 
           : 0;
         
         store.value = {
-          id: storeDoc.id,
+          id: route.params.storeId,
           ...storeData,
           rating: parseFloat(averageRating.toFixed(1)),
           reviewCount: ratings.length
         };
+        console.log('✅ Store with ratings:', store.value);
       } catch (ratingError) {
-        console.error('Error fetching ratings for store:', storeDoc.id, ratingError);
+        console.error('❌ Error fetching ratings for store:', route.params.storeId, ratingError);
         store.value = {
-          id: storeDoc.id,
+          id: route.params.storeId,
           ...storeData,
           rating: 0,
           reviewCount: 0
@@ -314,13 +324,13 @@ const fetchStore = async () => {
       }
       
       // Fetch products for this store
-      await fetchStoreProducts(storeDoc.id);
+      await fetchStoreProducts(route.params.storeId);
     } else {
-      // Store not found, redirect to stores list
+      console.log('❌ Store not found');
       router.push('/stores-shopping');
     }
   } catch (error) {
-    console.error('Error fetching store:', error);
+    console.error('❌ Error fetching store:', error);
   } finally {
     loading.value = false;
   }
@@ -330,21 +340,29 @@ const fetchStoreProducts = async (storeId) => {
   if (!projectStore.selectedProject?.id) return;
   
   try {
-    const productsRef = collection(db, `projects/${projectStore.selectedProject.id}/stores/${storeId}/products`);
-    const productsSnapshot = await getDocs(productsRef);
+    console.log('🔍 Fetching store products for store:', storeId);
+    const collectionPath = `projects/${projectStore.selectedProject.id}/stores/${storeId}/products`;
+    console.log('🔍 Products collection path:', collectionPath);
     
-    products.value = productsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const queryResult = await firestoreService.getDocs(collectionPath, { timeoutMs: 6000 });
+    console.log('🔍 Products query result:', queryResult.docs.length, 'products found');
+    
+    products.value = queryResult.docs.map(doc => {
+      const docData = doc.data();
+      return {
+        id: doc.id,
+        ...docData
+      };
+    });
     
     // Debug: Log product data to see what we're getting
-    console.log('Fetched products:', products.value);
+    console.log('✅ Fetched products:', products.value);
     products.value.forEach(product => {
       console.log(`Product: ${product.name}, Image: ${product.image}`);
     });
   } catch (error) {
-    console.error('Error fetching store products:', error);
+    console.error('❌ Error fetching store products:', error);
+    products.value = []; // Clear products on error
   }
 };
 

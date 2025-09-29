@@ -124,6 +124,7 @@ export class BookingService {
     async createCourtBooking(projectId, bookingData) {
         return performanceService.timeOperation('createCourtBooking', async () => {
             try {
+                console.log('🚀 Starting court booking creation...');
                 // Validate required fields
                 if (!projectId) {
                     throw new Error('Project ID is required');
@@ -152,7 +153,16 @@ export class BookingService {
                 console.log('🚀 Creating court booking:', newBooking);
                 
                 const collectionPath = `projects/${projectId}/bookings`
-                const result = await firestoreService.addDoc(collectionPath, newBooking)
+                
+                // Add timeout to prevent hanging
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Booking creation timeout')), 10000); // 10 second timeout
+                });
+                
+                const result = await Promise.race([
+                    firestoreService.addDoc(collectionPath, newBooking),
+                    timeoutPromise
+                ]);
                 
                 console.log('🔍 Firestore addDoc result:', result);
                 const bookingId = result.id || result.documentId || result;
@@ -164,6 +174,7 @@ export class BookingService {
                     throw new Error('Failed to create booking - no ID returned');
                 }
                 
+                console.log('🎉 Court booking completed successfully with ID:', bookingId);
                 return { success: true, bookingId, booking: { ...newBooking, id: bookingId } };
             } catch (error) {
                 console.error("❌ Error creating court booking:", error);

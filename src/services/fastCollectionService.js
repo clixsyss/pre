@@ -91,6 +91,11 @@ class FastCollectionService {
       
       if (snapshot.empty) {
         console.log(`🚀 FastCollection: No news found for project ${projectId} - collection is empty`)
+        console.log(`🔍 FastCollection: This could mean:`)
+        console.log(`  1. The collection doesn't exist`)
+        console.log(`  2. The collection exists but has no documents`)
+        console.log(`  3. Permission issues (though we should see an error)`)
+        console.log(`  4. The collection path is incorrect`)
         const emptyResult = []
         cacheService.setCollectionData(`projects/${projectId}/news`, options, emptyResult)
         return emptyResult

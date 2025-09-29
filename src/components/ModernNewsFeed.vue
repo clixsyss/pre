@@ -487,22 +487,32 @@ watch(() => props.projectId, async (newProjectId, oldProjectId) => {
 
 const loadDefaultLogo = async () => {
   try {
-    let storageInstance = storage
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Logo loading timeout')), 5000) // 5 second timeout
+    })
     
-    // On native platforms, storage might be null, so we need to get it from the app
-    if (!storageInstance && isNative) {
-      console.log('📱 Native platform detected, getting storage instance from app')
-      const { getStorage } = await import('firebase/storage')
-      const { app } = await import('../boot/firebase')
-      storageInstance = getStorage(app)
-    }
+    const logoLoadPromise = (async () => {
+      let storageInstance = storage
+      
+      // On native platforms, storage might be null, so we need to get it from the app
+      if (!storageInstance && isNative) {
+        console.log('📱 Native platform detected, getting storage instance from app')
+        const { getStorage } = await import('firebase/storage')
+        const { app } = await import('../boot/firebase')
+        storageInstance = getStorage(app)
+      }
+      
+      if (!storageInstance) {
+        throw new Error('Firebase Storage not available')
+      }
+      
+      const logoRef = storageRef(storageInstance, 'logo.png')
+      return await getDownloadURL(logoRef)
+    })()
     
-    if (!storageInstance) {
-      throw new Error('Firebase Storage not available')
-    }
-    
-    const logoRef = storageRef(storageInstance, 'logo.png')
-    defaultLogoUrl.value = await getDownloadURL(logoRef)
+    const logoUrl = await Promise.race([logoLoadPromise, timeoutPromise])
+    defaultLogoUrl.value = logoUrl
     console.log('✅ Default logo loaded from Firebase Storage:', defaultLogoUrl.value)
   } catch (error) {
     console.log('Default logo not found in Firebase Storage, using local fallback:', error.message)
@@ -527,13 +537,18 @@ const fetchNews = async () => {
   console.log('🚀 ModernNewsFeed: Starting news fetch for project:', projectId)
   loading.value = true
   try {
+    console.log('📦 ModernNewsFeed: Importing news service...')
     // Import news service dynamically to avoid circular imports
     const { default: newsService } = await import('../services/newsService.js')
+    console.log('✅ ModernNewsFeed: News service imported successfully')
+    
+    console.log('🚀 ModernNewsFeed: Calling newsService.fetchNews...')
     const news = await newsService.fetchNews(projectId, {
       publishedOnly: true,
       limit: 20,
       prioritizeFeatured: !props.showAll // Prioritize featured news on homepage only
     })
+    console.log('✅ ModernNewsFeed: News service returned:', news?.length || 0, 'items')
 
     // Transform news items to display format
     newsItems.value = news.map(item => ({
@@ -554,10 +569,16 @@ const fetchNews = async () => {
       updatedAt: item.updatedAt
     }))
   } catch (error) {
-    console.error('Error fetching news:', error)
+    console.error('❌ ModernNewsFeed: Error fetching news:', error)
+    console.error('❌ ModernNewsFeed: Error details:', {
+      message: error.message,
+      stack: error.stack,
+      projectId: projectId
+    })
     newsItems.value = []
   } finally {
     loading.value = false
+    console.log('🏁 ModernNewsFeed: News fetch completed, loading set to false')
   }
 }
 
@@ -598,7 +619,12 @@ onMounted(async () => {
   console.log('🔍 Project store selectedProject on mount:', projectStore.selectedProject)
   console.log('🔍 Props projectId on mount:', props.projectId)
   
-  await loadDefaultLogo()
+  // Load logo in background without blocking news fetch
+  loadDefaultLogo().catch(error => {
+    console.log('Logo loading failed, continuing with news fetch:', error.message)
+  })
+  
+  // Fetch news immediately
   await fetchNews()
   setupVideoLazyLoading()
 })

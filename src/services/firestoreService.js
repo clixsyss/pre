@@ -176,12 +176,19 @@ class FirestoreService {
           reference: collectionPath,
           data
         })
+        console.log('🔍 Native addDoc result:', result);
         return {
-          id: result.id
+          id: result.id,
+          documentId: result.id // Add documentId for compatibility
         }
       } else {
         const collectionRef = collection(this.db, collectionPath)
-        return await addDoc(collectionRef, data)
+        const docRef = await addDoc(collectionRef, data)
+        console.log('🔍 Web addDoc result:', docRef);
+        return {
+          id: docRef.id,
+          documentId: docRef.id // Add documentId for compatibility
+        }
       }
     } catch (error) {
       console.error('Add document error:', error)
@@ -226,6 +233,49 @@ class FirestoreService {
 
       if (this.isNative) {
         await this.initialize()
+        
+        // For news collection, try using web SDK as fallback due to Capacitor plugin listener issues
+        if (collectionPath.includes('/news')) {
+          console.log('🔍 FirestoreService: Using web SDK fallback for news collection due to Capacitor plugin issues')
+          
+          // Create a timeout promise for the Web SDK fallback
+          const webSDKTimeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Web SDK fallback timeout')), 8000) // 8 second timeout
+          })
+          
+          try {
+            const webSDKPromise = (async () => {
+              console.log('🔍 FirestoreService: Importing Firebase Web SDK...')
+              const { getDocs, collection } = await import('firebase/firestore')
+              console.log('✅ FirestoreService: Firebase Web SDK imported successfully')
+              
+              console.log('🔍 FirestoreService: Creating collection reference...')
+              const collectionRef = collection(this.db, collectionPath)
+              console.log('✅ FirestoreService: Collection reference created')
+              
+              console.log('🔍 FirestoreService: Executing getDocs query...')
+              const result = await getDocs(collectionRef)
+              console.log('✅ FirestoreService: getDocs completed, result:', { empty: result.empty, size: result.size, docsCount: result.docs.length })
+              
+              const collectionData = {
+                docs: result.docs,
+                empty: result.empty,
+                size: result.size
+              }
+              
+              // Cache the result
+              cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
+              console.log('✅ FirestoreService: Web SDK fallback successful, returning data')
+              return collectionData
+            })()
+            
+            const result = await Promise.race([webSDKPromise, webSDKTimeoutPromise])
+            return result
+          } catch (webError) {
+            console.log('❌ FirestoreService: Web SDK fallback failed, trying Capacitor plugin:', webError.message)
+            console.log('❌ FirestoreService: Web SDK error details:', webError)
+          }
+        }
         
         // Create a timeout promise
         const timeoutPromise = new Promise((_, reject) => {
