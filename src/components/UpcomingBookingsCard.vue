@@ -178,9 +178,9 @@ watch([() => projectStore.selectedProject?.id, () => projectStore.userProjects.l
 });
 
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
   // Only fetch if we have both user and project
-  const user = optimizedAuthService.getCurrentUser();
+  const user = await optimizedAuthService.getCurrentUser();
   if (user && projectStore.selectedProject?.id) {
     fetchBookings();
   } else {

@@ -98,7 +98,7 @@ service cloud.firestore {
     
     // Allow listing project sports
     match /projects/{projectId}/sports {
-      allow list: if request.auth != null;
+      allow list, get: if request.auth != null;
     }
     
     // Project Courts - allow authenticated users to read/write within project
@@ -108,7 +108,7 @@ service cloud.firestore {
     
     // Allow listing project courts
     match /projects/{projectId}/courts {
-      allow list: if request.auth != null;
+      allow list, get: if request.auth != null;
     }
     
     // Project Academies - allow authenticated users to read/write within project
@@ -118,7 +118,7 @@ service cloud.firestore {
     
     // Allow listing project academies
     match /projects/{projectId}/academies {
-      allow list: if request.auth != null;
+      allow list, get: if request.auth != null;
     }
     
     // Project Service Categories - allow authenticated users to read/write within project
@@ -128,7 +128,7 @@ service cloud.firestore {
     
     // Allow listing project service categories
     match /projects/{projectId}/serviceCategories {
-      allow list: if request.auth != null;
+      allow list, get: if request.auth != null;
     }
     
     // Project Services within Categories - allow authenticated users to read/write within project
@@ -168,7 +168,7 @@ service cloud.firestore {
     
     // Allow listing project stores
     match /projects/{projectId}/stores {
-      allow list: if request.auth != null;
+      allow list, get: if request.auth != null;
     }
     
     // Project Products - allow authenticated users to read/write within project

@@ -366,12 +366,6 @@ const submitRegistration = async () => {
       throw new Error('Failed to create academy registration - no ID returned');
     }
     
-    // Also save to the academy store for local state management
-    await academiesStore.addUserBooking({
-      ...registrationData,
-      id: bookingId
-    });
-    
     // Refresh the academy store to show the new booking
     await academiesStore.fetchUserBookings(user.uid, currentProject.value.id);
     

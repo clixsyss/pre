@@ -1,19 +1,6 @@
 <template>
   <div class="violations-page">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <button @click="goBack" class="back-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <div class="header-text">
-          <h1>Violations & Fines</h1>
-          <p>View and manage your violations</p>
-        </div>
-      </div>
-    </div>
+    <PageHeader title="Violations & Fines" subtitle="View and manage your violations" />
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
@@ -154,6 +141,7 @@ import { useProjectStore } from '../../stores/projectStore'
 import { getUserFines } from '../../services/finesService'
 import optimizedAuthService from 'src/services/optimizedAuthService'
 import ViolationDetailModal from '../../components/ViolationDetailModal.vue'
+import PageHeader from '../../components/PageHeader.vue'
 
 // Component name for ESLint
 defineOptions({
@@ -203,9 +191,9 @@ const filteredViolations = computed(() => {
 })
 
 // Methods
-const goBack = () => {
-  router.push('/profile')
-}
+// const goBack = () => {
+//   router.push('/profile')
+// }
 
 const loadViolations = async () => {
   if (!projectStore.selectedProject || !currentUserId.value) return
@@ -311,21 +299,6 @@ onMounted(async () => {
 .violations-page {
   background: #fafafa;
   min-height: 100vh;
-}
-
-.page-header {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 16px 20px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  gap: 16px;
 }
 
 .back-btn {
