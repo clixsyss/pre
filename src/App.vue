@@ -55,6 +55,9 @@ onMounted(async () => {
     
     console.log('🚀 App.vue: Services initialized')
     
+    // Wait a bit more to ensure everything is properly initialized
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
     // Hide splash screen and show app content
     isRouterLoading.value = false
     
@@ -64,9 +67,11 @@ onMounted(async () => {
     
   } catch (error) {
     console.error('❌ App.vue: Error during initialization:', error)
-    // Hide splash even if there's an error
-    isRouterLoading.value = false
-    window.dispatchEvent(new CustomEvent('appReady'))
+    // Hide splash even if there's an error, but with a delay
+    setTimeout(() => {
+      isRouterLoading.value = false
+      window.dispatchEvent(new CustomEvent('appReady'))
+    }, 1000)
   }
 })
 

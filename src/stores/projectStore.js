@@ -221,10 +221,15 @@ export const useProjectStore = defineStore('project', () => {
     try {
       console.log('ProjectStore: Starting rehydration for user:', userId)
       
-      // First try to load from localStorage if we have projects
-      if (userProjects.value.length > 0) {
+      // Check if we already have projects for this user and they're recent
+      const now = Date.now()
+      if (userProjects.value.length > 0 && (now - lastFetchTime.value) < cacheDuration) {
+        console.log('ProjectStore: Using cached projects, attempting to restore selection')
         const restored = loadSelectedProject()
-        if (restored) return true
+        if (restored) {
+          console.log('ProjectStore: Successfully restored from cache')
+          return true
+        }
       }
       
       // If no projects or couldn't restore, fetch projects
@@ -233,7 +238,10 @@ export const useProjectStore = defineStore('project', () => {
       
       // Try to restore again after fetching
       const restored = loadSelectedProject()
-      if (restored) return true
+      if (restored) {
+        console.log('ProjectStore: Successfully restored after fetch')
+        return true
+      }
       
       // If still no project selected and user has only one project, auto-select it
       if (userProjects.value.length === 1) {

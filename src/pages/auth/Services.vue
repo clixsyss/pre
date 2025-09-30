@@ -410,8 +410,18 @@ const loadBookings = async () => {
 
 // Open booking modal
 const openBookingModal = (booking) => {
+  console.log('🔍 Services: openBookingModal called', { 
+    bookingId: booking?.id,
+    booking: booking 
+  });
+  
   selectedBooking.value = booking;
   showBookingModal.value = true;
+  
+  console.log('🔍 Services: Modal state updated', {
+    showBookingModal: showBookingModal.value,
+    selectedBooking: selectedBooking.value
+  });
 };
 
 // Close booking modal

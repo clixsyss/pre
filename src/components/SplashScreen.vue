@@ -46,11 +46,19 @@ onMounted(() => {
   
   // Listen for app ready event
   const handleAppReady = () => {
-    splashStore.setLoading(false)
-    splashStore.setLoadingMessage('')
+    // Update loading message
+    splashStore.setLoadingMessage('Almost ready...')
+    
+    // Keep splash visible a bit longer to ensure smooth transition
     setTimeout(() => {
-      splashStore.hideSplash()
-    }, 300)
+      splashStore.setLoading(false)
+      splashStore.setLoadingMessage('')
+      
+      // Hide splash after a short delay
+      setTimeout(() => {
+        splashStore.hideSplash()
+      }, 500)
+    }, 800)
   }
   
   // Listen for app ready event from main app
@@ -62,7 +70,7 @@ onMounted(() => {
       console.warn('Splash screen timeout, forcing hide')
       handleAppReady()
     }
-  }, 10000) // 10 second fallback
+  }, 15000) // 15 second fallback
   
   // Cleanup
   return () => {

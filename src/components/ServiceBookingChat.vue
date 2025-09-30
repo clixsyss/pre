@@ -42,7 +42,7 @@
 
       <div v-else class="messages-list">
         <div 
-          v-for="message in booking.messages || []" 
+          v-for="message in debugMessages" 
           :key="message.id"
           :class="['message-wrapper', message.senderType]"
         >
@@ -80,6 +80,12 @@
               </div>
             </div>
           </div>
+        </div>
+        
+        <!-- Debug: Show message count -->
+        <div v-if="debugMessages.length === 0 && booking" class="debug-info">
+          <p>No messages found. Booking has {{ booking.messages?.length || 0 }} messages.</p>
+          <p>Debug: booking.messages = {{ booking.messages }}</p>
         </div>
       </div>
     </div>
@@ -197,6 +203,12 @@ const bookingId = route.params.id;
 // Computed properties
 const isBookingClosed = computed(() => booking.value?.status === 'closed');
 
+// Debug computed property
+const debugMessages = computed(() => {
+  console.log('🔍 Debug messages computed:', booking.value?.messages);
+  return booking.value?.messages || [];
+});
+
 // Load booking data
 onMounted(async () => {
   await loadBooking();
@@ -233,10 +245,14 @@ const loadBooking = async () => {
   }
 
   try {
+    console.log('🔍 Loading booking with ID:', bookingId);
     const bookingData = await serviceBookingService.getServiceBooking(
       projectStore.selectedProject.id, 
       bookingId
     );
+    console.log('🔍 Booking data loaded:', bookingData);
+    console.log('🔍 Messages in booking:', bookingData?.messages);
+    console.log('🔍 Messages count:', bookingData?.messages?.length);
     booking.value = bookingData;
   } catch (error) {
     console.error('Error loading booking:', error);
@@ -253,6 +269,9 @@ const setupRealtimeListener = () => {
     projectStore.selectedProject.id,
     bookingId,
     (updatedBooking) => {
+      console.log('🔍 Realtime booking update:', updatedBooking);
+      console.log('🔍 Realtime messages:', updatedBooking?.messages);
+      console.log('🔍 Realtime messages count:', updatedBooking?.messages?.length);
       booking.value = updatedBooking;
     }
   );
@@ -711,6 +730,21 @@ const formatMessageTime = (timestamp) => {
 .message-wrapper.system .message-time {
   color: #6b7280;
   text-align: left;
+}
+
+/* Debug Info Styles */
+.debug-info {
+  padding: 1rem;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  margin: 1rem;
+  font-size: 0.875rem;
+  color: #92400e;
+}
+
+.debug-info p {
+  margin: 0.25rem 0;
 }
 
 /* Message Input Container */

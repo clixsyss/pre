@@ -231,7 +231,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { useSmartMirrorStore } from '../stores/smartMirrorStore'
 import { useSwipeNavigation } from '../composables/useSwipeNavigation'
-import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import { getAuth } from 'firebase/auth'
 import ViolationNotificationPopup from '../components/ViolationNotificationPopup.vue'
 import SuspensionMessage from '../components/SuspensionMessage.vue'
 import { markViolationsAsShown, hasActiveViolations, clearOldNotificationHistory } from '../services/violationNotificationService'
@@ -281,13 +281,27 @@ const shouldHideBottomNav = computed(() => {
 // Keyboard detection methods
 const detectKeyboardVisibility = () => {
   const initialViewportHeight = window.innerHeight
+  let resizeTimeout = null
   
   const handleResize = () => {
-    const currentViewportHeight = window.innerHeight
-    const heightDifference = initialViewportHeight - currentViewportHeight
+    // Debounce resize events
+    if (resizeTimeout) {
+      clearTimeout(resizeTimeout)
+    }
     
-    // Consider keyboard visible if viewport height decreased by more than 150px
-    isKeyboardVisible.value = heightDifference > 150
+    resizeTimeout = setTimeout(() => {
+      const currentViewportHeight = window.innerHeight
+      const heightDifference = initialViewportHeight - currentViewportHeight
+      
+      // Consider keyboard visible if viewport height decreased by more than 150px
+      const keyboardVisible = heightDifference > 150
+      
+      // Only update if the state actually changed
+      if (isKeyboardVisible.value !== keyboardVisible) {
+        isKeyboardVisible.value = keyboardVisible
+        console.log('Keyboard visibility changed:', keyboardVisible, 'Height difference:', heightDifference)
+      }
+    }, 100)
   }
   
   window.addEventListener('resize', handleResize)
@@ -295,17 +309,23 @@ const detectKeyboardVisibility = () => {
   // Also listen for focus events on input elements
   const handleFocus = (event) => {
     if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-      setTimeout(() => {
-        isKeyboardVisible.value = true
-      }, 300) // Small delay to allow keyboard animation
+      // Only set to true if we're on a chat page
+      if (isChatPage.value) {
+        setTimeout(() => {
+          isKeyboardVisible.value = true
+        }, 300) // Small delay to allow keyboard animation
+      }
     }
   }
   
   const handleBlur = (event) => {
     if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-      setTimeout(() => {
-        isKeyboardVisible.value = false
-      }, 300) // Small delay to allow keyboard animation
+      // Only set to false if we're on a chat page
+      if (isChatPage.value) {
+        setTimeout(() => {
+          isKeyboardVisible.value = false
+        }, 300) // Small delay to allow keyboard animation
+      }
     }
   }
   
@@ -317,15 +337,18 @@ const detectKeyboardVisibility = () => {
     window.removeEventListener('resize', handleResize)
     document.removeEventListener('focusin', handleFocus)
     document.removeEventListener('focusout', handleBlur)
+    if (resizeTimeout) {
+      clearTimeout(resizeTimeout)
+    }
   }
 }
 
 const checkIfChatPage = () => {
   const chatRoutes = [
-    '/complaints/',
-    '/violations/',
-    '/support/',
-    '/service-booking/'
+    '/complaint-chat/',
+    '/violation-chat/',
+    '/support-chat/',
+    '/service-booking-chat/'
   ]
   
   isChatPage.value = chatRoutes.some(chatRoute => route.path.includes(chatRoute))
@@ -535,32 +558,31 @@ const handleSuspensionMessage = (event) => {
   }
 }
 
+// Listen for project store ready event to check violations
+const handleProjectStoreReady = () => {
+  setTimeout(() => {
+    checkForViolations()
+  }, 1000) // Small delay to ensure everything is loaded
+}
+
 // Load user projects when component mounts
 onMounted(async () => {
   // Reset violation notifications when app starts
   resetViolationNotifications()
   
-  const auth = getAuth()
-  const unsubscribe = onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      // Rehydrate the store (fetch projects and restore selection)
-      const restored = await projectStore.rehydrateStore(user.uid)
-      
-      if (!restored) {
-        console.log('No project restored, user needs to select a project')
-      } else {
-        // Check for violations after project is loaded
-        setTimeout(() => {
-          checkForViolations()
-        }, 1000) // Small delay to ensure everything is loaded
-      }
-      
-      // Check user suspension status
-      setTimeout(() => {
-        checkUserSuspensionStatus()
-      }, 1500) // Check after violations check
-    }
-  })
+  window.addEventListener('projectStoreReady', handleProjectStoreReady)
+  
+  // Check for violations if project is already loaded
+  if (projectStore.hasSelectedProject) {
+    setTimeout(() => {
+      checkForViolations()
+    }, 1000)
+  }
+  
+  // Check user suspension status
+  setTimeout(() => {
+    checkUserSuspensionStatus()
+  }, 1500) // Check after violations check
   
   window.addEventListener('showSuspensionMessage', handleSuspensionMessage)
   
@@ -587,14 +609,14 @@ onMounted(async () => {
   }
   
   return () => {
-    unsubscribe()
     cleanupKeyboardDetection()
   }
 })
 
-// Cleanup event listener on unmount
+// Cleanup event listeners on unmount
 onUnmounted(() => {
   window.removeEventListener('showSuspensionMessage', handleSuspensionMessage)
+  window.removeEventListener('projectStoreReady', handleProjectStoreReady)
 })
 </script>
 

@@ -1223,6 +1223,9 @@ const loadViolationStats = async () => {
   if (!currentUser || !projectStore.selectedProject) return
 
   try {
+    console.log('🔍 ProfilePage: Current user ID:', currentUser.uid)
+    console.log('🔍 ProfilePage: Project ID:', projectStore.selectedProject.id)
+    
     const userViolations = await getUserFines(projectStore.selectedProject.id, currentUser.uid)
 
     const stats = userViolations.reduce((acc, violation) => {
@@ -1235,10 +1238,13 @@ const loadViolationStats = async () => {
     }, { total: 0, pending: 0, paid: 0, disputed: 0, cancelled: 0 })
 
     violationStats.value = stats
+    console.log('🔍 Violation stats loaded:', stats)
+    console.log('🔍 Raw violations data:', userViolations)
   } catch (error) {
     console.error('Error loading violation stats:', error)
   }
 }
+
 
 const loadComplaintStats = async () => {
   const currentUser = await optimizedAuthService.getCurrentUser()
@@ -4096,6 +4102,24 @@ input:checked+.toggle-slider:before {
   text-align: center;
   padding: 40px 20px;
   gap: 16px;
+}
+
+.test-violation-btn {
+  background: #AF1E23;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 1rem;
+}
+
+.test-violation-btn:hover {
+  background: #8b161a;
+  transform: translateY(-1px);
 }
 
 .no-violations-icon {

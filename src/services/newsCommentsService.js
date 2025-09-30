@@ -1,7 +1,6 @@
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
-import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, orderBy, limit, onSnapshot, where, increment } from 'firebase/firestore'
-import { db } from '../boot/firebase'
+import firestoreService from './firestoreService'
 
 /**
  * News Comments Service
@@ -48,16 +47,15 @@ class NewsCommentsService {
         userProject: commentData.userProject || null,
       };
 
-      const commentsRef = collection(db, `projects/${projectId}/news/${newsId}/comments`);
-      const docRef = await addDoc(commentsRef, comment);
+      const commentId = await firestoreService.addDoc(`projects/${projectId}/news/${newsId}/comments`, comment);
       
       // Update the comment with its ID
-      await updateDoc(docRef, { id: docRef.id });
+      await firestoreService.updateDoc(`projects/${projectId}/news/${newsId}/comments/${commentId}`, { id: commentId });
       
       // Update news item comment count
       await this.updateNewsCommentCount(projectId, newsId, 1);
       
-      return docRef.id;
+      return commentId;
       } catch (error) {
         console.error('❌ Error adding comment:', error);
         errorHandlingService.handleFirestoreError(error, 'addComment')
@@ -75,28 +73,22 @@ class NewsCommentsService {
    */
   async getComments(projectId, newsId, options = {}) {
     try {
-      const commentsRef = collection(this.db, `projects/${projectId}/news/${newsId}/comments`);
-      let q = query(commentsRef, orderBy('createdAt', 'desc'));
+      const queryOptions = {
+        orderBy: [['createdAt', 'desc']],
+        limit: options.limit
+      };
       
-      if (options.limit) {
-        q = query(q, limit(options.limit));
-      }
+      const comments = await firestoreService.getCollection(
+        `projects/${projectId}/news/${newsId}/comments`,
+        queryOptions
+      );
       
-      const snapshot = await getDocs(q);
-      const comments = [];
-      
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        comments.push({
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate?.() || data.createdAt,
-          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-          deletedAt: data.deletedAt?.toDate?.() || data.deletedAt,
-        });
-      });
-      
-      return comments;
+      return comments.map(comment => ({
+        ...comment,
+        createdAt: comment.createdAt?.toDate?.() || comment.createdAt,
+        updatedAt: comment.updatedAt?.toDate?.() || comment.updatedAt,
+        deletedAt: comment.deletedAt?.toDate?.() || comment.deletedAt,
+      }));
     } catch (error) {
       console.error('Error fetching comments:', error);
       throw error;
@@ -112,23 +104,25 @@ class NewsCommentsService {
    */
   subscribeToComments(projectId, newsId, callback) {
     try {
-      const commentsRef = collection(this.db, `projects/${projectId}/news/${newsId}/comments`);
-      const q = query(commentsRef, orderBy('createdAt', 'desc'));
-      
-      return onSnapshot(q, (snapshot) => {
-        const comments = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          comments.push({
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate?.() || data.createdAt,
-            updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-            deletedAt: data.deletedAt?.toDate?.() || data.deletedAt,
-          });
-        });
-        callback(comments);
-      });
+      // Use firestoreService for real-time updates
+      return firestoreService.onSnapshot(
+        `projects/${projectId}/news/${newsId}/comments`,
+        (docSnapshot) => {
+          if (docSnapshot && docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            const comment = {
+              id: docSnapshot.id,
+              ...data,
+              createdAt: data.createdAt?.toDate?.() || data.createdAt,
+              updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+              deletedAt: data.deletedAt?.toDate?.() || data.deletedAt,
+            };
+            callback([comment]);
+          } else {
+            callback([]);
+          }
+        }
+      );
     } catch (error) {
       console.error('Error setting up comments subscription:', error);
       throw error;
@@ -147,10 +141,9 @@ class NewsCommentsService {
    */
   async toggleReaction(projectId, newsId, commentId, userId, emoji, isAdding) {
     try {
-      const commentRef = doc(this.db, `projects/${projectId}/news/${newsId}/comments`, commentId);
-      const commentDoc = await getDoc(commentRef);
+      const commentDoc = await firestoreService.getDoc(`projects/${projectId}/news/${newsId}/comments/${commentId}`);
       
-      if (!commentDoc.exists()) {
+      if (!commentDoc || !commentDoc.exists()) {
         throw new Error('Comment not found');
       }
       
@@ -179,7 +172,7 @@ class NewsCommentsService {
         }
       }
       
-      await updateDoc(commentRef, {
+      await firestoreService.updateDoc(`projects/${projectId}/news/${newsId}/comments/${commentId}`, {
         reactions,
         updatedAt: new Date()
       });
@@ -200,9 +193,7 @@ class NewsCommentsService {
    */
   async deleteComment(projectId, newsId, commentId, adminId, reason = 'Violation of community guidelines') {
     try {
-      const commentRef = doc(this.db, `projects/${projectId}/news/${newsId}/comments`, commentId);
-      
-      await updateDoc(commentRef, {
+      await firestoreService.updateDoc(`projects/${projectId}/news/${newsId}/comments/${commentId}`, {
         isDeleted: true,
         deletedBy: adminId,
         deletedAt: new Date(),
@@ -227,9 +218,7 @@ class NewsCommentsService {
    */
   async restoreComment(projectId, newsId, commentId) {
     try {
-      const commentRef = doc(this.db, `projects/${projectId}/news/${newsId}/comments`, commentId);
-      
-      await updateDoc(commentRef, {
+      await firestoreService.updateDoc(`projects/${projectId}/news/${newsId}/comments/${commentId}`, {
         isDeleted: false,
         deletedBy: null,
         deletedAt: null,
@@ -254,11 +243,15 @@ class NewsCommentsService {
    */
   async updateNewsCommentCount(projectId, newsId, change) {
     try {
-      const newsRef = doc(this.db, `projects/${projectId}/news`, newsId);
-      await updateDoc(newsRef, {
-        commentCount: increment(change),
-        updatedAt: new Date()
-      });
+      // Get current comment count first
+      const newsDoc = await firestoreService.getDoc(`projects/${projectId}/news/${newsId}`);
+      if (newsDoc && newsDoc.exists()) {
+        const currentCount = newsDoc.data().commentCount || 0;
+        await firestoreService.updateDoc(`projects/${projectId}/news/${newsId}`, {
+          commentCount: currentCount + change,
+          updatedAt: new Date()
+        });
+      }
     } catch (error) {
       console.error('Error updating comment count:', error);
       // Don't throw error as this is not critical
@@ -301,9 +294,9 @@ class NewsCommentsService {
    */
   async addNewsReaction(projectId, newsId, emoji) {
     try {
-      const { getAuth } = await import('firebase/auth');
-      const auth = getAuth();
-      const user = auth.currentUser;
+      // Get current user from optimized auth service
+      const { optimizedAuthService } = await import('./optimizedAuthService')
+      const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) throw new Error('User not authenticated');
       
@@ -315,7 +308,7 @@ class NewsCommentsService {
         createdAt: new Date()
       };
       
-      await addDoc(collection(this.db, `projects/${projectId}/news/${newsId}/reactions`), reactionData);
+      await firestoreService.addDoc(`projects/${projectId}/news/${newsId}/reactions`, reactionData);
     } catch (error) {
       console.error('Error adding news reaction:', error);
       throw error;
@@ -331,18 +324,23 @@ class NewsCommentsService {
    */
   async removeNewsReaction(projectId, newsId, emoji) {
     try {
-      const { getAuth } = await import('firebase/auth');
-      const auth = getAuth();
-      const user = auth.currentUser;
+      // Get current user from optimized auth service
+      const { optimizedAuthService } = await import('./optimizedAuthService')
+      const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) throw new Error('User not authenticated');
       
       // Find and delete the user's reaction with this emoji
-      const reactionsRef = collection(this.db, `projects/${projectId}/news/${newsId}/reactions`);
-      const q = query(reactionsRef, where('userId', '==', user.uid), where('emoji', '==', emoji));
-      const snapshot = await getDocs(q);
+      const reactions = await firestoreService.getCollection(`projects/${projectId}/news/${newsId}/reactions`, {
+        where: [
+          ['userId', '==', user.uid],
+          ['emoji', '==', emoji]
+        ]
+      });
       
-      const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+      const deletePromises = reactions.map(reaction => 
+        firestoreService.deleteDoc(`projects/${projectId}/news/${newsId}/reactions/${reaction.id}`)
+      );
       await Promise.all(deletePromises);
     } catch (error) {
       console.error('Error removing news reaction:', error);
@@ -358,13 +356,13 @@ class NewsCommentsService {
    */
   async getNewsReactions(projectId, newsId) {
     try {
-      const reactionsRef = collection(this.db, `projects/${projectId}/news/${newsId}/reactions`);
-      const q = query(reactionsRef, orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
+      const reactions = await firestoreService.getCollection(`projects/${projectId}/news/${newsId}/reactions`, {
+        orderBy: [['createdAt', 'desc']]
+      });
       
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      return reactions.map(reaction => ({
+        id: reaction.id,
+        ...reaction
       }));
     } catch (error) {
       console.error('Error fetching news reactions:', error);
@@ -381,16 +379,22 @@ class NewsCommentsService {
    */
   subscribeToNewsReactions(projectId, newsId, callback) {
     try {
-      const reactionsRef = collection(this.db, `projects/${projectId}/news/${newsId}/reactions`);
-      const q = query(reactionsRef, orderBy('createdAt', 'desc'));
-      
-      return onSnapshot(q, (snapshot) => {
-        const reactions = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        callback(reactions);
-      });
+      // Use firestoreService for real-time updates
+      return firestoreService.onSnapshot(
+        `projects/${projectId}/news/${newsId}/reactions`,
+        (docSnapshot) => {
+          if (docSnapshot && docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            const reaction = {
+              id: docSnapshot.id,
+              ...data
+            };
+            callback([reaction]);
+          } else {
+            callback([]);
+          }
+        }
+      );
     } catch (error) {
       console.error('Error subscribing to news reactions:', error);
       throw error;
@@ -406,18 +410,21 @@ class NewsCommentsService {
    */
   async toggleNewsReaction(projectId, newsId, emoji) {
     try {
-      const { getAuth } = await import('firebase/auth');
-      const auth = getAuth();
-      const user = auth.currentUser;
+      // Get current user from optimized auth service
+      const { optimizedAuthService } = await import('./optimizedAuthService')
+      const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) throw new Error('User not authenticated');
       
       // Check if user already has this reaction
-      const reactionsRef = collection(this.db, `projects/${projectId}/news/${newsId}/reactions`);
-      const q = query(reactionsRef, where('userId', '==', user.uid), where('emoji', '==', emoji));
-      const snapshot = await getDocs(q);
+      const reactions = await firestoreService.getCollection(`projects/${projectId}/news/${newsId}/reactions`, {
+        where: [
+          ['userId', '==', user.uid],
+          ['emoji', '==', emoji]
+        ]
+      });
       
-      if (snapshot.empty) {
+      if (reactions.length === 0) {
         // Add reaction
         await this.addNewsReaction(projectId, newsId, emoji);
       } else {
@@ -439,14 +446,8 @@ class NewsCommentsService {
    */
   async deleteCommentWithReplies(projectId, newsId, commentId) {
     try {
-      const commentsRef = collection(this.db, `projects/${projectId}/news/${newsId}/comments`);
-      
       // Get all comments to find replies
-      const allCommentsSnapshot = await getDocs(commentsRef);
-      const allComments = allCommentsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const allComments = await firestoreService.getCollection(`projects/${projectId}/news/${newsId}/comments`);
       
       // Find all replies to this comment (recursively)
       const repliesToDelete = [];
@@ -461,14 +462,12 @@ class NewsCommentsService {
       findReplies(commentId);
       
       // Delete the main comment
-      const commentDoc = doc(commentsRef, commentId);
-      await deleteDoc(commentDoc);
+      await firestoreService.deleteDoc(`projects/${projectId}/news/${newsId}/comments/${commentId}`);
       
       // Delete all replies
-      const deletePromises = repliesToDelete.map(replyId => {
-        const replyDoc = doc(commentsRef, replyId);
-        return deleteDoc(replyDoc);
-      });
+      const deletePromises = repliesToDelete.map(replyId => 
+        firestoreService.deleteDoc(`projects/${projectId}/news/${newsId}/comments/${replyId}`)
+      );
       
       await Promise.all(deletePromises);
       

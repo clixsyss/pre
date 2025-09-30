@@ -16,10 +16,12 @@ import AuthSupport from '../pages/auth/Support.vue'
 import SupportChatPage from '../pages/auth/SupportChatPage.vue'
 
 const routes = [
-  // Root redirects to onboarding
+  // Root redirects based on auth state - handled in beforeEach guard
   {
     path: '/',
-    redirect: '/onboarding'
+    name: 'Root',
+    component: () => import('../pages/auth/Home.vue'), // Default component, will be redirected by guard
+    meta: { requiresAuth: true }
   },
 
   // Unauthorized user routes
@@ -341,6 +343,32 @@ router.beforeEach(async (to, from, next) => {
   console.log('Navigation guard - to:', to.path, 'from:', from.path)
   const requiresAuth = to.meta.requiresAuth
 
+  // Handle root route specially
+  if (to.path === '/') {
+    console.log('Navigation guard: Handling root route')
+    try {
+      // Wait a bit for auth state to be established
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      const currentUser = await optimizedAuthService.getCurrentUser()
+      console.log('Navigation guard: Current user check result:', currentUser ? 'authenticated' : 'not authenticated')
+      
+      if (currentUser) {
+        console.log('Navigation guard: User authenticated, redirecting to /home')
+        next('/home')
+        return
+      } else {
+        console.log('Navigation guard: User not authenticated, redirecting to /onboarding')
+        next('/onboarding')
+        return
+      }
+    } catch (error) {
+      console.error('Navigation guard: Error checking auth state:', error)
+      next('/onboarding')
+      return
+    }
+  }
+
   // For non-authenticated routes, allow immediate navigation
   if (!requiresAuth) {
     next()
@@ -351,7 +379,7 @@ router.beforeEach(async (to, from, next) => {
   return new Promise((resolve) => {
     let resolved = false
 
-    // Reduced timeout for better UX
+    // Wait a bit longer for authentication state to be established
     const timeout = setTimeout(() => {
       if (!resolved) {
         console.log('Auth check timeout, allowing navigation')
@@ -359,30 +387,39 @@ router.beforeEach(async (to, from, next) => {
         next()
         resolve()
       }
-    }, 2000) // Reduced from 5s to 2s
+    }, 3000) // Increased to 3s to allow auth state to establish
 
-    // Get current user using optimized auth service
-    optimizedAuthService.getCurrentUser().then(currentUser => {
-      if (resolved) return
-      
-      console.log('Current user from authService:', currentUser ? 'authenticated' : 'not authenticated')
-      
-      clearTimeout(timeout)
-      resolved = true
-      
-      // Process the auth state
-      processAuthState(currentUser, to, from, next, resolve, requiresAuth)
-    }).catch(error => {
-      if (resolved) return
-      
-      console.error('Error getting current user:', error)
-      clearTimeout(timeout)
-      resolved = true
-      
-      // On error, allow navigation to prevent blocking
-      next()
-      resolve()
-    })
+    // Add a small delay to allow authentication state to be established
+    const checkAuth = async () => {
+      try {
+        // Wait a bit for auth state to be established
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        const currentUser = await optimizedAuthService.getCurrentUser()
+        
+        if (resolved) return
+        
+        console.log('Current user from authService:', currentUser ? 'authenticated' : 'not authenticated')
+        
+        clearTimeout(timeout)
+        resolved = true
+        
+        // Process the auth state
+        processAuthState(currentUser, to, from, next, resolve, requiresAuth)
+      } catch (error) {
+        if (resolved) return
+        
+        console.error('Error getting current user:', error)
+        clearTimeout(timeout)
+        resolved = true
+        
+        // On error, allow navigation to prevent blocking
+        next()
+        resolve()
+      }
+    }
+
+    checkAuth()
   })
 })
 

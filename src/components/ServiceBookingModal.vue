@@ -282,7 +282,15 @@ const closeModal = () => {
 
 // Open chat
 const openChat = () => {
-  if (!currentBooking.value?.id) return;
+  console.log('🔍 ServiceBookingModal: openChat called', { 
+    bookingId: currentBooking.value?.id,
+    booking: currentBooking.value 
+  });
+  
+  if (!currentBooking.value?.id) {
+    console.error('❌ ServiceBookingModal: No booking ID available');
+    return;
+  }
   
   // Mark messages as read when opening chat
   if (currentBooking.value.messages && currentBooking.value.messages.length > 0) {
@@ -292,7 +300,15 @@ const openChat = () => {
   
   // Close modal and navigate to chat
   closeModal();
-  router.push(`/service-booking-chat/${currentBooking.value.id}`);
+  
+  const chatRoute = `/service-booking-chat/${currentBooking.value.id}`;
+  console.log('🚀 ServiceBookingModal: Navigating to chat route:', chatRoute);
+  
+  router.push(chatRoute).then(() => {
+    console.log('✅ ServiceBookingModal: Navigation successful');
+  }).catch((error) => {
+    console.error('❌ ServiceBookingModal: Navigation failed:', error);
+  });
 };
 
 // Format date

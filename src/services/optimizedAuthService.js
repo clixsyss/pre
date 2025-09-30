@@ -31,6 +31,14 @@ class OptimizedAuthService {
   }
 
   /**
+   * Clear cached user (useful for logout or when auth state changes)
+   */
+  clearCachedUser() {
+    this.currentUser = null
+    console.log('🚀 OptimizedAuthService: Cleared cached user')
+  }
+
+  /**
    * Get current user with caching
    */
   async getCurrentUser() {
@@ -54,6 +62,7 @@ class OptimizedAuthService {
       return this.currentUser
     } catch (error) {
       console.error('❌ Get current user error:', error)
+      this.currentUser = null
       return null
     }
   }
@@ -150,6 +159,12 @@ class OptimizedAuthService {
         return this.capacitorAuth.addListener('authStateChange', (result) => {
           console.log('🚀 OptimizedAuthService: Auth state changed, user:', result.user ? 'authenticated' : 'not authenticated')
           this.currentUser = result.user
+          
+          // Clear cache on sign out
+          if (!result.user) {
+            cacheService.clear()
+          }
+          
           callback(result.user)
         })
       })

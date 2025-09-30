@@ -1,6 +1,6 @@
 import { defineBoot } from '#q-app/wrappers'
 import { initializeApp } from 'firebase/app'
-import { getAuth, GoogleAuthProvider } from 'firebase/auth'
+import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 import { Capacitor } from '@capacitor/core'
@@ -37,11 +37,13 @@ if (isNative) {
   // Use Capacitor Firebase plugins for native platforms
   console.log('Firebase Boot: Using Capacitor Firebase plugins for native platform')
   
-  // For native platforms, we'll use the plugins directly in services
-  // Keep auth, db, and storage as null - they'll be handled by Capacitor plugins
-  auth = null
-  db = null
-  storage = null
+  // For native platforms, we still need Web SDK instances for compatibility
+  // This ensures authentication persistence works properly
+  auth = getAuth(app)
+  db = getFirestore(app)
+  storage = getStorage(app)
+  
+  console.log('Firebase Boot: Web SDK instances created for native platform compatibility')
 } else {
   // Use Web SDK for web/PWA
   console.log('Firebase Boot: Using Firebase Web SDK for web platform')
@@ -49,6 +51,16 @@ if (isNative) {
   auth = getAuth(app)
   db = getFirestore(app)
   storage = getStorage(app)
+}
+
+// Set up authentication persistence
+if (auth) {
+  try {
+    setPersistence(auth, browserLocalPersistence)
+    console.log('Firebase Boot: Authentication persistence set to local storage')
+  } catch (error) {
+    console.error('Firebase Boot: Failed to set auth persistence:', error)
+  }
 }
 
 export default defineBoot(async ({ app }) => {

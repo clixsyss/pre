@@ -64,6 +64,8 @@ export const getUserFines = async (projectId, userId) => {
   return performanceService.timeOperation('getUserFines', async () => {
     try {
       console.log('🔍 Getting user fines:', { projectId, userId })
+      console.log('🔍 User ID being searched for:', userId)
+      console.log('🔍 User ID length:', userId.length)
       
       const collectionPath = `projects/${projectId}/fines`
       const filters = {
@@ -72,12 +74,15 @@ export const getUserFines = async (projectId, userId) => {
       const orderBy = { field: 'createdAt', direction: 'desc' }
       
       const result = await firestoreService.getDocs(collectionPath, filters, orderBy)
+      console.log('🔍 Raw Firestore result:', result)
+      
       const fines = result.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       
       console.log('✅ User fines retrieved:', { count: fines.length })
+      console.log('🔍 Fines data:', fines)
       return fines;
     } catch (error) {
       console.error('❌ Error fetching user fines:', error);
