@@ -1,5 +1,20 @@
 {
   "appId": "com.pregroup.app",
   "appName": "PRE Group",
-  "webDir": "dist/spa"
+  "webDir": "dist/spa",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 3000,
+      "launchAutoHide": false,
+      "backgroundColor": "#000000",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": true,
+      "androidSpinnerStyle": "large",
+      "iosSpinnerStyle": "small",
+      "spinnerColor": "#AF1E23",
+      "splashFullScreen": true,
+      "splashImmersive": true
+    }
+  }
 }

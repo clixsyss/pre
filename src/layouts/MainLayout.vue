@@ -157,7 +157,7 @@
     </main>
 
     <!-- Bottom Navigation -->
-    <nav class="bottom-navigation">
+    <nav class="bottom-navigation" :class="{ 'hidden': shouldHideBottomNav }">
       <router-link to="/home" class="nav-item" :class="{ active: isActiveTab('home') }">
         <div class="nav-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -263,12 +263,74 @@ const showSuspensionMessage = ref(false)
 const suspensionMessage = ref(null)
 const isUserSuspended = ref(false)
 
+// Keyboard state
+const isKeyboardVisible = ref(false)
+const isChatPage = ref(false)
+
 // Computed properties
 const currentProject = computed(() => projectStore.selectedProject)
 const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => currentProject.value?.id)
 
+// Hide bottom navigation when keyboard is visible on chat pages
+const shouldHideBottomNav = computed(() => {
+  return isKeyboardVisible.value && isChatPage.value
+})
+
 // Methods
+// Keyboard detection methods
+const detectKeyboardVisibility = () => {
+  const initialViewportHeight = window.innerHeight
+  
+  const handleResize = () => {
+    const currentViewportHeight = window.innerHeight
+    const heightDifference = initialViewportHeight - currentViewportHeight
+    
+    // Consider keyboard visible if viewport height decreased by more than 150px
+    isKeyboardVisible.value = heightDifference > 150
+  }
+  
+  window.addEventListener('resize', handleResize)
+  
+  // Also listen for focus events on input elements
+  const handleFocus = (event) => {
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+      setTimeout(() => {
+        isKeyboardVisible.value = true
+      }, 300) // Small delay to allow keyboard animation
+    }
+  }
+  
+  const handleBlur = (event) => {
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+      setTimeout(() => {
+        isKeyboardVisible.value = false
+      }, 300) // Small delay to allow keyboard animation
+    }
+  }
+  
+  document.addEventListener('focusin', handleFocus)
+  document.addEventListener('focusout', handleBlur)
+  
+  // Cleanup function
+  return () => {
+    window.removeEventListener('resize', handleResize)
+    document.removeEventListener('focusin', handleFocus)
+    document.removeEventListener('focusout', handleBlur)
+  }
+}
+
+const checkIfChatPage = () => {
+  const chatRoutes = [
+    '/complaints/',
+    '/violations/',
+    '/support/',
+    '/service-booking/'
+  ]
+  
+  isChatPage.value = chatRoutes.some(chatRoute => route.path.includes(chatRoute))
+}
+
 const switchToProject = async (project) => {
   try {
     // Show loading state
@@ -452,6 +514,15 @@ watch(
   { deep: true }
 )
 
+// Watch for route changes to detect chat pages
+watch(
+  () => route.path,
+  () => {
+    checkIfChatPage()
+  },
+  { immediate: true }
+)
+
 // Listen for suspension message events from router
 const handleSuspensionMessage = (event) => {
   const { suspensionDetails, attemptedRoute } = event.detail
@@ -493,6 +564,9 @@ onMounted(async () => {
   
   window.addEventListener('showSuspensionMessage', handleSuspensionMessage)
   
+  // Initialize keyboard detection
+  const cleanupKeyboardDetection = detectKeyboardVisibility()
+  
   // Add dead zones for areas where swipe should be disabled
   // Bottom navigation area (prevent accidental swipes when tapping nav items)
   const navHeight = 80 // Smaller dead zone
@@ -512,7 +586,10 @@ onMounted(async () => {
     }, 2000)
   }
   
-  return () => unsubscribe()
+  return () => {
+    unsubscribe()
+    cleanupKeyboardDetection()
+  }
 })
 
 // Cleanup event listener on unmount
@@ -765,6 +842,11 @@ onUnmounted(() => {
   bottom: 0;
   z-index: 100;
   width: 100%;
+  transition: transform 0.3s ease-in-out;
+}
+
+.bottom-navigation.hidden {
+  transform: translateY(100%);
 }
 
 .nav-item {

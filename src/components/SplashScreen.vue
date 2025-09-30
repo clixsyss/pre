@@ -40,24 +40,33 @@ import { useSplashStore } from '../stores/splash'
 const splashStore = useSplashStore()
 
 onMounted(() => {
-  // Only show splash screen for first visit or if explicitly needed
-  const hasSeenSplash = localStorage.getItem('hasSeenSplash')
+  // Always show splash screen with loading during app initialization
+  splashStore.setLoading(true)
+  splashStore.setLoadingMessage('Initializing...')
   
-  if (!hasSeenSplash) {
-    // First time user - show splash screen
-    splashStore.setLoading(true)
-    
-    // Hide splash screen after 2 seconds
+  // Listen for app ready event
+  const handleAppReady = () => {
+    splashStore.setLoading(false)
+    splashStore.setLoadingMessage('')
     setTimeout(() => {
-      splashStore.setLoading(false)
-      setTimeout(() => {
-        splashStore.hideSplash()
-        localStorage.setItem('hasSeenSplash', 'true')
-      }, 500)
-    }, 2000)
-  } else {
-    // Returning user - hide splash immediately
-    splashStore.hideSplash()
+      splashStore.hideSplash()
+    }, 300)
+  }
+  
+  // Listen for app ready event from main app
+  window.addEventListener('appReady', handleAppReady)
+  
+  // Fallback timeout to prevent infinite loading
+  setTimeout(() => {
+    if (splashStore.show) {
+      console.warn('Splash screen timeout, forcing hide')
+      handleAppReady()
+    }
+  }, 10000) // 10 second fallback
+  
+  // Cleanup
+  return () => {
+    window.removeEventListener('appReady', handleAppReady)
   }
 })
 </script>

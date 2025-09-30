@@ -45,7 +45,7 @@
           <div class="store-meta">
             <span class="location">{{ store?.location }}</span>
             <span class="delivery">{{ store?.averageDeliveryTime }} delivery</span>
-            <span v-if="store?.deliveryFee" class="delivery-fee">${{ store.deliveryFee }} delivery fee</span>
+            <span v-if="store?.deliveryFee" class="delivery-fee">EGP{{ store.deliveryFee }} delivery fee</span>
           </div>
           
           <!-- Store Rating -->

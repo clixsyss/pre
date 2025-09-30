@@ -255,7 +255,9 @@ class FirestoreService {
       console.log('🚀 FirestoreService: Getting collection docs for:', collectionPath)
       
       // Check cache first
-      const cacheKey = `collection:${collectionPath}`
+      // Create a cache key that includes query parameters to avoid cache conflicts
+      const queryParams = queryOptions ? JSON.stringify(queryOptions) : 'no-params'
+      const cacheKey = `collection:${collectionPath}:${queryParams}`
       const cachedData = cacheService.get(cacheKey)
       if (cachedData) {
         console.log('FirestoreService: Using cached collection data for:', collectionPath)

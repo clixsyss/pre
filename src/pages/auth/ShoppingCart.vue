@@ -115,12 +115,12 @@
         <div class="summary-content">
           <div class="summary-row">
             <span>Subtotal</span>
-            <span>${{ subtotal.toFixed(2) }}</span>
+            <span>EGP{{ subtotal.toFixed(2) }}</span>
           </div>
           
           <div class="summary-row">
             <span>Delivery Fee</span>
-            <span>${{ deliveryFee.toFixed(2) }}</span>
+            <span>EGP{{ deliveryFee.toFixed(2) }}</span>
           </div>
           
           <div v-if="cartStore.items.length > 0 && cartStore.items[0].storeDeliveryFee" class="summary-note">
@@ -129,7 +129,7 @@
           
           <div class="summary-row total">
             <span>Total</span>
-            <span>${{ total.toFixed(2) }}</span>
+            <span>EGP{{ total.toFixed(2) }}</span>
           </div>
         </div>
         
@@ -210,15 +210,15 @@
             <div class="order-totals-section">
               <div class="total-row">
                 <span>Subtotal</span>
-                <span>${{ orderSubtotal.toFixed(2) }}</span>
+                <span>EGP{{ orderSubtotal.toFixed(2) }}</span>
               </div>
               <div class="total-row">
                 <span>Delivery Fee</span>
-                <span>${{ orderDeliveryFee.toFixed(2) }}</span>
+                <span>EGP{{ orderDeliveryFee.toFixed(2) }}</span>
               </div>
               <div class="total-row total-amount">
                 <span>Total</span>
-                <span>${{ orderTotal.toFixed(2) }}</span>
+                <span>EGP{{ orderTotal.toFixed(2) }}</span>
               </div>
             </div>
           </div>

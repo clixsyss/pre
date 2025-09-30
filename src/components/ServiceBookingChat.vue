@@ -397,6 +397,15 @@ const formatMessageTime = (timestamp) => {
   right: 0;
   bottom: 80px; /* Bottom nav height */
   z-index: 100;
+  transition: bottom 0.3s ease-in-out;
+}
+
+/* When keyboard is visible, expand to full height */
+@media (max-height: 600px) {
+  .service-booking-chat {
+    bottom: 0;
+    height: calc(100vh - 150px);
+  }
 }
 
 /* Header Styles */

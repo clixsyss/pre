@@ -177,7 +177,7 @@
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
-                  <span>${{ store.deliveryFee }}</span>
+                  <span>EGP{{ store.deliveryFee }}</span>
                 </div>
                 
                 <div class="meta-item free-delivery" v-else>
@@ -304,7 +304,7 @@
                 <div class="order-items">
                   <div class="items-preview">
                     <span class="items-count">{{ order.items?.length || 0 }} items</span>
-                    <span class="items-total">${{ (order.total || 0).toFixed(2) }}</span>
+                    <span class="items-total">EGP{{ (order.total || 0).toFixed(2) }}</span>
                   </div>
                   <div class="store-name" v-if="order.storeName">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -445,7 +445,7 @@
               </div>
               <div class="card-content">
                 <span class="card-label">Subtotal</span>
-                <span class="card-value">${{ (selectedOrder.subtotal || 0).toFixed(2) }}</span>
+                <span class="card-value">EGP{{ (selectedOrder.subtotal || 0).toFixed(2) }}</span>
               </div>
             </div>
 
@@ -457,7 +457,7 @@
               </div>
               <div class="card-content">
                 <span class="card-label">Delivery</span>
-                <span class="card-value">{{ selectedOrder.deliveryFee ? `$${selectedOrder.deliveryFee.toFixed(2)}` : 'Free' }}</span>
+                <span class="card-value">{{ selectedOrder.deliveryFee ? `EGP${selectedOrder.deliveryFee.toFixed(2)}` : 'Free' }}</span>
               </div>
             </div>
 

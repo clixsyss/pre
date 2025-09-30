@@ -20,7 +20,6 @@ import { useRoute } from 'vue-router'
 import SplashScreen from './components/SplashScreen.vue'
 import NotificationPopup from './components/NotificationPopup.vue'
 import MainLayout from './layouts/MainLayout.vue'
-import { useSplashStore } from './stores/splash'
 
 // Component name for ESLint
 defineOptions({
@@ -29,7 +28,6 @@ defineOptions({
 
 const route = useRoute()
 const isRouterLoading = ref(true)
-const splashStore = useSplashStore()
 
 onMounted(async () => {
   try {
@@ -39,19 +37,36 @@ onMounted(async () => {
     await nextTick()
     console.log('🚀 App.vue: Vue app mounted')
     
-    // Small delay to ensure everything is ready
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // Initialize Firebase services in parallel
+    const initPromises = []
+    
+    // Initialize auth service
+    if (window.optimizedAuthService) {
+      initPromises.push(window.optimizedAuthService.initialize())
+    }
+    
+    // Initialize Firestore service
+    if (window.firestoreService) {
+      initPromises.push(window.firestoreService.initialize())
+    }
+    
+    // Wait for all initializations to complete
+    await Promise.allSettled(initPromises)
+    
+    console.log('🚀 App.vue: Services initialized')
     
     // Hide splash screen and show app content
-    splashStore.hideSplash()
     isRouterLoading.value = false
+    
+    // Emit app ready event for splash screen
+    window.dispatchEvent(new CustomEvent('appReady'))
     console.log('🚀 App.vue: App ready, splash hidden')
     
   } catch (error) {
     console.error('❌ App.vue: Error during initialization:', error)
     // Hide splash even if there's an error
-    splashStore.hideSplash()
     isRouterLoading.value = false
+    window.dispatchEvent(new CustomEvent('appReady'))
   }
 })
 

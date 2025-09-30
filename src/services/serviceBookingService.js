@@ -2,9 +2,7 @@ import firestoreService from './firestoreService'
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
 import optimizedAuthService from './optimizedAuthService'
-import { collection, query, where, orderBy, getDocs, doc, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore'
-import { getAuth } from 'firebase/auth'
-import { db } from '../boot/firebase'
+// Note: Using Date.now() instead of serverTimestamp() for Capacitor Firebase compatibility
 
 class ServiceBookingService {
   /**
@@ -155,25 +153,35 @@ class ServiceBookingService {
    * @returns {Promise<Array>} Array of user's bookings with specified status
    */
   async getServiceBookingsByStatus(projectId, userId, status) {
-    try {
-      const q = query(
-        collection(db, `projects/${projectId}/serviceBookings`),
-        where('userId', '==', userId),
-        where('status', '==', status),
-        orderBy('lastMessageAt', 'desc')
-      );
-      
-      const querySnapshot = await getDocs(q);
-      const bookings = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      return bookings;
-    } catch (error) {
-      console.error(`Error fetching ${status} service bookings:`, error);
-      throw error;
-    }
+    return performanceService.timeOperation('getServiceBookingsByStatus', async () => {
+      try {
+        console.log('🔍 Getting service bookings by status:', { projectId, userId, status })
+        
+        const collectionPath = `projects/${projectId}/serviceBookings`
+        const queryOptions = {
+          filters: [
+            { field: 'userId', operator: '==', value: userId },
+            { field: 'status', operator: '==', value: status }
+          ],
+          orderBy: [
+            { field: 'lastMessageAt', direction: 'desc' }
+          ],
+          timeoutMs: 6000
+        }
+        
+        const result = await firestoreService.getDocs(collectionPath, queryOptions)
+        
+        console.log('✅ Service bookings retrieved successfully:', result.docs.length)
+        return result.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+      } catch (error) {
+        console.error(`❌ Error fetching ${status} service bookings:`, error);
+        errorHandlingService.handleFirestoreError(error, 'getServiceBookingsByStatus')
+        throw error;
+      }
+    })
   }
 
   /**
@@ -218,7 +226,6 @@ class ServiceBookingService {
    */
   async updateBookingStatus(projectId, bookingId, status, reason = '') {
     try {
-      const docRef = doc(db, `projects/${projectId}/serviceBookings`, bookingId);
       
       // Add system message for status change
       const now = new Date();
@@ -231,10 +238,11 @@ class ServiceBookingService {
       };
 
       const currentBooking = await this.getServiceBooking(projectId, bookingId);
-      await updateDoc(docRef, {
+      const docPath = `projects/${projectId}/serviceBookings/${bookingId}`;
+      await firestoreService.updateDoc(docPath, {
         status: status,
-        updatedAt: serverTimestamp(),
-        lastMessageAt: serverTimestamp(),
+        updatedAt: new Date(),
+        lastMessageAt: new Date(),
         messages: [...(currentBooking.messages || []), systemMessage]
       });
     } catch (error) {
@@ -255,8 +263,6 @@ class ServiceBookingService {
       try {
         console.log('🔍 Completing service booking:', { projectId, bookingId, reason })
         
-        const docRef = doc(db, `projects/${projectId}/serviceBookings`, bookingId);
-        
         // Add system message for completion
         const now = new Date();
         const systemMessage = {
@@ -268,10 +274,11 @@ class ServiceBookingService {
         };
 
         const currentBooking = await this.getServiceBooking(projectId, bookingId);
-        await updateDoc(docRef, {
+        const docPath = `projects/${projectId}/serviceBookings/${bookingId}`;
+        await firestoreService.updateDoc(docPath, {
           status: 'closed',
-          updatedAt: serverTimestamp(),
-          lastMessageAt: serverTimestamp(),
+          updatedAt: new Date(),
+          lastMessageAt: new Date(),
           messages: [...(currentBooking.messages || []), systemMessage]
         });
         
@@ -295,7 +302,6 @@ class ServiceBookingService {
    */
   async updateBookingDetails(projectId, bookingId, updates, reason = '') {
     try {
-      const docRef = doc(db, `projects/${projectId}/serviceBookings`, bookingId);
       const booking = await this.getServiceBooking(projectId, bookingId);
       
       // Create system message for the update
@@ -328,10 +334,11 @@ class ServiceBookingService {
         messageType: 'details_update'
       };
 
-      await updateDoc(docRef, {
+      const docPath = `projects/${projectId}/serviceBookings/${bookingId}`;
+      await firestoreService.updateDoc(docPath, {
         ...updates,
-        updatedAt: serverTimestamp(),
-        lastMessageAt: serverTimestamp(),
+        updatedAt: new Date(),
+        lastMessageAt: new Date(),
         messages: [...booking.messages || [], systemMessage]
       });
     } catch (error) {
@@ -348,37 +355,53 @@ class ServiceBookingService {
    * @returns {Promise<void>}
    */
   async addMessage(projectId, bookingId, messageData) {
-    try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      
-      if (!user) {
-        throw new Error('User not authenticated');
+    return performanceService.timeOperation('addMessage', async () => {
+      try {
+        console.log('🔍 Adding message to service booking:', { projectId, bookingId, messageData })
+        
+        const user = await optimizedAuthService.getCurrentUser();
+        
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+
+        const booking = await this.getServiceBooking(projectId, bookingId);
+        console.log('📋 Current booking messages count:', booking.messages?.length || 0)
+        
+        const now = new Date();
+        const message = {
+          id: Date.now().toString(),
+          text: messageData.text,
+          senderType: messageData.senderType || 'user',
+          senderId: user.uid,
+          senderName: user.displayName || 'User',
+          timestamp: now,
+          messageType: 'chat'
+        };
+
+        console.log('💬 New message object:', message)
+
+        const docPath = `projects/${projectId}/serviceBookings/${bookingId}`;
+        const updateData = {
+          messages: [...(booking.messages || []), message],
+          lastMessageAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        console.log('📝 Update data:', { 
+          messagesCount: updateData.messages.length,
+          lastMessageAt: updateData.lastMessageAt,
+          updatedAt: updateData.updatedAt
+        })
+        
+        await firestoreService.updateDoc(docPath, updateData);
+        console.log('✅ Message added successfully to service booking')
+      } catch (error) {
+        console.error('❌ Error adding message:', error);
+        errorHandlingService.handleFirestoreError(error, 'addMessage')
+        throw error;
       }
-
-      const docRef = doc(db, `projects/${projectId}/serviceBookings`, bookingId);
-      const booking = await this.getServiceBooking(projectId, bookingId);
-      
-      const now = new Date();
-      const message = {
-        id: Date.now().toString(),
-        text: messageData.text,
-        senderType: messageData.senderType || 'user',
-        senderId: user.uid,
-        senderName: user.displayName || 'User',
-        timestamp: now,
-        messageType: 'chat'
-      };
-
-      await updateDoc(docRef, {
-        messages: [...booking.messages || [], message],
-        lastMessageAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-    } catch (error) {
-      console.error('Error adding message:', error);
-      throw error;
-    }
+    })
   }
 
   /**
@@ -389,8 +412,8 @@ class ServiceBookingService {
    * @returns {Function} Unsubscribe function
    */
   onServiceBookingChange(projectId, bookingId, callback) {
-    const docRef = doc(db, `projects/${projectId}/serviceBookings`, bookingId);
-    return onSnapshot(docRef, (doc) => {
+    const docPath = `projects/${projectId}/serviceBookings/${bookingId}`;
+    return firestoreService.onSnapshot(docPath, (doc) => {
       if (doc.exists()) {
         callback({
           id: doc.id,

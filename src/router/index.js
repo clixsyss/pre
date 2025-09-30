@@ -274,11 +274,16 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
     }
   } else if (user && requiresAuth) {
     // User is authenticated and trying to access protected route
-    // Check if profile is complete
+    // Run profile and suspension checks in parallel for better performance
     try {
-      const userDoc = await firestoreService.getDoc(`users/${user.uid}`)
-      if (userDoc.exists()) {
-        const userData = userDoc.data()
+      const [userDocResult, suspensionResult] = await Promise.allSettled([
+        firestoreService.getDoc(`users/${user.uid}`),
+        canUserAccessRoute(user.uid, to.path)
+      ])
+      
+      // Check profile completion
+      if (userDocResult.status === 'fulfilled' && userDocResult.value.exists()) {
+        const userData = userDocResult.value.data()
         const isProfileComplete = userData.isProfileComplete
         
         if (!isProfileComplete) {
@@ -287,44 +292,40 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
           resolve()
           return
         }
-
-        // Check if user is suspended and can access this route
+      }
+      
+      // Check suspension status
+      if (suspensionResult.status === 'fulfilled' && !suspensionResult.value) {
+        console.log('User is suspended and cannot access this route:', to.path)
+        
+        // Check suspension details to show proper message
         try {
-          const canAccess = await canUserAccessRoute(user.uid, to.path)
-          if (!canAccess) {
-            console.log('User is suspended and cannot access this route:', to.path)
-
-            // Check suspension details to show proper message
-            const suspensionStatus = await checkUserSuspension(user.uid)
-            if (suspensionStatus.isSuspended) {
-              // Emit event to show suspension message
-              window.dispatchEvent(new CustomEvent('showSuspensionMessage', {
-                detail: {
-                  suspensionDetails: suspensionStatus.suspensionDetails,
-                  attemptedRoute: to.path
-                }
-              }))
-            }
-
-            // Redirect to home page for suspended users
-            next('/home')
-            resolve()
-            return
+          const suspensionStatus = await checkUserSuspension(user.uid)
+          if (suspensionStatus.isSuspended) {
+            // Emit event to show suspension message
+            window.dispatchEvent(new CustomEvent('showSuspensionMessage', {
+              detail: {
+                suspensionDetails: suspensionStatus.suspensionDetails,
+                attemptedRoute: to.path
+              }
+            }))
           }
         } catch (error) {
-          console.error('Error checking suspension status:', error)
-          // On error, allow access but log the issue
+          console.error('Error checking suspension details:', error)
         }
-
-        // Profile complete or no profile data - allow access
-        next()
+        
+        // Redirect to home page for suspended users
+        next('/home')
         resolve()
-      } else {
-        console.log('No user document found in Firestore')
+        return
       }
+      
+      // All checks passed - allow access
+      next()
+      resolve()
     } catch (error) {
-      console.error('Error checking profile completion:', error)
-      // On error, allow access but log the issue
+      console.error('Error in auth state processing:', error)
+      // On error, allow access to prevent blocking
       next()
       resolve()
     }
@@ -340,11 +341,17 @@ router.beforeEach(async (to, from, next) => {
   console.log('Navigation guard - to:', to.path, 'from:', from.path)
   const requiresAuth = to.meta.requiresAuth
 
-  // Check authentication status with timeout
+  // For non-authenticated routes, allow immediate navigation
+  if (!requiresAuth) {
+    next()
+    return
+  }
+
+  // Check authentication status with optimized timeout
   return new Promise((resolve) => {
     let resolved = false
 
-    // Set a timeout to prevent infinite loading
+    // Reduced timeout for better UX
     const timeout = setTimeout(() => {
       if (!resolved) {
         console.log('Auth check timeout, allowing navigation')
@@ -352,40 +359,29 @@ router.beforeEach(async (to, from, next) => {
         next()
         resolve()
       }
-    }, 5000) // 5 second timeout
+    }, 2000) // Reduced from 5s to 2s
 
-          // Get current user using optimized auth service
-          optimizedAuthService.getCurrentUser().then(currentUser => {
-      console.log('Current user from authService:', currentUser ? 'authenticated' : 'not authenticated')
-      
-      // If we have a current user, use it immediately
-      if (currentUser && !resolved) {
-        console.log('Using current user for immediate auth check')
-        clearTimeout(timeout)
-        resolved = true
-        
-        console.log('Auth state from currentUser - user:', currentUser ? 'authenticated' : 'not authenticated')
-        
-        // Process the auth state
-        processAuthState(currentUser, to, from, next, resolve, requiresAuth)
-        return
-      }
-    }).catch(error => {
-      console.error('Error getting current user:', error)
-    })
-    
-          // Listen to auth state changes using optimized auth service
-          const unsubscribe = optimizedAuthService.onAuthStateChanged(async (user) => {
+    // Get current user using optimized auth service
+    optimizedAuthService.getCurrentUser().then(currentUser => {
       if (resolved) return
       
-      unsubscribe()
+      console.log('Current user from authService:', currentUser ? 'authenticated' : 'not authenticated')
+      
       clearTimeout(timeout)
       resolved = true
       
-      console.log('Auth state changed - user:', user ? 'authenticated' : 'not authenticated')
-      
       // Process the auth state
-      processAuthState(user, to, from, next, resolve, requiresAuth)
+      processAuthState(currentUser, to, from, next, resolve, requiresAuth)
+    }).catch(error => {
+      if (resolved) return
+      
+      console.error('Error getting current user:', error)
+      clearTimeout(timeout)
+      resolved = true
+      
+      // On error, allow navigation to prevent blocking
+      next()
+      resolve()
     })
   })
 })
