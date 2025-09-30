@@ -38,11 +38,10 @@ if (isNative) {
   console.log('Firebase Boot: Using Capacitor Firebase plugins for native platform')
   
   // For native platforms, we'll use the plugins directly in services
-  // Keep auth and storage as null - they'll be handled by Capacitor plugins
-  // But we need Web SDK db for collection queries since Capacitor plugin doesn't support getDocuments
+  // Keep auth, db, and storage as null - they'll be handled by Capacitor plugins
   auth = null
-  db = getFirestore(app) // Web SDK for collection queries
-  storage = null // Capacitor plugin will handle Storage
+  db = null
+  storage = null
 } else {
   // Use Web SDK for web/PWA
   console.log('Firebase Boot: Using Firebase Web SDK for web platform')

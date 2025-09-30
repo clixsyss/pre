@@ -79,7 +79,26 @@ export class BookingService {
             try {
                 console.log('🔍 Getting available time slots:', { projectId, courtId, date })
                 
-                const baseSlots = this.generateTimeSlots();
+                // First, try to get court-specific time slot configuration from database
+                let baseSlots;
+                try {
+                    const courtDoc = await firestoreService.getDoc(`projects/${projectId}/courts/${courtId}`);
+                    const courtData = courtDoc?.snapshot?.data || courtDoc?.data?.() || courtDoc;
+                    
+                    if (courtData && courtData.timeSlotConfig) {
+                        // Use court-specific time slot configuration from database
+                        const { startHour, endHour, intervalMinutes } = courtData.timeSlotConfig;
+                        console.log('🔍 Using court-specific time slot config from database:', courtData.timeSlotConfig);
+                        baseSlots = this.generateTimeSlots(startHour, endHour, intervalMinutes);
+                    } else {
+                        // Fallback to default hardcoded hours
+                        console.log('🔍 Using default hardcoded time slots (6 AM - 10 PM)');
+                        baseSlots = this.generateTimeSlots();
+                    }
+                } catch (configError) {
+                    console.warn('⚠️ Could not fetch court config, using default time slots:', configError);
+                    baseSlots = this.generateTimeSlots();
+                }
                 
                 // Check which slots are already booked
                 const collectionPath = `projects/${projectId}/bookings`

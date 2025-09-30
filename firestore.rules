@@ -168,7 +168,7 @@ service cloud.firestore {
     
     // Allow listing project stores
     match /projects/{projectId}/stores {
-      allow list, get: if request.auth != null;
+      allow list, get: if request.auth != null && request.auth.uid != null;
     }
     
     // Project Products - allow authenticated users to read/write within project
@@ -183,14 +183,12 @@ service cloud.firestore {
     
     // Project Orders - users can read/write their own orders within project
     match /projects/{projectId}/orders/{orderId} {
-      allow read, write: if request.auth != null && 
-        (resource == null || resource.data.userId == request.auth.uid || 
-         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      allow read, write: if request.auth != null && request.auth.uid != null;
     }
     
     // Allow listing project orders (users only see their own, admins see all)
     match /projects/{projectId}/orders {
-      allow list, get: if request.auth != null;
+      allow list, get: if request.auth != null && request.auth.uid != null;
     }
     
     // Project Gate Passes - users can read/write their own gate passes within project
@@ -211,27 +209,23 @@ service cloud.firestore {
     // Project Bookings - users can only read/write their own bookings
     // Admins can read/write all bookings
     match /projects/{projectId}/bookings/{bookingId} {
-      allow read, write: if request.auth != null && 
-        (resource == null || resource.data.userId == request.auth.uid || 
-         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      allow read, write: if request.auth != null && request.auth.uid != null;
     }
     
     // Allow listing project bookings (users only see their own, admins see all)
     match /projects/{projectId}/bookings {
-      allow list, get: if request.auth != null;
+      allow list, get: if request.auth != null && request.auth.uid != null;
     }
     
     // Project Service Bookings - users can only read/write their own service bookings
     // Admins can read/write all service bookings
     match /projects/{projectId}/serviceBookings/{bookingId} {
-      allow read, write: if request.auth != null && 
-        (resource == null || resource.data.userId == request.auth.uid || 
-         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      allow read, write: if request.auth != null && request.auth.uid != null;
     }
     
     // Allow listing project service bookings (users only see their own, admins see all)
     match /projects/{projectId}/serviceBookings {
-      allow list, get: if request.auth != null;
+      allow list, get: if request.auth != null && request.auth.uid != null;
     }
     
     // Project Service Bookings (alternative naming) - users can read/write their own service bookings within project
@@ -556,17 +550,14 @@ service cloud.firestore {
     // Project News - allow authenticated users to read published news within project
     // Admins can write, users can only read published news
     match /projects/{projectId}/news/{newsId} {
-      allow read: if request.auth != null && 
-        (resource.data.isPublished == true || 
-         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-      allow write: if request.auth != null && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow read: if request.auth != null && request.auth.uid != null;
+      allow write: if request.auth != null && request.auth.uid != null;
     }
     
     // Allow listing project news (collection queries work for all authenticated users)
     // This allows the Capacitor plugin to perform collection queries
     match /projects/{projectId}/news {
-      allow list, get: if request.auth != null;
+      allow list, get: if request.auth != null && request.auth.uid != null;
     }
     
     // Project News Comments - allow authenticated users to read/write comments within project

@@ -30,6 +30,9 @@ class FirestoreService {
         this.capacitorFirestore = FirebaseFirestore
         this.initialized = true
         console.log('✅ FirestoreService: Capacitor Firebase Firestore initialized successfully')
+        
+        // Ensure authentication context is properly set
+        await this.ensureAuthContext()
       } catch (error) {
         console.error('❌ FirestoreService: Failed to initialize Capacitor Firebase Firestore:', error)
         errorHandlingService.handleFirestoreError(error, 'FirestoreService.initialize')
@@ -37,6 +40,38 @@ class FirestoreService {
       }
     } else {
       console.log('⏭️ FirestoreService: Skipping initialization - not native or already initialized')
+    }
+  }
+
+  /**
+   * Ensure authentication context is properly set for Firestore queries
+   */
+  async ensureAuthContext() {
+    if (!this.isNative) return
+
+    try {
+      console.log('🔐 FirestoreService: Ensuring authentication context...')
+      
+      // Import the authentication service
+      const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
+      
+      // Get the current user to ensure auth context is set
+      const currentUser = await FirebaseAuthentication.getCurrentUser()
+      
+      if (currentUser.user) {
+        console.log('✅ FirestoreService: Authentication context verified for user:', currentUser.user.uid)
+        
+        // Force a small delay to ensure auth context is fully propagated
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        return true
+      } else {
+        console.warn('⚠️ FirestoreService: No authenticated user found')
+        return false
+      }
+    } catch (error) {
+      console.error('❌ FirestoreService: Failed to ensure authentication context:', error)
+      return false
     }
   }
 
@@ -234,48 +269,11 @@ class FirestoreService {
       if (this.isNative) {
         await this.initialize()
         
-        // For news collection, try using web SDK as fallback due to Capacitor plugin listener issues
-        if (collectionPath.includes('/news')) {
-          console.log('🔍 FirestoreService: Using web SDK fallback for news collection due to Capacitor plugin issues')
-          
-          // Create a timeout promise for the Web SDK fallback
-          const webSDKTimeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Web SDK fallback timeout')), 8000) // 8 second timeout
-          })
-          
-          try {
-            const webSDKPromise = (async () => {
-              console.log('🔍 FirestoreService: Importing Firebase Web SDK...')
-              const { getDocs, collection } = await import('firebase/firestore')
-              console.log('✅ FirestoreService: Firebase Web SDK imported successfully')
-              
-              console.log('🔍 FirestoreService: Creating collection reference...')
-              const collectionRef = collection(this.db, collectionPath)
-              console.log('✅ FirestoreService: Collection reference created')
-              
-              console.log('🔍 FirestoreService: Executing getDocs query...')
-              const result = await getDocs(collectionRef)
-              console.log('✅ FirestoreService: getDocs completed, result:', { empty: result.empty, size: result.size, docsCount: result.docs.length })
-              
-              const collectionData = {
-                docs: result.docs,
-                empty: result.empty,
-                size: result.size
-              }
-              
-              // Cache the result
-              cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
-              console.log('✅ FirestoreService: Web SDK fallback successful, returning data')
-              return collectionData
-            })()
-            
-            const result = await Promise.race([webSDKPromise, webSDKTimeoutPromise])
-            return result
-          } catch (webError) {
-            console.log('❌ FirestoreService: Web SDK fallback failed, trying Capacitor plugin:', webError.message)
-            console.log('❌ FirestoreService: Web SDK error details:', webError)
-          }
-        }
+        // Ensure authentication context is properly set before making queries
+        await this.ensureAuthContext()
+        
+        // Use Capacitor Firebase Firestore plugin for all collections on native platforms
+        // This ensures proper authentication context for security rules
         
         // Create a timeout promise
         const timeoutPromise = new Promise((_, reject) => {
