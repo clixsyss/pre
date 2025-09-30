@@ -1,20 +1,24 @@
 <template>
-  <SplashScreen />
-  
-  <!-- Show MainLayout only for authenticated pages -->
-  <MainLayout v-if="isAuthenticatedPage && !isRouterLoading">
-    <router-view />
-  </MainLayout>
-  
-  <!-- Show clean layout for authentication pages -->
-  <div v-else-if="!isRouterLoading" class="auth-layout">
-    <router-view />
+  <div>
+    <SplashScreen />
+    
+    <!-- Show MainLayout only for authenticated pages -->
+    <MainLayout v-if="isAuthenticatedPage && !isRouterLoading">
+      <router-view />
+    </MainLayout>
+    
+    <!-- Show clean layout for authentication pages -->
+    <div v-else-if="!isRouterLoading" class="auth-layout">
+      <router-view />
+    </div>
+    
+    <NotificationPopup />
   </div>
-  
-  <NotificationPopup />
 </template>
 
 <script setup>
+console.log('🚀🚀🚀 JavaScript is executing! App.vue script setup started!')
+
 import { computed, ref, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import SplashScreen from './components/SplashScreen.vue'

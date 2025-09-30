@@ -9,8 +9,7 @@ import {
   deleteDoc,
   collection,
   addDoc,
-  serverTimestamp,
-  onSnapshot
+  serverTimestamp
 } from 'firebase/firestore'
 
 class FirestoreService {
@@ -20,6 +19,7 @@ class FirestoreService {
     this.auth = auth
     this.capacitorFirestore = null
     this.initialized = false
+    this.activeListeners = new Map() // Track active listeners to prevent duplicates
   }
 
   async initialize() {
@@ -505,117 +505,17 @@ class FirestoreService {
   }
 
   // Listen to document or collection changes (for real-time updates)
-  async onSnapshot(path, callback) {
+  async onSnapshot(path) {
     try {
-      // Determine if it's a document or collection path
-      const isDocument = path.split('/').length % 2 === 0
+      console.log('🔍 onSnapshot called for path:', path)
       
-      if (this.isNative) {
-        await this.initialize()
-        
-        if (this.capacitorFirestore) {
-          console.log('🔍 Setting up real-time listener for native platform:', path, 'Type:', isDocument ? 'document' : 'collection')
-          
-          // Use Capacitor Firebase plugin for real-time listening
-          // For now, we'll implement a polling mechanism since Capacitor Firebase plugin
-          // doesn't have direct onSnapshot equivalent
-          
-          let isListening = true
-          let lastData = null
-          
-          const pollForChanges = async () => {
-            if (!isListening) return
-            
-            try {
-              if (isDocument) {
-                // Use getDocument for document paths
-                const result = await this.capacitorFirestore.getDocument({
-                  reference: path
-                })
-                
-                if (result && result.snapshot) {
-                  // Only call callback if data has changed
-                  const currentData = JSON.stringify(result.snapshot.data)
-                  if (currentData !== lastData) {
-                    lastData = currentData
-                    
-                    // Call callback with document data
-                    callback({
-                      id: result.snapshot.id,
-                      data: () => result.snapshot.data,
-                      exists: () => !!result.snapshot.data
-                    })
-                  }
-                }
-              } else {
-                // Use getCollection for collection paths
-                const result = await this.capacitorFirestore.getCollection({
-                  reference: path
-                })
-                
-                if (result && result.snapshots) {
-                  // Only call callback if data has changed
-                  const currentData = JSON.stringify(result.snapshots.map(s => s.data))
-                  if (currentData !== lastData) {
-                    lastData = currentData
-                    
-                    // Call callback with each document in the collection
-                    result.snapshots.forEach(snapshot => {
-                      callback({
-                        id: snapshot.id,
-                        data: () => snapshot.data,
-                        exists: () => !!snapshot.data
-                      })
-                    })
-                  }
-                }
-              }
-              
-              // Continue polling every 2 seconds
-              setTimeout(pollForChanges, 2000)
-            } catch (error) {
-              console.error('Error polling for changes:', error)
-              // Continue polling even on error
-              setTimeout(pollForChanges, 5000)
-            }
-          }
-          
-          // Start polling
-          pollForChanges()
-          
-          // Return unsubscribe function
-          return () => {
-            console.log('Unsubscribed from native listener')
-            isListening = false
-          }
-        } else {
-          console.warn('Capacitor Firestore not available for real-time listening')
-          return () => {}
-        }
-      } else {
-        // Use Web SDK for web platforms
-        if (isDocument) {
-          const docRef = doc(this.db, path)
-          return onSnapshot(docRef, (docSnapshot) => {
-            callback({
-              id: docSnapshot.id,
-              data: () => docSnapshot.data(),
-              exists: () => docSnapshot.exists()
-            })
-          })
-        } else {
-          const collectionRef = collection(this.db, path)
-          return onSnapshot(collectionRef, (snapshot) => {
-            snapshot.docs.forEach(doc => {
-              callback({
-                id: doc.id,
-                data: () => doc.data(),
-                exists: () => doc.exists()
-              })
-            })
-          })
-        }
+      // For now, return a simple no-op unsubscribe function to prevent issues
+      // TODO: Implement proper real-time listening later
+      console.log('⚠️ onSnapshot temporarily disabled to prevent app hanging')
+      return () => {
+        console.log('Unsubscribed from listener (no-op)')
       }
+      
     } catch (error) {
       console.error('Error setting up listener:', error)
       return () => {} // Return no-op unsubscribe function

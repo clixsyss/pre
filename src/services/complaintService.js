@@ -1,13 +1,11 @@
 import firestoreService from './firestoreService'
+import fileUploadService from './fileUploadService'
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
-import { doc, updateDoc, serverTimestamp, collection, query, where, orderBy, onSnapshot, deleteDoc } from 'firebase/firestore'
-import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
-// import { db, storage } from '../boot/firebase' // Not used in updated methods
 
 class ComplaintService {
   constructor() {
-    // No need for db and storage references - using services
+    // Using services instead of direct Firebase references
   }
 
   // Create a new complaint
@@ -201,90 +199,81 @@ class ComplaintService {
 
   // Assign complaint to admin
   async assignComplaint(projectId, complaintId, adminId) {
-    try {
-      const complaintRef = doc(this.db, `projects/${projectId}/complaints`, complaintId);
-      await updateDoc(complaintRef, {
-        adminId,
-        updatedAt: serverTimestamp()
-      });
-      return true;
-    } catch (error) {
-      console.error('Error assigning complaint:', error);
-      throw error;
-    }
-  }
-
-  // Upload image for complaint message
-  async uploadComplaintImage(file, complaintId = null) {
-    try {
-      const fileExtension = file.name.split('.').pop();
-      const tempId = complaintId || 'temp';
-      const fileName = `complaints/${tempId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
-      const fileRef = storageRef(this.storage, fileName);
-      
-      await uploadBytes(fileRef, file);
-      const downloadURL = await getDownloadURL(fileRef);
-      
-      return {
-        url: downloadURL,
-        fileName: fileName
-      };
-    } catch (error) {
-      console.error('Error uploading complaint image:', error);
-      throw error;
-    }
-  }
-
-  // Delete complaint image
-  async deleteComplaintImage(fileName) {
-    try {
-      const imageRef = storageRef(this.storage, fileName);
-      await deleteObject(imageRef);
-      return true;
-    } catch (error) {
-      console.error('Error deleting complaint image:', error);
-      throw error;
-    }
-  }
-
-  // Listen to real-time updates for a specific complaint
-  subscribeToComplaint(projectId, complaintId, callback) {
-    const complaintRef = doc(this.db, `projects/${projectId}/complaints`, complaintId);
-    return onSnapshot(complaintRef, (doc) => {
-      if (doc.exists()) {
-        callback({ id: doc.id, ...doc.data() });
-      } else {
-        callback(null);
+    return performanceService.timeOperation('assignComplaint', async () => {
+      try {
+        console.log('🚀 Assigning complaint to admin:', { projectId, complaintId, adminId });
+        
+        const docPath = `projects/${projectId}/complaints/${complaintId}`;
+        
+        await firestoreService.updateDoc(docPath, {
+          adminId,
+          updatedAt: new Date()
+        });
+        
+        console.log('✅ Complaint assigned successfully');
+        return true;
+      } catch (error) {
+        console.error('❌ Error assigning complaint:', error);
+        errorHandlingService.handleFirestoreError(error, 'assignComplaint');
+        throw error;
       }
     });
   }
 
+  // Upload image for complaint message
+  async uploadComplaintImage(file, complaintId = null) {
+    return performanceService.timeOperation('uploadComplaintImage', async () => {
+      try {
+        console.log('🚀 Uploading complaint image:', { fileName: file.name, complaintId });
+        
+        const tempId = complaintId || 'temp';
+        const folderPath = `complaints/${tempId}`;
+        
+        const result = await fileUploadService.uploadFile(file, folderPath);
+        
+        console.log('✅ Complaint image uploaded successfully:', result);
+        return result;
+      } catch (error) {
+        console.error('❌ Error uploading complaint image:', error);
+        errorHandlingService.handleFirestoreError(error, 'uploadComplaintImage');
+        throw error;
+      }
+    });
+  }
+
+  // Delete complaint image
+  async deleteComplaintImage(fileName) {
+    return performanceService.timeOperation('deleteComplaintImage', async () => {
+      try {
+        console.log('🚀 Deleting complaint image:', fileName);
+        
+        await fileUploadService.deleteFile(fileName);
+        
+        console.log('✅ Complaint image deleted successfully');
+        return true;
+      } catch (error) {
+        console.error('❌ Error deleting complaint image:', error);
+        errorHandlingService.handleFirestoreError(error, 'deleteComplaintImage');
+        throw error;
+      }
+    });
+  }
+
+  // Listen to real-time updates for a specific complaint
+  subscribeToComplaint(projectId, complaintId, callback) {
+    console.log('🔍 Setting up complaint subscription:', { projectId, complaintId });
+    return firestoreService.onSnapshot(`projects/${projectId}/complaints/${complaintId}`, callback);
+  }
+
   // Listen to real-time updates for all complaints
   subscribeToComplaints(projectId, filters = {}, callback) {
-    const complaintsRef = collection(this.db, `projects/${projectId}/complaints`);
-    let q = query(complaintsRef, orderBy('lastMessageAt', 'desc'));
-
-    // Apply filters
-    if (filters.status) {
-      q = query(q, where('status', '==', filters.status));
-    }
-    if (filters.userId) {
-      q = query(q, where('userId', '==', filters.userId));
-    }
-    if (filters.adminId) {
-      q = query(q, where('adminId', '==', filters.adminId));
-    }
-    if (filters.category) {
-      q = query(q, where('category', '==', filters.category));
-    }
-
-    return onSnapshot(q, (querySnapshot) => {
-      const complaints = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      callback(complaints);
-    });
+    console.log('🔍 Setting up complaints subscription:', { projectId, filters });
+    
+    const collectionPath = `projects/${projectId}/complaints`;
+    
+    // For now, use the basic onSnapshot method
+    // TODO: Implement proper filtering for real-time subscriptions
+    return firestoreService.onSnapshot(collectionPath, callback);
   }
 
   // Get complaint statistics
@@ -309,14 +298,22 @@ class ComplaintService {
 
   // Delete a complaint
   async deleteComplaint(projectId, complaintId) {
-    try {
-      const complaintRef = doc(this.db, `projects/${projectId}/complaints`, complaintId);
-      await deleteDoc(complaintRef);
-      return true;
-    } catch (error) {
-      console.error('Error deleting complaint:', error);
-      throw error;
-    }
+    return performanceService.timeOperation('deleteComplaint', async () => {
+      try {
+        console.log('🚀 Deleting complaint:', { projectId, complaintId });
+        
+        const docPath = `projects/${projectId}/complaints/${complaintId}`;
+        
+        await firestoreService.deleteDoc(docPath);
+        
+        console.log('✅ Complaint deleted successfully');
+        return true;
+      } catch (error) {
+        console.error('❌ Error deleting complaint:', error);
+        errorHandlingService.handleFirestoreError(error, 'deleteComplaint');
+        throw error;
+      }
+    });
   }
 }
 
