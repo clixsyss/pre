@@ -31,8 +31,8 @@ export const createSupportChat = async (projectId, data) => {
       const collectionPath = `projects/${projectId}/supportChats`
       const result = await firestoreService.addDoc(collectionPath, supportChatData)
       
-      console.log('✅ Support chat created successfully:', { chatId: result.reference.id })
-      return { id: result.reference.id, ...supportChatData };
+      console.log('✅ Support chat created successfully:', { chatId: result.id })
+      return { id: result.id, ...supportChatData };
     } catch (error) {
       console.error('❌ Error creating support chat:', error);
       errorHandlingService.handleFirestoreError(error, 'createSupportChat')
