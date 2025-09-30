@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, computed } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSupportStore } from '../../stores/supportStore'
 import PageHeader from '../../components/PageHeader.vue'
@@ -96,17 +96,12 @@ const formatDate = (timestamp) => {
 
 onMounted(async () => {
   try {
+    // Fetch support chats using getDocs instead of real-time listener
     await supportStore.fetchSupportChats()
     
-    // Set up real-time listener
-    const unsubscribe = supportStore.listenToUserSupportChats()
-    
-    // Clean up listener on unmount
-    onUnmounted(() => {
-      if (unsubscribe) {
-        unsubscribe()
-      }
-    })
+    // Note: Real-time listeners are temporarily disabled to prevent app hanging
+    // Support chats will be refreshed when user navigates back to this page
+    console.log('✅ Support chats fetched successfully')
   } catch (error) {
     console.error('Error setting up support chats:', error)
   }

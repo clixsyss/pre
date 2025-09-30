@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import supportService from '../services/supportService';
 import { useProjectStore } from './projectStore';
-import { getAuth } from 'firebase/auth';
+import optimizedAuthService from '../services/optimizedAuthService';
 
 export const useSupportStore = defineStore('support', () => {
   // State
@@ -20,9 +20,7 @@ export const useSupportStore = defineStore('support', () => {
 
   // Getters
   const userSupportChats = computed(() => {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    return supportChats.value.filter(chat => chat.userId === user?.uid);
+    return supportChats.value; // All chats are already filtered by userId in fetchSupportChats
   });
 
   const supportChatsByStatus = computed(() => {
@@ -48,8 +46,7 @@ export const useSupportStore = defineStore('support', () => {
         throw new Error('No project selected');
       }
 
-      const auth = getAuth();
-      const user = auth.currentUser;
+      const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) {
         throw new Error('User must be authenticated');
@@ -178,8 +175,7 @@ export const useSupportStore = defineStore('support', () => {
 
   const updateStats = async () => {
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
+      const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) {
         stats.value = {
@@ -235,20 +231,12 @@ export const useSupportStore = defineStore('support', () => {
   };
 
   const listenToUserSupportChats = () => {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    
-    if (!user) return null;
-
-    const projectStore = useProjectStore();
-    const projectId = projectStore.selectedProject?.id;
-    
-    if (!projectId) return null;
-    
-    return supportService.listenToUserSupportChats(projectId, user.uid, (chats) => {
-      supportChats.value = chats;
-      updateStats();
-    });
+    // Real-time listeners are temporarily disabled to prevent app hanging
+    // Return a no-op unsubscribe function
+    console.log('⚠️ Real-time support chat listeners are temporarily disabled')
+    return () => {
+      console.log('Unsubscribed from support chat listener (no-op)')
+    }
   };
 
   const clearCurrentChat = () => {

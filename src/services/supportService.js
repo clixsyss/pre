@@ -2,9 +2,6 @@ import firestoreService from './firestoreService'
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
 import optimizedAuthService from './optimizedAuthService'
-import { collection, query, where, orderBy, getDocs, doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore'
-import { getAuth } from 'firebase/auth'
-import { db } from '../boot/firebase'
 
 // Create a new support chat
 export const createSupportChat = async (projectId, data) => {
@@ -34,8 +31,8 @@ export const createSupportChat = async (projectId, data) => {
       const collectionPath = `projects/${projectId}/supportChats`
       const result = await firestoreService.addDoc(collectionPath, supportChatData)
       
-      console.log('✅ Support chat created successfully:', { chatId: result.id })
-      return { id: result.id, ...supportChatData };
+      console.log('✅ Support chat created successfully:', { chatId: result.reference.id })
+      return { id: result.reference.id, ...supportChatData };
     } catch (error) {
       console.error('❌ Error creating support chat:', error);
       errorHandlingService.handleFirestoreError(error, 'createSupportChat')
@@ -79,12 +76,12 @@ export const getUserSupportChats = async (projectId, userId) => {
       console.log('🔍 Getting user support chats:', { projectId, userId })
       
       const collectionPath = `projects/${projectId}/supportChats`
-      const filters = {
-        userId: { operator: '==', value: userId }
+      const queryOptions = {
+        filters: [{ field: 'userId', operator: '==', value: userId }],
+        orderBy: { field: 'lastMessageAt', direction: 'desc' }
       }
-      const orderBy = { field: 'lastMessageAt', direction: 'desc' }
       
-      const result = await firestoreService.getDocs(collectionPath, filters, orderBy)
+      const result = await firestoreService.getDocs(collectionPath, queryOptions)
       const chats = result.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -102,131 +99,165 @@ export const getUserSupportChats = async (projectId, userId) => {
 
 // Get all support chats (for admin)
 export const getAllSupportChats = async (projectId) => {
-  try {
-    const q = query(
-      collection(db, `projects/${projectId}/supportChats`),
-      orderBy('lastMessageAt', 'desc')
-    );
-    
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-  } catch (error) {
-    console.error('Error getting all support chats:', error);
-    throw error;
-  }
+  return performanceService.timeOperation('getAllSupportChats', async () => {
+    try {
+      console.log('🔍 Getting all support chats for project:', projectId)
+      
+      const collectionPath = `projects/${projectId}/supportChats`
+      const queryOptions = {
+        orderBy: { field: 'lastMessageAt', direction: 'desc' }
+      }
+      
+      const result = await firestoreService.getDocs(collectionPath, queryOptions)
+      const chats = result.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      console.log('✅ All support chats retrieved:', { count: chats.length })
+      return chats;
+    } catch (error) {
+      console.error('❌ Error getting all support chats:', error);
+      errorHandlingService.handleFirestoreError(error, 'getAllSupportChats')
+      throw error;
+    }
+  })
 };
 
 // Add message to support chat
 export const addMessageToSupportChat = async (projectId, chatId, message) => {
-  try {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    
-    if (!user) {
-      throw new Error('User must be authenticated');
+  return performanceService.timeOperation('addMessageToSupportChat', async () => {
+    try {
+      console.log('🚀 Adding message to support chat:', { projectId, chatId })
+      
+      const user = await optimizedAuthService.getCurrentUser()
+      
+      if (!user) {
+        throw new Error('User must be authenticated');
+      }
+
+      const docPath = `projects/${projectId}/supportChats/${chatId}`
+      const chatResult = await firestoreService.getDoc(docPath)
+      
+      if (!chatResult.exists) {
+        throw new Error('Support chat not found');
+      }
+
+      const chatData = chatResult.data
+      const now = new Date()
+      const newMessage = {
+        id: Date.now().toString(),
+        text: message.text,
+        senderId: user.uid,
+        senderName: user.displayName || 'User',
+        senderType: user.uid === chatData.userId ? 'user' : 'admin',
+        timestamp: now,
+        type: message.type || 'text',
+        imageUrl: message.imageUrl || null
+      };
+
+      // Get current messages and add new one
+      const currentMessages = chatData.messages || [];
+      const updatedMessages = [...currentMessages, newMessage];
+
+      await firestoreService.updateDoc(docPath, {
+        messages: updatedMessages,
+        lastMessageAt: now,
+        updatedAt: now
+      });
+
+      console.log('✅ Message added to support chat successfully')
+      return newMessage;
+    } catch (error) {
+      console.error('❌ Error adding message to support chat:', error);
+      errorHandlingService.handleFirestoreError(error, 'addMessageToSupportChat')
+      throw error;
     }
-
-    const chatRef = doc(db, `projects/${projectId}/supportChats`, chatId);
-    const chatSnap = await getDoc(chatRef);
-    
-    if (!chatSnap.exists()) {
-      throw new Error('Support chat not found');
-    }
-
-    const chatData = chatSnap.data();
-    const now = new Date();
-    const newMessage = {
-      id: Date.now().toString(),
-      text: message.text,
-      senderId: user.uid,
-      senderName: user.displayName || 'User',
-      senderType: user.uid === chatData.userId ? 'user' : 'admin',
-      timestamp: now,
-      type: message.type || 'text',
-      imageUrl: message.imageUrl || null
-    };
-
-    // Get current messages and add new one (same as complaints)
-    const currentMessages = chatData.messages || [];
-    const updatedMessages = [...currentMessages, newMessage];
-
-    await updateDoc(chatRef, {
-      messages: updatedMessages,
-      lastMessageAt: now,
-      updatedAt: now
-    });
-
-    return newMessage;
-  } catch (error) {
-    console.error('Error adding message to support chat:', error);
-    throw error;
-  }
+  })
 };
 
 // Update support chat status
 export const updateSupportChatStatus = async (projectId, chatId, status) => {
-  try {
-    const chatRef = doc(db, `projects/${projectId}/supportChats`, chatId);
-    await updateDoc(chatRef, {
-      status,
-      updatedAt: new Date()
-    });
-  } catch (error) {
-    console.error('Error updating support chat status:', error);
-    throw error;
-  }
+  return performanceService.timeOperation('updateSupportChatStatus', async () => {
+    try {
+      console.log('🚀 Updating support chat status:', { projectId, chatId, status })
+      
+      const docPath = `projects/${projectId}/supportChats/${chatId}`
+      await firestoreService.updateDoc(docPath, {
+        status,
+        updatedAt: new Date()
+      });
+      
+      console.log('✅ Support chat status updated successfully')
+    } catch (error) {
+      console.error('❌ Error updating support chat status:', error);
+      errorHandlingService.handleFirestoreError(error, 'updateSupportChatStatus')
+      throw error;
+    }
+  })
 };
 
 // Listen to support chat changes
 export const listenToSupportChat = (projectId, chatId, callback) => {
-  const chatRef = doc(db, `projects/${projectId}/supportChats`, chatId);
-  return onSnapshot(chatRef, (doc) => {
-    if (doc.exists()) {
-      callback({ id: doc.id, ...doc.data() });
-    } else {
-      callback(null);
-    }
-  });
+  try {
+    const docPath = `projects/${projectId}/supportChats/${chatId}`
+    return firestoreService.onSnapshot(docPath, (doc) => {
+      if (doc && doc.exists) {
+        callback({ id: doc.id, ...doc.data });
+      } else {
+        callback(null);
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error setting up support chat listener:', error);
+    throw error;
+  }
 };
 
 // Listen to user's support chats
 export const listenToUserSupportChats = (projectId, userId, callback) => {
-  const q = query(
-    collection(db, `projects/${projectId}/supportChats`),
-    where('userId', '==', userId),
-    orderBy('lastMessageAt', 'desc')
-  );
-  
-  return onSnapshot(q, (querySnapshot) => {
-    const chats = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    callback(chats);
-  });
+  try {
+    const collectionPath = `projects/${projectId}/supportChats`
+    const filters = [{ field: 'userId', operator: '==', value: userId }]
+    const orderBy = { field: 'lastMessageAt', direction: 'desc' }
+    
+    return firestoreService.onSnapshot(collectionPath, (querySnapshot) => {
+      const chats = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data
+      }));
+      callback(chats);
+    }, { filters, orderBy });
+  } catch (error) {
+    console.error('❌ Error setting up user support chats listener:', error);
+    throw error;
+  }
 };
 
 // Get support chat stats
 export const getSupportChatStats = async (projectId, userId) => {
-  try {
-    const chats = await getUserSupportChats(projectId, userId);
-    
-    const stats = {
-      total: chats.length,
-      open: chats.filter(chat => chat.status === 'open').length,
-      inProgress: chats.filter(chat => chat.status === 'in-progress').length,
-      resolved: chats.filter(chat => chat.status === 'resolved').length,
-      closed: chats.filter(chat => chat.status === 'closed').length
-    };
-    
-    return stats;
-  } catch (error) {
-    console.error('Error getting support chat stats:', error);
-    throw error;
-  }
+  return performanceService.timeOperation('getSupportChatStats', async () => {
+    try {
+      console.log('🔍 Getting support chat stats:', { projectId, userId })
+      
+      const chats = await getUserSupportChats(projectId, userId);
+      
+      const stats = {
+        total: chats.length,
+        open: chats.filter(chat => chat.status === 'open').length,
+        inProgress: chats.filter(chat => chat.status === 'in-progress').length,
+        resolved: chats.filter(chat => chat.status === 'resolved').length,
+        closed: chats.filter(chat => chat.status === 'closed').length
+      };
+      
+      console.log('✅ Support chat stats retrieved:', stats)
+      return stats;
+    } catch (error) {
+      console.error('❌ Error getting support chat stats:', error);
+      errorHandlingService.handleFirestoreError(error, 'getSupportChatStats')
+      throw error;
+    }
+  })
 };
 
 export default {

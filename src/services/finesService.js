@@ -1,7 +1,7 @@
 import firestoreService from './firestoreService'
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
-import { collection, query, where, orderBy, getDocs, doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore'
+import { doc, updateDoc, onSnapshot } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, storage } from '../boot/firebase'
 
@@ -68,22 +68,26 @@ export const getUserFines = async (projectId, userId) => {
       console.log('🔍 User ID length:', userId.length)
       
       const collectionPath = `projects/${projectId}/fines`
-      const filters = {
-        userId: { operator: '==', value: userId }
+      // Now filtering by userId field which exists in the database
+      const queryOptions = {
+        filters: [
+          { field: 'userId', operator: '==', value: userId }
+        ],
+        orderBy: { field: 'createdAt', direction: 'desc' },
+        timeoutMs: 8000
       }
-      const orderBy = { field: 'createdAt', direction: 'desc' }
       
-      const result = await firestoreService.getDocs(collectionPath, filters, orderBy)
+      const result = await firestoreService.getDocs(collectionPath, queryOptions)
       console.log('🔍 Raw Firestore result:', result)
       
-      const fines = result.docs.map(doc => ({
+      const userFines = result.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       
-      console.log('✅ User fines retrieved:', { count: fines.length })
-      console.log('🔍 Fines data:', fines)
-      return fines;
+      console.log('✅ User fines retrieved:', { count: userFines.length, userId })
+      console.log('🔍 Fines data:', userFines)
+      return userFines;
     } catch (error) {
       console.error('❌ Error fetching user fines:', error);
       errorHandlingService.handleFirestoreError(error, 'getUserFines')
@@ -95,15 +99,18 @@ export const getUserFines = async (projectId, userId) => {
 // Get fines by status
 export const getFinesByStatus = async (projectId, status) => {
   try {
-    const finesCollection = collection(db, 'projects', projectId, 'fines');
-    const q = query(
-      finesCollection,
-      where('status', '==', status),
-      orderBy('createdAt', 'desc')
-    );
-    const snapshot = await getDocs(q);
+    const collectionPath = `projects/${projectId}/fines`
+    const queryOptions = {
+      filters: [
+        { field: 'status', operator: '==', value: status }
+      ],
+      orderBy: { field: 'createdAt', direction: 'desc' },
+      timeoutMs: 8000
+    }
     
-    return snapshot.docs.map(doc => ({
+    const result = await firestoreService.getDocs(collectionPath, queryOptions)
+    
+    return result.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
@@ -116,11 +123,11 @@ export const getFinesByStatus = async (projectId, status) => {
 // Get a specific fine
 export const getFine = async (projectId, fineId) => {
   try {
-    const fineDoc = doc(db, 'projects', projectId, 'fines', fineId);
-    const snapshot = await getDoc(fineDoc);
+    const docPath = `projects/${projectId}/fines/${fineId}`
+    const result = await firestoreService.getDoc(docPath)
     
-    if (snapshot.exists()) {
-      return { id: snapshot.id, ...snapshot.data() };
+    if (result.exists) {
+      return { id: result.id, ...result.data };
     } else {
       throw new Error('Fine not found');
     }
@@ -306,10 +313,10 @@ export const deleteFineImage = async (imageUrl) => {
 export const searchUsers = async (projectId, searchTerm) => {
   try {
     // Fetch all users from global collection
-    const usersSnapshot = await getDocs(collection(db, 'users'));
-    const usersData = usersSnapshot.docs.map(doc => ({
+    const result = await firestoreService.getDocs('users', { timeoutMs: 8000 });
+    const usersData = result.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      ...doc.data
     }));
 
     // Filter users who belong to this specific project

@@ -20,9 +20,9 @@ export const useComplaintStore = defineStore('complaint', () => {
 
   // Getters
   const userComplaints = computed(() => {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    return complaints.value.filter(complaint => complaint.userId === user?.uid);
+    // Since we're now filtering by userId at the service level,
+    // all complaints in the store should belong to the current user
+    return complaints.value;
   });
 
   const complaintsByStatus = computed(() => {
@@ -48,8 +48,30 @@ export const useComplaintStore = defineStore('complaint', () => {
         throw new Error('No project selected');
       }
 
-      const complaintsData = await complaintService.getComplaints(projectId, filters);
+      // Get current user ID to filter complaints
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Always filter by current user for user-specific complaints
+      const userFilters = {
+        ...filters,
+        userId: currentUser.uid
+      };
+
+      console.log('🔍 Fetching complaints with filters:', { projectId, userFilters, currentUserId: currentUser.uid });
+
+      const complaintsData = await complaintService.getComplaints(projectId, userFilters);
+      
+      console.log('🔍 Raw complaints data from service:', complaintsData.length, 'complaints');
+      console.log('🔍 Sample complaint user IDs:', complaintsData.map(c => ({ id: c.id, userId: c.userId })));
+      
       complaints.value = complaintsData;
+      
+      console.log('✅ Complaints fetched and stored:', complaintsData.length);
       
       return complaintsData;
     } catch (err) {

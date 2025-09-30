@@ -65,6 +65,7 @@ class ComplaintService {
         }
         if (filters.userId) {
           queryFilters.userId = { operator: '==', value: filters.userId }
+          console.log('🔍 Applied userId filter:', filters.userId)
         }
         if (filters.adminId) {
           queryFilters.adminId = { operator: '==', value: filters.adminId }
@@ -73,11 +74,15 @@ class ComplaintService {
           queryFilters.category = { operator: '==', value: filters.category }
         }
 
+        console.log('🔍 Final query filters:', queryFilters)
+
         const result = await firestoreService.getDocs(collectionPath, queryFilters, orderByClause)
         const complaints = result.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
+
+        console.log('🔍 Raw complaints from Firestore:', complaints.map(c => ({ id: c.id, userId: c.userId })))
 
         // Apply limit if specified
         const finalComplaints = filters.limit ? complaints.slice(0, filters.limit) : complaints
