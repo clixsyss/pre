@@ -29,6 +29,33 @@ defineOptions({
 const route = useRoute()
 const isRouterLoading = ref(true)
 
+// Global error handler - enhanced
+window.addEventListener('error', (event) => {
+  console.error('❌ Global JavaScript error:', event.error)
+  console.error('❌ Error details:', {
+    message: event.message,
+    filename: event.filename,
+    lineno: event.lineno,
+    colno: event.colno
+  })
+  // Prevent the error from crashing the app
+  event.preventDefault()
+  return true
+})
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('❌ Unhandled promise rejection:', event.reason)
+  // Prevent the rejection from crashing the app
+  event.preventDefault()
+})
+
+// Catch any synchronous errors
+try {
+  console.log('🚀 App.vue: Setting up error handlers')
+} catch (error) {
+  console.error('❌ Error setting up error handlers:', error)
+}
+
 onMounted(async () => {
   try {
     console.log('🚀 App.vue: Starting app initialization...')
@@ -37,28 +64,55 @@ onMounted(async () => {
     await nextTick()
     console.log('🚀 App.vue: Vue app mounted')
     
-    // Initialize Firebase services in parallel
-    const initPromises = []
+    // Simple initialization with more error handling
+    console.log('🔍 App.vue: Checking services availability...')
     
-    // Initialize auth service
-    if (window.optimizedAuthService) {
-      initPromises.push(window.optimizedAuthService.initialize())
+    // Check services with error handling
+    let authServiceAvailable = false
+    let firestoreServiceAvailable = false
+    
+    try {
+      authServiceAvailable = !!window.optimizedAuthService
+      console.log('🔍 optimizedAuthService available:', authServiceAvailable)
+    } catch (e) {
+      console.warn('⚠️ Error checking auth service:', e)
     }
     
-    // Initialize Firestore service
-    if (window.firestoreService) {
-      initPromises.push(window.firestoreService.initialize())
+    try {
+      firestoreServiceAvailable = !!window.firestoreService
+      console.log('🔍 firestoreService available:', firestoreServiceAvailable)
+    } catch (e) {
+      console.warn('⚠️ Error checking firestore service:', e)
     }
     
-    // Wait for all initializations to complete
-    await Promise.allSettled(initPromises)
+    // Initialize services one by one with error handling
+    if (authServiceAvailable) {
+      try {
+        console.log('🔍 App.vue: Initializing auth service...')
+        await window.optimizedAuthService.initialize()
+        console.log('✅ Auth service initialized')
+      } catch (error) {
+        console.error('❌ Auth service initialization failed:', error)
+      }
+    }
     
-    console.log('🚀 App.vue: Services initialized')
+    if (firestoreServiceAvailable) {
+      try {
+        console.log('🔍 App.vue: Initializing firestore service...')
+        await window.firestoreService.initialize()
+        console.log('✅ Firestore service initialized')
+      } catch (error) {
+        console.error('❌ Firestore service initialization failed:', error)
+      }
+    }
+    
+    console.log('🚀 App.vue: Services initialization completed')
     
     // Wait a bit more to ensure everything is properly initialized
     await new Promise(resolve => setTimeout(resolve, 500))
     
     // Hide splash screen and show app content
+    console.log('🔍 App.vue: Setting isRouterLoading to false...')
     isRouterLoading.value = false
     
     // Emit app ready event for splash screen
@@ -66,9 +120,12 @@ onMounted(async () => {
     console.log('🚀 App.vue: App ready, splash hidden')
     
   } catch (error) {
-    console.error('❌ App.vue: Error during initialization:', error)
+    console.error('❌ App.vue: Critical error during initialization:', error)
+    console.error('❌ Error stack:', error.stack)
+    
     // Hide splash even if there's an error, but with a delay
     setTimeout(() => {
+      console.log('🔍 App.vue: Force hiding splash due to critical error...')
       isRouterLoading.value = false
       window.dispatchEvent(new CustomEvent('appReady'))
     }, 1000)

@@ -102,21 +102,46 @@ export class BookingService {
                 
                 // Check which slots are already booked
                 const collectionPath = `projects/${projectId}/bookings`
-                const filters = {
-                    courtId: { operator: '==', value: courtId },
-                    date: { operator: '==', value: date },
-                    status: { operator: 'in', value: ["confirmed", "pending"] }
-                }
+                const filters = [
+                    { field: 'courtId', operator: '==', value: courtId },
+                    { field: 'date', operator: '==', value: date },
+                    { field: 'status', operator: 'in', value: ["confirmed", "pending"] }
+                ]
                 
-                const result = await firestoreService.getDocs(collectionPath, filters)
+                console.log('🔍 Debug: Query filters:', filters);
+                const result = await firestoreService.getDocs(collectionPath, { filters })
                 const bookedSlots = [];
                 
                 result.docs.forEach((doc) => {
                     const booking = doc.data();
                     if (booking.timeSlots) {
-                        bookedSlots.push(...booking.timeSlots);
+                        // Normalize time format to match generated slots (add leading zeros)
+                        const normalizedSlots = booking.timeSlots.map(time => {
+                            // Convert "2:00 PM" to "02:00 PM", "7:00 AM" to "07:00 AM", etc.
+                            if (time.match(/^\d:\d{2} [AP]M$/)) {
+                                return '0' + time;
+                            }
+                            return time;
+                        });
+                        bookedSlots.push(...normalizedSlots);
+                        console.log('🔍 Debug: Original slots:', booking.timeSlots, 'Normalized slots:', normalizedSlots);
                     }
                 });
+                
+                console.log('🔍 Debug: Booked slots from database:', bookedSlots);
+                console.log('🔍 Debug: Generated base slots:', baseSlots.map(s => s.time));
+                console.log('🔍 Debug: Sample booking data:', result.docs.slice(0, 3).map(doc => ({
+                    id: doc.id,
+                    timeSlots: doc.data().timeSlots,
+                    date: doc.data().date,
+                    courtId: doc.data().courtId
+                })));
+                
+                // Debug: Check if date filtering is working
+                const datesInResults = [...new Set(result.docs.map(doc => doc.data().date))];
+                console.log('🔍 Debug: Query date:', date);
+                console.log('🔍 Debug: All dates in results:', datesInResults);
+                console.log('🔍 Debug: Date filter working?', datesInResults.length === 1 && datesInResults[0] === date);
                 
                 // Filter out booked slots
                 const availableSlots = baseSlots.map(slot => ({
@@ -175,11 +200,15 @@ export class BookingService {
                 
                 // Add timeout to prevent hanging
                 const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Booking creation timeout')), 10000); // 10 second timeout
+                    setTimeout(() => reject(new Error('Booking creation timeout')), 12000); // 12 second timeout
                 });
                 
+                console.log('🔍 Starting Firestore addDoc operation...');
+                const addDocPromise = firestoreService.addDoc(collectionPath, newBooking);
+                
+                console.log('🔍 Racing addDoc against timeout...');
                 const result = await Promise.race([
-                    firestoreService.addDoc(collectionPath, newBooking),
+                    addDocPromise,
                     timeoutPromise
                 ]);
                 

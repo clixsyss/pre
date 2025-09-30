@@ -206,19 +206,36 @@ class FirestoreService {
   // Add a document
   async addDoc(collectionPath, data) {
     try {
+      console.log('🔍 FirestoreService.addDoc called:', { collectionPath, dataKeys: Object.keys(data) });
+      
       if (this.isNative) {
+        console.log('🔍 Using native Capacitor Firebase for addDoc...');
         await this.initialize()
-        const result = await this.capacitorFirestore.addDocument({
-          reference: collectionPath,
-          data
-        })
+        
+        console.log('🔍 Calling capacitorFirestore.addDocument...');
+        
+        // Add a direct timeout to the Capacitor Firebase call
+        const capacitorTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Capacitor Firebase addDocument timeout')), 10000); // 10 second timeout
+        });
+        
+        const result = await Promise.race([
+          this.capacitorFirestore.addDocument({
+            reference: collectionPath,
+            data
+          }),
+          capacitorTimeout
+        ]);
+        
         console.log('🔍 Native addDoc result:', result);
         return {
           id: result.id,
           documentId: result.id // Add documentId for compatibility
         }
       } else {
+        console.log('🔍 Using Web SDK for addDoc...');
         const collectionRef = collection(this.db, collectionPath)
+        console.log('🔍 Calling Web SDK addDoc...');
         const docRef = await addDoc(collectionRef, data)
         console.log('🔍 Web addDoc result:', docRef);
         return {
@@ -227,7 +244,7 @@ class FirestoreService {
         }
       }
     } catch (error) {
-      console.error('Add document error:', error)
+      console.error('❌ Add document error:', error)
       throw error
     }
   }
@@ -313,10 +330,10 @@ class FirestoreService {
                 const fieldValue = this.getNestedValue(docData, filter.field)
                 console.log('FirestoreService: Filter check:', { field: filter.field, value: fieldValue, expected: filter.value, operator: filter.operator })
                 
-                // For debugging, let's be more lenient with filtering
-                if (fieldValue === undefined) {
-                  console.log('FirestoreService: Field not found, skipping filter')
-                  return true
+                // Don't skip filters for undefined values - this was causing the date filter to be ignored
+                if (fieldValue === undefined || fieldValue === null) {
+                  console.log('FirestoreService: Field not found or null, filter fails:', filter.field)
+                  return false
                 }
                 
                 switch (filter.operator) {

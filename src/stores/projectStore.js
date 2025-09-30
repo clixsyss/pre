@@ -190,6 +190,13 @@ export const useProjectStore = defineStore('project', () => {
     const savedProjectId = localStorage.getItem('selectedProjectId')
     const savedTimestamp = localStorage.getItem('selectedProjectTimestamp')
     
+    console.log('ProjectStore: Attempting to load saved project:', {
+      savedProjectId,
+      savedTimestamp,
+      availableProjects: userProjects.value.map(p => p.id),
+      availableProjectNames: userProjects.value.map(p => p.name)
+    })
+    
     if (savedProjectId && userProjects.value.length > 0) {
       // Check if the saved selection is not too old (24 hours)
       const now = Date.now()
@@ -204,15 +211,20 @@ export const useProjectStore = defineStore('project', () => {
       
       // Validate that user still has access to this project
       if (!validateSavedProject(savedProjectId)) {
+        console.log('ProjectStore: User no longer has access to saved project:', savedProjectId)
         return false
       }
       
       const project = userProjects.value.find(p => p.id === savedProjectId)
       if (project) {
         selectedProject.value = project
-        console.log('Restored selected project from localStorage:', project.name)
+        console.log('ProjectStore: Restored selected project from localStorage:', project.name)
         return true
+      } else {
+        console.log('ProjectStore: Saved project not found in available projects:', savedProjectId)
       }
+    } else {
+      console.log('ProjectStore: No saved project ID or no projects available')
     }
     return false
   }
@@ -247,6 +259,13 @@ export const useProjectStore = defineStore('project', () => {
       if (userProjects.value.length === 1) {
         selectProject(userProjects.value[0])
         console.log('ProjectStore: Auto-selected single project:', userProjects.value[0].name)
+        return true
+      }
+      
+      // If user has multiple projects and no saved selection, auto-select the first one
+      if (userProjects.value.length > 1) {
+        selectProject(userProjects.value[0])
+        console.log('ProjectStore: Auto-selected first project for user with multiple projects:', userProjects.value[0].name)
         return true
       }
       
