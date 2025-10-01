@@ -406,8 +406,9 @@ onUnmounted(() => {
   .carousel-container {
     height: 200px;
     border-radius: 12px;
-    margin: 0 16px;
-    width: calc(100% - 32px);
+    /* margin: 0 16px; */
+    /* width: calc(100% - 32px); */
+    width: 100%;
   }
   
   .ad-image-container {

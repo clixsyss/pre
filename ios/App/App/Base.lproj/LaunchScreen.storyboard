@@ -25,7 +25,7 @@
                             </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
-                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
                             <constraint firstItem="snD-IY-ifK" firstAttribute="centerX" secondItem="view-controller-view" secondAttribute="centerX" id="3"/>
                             <constraint firstItem="snD-IY-ifK" firstAttribute="centerY" secondItem="view-controller-view" secondAttribute="centerY" id="4"/>
@@ -39,8 +39,5 @@
     </scenes>
     <resources>
         <image name="Splash" width="910.66668701171875" height="910.66668701171875"/>
-        <systemColor name="systemBackgroundColor">
-            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-        </systemColor>
     </resources>
 </document>

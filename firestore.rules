@@ -644,8 +644,9 @@ service cloud.firestore {
     }
     
     // Allow listing fines (users can list their own, admins can list all)
+    // This rule allows both list and read operations for collection queries
     match /projects/{projectId}/fines {
-      allow list, get: if request.auth != null;
+      allow list, get, read: if request.auth != null;
     }
     
     // Project Support Chats - allow authenticated users to read/write support chats within project

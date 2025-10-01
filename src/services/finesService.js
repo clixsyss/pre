@@ -3,6 +3,7 @@ import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
+import { getAuth } from 'firebase/auth'
 import { db, storage } from '../boot/firebase'
 
 // Create a new fine/violation
@@ -67,7 +68,18 @@ export const getUserFines = async (projectId, userId) => {
       console.log('🔍 User ID being searched for:', userId)
       console.log('🔍 User ID length:', userId.length)
       
+      // Check if user is authenticated
+      const auth = getAuth()
+      const currentUser = auth.currentUser
+      console.log('🔍 Current user:', currentUser ? currentUser.uid : 'Not authenticated')
+      
+      if (!currentUser) {
+        throw new Error('User not authenticated')
+      }
+      
       const collectionPath = `projects/${projectId}/fines`
+      console.log('🔍 Collection path:', collectionPath)
+      
       // Now filtering by userId field which exists in the database
       const queryOptions = {
         filters: [
@@ -76,6 +88,8 @@ export const getUserFines = async (projectId, userId) => {
         orderBy: { field: 'createdAt', direction: 'desc' },
         timeoutMs: 8000
       }
+      
+      console.log('🔍 Query options:', queryOptions)
       
       const result = await firestoreService.getDocs(collectionPath, queryOptions)
       console.log('🔍 Raw Firestore result:', result)
@@ -90,6 +104,19 @@ export const getUserFines = async (projectId, userId) => {
       return userFines;
     } catch (error) {
       console.error('❌ Error fetching user fines:', error);
+      console.error('❌ Error details:', {
+        code: error.code,
+        message: error.message,
+        projectId,
+        userId
+      });
+      
+      // If it's a permission error, return empty array instead of throwing
+      if (error.code === 'permission-denied') {
+        console.warn('⚠️ Permission denied for fines collection, returning empty array')
+        return []
+      }
+      
       errorHandlingService.handleFirestoreError(error, 'getUserFines')
       throw error;
     }

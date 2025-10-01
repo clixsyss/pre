@@ -56,25 +56,11 @@ defineExpose({
 .news-page {
   min-height: 100vh;
   background: #f8f9fa;
-  padding: 20px;
   padding-bottom: 20px;
 }
 
 .news-content {
   max-width: 1200px;
   margin: 0 auto;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .news-page {
-    padding: 16px;
-  }
-}
-
-@media (max-width: 480px) {
-  .news-page {
-    padding: 12px;
-  }
 }
 </style>

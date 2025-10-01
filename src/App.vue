@@ -68,7 +68,7 @@ onMounted(async () => {
     await nextTick()
     console.log('🚀 App.vue: Vue app mounted')
     
-    // Simple initialization with more error handling
+    // Simple initialization with error handling
     console.log('🔍 App.vue: Checking services availability...')
     
     // Check services with error handling

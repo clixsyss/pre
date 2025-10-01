@@ -48,7 +48,7 @@
               v-for="pdfGuideline in pdfGuidelines" 
               :key="pdfGuideline.id" 
               class="pdf-guideline-card"
-              @click="openPDFViewer(pdfGuideline)"
+              @click="openPDFInNewTab(pdfGuideline)"
             >
               <div class="pdf-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -57,7 +57,14 @@
                 </svg>
               </div>
               <div class="pdf-info">
-                <h5 class="pdf-title">{{ pdfGuideline.title }}</h5>
+                <h5 class="pdf-title">
+                  {{ pdfGuideline.title }}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="external-link-icon">
+                    <path d="M18 13V19C18 19.5304 17.7893 20.0391 17.4142 20.4142C17.0391 20.7893 16.5304 21 16 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V8C3 7.46957 3.21071 6.96086 3.58579 6.58579C3.96086 6.21071 4.46957 6 5 6H11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="15,3 21,3 21,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </h5>
                 <p class="pdf-description">{{ pdfGuideline.description || 'Project guidelines document' }}</p>
                 <div class="pdf-meta">
                   <span class="pdf-size" v-if="pdfGuideline.fileSize">{{ formatFileSize(pdfGuideline.fileSize) }}</span>
@@ -171,9 +178,13 @@ const fetchGuidelines = async () => {
   }
 };
 
-const openPDFViewer = (pdfGuideline) => {
-  selectedPDF.value = pdfGuideline;
-  showPDFViewer.value = true;
+const openPDFInNewTab = (pdfGuideline) => {
+  // Open PDF in a new tab/window
+  if (pdfGuideline.downloadURL) {
+    window.open(pdfGuideline.downloadURL, '_blank', 'noopener,noreferrer');
+  } else {
+    console.error('No download URL available for PDF:', pdfGuideline);
+  }
 };
 
 const closePDFViewer = () => {
@@ -261,7 +272,6 @@ watch(() => projectStore.selectedProject?.id, (newProjectId) => {
 }
 
 .guidelines-dialog {
-  background: #F6F6F6;
   border-radius: 20px;
   width: 90%;
   height: auto;
@@ -270,7 +280,6 @@ watch(() => projectStore.selectedProject?.id, (newProjectId) => {
   box-shadow: 
     0 25px 50px -12px rgba(0, 0, 0, 0.25),
     0 0 0 1px rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.2);
   animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
@@ -390,12 +399,18 @@ watch(() => projectStore.selectedProject?.id, (newProjectId) => {
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  position: relative;
 }
 
 .pdf-guideline-card:hover {
   border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.1);
   transform: translateY(-2px);
+}
+
+.pdf-guideline-card:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.15);
 }
 
 .pdf-icon {
@@ -421,6 +436,20 @@ watch(() => projectStore.selectedProject?.id, (newProjectId) => {
   font-weight: 600;
   color: #111827;
   line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.external-link-icon {
+  color: #6b7280;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.pdf-guideline-card:hover .external-link-icon {
+  opacity: 1;
+  color: #AF1E23;
 }
 
 .pdf-description {

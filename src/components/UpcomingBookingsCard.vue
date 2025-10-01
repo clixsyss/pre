@@ -329,7 +329,6 @@ onMounted(async () => {
 
 @media (max-width: 480px) {
   .booking-item {
-    flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }

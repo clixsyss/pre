@@ -711,12 +711,6 @@ onActivated(async () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.project-switcher-btn:hover {
-  background: #fff5f2;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
 /* Stats Overview */
 .stats-overview {
   display: grid;
@@ -737,12 +731,6 @@ onActivated(async () => {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   cursor: pointer;
   transition: all 0.2s ease;
-}
-
-.stat-card:hover {
-  border-color: #AF1E23;
-  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);
-  transform: translateY(-2px);
 }
 
 .stat-card.loading {
@@ -830,13 +818,6 @@ onActivated(async () => {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   min-width: 140px;
   flex-shrink: 0;
-}
-
-.action-card:hover {
-  background: #F6F6F6;
-  border-color: #AF1E23;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
 }
 
 .action-icon {
@@ -1063,11 +1044,6 @@ onActivated(async () => {
   color: #64748b;
 }
 
-.close-btn:hover {
-  background: #f1f5f9;
-  color: #1e293b;
-}
-
 .modal-body {
   margin-bottom: 28px;
 }
@@ -1088,13 +1064,6 @@ onActivated(async () => {
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
-}
-
-.project-option:hover {
-  background: #F6F6F6;
-  border-color: #AF1E23;
-  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.15);
-  transform: translateY(-2px);
 }
 
 .project-option.current {
@@ -1190,12 +1159,6 @@ onActivated(async () => {
   box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
 }
 
-.go-to-selection-btn:hover {
-  background: #AF1E23;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
-}
-
 .modal-footer {
   padding-top: 20px;
   border-top: 1px solid #e2e8f0;
@@ -1215,12 +1178,5 @@ onActivated(async () => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-}
-
-.secondary-btn:hover {
-  background: #fff5f2;
-  border-color: #AF1E23;
-  color: #AF1E23;
-  transform: translateY(-2px);
 }
 </style>

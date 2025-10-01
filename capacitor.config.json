@@ -4,12 +4,12 @@
   "webDir": "dist/spa",
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 3000,
-      "launchAutoHide": false,
-      "backgroundColor": "#000000",
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#231F20",
       "androidSplashResourceName": "splash",
       "androidScaleType": "CENTER_CROP",
-      "showSpinner": true,
+      "showSpinner": false,
       "androidSpinnerStyle": "large",
       "iosSpinnerStyle": "small",
       "spinnerColor": "#AF1E23",

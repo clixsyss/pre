@@ -325,8 +325,26 @@ const filteredNews = computed(() => {
   } else {
     filtered = newsItems.value.filter(item => item.type === activeTab.value)
   }
-  // Show only the latest 3 news items unless showAll is true
-  return props.showAll ? filtered : filtered.slice(0, 3)
+  
+  // For homepage (showAll = false), show latest 3 news items with featured priority
+  if (!props.showAll) {
+    // Sort by featured status first, then by date
+    filtered.sort((a, b) => {
+      // Featured items first
+      if (a.featured && !b.featured) return -1
+      if (!a.featured && b.featured) return 1
+      
+      // Then by creation date (newest first)
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt)
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt)
+      return dateB - dateA
+    })
+    
+    // Take only the latest 3
+    return filtered.slice(0, 3)
+  }
+  
+  return filtered
 })
 
 const getTabCount = (tabValue) => {
@@ -360,20 +378,76 @@ const formatTime = (timestamp) => {
   if (!timestamp) return 'Just now'
 
   try {
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+    let date
+    if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+      // Firestore Timestamp
+      date = timestamp.toDate()
+    } else if (timestamp instanceof Date) {
+      // Already a Date object
+      date = timestamp
+    } else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+      // String or number timestamp
+      date = new Date(timestamp)
+    } else {
+      console.warn('Unknown timestamp format:', timestamp)
+      return 'Recently'
+    }
+
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date:', timestamp)
+      return 'Recently'
+    }
+
     const now = new Date()
     const diffInSeconds = Math.floor((now - date) / 1000)
 
-    if (diffInSeconds < 60) return 'Just now'
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
+    // Handle future dates (shouldn't happen but just in case)
+    if (diffInSeconds < 0) return 'Just now'
 
+    // Less than 1 minute
+    if (diffInSeconds < 60) return 'Just now'
+    
+    // Less than 1 hour
+    if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60)
+      return `${minutes}m ago`
+    }
+    
+    // Less than 24 hours
+    if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600)
+      return `${hours}h ago`
+    }
+    
+    // Less than 7 days
+    if (diffInSeconds < 604800) {
+      const days = Math.floor(diffInSeconds / 86400)
+      return `${days}d ago`
+    }
+    
+    // Less than 30 days
+    if (diffInSeconds < 2592000) {
+      const weeks = Math.floor(diffInSeconds / 604800)
+      return `${weeks}w ago`
+    }
+    
+    // Less than 1 year
+    if (diffInSeconds < 31536000) {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      })
+    }
+    
+    // More than 1 year
     return date.toLocaleDateString('en-US', {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      year: 'numeric'
     })
-  } catch {
+  } catch (error) {
+    console.warn('Error formatting date:', error, 'Timestamp:', timestamp)
     return 'Recently'
   }
 }
@@ -706,11 +780,11 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.view-all-btn:hover {
+/* .view-all-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
-}
+} */
 
 .view-all-btn:active {
   transform: translateY(0);
@@ -731,11 +805,11 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.back-btn:hover {
+/* .back-btn:hover {
   background: #e5e7eb;
   color: #374151;
   transform: scale(1.05);
-}
+} */
 
 .filter-section {
   margin-bottom: 20px;
@@ -773,11 +847,11 @@ onUnmounted(() => {
   min-width: fit-content;
 }
 
-.filter-tab:hover {
+/* .filter-tab:hover {
   color: #374151;
   background: #e5e7eb;
   border-color: #d1d5db;
-}
+} */
 
 .filter-tab.active {
   background: #AF1E23;
@@ -906,12 +980,12 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-.news-card:hover {
+/* .news-card:hover {
   background: white;
   border-color: #e0e0e0;
   transform: translateY(-2px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-}
+} */
 
 .news-card.featured {
   background: linear-gradient(135deg, #fff5f2 0%, #ffffff 100%);
@@ -1139,12 +1213,12 @@ onUnmounted(() => {
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
 }
-
+/* 
 .read-more-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
-}
+} */
 
 /* Empty State */
 .empty-state {
@@ -1220,16 +1294,12 @@ onUnmounted(() => {
 
   .news-media {
     width: 100%;
-    height: 200px;
-  }
-
-  .news-skeleton {
-    flex-direction: column;
+    height: 150px;
   }
 
   .skeleton-image {
-    width: 100%;
-    height: 120px;
+    width: 40%;
+    height: auto;
   }
 }
 
@@ -1368,11 +1438,11 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.dialog-close-btn:hover {
+/* .dialog-close-btn:hover {
   background: #e2e8f0;
   color: #334155;
   transform: scale(1.05);
-}
+} */
 
 .dialog-content {
   flex: 1;
@@ -1503,9 +1573,9 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
-.external-link:hover {
+/* .external-link:hover {
   transform: translateY(-1px);
-}
+} */
 
 .link-content {
   display: flex;
@@ -1551,9 +1621,9 @@ onUnmounted(() => {
   transition: transform 0.2s ease;
 }
 
-.external-link:hover .link-arrow {
+/* .external-link:hover .link-arrow {
   transform: translate(2px, -2px);
-}
+} */
 
 .dialog-actions {
   padding: 16px 24px 24px 24px;
@@ -1579,11 +1649,11 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
 
-.dialog-action-btn:hover {
+/* .dialog-action-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
-}
+} */
 
 .dialog-action-btn:active {
   transform: translateY(0);
@@ -1648,10 +1718,10 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-.close-btn:hover {
+/* .close-btn:hover {
   background: #f3f4f6;
   color: #374151;
-}
+} */
 
 .modal-body {
   flex: 1;
@@ -1776,10 +1846,10 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
-.close-modal-btn:hover {
+/* .close-modal-btn:hover {
   background: #e5e7eb;
   transform: translateY(-1px);
-}
+} */
 
 /* Modal Transitions */
 .modal-fade-enter-active,

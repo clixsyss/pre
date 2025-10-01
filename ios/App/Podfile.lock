@@ -1170,6 +1170,8 @@ PODS:
   - CapacitorFirebaseStorage (7.3.1):
     - Capacitor
     - FirebaseStorage (~> 11.7.0)
+  - CapacitorSplashScreen (7.0.3):
+    - Capacitor
   - Firebase/Analytics (11.7.0):
     - Firebase/Core
   - Firebase/Auth (11.7.0):
@@ -1410,6 +1412,7 @@ DEPENDENCIES:
   - "CapacitorFirebaseAuthentication (from `../../node_modules/@capacitor-firebase/authentication`)"
   - "CapacitorFirebaseFirestore (from `../../node_modules/@capacitor-firebase/firestore`)"
   - "CapacitorFirebaseStorage (from `../../node_modules/@capacitor-firebase/storage`)"
+  - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
   - Firebase/Analytics
   - Firebase/Auth
   - Firebase/Core
@@ -1456,6 +1459,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor-firebase/firestore"
   CapacitorFirebaseStorage:
     :path: "../../node_modules/@capacitor-firebase/storage"
+  CapacitorSplashScreen:
+    :path: "../../node_modules/@capacitor/splash-screen"
 
 SPEC CHECKSUMS:
   abseil: d121da9ef7e2ff4cab7666e76c5a3e0915ae08c3
@@ -1466,6 +1471,7 @@ SPEC CHECKSUMS:
   CapacitorFirebaseAuthentication: e86d4bbb1d926c53a290114f3054c7c017f8ef65
   CapacitorFirebaseFirestore: 0be1092f15de26c5d0e475804e8c981177438d69
   CapacitorFirebaseStorage: 357a983b0257c8d5cd5cffe1f5b28393a9afffb6
+  CapacitorSplashScreen: d06ae8804808e9f649a08e7bb7f283c77b688084
   Firebase: a64bf6a8546e6eab54f1c715cd6151f39d2329f4
   FirebaseAnalytics: bc9e565af9044ba8d6c6e4157e4edca8e5fdf7ec
   FirebaseAppCheckInterop: 06fe5a3799278ae4667e6c432edd86b1030fa3df
@@ -1489,6 +1495,6 @@ SPEC CHECKSUMS:
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
 
-PODFILE CHECKSUM: a4dc5a39be2b9fd70c26f751e7c42cc3b7c71156
+PODFILE CHECKSUM: 9d64652ba0e2f3ea4c39a9e0a09a85414f707717
 
 COCOAPODS: 1.16.2
