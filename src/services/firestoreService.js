@@ -134,19 +134,21 @@ class FirestoreService {
     try {
       if (this.isNative) {
         await this.initialize()
-        const docData = { ...data }
+        
+        // Serialize data for Capacitor (convert Date objects to ISO strings)
+        const serializedData = this.serializeDataForCapacitor(data)
         
         // Convert serverTimestamp for native
         if (options.merge) {
           await this.capacitorFirestore.setDocument({
             reference: path,
-            data: docData,
+            data: serializedData,
             merge: true
           })
         } else {
           await this.capacitorFirestore.setDocument({
             reference: path,
-            data: docData
+            data: serializedData
           })
         }
       } else {
@@ -171,9 +173,13 @@ class FirestoreService {
     try {
       if (this.isNative) {
         await this.initialize()
+        
+        // Serialize data for Capacitor (convert Date objects to ISO strings)
+        const serializedData = this.serializeDataForCapacitor(data)
+        
         await this.capacitorFirestore.updateDocument({
           reference: path,
-          data
+          data: serializedData
         })
       } else {
         const docRef = doc(this.db, path)
@@ -204,68 +210,65 @@ class FirestoreService {
   }
 
   // Add a document
+  /**
+   * Serialize data for Capacitor Firebase
+   * Converts Date objects to ISO strings and handles nested objects
+   */
+  serializeDataForCapacitor(data) {
+    if (data === null || data === undefined) {
+      return data;
+    }
+
+    if (data instanceof Date) {
+      return data.toISOString();
+    }
+
+    if (Array.isArray(data)) {
+      return data.map(item => this.serializeDataForCapacitor(item));
+    }
+
+    if (typeof data === 'object') {
+      const serialized = {};
+      for (const [key, value] of Object.entries(data)) {
+        serialized[key] = this.serializeDataForCapacitor(value);
+      }
+      return serialized;
+    }
+
+    return data;
+  }
+
   async addDoc(collectionPath, data) {
     try {
       console.log('🔍 FirestoreService.addDoc called:', { collectionPath, dataKeys: Object.keys(data) });
       
-      // TEMPORARY FIX: Use Web SDK directly for all operations on iOS
-      // The native Capacitor plugin is timing out, Web SDK is faster and more reliable
       if (this.isNative) {
-        console.log('⚡ Using Web SDK for iOS (native plugin has issues)...');
+        console.log('🔍 Using native Capacitor Firebase for addDoc...');
+        await this.initialize()
         
-        if (!this.db) {
-          console.error('❌ Web SDK db not initialized!');
-          throw new Error('Web SDK not available');
-        }
+        // Serialize data for Capacitor (convert Date objects to ISO strings)
+        const serializedData = this.serializeDataForCapacitor(data);
+        console.log('🔍 Data serialized for Capacitor');
         
-        console.log('🔍 Creating collection reference...');
-        const collectionRef = collection(this.db, collectionPath)
-        console.log('✅ Collection ref created:', { 
-          path: collectionRef.path,
-          id: collectionRef.id,
-          type: collectionRef.type 
+        console.log('🔍 Calling capacitorFirestore.addDocument...');
+        
+        // Add timeout to prevent hanging
+        const timeoutMs = 15000; // 15 seconds
+        const addDocPromise = this.capacitorFirestore.addDocument({
+          reference: collectionPath,
+          data: serializedData
         });
         
-        // Convert Date objects to ISO strings (Date objects can cause issues on iOS)
-        console.log('🔍 Converting Date objects to strings...');
-        const sanitizedData = JSON.parse(JSON.stringify(data, (key, value) => {
-          if (value instanceof Date) {
-            return value.toISOString();
-          }
-          return value;
-        }));
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('addDocument operation timed out')), timeoutMs)
+        );
         
-        console.log('🔍 About to call addDoc with sanitized data:', Object.keys(sanitizedData));
-        console.log('🔍 Timestamp:', new Date().toISOString());
+        const result = await Promise.race([addDocPromise, timeoutPromise]);
         
-        // Add timeout to detect if addDoc is hanging
-        const addDocTimeout = new Promise((_, reject) => {
-          setTimeout(() => {
-            console.error('❌ Web SDK addDoc is hanging - possible network issue');
-            reject(new Error('Web SDK addDoc timeout - check network connectivity'));
-          }, 8000);
-        });
-        
-        try {
-          console.log('🔍 Calling addDoc with 8-second timeout...');
-          const docRef = await Promise.race([
-            addDoc(collectionRef, sanitizedData),
-            addDocTimeout
-          ])
-          console.log('✅ Web SDK addDoc completed!');
-          console.log('✅ Document ID:', docRef.id);
-          console.log('✅ Document path:', docRef.path);
-          console.log('✅ Completion timestamp:', new Date().toISOString());
-          return {
-            id: docRef.id,
-            documentId: docRef.id // Add documentId for compatibility
-          }
-        } catch (addDocError) {
-          console.error('❌ Web SDK addDoc failed:', addDocError);
-          console.error('❌ Error code:', addDocError.code);
-          console.error('❌ Error message:', addDocError.message);
-          console.error('❌ Full error:', JSON.stringify(addDocError, null, 2));
-          throw addDocError;
+        console.log('✅ Native addDoc result:', result);
+        return {
+          id: result.id,
+          documentId: result.id // Add documentId for compatibility
         }
       } else {
         console.log('🔍 Using Web SDK for addDoc...');
@@ -280,9 +283,12 @@ class FirestoreService {
       }
     } catch (error) {
       console.error('❌ Add document error:', error)
-      console.error('❌ Error type:', error.constructor.name);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Error stack:', error.stack);
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        name: error.name,
+        stack: error.stack
+      })
       throw error
     }
   }
