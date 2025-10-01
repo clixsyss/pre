@@ -140,6 +140,7 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useNotificationStore } from '../../stores/notifications';
 import { useServiceBookingStore } from '../../stores/serviceBookingStore';
 import serviceTimeSlotService from '../../services/serviceTimeSlotService';
+import optimizedAuthService from '../../services/optimizedAuthService';
 import PageHeader from '../../components/PageHeader.vue';
 
 // Component name for ESLint
@@ -309,11 +310,20 @@ const confirmBooking = async () => {
     // Create the booking
     await serviceBookingStore.createBooking(projectStore.selectedProject.id, bookingData);
     
-    // Close dialog after booking
-    closeBookingDialog();
-    
     // Show success notification
     notificationStore.showSuccess('Service booked successfully!');
+    
+    // Wait a bit to ensure Firestore has committed the write
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Refresh service bookings to show the new one
+    const user = await optimizedAuthService.getCurrentUser();
+    if (user) {
+      await serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid);
+    }
+    
+    // Close dialog after booking
+    closeBookingDialog();
     
     console.log('Service booking created:', bookingData);
   } catch (error) {

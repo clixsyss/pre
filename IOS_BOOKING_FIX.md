@@ -1,10 +1,17 @@
 # iOS Court Booking Fix
 
 ## Issue Summary
-The iOS app with Capacitor was not creating court bookings due to:
+The iOS app with Capacitor had two issues with bookings:
+
+### Issue 1: Bookings Not Being Created (FIXED)
 1. **Date serialization issue**: JavaScript `Date` objects were not being properly serialized for Capacitor Firebase
 2. **Hanging operations**: The `addDocument` operation was hanging indefinitely without timeout
 3. **Firebase App initialization error**: The `@capacitor-firebase/app` plugin was showing UNIMPLEMENTED error (non-critical)
+
+### Issue 2: Bookings Not Appearing Immediately (FIXED)
+1. **Cache not invalidated**: After creating a booking, cached data was being returned
+2. **Timing issue**: Fetch happened before Firestore fully committed the write
+3. **No refresh**: Some booking types didn't trigger a refresh after creation
 
 ## Changes Made
 
@@ -14,10 +21,27 @@ The iOS app with Capacitor was not creating court bookings due to:
 - Added 15-second timeout to prevent hanging operations
 - Added detailed error logging
 - Updated `setDoc()` and `updateDoc()` to use the same serialization
+- **Added automatic cache invalidation after write operations**
 
 ### 2. `src/boot/firebase.js`
 - Made `@capacitor-firebase/app` initialization error non-blocking
 - Other Firebase plugins can still work without it
+
+### 3. `src/services/bookingService.js`
+- Added cache invalidation after creating court bookings
+- Ensures fresh data is fetched after booking creation
+
+### 4. `src/pages/auth/CourtBooking.vue`
+- Added 500ms delay before fetching bookings to ensure Firestore has committed
+- Improved timing of success notification and navigation
+
+### 5. `src/pages/auth/ServiceCategoryDetails.vue`
+- Added refresh after service booking creation
+- Added 500ms delay before fetching to ensure consistency
+
+### 6. `src/pages/auth/AcademyRegistration.vue`
+- Added 500ms delay before fetching bookings
+- Ensures new registration appears immediately
 
 ## Testing Instructions
 
@@ -120,6 +144,18 @@ const result = await Promise.race([
   addDocPromise,
   timeoutPromise
 ]);
+```
+
+### Cache Invalidation
+```javascript
+// After creating a booking
+cacheService.invalidatePattern(`collection:projects/${projectId}/bookings`);
+
+// Wait for Firestore to commit
+await new Promise(resolve => setTimeout(resolve, 500));
+
+// Then fetch fresh data
+await academiesStore.fetchUserBookings(user.uid, projectId);
 ```
 
 ## Firestore Security Rules

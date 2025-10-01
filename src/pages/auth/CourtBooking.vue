@@ -350,15 +350,18 @@ const confirmBooking = async () => {
     console.log('🔍 Court booking result:', result);
     
     if (result.success && result.bookingId) {
+      notificationStore.showSuccess(`Booking request submitted! Awaiting admin confirmation. Booking ID: ${result.bookingId}`);
+      
+      // Wait a bit to ensure Firestore has committed the write
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Refresh the academy store to show the new booking
       await academiesStore.fetchUserBookings(user.uid, projectId.value);
       
-      notificationStore.showSuccess(`Booking request submitted! Awaiting admin confirmation. Booking ID: ${result.bookingId}`);
-      
-      // Show success for 3 seconds before redirecting (longer message)
+      // Show success for 2 more seconds before redirecting
       setTimeout(() => {
         router.push('/my-bookings');
-      }, 3000);
+      }, 2000);
     } else {
       console.error('❌ Court booking failed:', result);
       notificationStore.showError('Failed to create booking. Please try again.');

@@ -366,6 +366,9 @@ const submitRegistration = async () => {
       throw new Error('Failed to create academy registration - no ID returned');
     }
     
+    // Wait a bit to ensure Firestore has committed the write
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     // Refresh the academy store to show the new booking
     await academiesStore.fetchUserBookings(user.uid, currentProject.value.id);
     
@@ -376,7 +379,7 @@ const submitRegistration = async () => {
     // Don't redirect immediately, show success message first
     setTimeout(() => {
       router.push('/academy-programs');
-    }, 3000);
+    }, 2500);
     
   } catch (err) {
     console.error('Error submitting registration:', err);

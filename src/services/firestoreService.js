@@ -266,6 +266,10 @@ class FirestoreService {
         const result = await Promise.race([addDocPromise, timeoutPromise]);
         
         console.log('✅ Native addDoc result:', result);
+        
+        // Invalidate cache for this collection to ensure fresh reads
+        cacheService.invalidatePattern(`collection:${collectionPath}`);
+        
         return {
           id: result.id,
           documentId: result.id // Add documentId for compatibility
@@ -276,6 +280,10 @@ class FirestoreService {
         console.log('🔍 Calling Web SDK addDoc...');
         const docRef = await addDoc(collectionRef, data)
         console.log('🔍 Web addDoc result:', docRef);
+        
+        // Invalidate cache for this collection to ensure fresh reads
+        cacheService.invalidatePattern(`collection:${collectionPath}`);
+        
         return {
           id: docRef.id,
           documentId: docRef.id // Add documentId for compatibility

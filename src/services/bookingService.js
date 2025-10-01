@@ -216,6 +216,11 @@ export class BookingService {
                     throw new Error('Failed to create booking - no ID returned');
                 }
                 
+                // Invalidate cache for bookings collection to force fresh fetch
+                console.log('🗑️ Invalidating bookings cache...');
+                const { default: cacheService } = await import('./cacheService');
+                cacheService.invalidatePattern(`collection:projects/${projectId}/bookings`);
+                
                 console.log('🎉 Court booking completed successfully with ID:', bookingId);
                 return { success: true, bookingId, booking: { ...newBooking, id: bookingId } };
             } catch (error) {

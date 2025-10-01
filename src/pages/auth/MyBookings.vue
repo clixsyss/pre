@@ -168,13 +168,6 @@
                 View
               </button>
               <button 
-                v-if="canComplete(booking)"
-                class="action-btn complete-btn"
-                @click="completeBooking(booking)"
-              >
-                Complete
-              </button>
-              <button 
                 v-if="canCancel(booking)"
                 class="action-btn cancel-btn"
                 @click="cancelBooking(booking)"
