@@ -567,13 +567,17 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
+  width: 100vw;
+  height: 100vh;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(8px);
-  z-index: 1000;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .edit-profile-dialog {
@@ -581,7 +585,7 @@ onMounted(() => {
   border-radius: 20px;
   width: 100%;
   max-width: 600px;
-  max-height: 90vh;
+  max-height: 80vh;
   overflow: hidden;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
   display: flex;
@@ -832,10 +836,6 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .edit-profile-dialog {
-    margin: 10px;
-    max-height: calc(100vh - 20px);
-  }
   
   .form-row {
     grid-template-columns: 1fr;
@@ -989,6 +989,25 @@ onMounted(() => {
 }
 
 /* Document Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
 .document-modal {
   background: white;
   border-radius: 12px;
