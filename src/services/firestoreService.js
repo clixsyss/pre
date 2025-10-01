@@ -208,29 +208,64 @@ class FirestoreService {
     try {
       console.log('🔍 FirestoreService.addDoc called:', { collectionPath, dataKeys: Object.keys(data) });
       
+      // TEMPORARY FIX: Use Web SDK directly for all operations on iOS
+      // The native Capacitor plugin is timing out, Web SDK is faster and more reliable
       if (this.isNative) {
-        console.log('🔍 Using native Capacitor Firebase for addDoc...');
-        await this.initialize()
+        console.log('⚡ Using Web SDK for iOS (native plugin has issues)...');
         
-        console.log('🔍 Calling capacitorFirestore.addDocument...');
+        if (!this.db) {
+          console.error('❌ Web SDK db not initialized!');
+          throw new Error('Web SDK not available');
+        }
         
-        // Add a direct timeout to the Capacitor Firebase call
-        const capacitorTimeout = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Capacitor Firebase addDocument timeout')), 10000); // 10 second timeout
+        console.log('🔍 Creating collection reference...');
+        const collectionRef = collection(this.db, collectionPath)
+        console.log('✅ Collection ref created:', { 
+          path: collectionRef.path,
+          id: collectionRef.id,
+          type: collectionRef.type 
         });
         
-        const result = await Promise.race([
-          this.capacitorFirestore.addDocument({
-            reference: collectionPath,
-            data
-          }),
-          capacitorTimeout
-        ]);
+        // Convert Date objects to ISO strings (Date objects can cause issues on iOS)
+        console.log('🔍 Converting Date objects to strings...');
+        const sanitizedData = JSON.parse(JSON.stringify(data, (key, value) => {
+          if (value instanceof Date) {
+            return value.toISOString();
+          }
+          return value;
+        }));
         
-        console.log('🔍 Native addDoc result:', result);
-        return {
-          id: result.id,
-          documentId: result.id // Add documentId for compatibility
+        console.log('🔍 About to call addDoc with sanitized data:', Object.keys(sanitizedData));
+        console.log('🔍 Timestamp:', new Date().toISOString());
+        
+        // Add timeout to detect if addDoc is hanging
+        const addDocTimeout = new Promise((_, reject) => {
+          setTimeout(() => {
+            console.error('❌ Web SDK addDoc is hanging - possible network issue');
+            reject(new Error('Web SDK addDoc timeout - check network connectivity'));
+          }, 8000);
+        });
+        
+        try {
+          console.log('🔍 Calling addDoc with 8-second timeout...');
+          const docRef = await Promise.race([
+            addDoc(collectionRef, sanitizedData),
+            addDocTimeout
+          ])
+          console.log('✅ Web SDK addDoc completed!');
+          console.log('✅ Document ID:', docRef.id);
+          console.log('✅ Document path:', docRef.path);
+          console.log('✅ Completion timestamp:', new Date().toISOString());
+          return {
+            id: docRef.id,
+            documentId: docRef.id // Add documentId for compatibility
+          }
+        } catch (addDocError) {
+          console.error('❌ Web SDK addDoc failed:', addDocError);
+          console.error('❌ Error code:', addDocError.code);
+          console.error('❌ Error message:', addDocError.message);
+          console.error('❌ Full error:', JSON.stringify(addDocError, null, 2));
+          throw addDocError;
         }
       } else {
         console.log('🔍 Using Web SDK for addDoc...');
@@ -245,6 +280,9 @@ class FirestoreService {
       }
     } catch (error) {
       console.error('❌ Add document error:', error)
+      console.error('❌ Error type:', error.constructor.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
       throw error
     }
   }

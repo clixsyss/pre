@@ -806,6 +806,9 @@ onActivated(async () => {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  /* Prevent swipe navigation interference */
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
 }
 
 .actions-scroll::-webkit-scrollbar {

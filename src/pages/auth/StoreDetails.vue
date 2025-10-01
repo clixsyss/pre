@@ -1,23 +1,8 @@
 <template>
   <div class="store-details-page">
     <!-- Hero Section -->
-    <div class="hero-section">
-      <div class="hero-content">
-        <div class="hero-header">
-          <button class="back-button" @click="goBack">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Back
-          </button>
-        </div>
-        
-        <div class="hero-text">
-          <h1 class="hero-title">{{ store?.name || 'Store Details' }}</h1>
-          <p class="hero-subtitle">{{ store?.location || 'Discover amazing products' }}</p>
-        </div>
-      </div>
-    </div>
+   
+    <PageHeader title="Store Details" subtitle="Discover amazing products" />
 
     <!-- Store Info Section -->
     <div class="store-info-section">
@@ -222,6 +207,7 @@ import { useRoute, useRouter } from 'vue-router';
 import firestoreService from 'src/services/firestoreService';
 import { useProjectStore } from 'src/stores/projectStore';
 import { useCartStore } from 'src/stores/cartStore';
+import PageHeader from 'src/components/PageHeader.vue';
 
 // Component name for ESLint
 defineOptions({
@@ -404,10 +390,6 @@ const viewCart = () => {
   router.push('/shopping-cart');
 };
 
-const goBack = () => {
-  router.back();
-};
-
 // Product favorite methods
 const toggleProductFavorite = (product) => {
   if (favoriteProducts.value.has(product.id)) {
@@ -458,7 +440,6 @@ onMounted(() => {
 
 <style scoped>
 .store-details-page {
-  padding: 20px 16px;
   background: #fafafa;
   min-height: 100vh;
 }

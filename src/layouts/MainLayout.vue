@@ -383,26 +383,43 @@ const goToProjectSelection = () => {
 
 // Violation notification methods
 const checkForViolations = async () => {
-  if (!currentProject.value || !getAuth().currentUser) return
+  console.log('🔍 checkForViolations called')
+  console.log('🔍 Current project:', currentProject.value)
+  
+  const auth = getAuth()
+  const currentUser = auth?.currentUser
+  console.log('🔍 Current user:', currentUser?.uid)
+  console.log('🔍 Auth object:', auth ? 'initialized' : 'not initialized')
+  
+  if (!currentProject.value || !currentUser) {
+    console.warn('⚠️ Cannot check violations: missing project or user')
+    return
+  }
   
   try {
+    console.log('🔍 Checking for active violations...')
     // Check for any active violations (issued or disputed) that need attention
     const result = await hasActiveViolations(currentProject.value.id, getAuth().currentUser.uid)
     
+    console.log('✅ Violation check result:', result)
+    
     if (result.hasActiveViolations) {
+      console.log('⚠️ Active violations found:', result.violationCount)
       violationCount.value = result.violationCount
       showViolationNotification.value = true
       
       // Mark violations as shown to prevent repeated notifications in same session
       const violationIds = result.violations.map(v => v.id)
       markViolationsAsShown(violationIds)
+      console.log('✅ Violation notification shown')
     } else {
+      console.log('✅ No active violations found')
       // No active violations, hide notification if it was showing
       showViolationNotification.value = false
       violationCount.value = 0
     }
   } catch (error) {
-    console.error('Error checking for violations:', error)
+    console.error('❌ Error checking for violations:', error)
   }
 }
 

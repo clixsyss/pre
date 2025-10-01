@@ -1,23 +1,7 @@
 <template>
   <div class="shopping-cart-page">
-    <!-- Hero Section -->
-    <div class="hero-section">
-      <div class="hero-content">
-        <div class="hero-header">
-          <button class="back-button" @click="goBack">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Back
-          </button>
-        </div>
-        
-        <div class="hero-text">
-          <h1 class="hero-title">Shopping Cart</h1>
-          <p class="hero-subtitle">Review your items and place your order</p>
-        </div>
-      </div>
-    </div>
+    <PageHeader title="Shopping Cart" subtitle="Review your items and place your order" />
+
     <!-- Cart Items -->
     <div v-if="cartStore.items.length === 0" class="empty-cart">
       <div class="empty-cart-icon">
@@ -363,6 +347,7 @@ import optimizedAuthService from 'src/services/optimizedAuthService';
 import { useProjectStore } from 'src/stores/projectStore';
 import { useCartStore } from 'src/stores/cartStore';
 import { useNotificationStore } from 'src/stores/notifications';
+import PageHeader from 'src/components/PageHeader.vue';
 
 // Component name for ESLint
 defineOptions({
@@ -701,10 +686,6 @@ const updateStoreRating = async (storeId) => {
 
 const browseStores = () => {
   router.push('/stores-shopping');
-};
-
-const goBack = () => {
-  router.back();
 };
 
 // Lifecycle

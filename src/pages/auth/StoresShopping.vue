@@ -1396,7 +1396,6 @@ watch(() => route.query.tab, (newTab) => {
 
 <style scoped>
 .stores-shopping-page {
-  padding: 14px;
   background: #fafafa;
   min-height: 100vh;
 }
@@ -1807,9 +1806,6 @@ watch(() => route.query.tab, (newTab) => {
 }
 
 @media (min-width: 1024px) {
-  .stores-shopping-page {
-    padding: 40px 32px;
-  }
   
   .header-content h1 {
     font-size: 2.5rem;
@@ -1908,7 +1904,6 @@ watch(() => route.query.tab, (newTab) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
 }
 
 .refresh-btn {
@@ -1938,7 +1933,7 @@ watch(() => route.query.tab, (newTab) => {
 /* Orders Stats */
 .orders-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 16px;
   margin-bottom: 32px;
 }
@@ -2253,7 +2248,7 @@ watch(() => route.query.tab, (newTab) => {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   width: 100%;
   max-width: 800px;
-  max-height: 90vh;
+  max-height: 80vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2334,7 +2329,7 @@ watch(() => route.query.tab, (newTab) => {
 .status-card {
   background: white;
   border-radius: 20px;
-  padding: 24px;
+  padding: 12px;
   margin-bottom: 24px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.05);
@@ -2686,7 +2681,7 @@ watch(() => route.query.tab, (newTab) => {
   
   .modal-content {
     border-radius: 20px;
-    max-height: 95vh;
+    max-height: 80vh;
   }
   
   .modal-header {
@@ -2716,7 +2711,7 @@ watch(() => route.query.tab, (newTab) => {
   
   .status-card {
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     text-align: center;
   }
   

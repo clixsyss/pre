@@ -53,10 +53,17 @@ export const getShownViolationNotifications = () => {
 // Check if user has any violations that need attention (regardless of notification status)
 export const hasActiveViolations = async (projectId, userId) => {
   try {
+    console.log('🔍 hasActiveViolations called:', { projectId, userId })
     const violations = await getUserFines(projectId, userId)
+    console.log('🔍 Total violations from getUserFines:', violations.length)
+    console.log('🔍 All violations:', violations)
+    
     const activeViolations = violations.filter(violation => 
       violation.status === 'issued' || violation.status === 'disputed'
     )
+    
+    console.log('🔍 Active violations (issued/disputed):', activeViolations.length)
+    console.log('🔍 Active violations details:', activeViolations)
     
     return {
       hasActiveViolations: activeViolations.length > 0,
@@ -64,7 +71,7 @@ export const hasActiveViolations = async (projectId, userId) => {
       violations: activeViolations
     }
   } catch (error) {
-    console.error('Error checking for active violations:', error)
+    console.error('❌ Error checking for active violations:', error)
     return {
       hasActiveViolations: false,
       violationCount: 0,

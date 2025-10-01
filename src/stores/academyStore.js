@@ -144,7 +144,7 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
                 const newBooking = {
                     ...booking,
                     createdAt: new Date(),
-                    status: "confirmed"
+                    status: "pending" // Start as pending until admin confirms
                 };
 
                 const docId = await firestoreService.addDoc('userBookings', newBooking);
@@ -173,7 +173,7 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
                     ...bookingData,
                     userId: userId,
                     createdAt: new Date(),
-                    status: "confirmed"
+                    status: "pending" // Start as pending until admin confirms
                 };
 
                 const docId = await firestoreService.addDoc(`projects/${projectId}/bookings`, newBooking);

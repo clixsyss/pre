@@ -463,30 +463,27 @@ const viewEvent = () => {
   router.push('/my-bookings');
 };
 
-// iOS touch event handlers
-let touchStartTime = 0;
+// iOS touch event handlers for visual feedback
 const handleTouchStart = (event) => {
-  touchStartTime = Date.now();
-  if (event.currentTarget && event.currentTarget.style) {
-    event.currentTarget.style.backgroundColor = '#f0f0f0';
+  const target = event.currentTarget;
+  if (target && target.style) {
+    target.style.backgroundColor = '#f0f0f0';
   }
 };
 
 const handleTouchEnd = (event) => {
-  const touchDuration = Date.now() - touchStartTime;
+  const target = event.currentTarget;
   
   // Reset background color
-  setTimeout(() => {
-    if (event.currentTarget && event.currentTarget.style) {
-      event.currentTarget.style.backgroundColor = '';
-    }
-  }, 150);
-  
-  // Only trigger click if it's a quick tap (not a long press)
-  if (touchDuration < 300 && event.currentTarget && typeof event.currentTarget.click === 'function') {
-    // The click event will handle the actual selection
-    event.currentTarget.click();
+  // Capture the target before setTimeout to avoid null reference
+  if (target && target.style) {
+    setTimeout(() => {
+      target.style.backgroundColor = '';
+    }, 150);
   }
+  
+  // Note: We don't need to manually trigger click or check duration
+  // The native click event will fire automatically for taps
 };
 
 // Lifecycle

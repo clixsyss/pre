@@ -534,7 +534,6 @@ const getLastMessagePreview = (booking) => {
 
 <style scoped>
 .services-page {
-  padding: 20px 16px;
   background: #fafafa;
 }
 
@@ -661,9 +660,6 @@ const getLastMessagePreview = (booking) => {
 
 /* Tablet and Desktop */
 @media (min-width: 768px) {
-  .services-page {
-    padding: 32px 24px;
-  }
   
   .hero-section {
     margin-bottom: 24px;
@@ -692,10 +688,6 @@ const getLastMessagePreview = (booking) => {
 }
 
 @media (min-width: 1024px) {
-  .services-page {
-    padding: 40px 32px;
-  }
-  
   .hero-title {
     font-size: 2.25rem;
   }

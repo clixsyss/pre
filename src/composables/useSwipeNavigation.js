@@ -114,10 +114,18 @@ export function useSwipeNavigation() {
    * Check if point is in a dead zone
    */
   const isInDeadZone = (x, y) => {
-    return config.deadZones.some(zone => {
-      return x >= zone.x && x <= zone.x + zone.width &&
+    const inDeadZone = config.deadZones.some(zone => {
+      const isInside = x >= zone.x && x <= zone.x + zone.width &&
              y >= zone.y && y <= zone.y + zone.height
+      
+      if (isInside) {
+        console.log('🚫 Touch in dead zone:', { x, y, zone })
+      }
+      
+      return isInside
     })
+    
+    return inDeadZone
   }
   
   /**
@@ -230,9 +238,22 @@ export function useSwipeNavigation() {
   
   /**
    * Add dead zone (area where swipe should be disabled)
+   * Returns an ID that can be used to remove the dead zone later
    */
   const addDeadZone = (x, y, width, height) => {
-    config.deadZones.push({ x, y, width, height })
+    const id = Date.now() + Math.random() // Generate unique ID
+    config.deadZones.push({ id, x, y, width, height })
+    return id
+  }
+  
+  /**
+   * Remove a specific dead zone by ID
+   */
+  const removeDeadZone = (id) => {
+    const index = config.deadZones.findIndex(zone => zone.id === id)
+    if (index !== -1) {
+      config.deadZones.splice(index, 1)
+    }
   }
   
   /**
@@ -322,6 +343,7 @@ export function useSwipeNavigation() {
     navigateToTab,
     getCurrentTabIndex,
     addDeadZone,
+    removeDeadZone,
     clearDeadZones,
     
     // Configuration

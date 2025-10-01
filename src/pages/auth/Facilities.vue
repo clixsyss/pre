@@ -98,7 +98,6 @@ const navigateToStores = () => {
 
 <style scoped>
 .facilities-page {
-  padding: 20px 16px;
   background: #fafafa;
   min-height: 100vh;
 }
@@ -209,9 +208,6 @@ const navigateToStores = () => {
 
 /* Tablet and Desktop */
 @media (min-width: 768px) {
-  .facilities-page {
-    padding: 32px 24px;
-  }
   
   .hero-section {
     margin-bottom: 24px;
@@ -240,10 +236,7 @@ const navigateToStores = () => {
 }
 
 @media (min-width: 1024px) {
-  .facilities-page {
-    padding: 40px 32px;
-  }
-  
+
   .hero-title {
     font-size: 2.25rem;
   }

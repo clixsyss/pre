@@ -190,7 +190,7 @@ export class BookingService {
                     ...bookingData,
                     projectId: projectId,
                     createdAt: new Date(),
-                    status: "confirmed",
+                    status: "pending", // Start as pending until admin confirms
                     type: "court"
                 };
 
@@ -198,19 +198,13 @@ export class BookingService {
                 
                 const collectionPath = `projects/${projectId}/bookings`
                 
-                // Add timeout to prevent hanging
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Booking creation timeout')), 12000); // 12 second timeout
-                });
-                
                 console.log('🔍 Starting Firestore addDoc operation...');
-                const addDocPromise = firestoreService.addDoc(collectionPath, newBooking);
+                console.log('⏰ Start time:', new Date().toISOString());
                 
-                console.log('🔍 Racing addDoc against timeout...');
-                const result = await Promise.race([
-                    addDocPromise,
-                    timeoutPromise
-                ]);
+                // Temporarily remove timeout to see if it eventually succeeds
+                const result = await firestoreService.addDoc(collectionPath, newBooking);
+                
+                console.log('⏰ End time:', new Date().toISOString());
                 
                 console.log('🔍 Firestore addDoc result:', result);
                 const bookingId = result.id || result.documentId || result;
@@ -254,7 +248,7 @@ export class BookingService {
                     ...bookingData,
                     projectId: projectId,
                     createdAt: new Date(),
-                    status: "confirmed",
+                    status: "pending", // Start as pending until admin confirms
                     type: "academy"
                 };
 

@@ -1,7 +1,7 @@
 import { defineBoot } from '#q-app/wrappers'
 import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, initializeFirestore, CACHE_SIZE_UNLIMITED } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 import { Capacitor } from '@capacitor/core'
 
@@ -37,10 +37,23 @@ if (isNative) {
   // Use Capacitor Firebase plugins for native platforms
   console.log('Firebase Boot: Using Capacitor Firebase plugins for native platform')
   
-  // For native platforms, we still need Web SDK instances for compatibility
-  // This ensures authentication persistence works properly
+  // For native platforms, initialize Firestore with cache disabled to force network mode
+  // This fixes the issue where writes hang on iOS
   auth = getAuth(app)
-  db = getFirestore(app)
+  
+  try {
+    console.log('Firebase Boot: Initializing Firestore with cache disabled for iOS...')
+    db = initializeFirestore(app, {
+      cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+      experimentalForceLongPolling: true, // Use long polling for better iOS compatibility
+      experimentalAutoDetectLongPolling: true
+    })
+    console.log('Firebase Boot: Firestore initialized with network-first mode')
+  } catch (error) {
+    console.warn('Firebase Boot: Failed to initialize custom Firestore, using default:', error)
+    db = getFirestore(app)
+  }
+  
   storage = getStorage(app)
   
   console.log('Firebase Boot: Web SDK instances created for native platform compatibility')
