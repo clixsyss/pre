@@ -135,7 +135,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../../stores/projectStore'
 import { getUserFines } from '../../services/finesService'
@@ -196,11 +196,23 @@ const filteredViolations = computed(() => {
 // }
 
 const loadViolations = async () => {
-  if (!projectStore.selectedProject || !currentUserId.value) return
+  console.log('ViolationsPage: loadViolations called')
+  console.log('ViolationsPage: Project:', projectStore.selectedProject?.id)
+  console.log('ViolationsPage: User ID:', currentUserId.value)
+  
+  if (!projectStore.selectedProject || !currentUserId.value) {
+    console.log('ViolationsPage: Missing project or user, skipping load')
+    return
+  }
   
   try {
     loading.value = true
+    console.log('ViolationsPage: Loading violations from Firestore...')
+    
     const userViolations = await getUserFines(projectStore.selectedProject.id, currentUserId.value)
+    console.log('ViolationsPage: Loaded violations:', userViolations.length)
+    console.log('ViolationsPage: Violations data:', userViolations)
+    
     violations.value = userViolations
     
     // Calculate stats
@@ -211,8 +223,19 @@ const loadViolations = async () => {
     }, { total: 0, issued: 0, paid: 0, disputed: 0, cancelled: 0 })
     
     violationStats.value = stats
+    console.log('ViolationsPage: Calculated stats:', stats)
   } catch (error) {
-    console.error('Error loading violations:', error)
+    console.error('ViolationsPage: Error loading violations:', error)
+    console.error('ViolationsPage: Error details:', {
+      message: error.message,
+      stack: error.stack,
+      projectId: projectStore.selectedProject?.id,
+      userId: currentUserId.value
+    })
+    
+    // Reset data on error
+    violations.value = []
+    violationStats.value = { total: 0, issued: 0, paid: 0, disputed: 0, cancelled: 0 }
   } finally {
     loading.value = false
   }
@@ -288,10 +311,83 @@ const getUnreadCount = (violation) => {
   ).length
 }
 
+// Event handlers
+const handleProjectStoreReady = () => {
+  console.log('ViolationsPage: Project store ready, loading violations...')
+  setTimeout(() => {
+    loadViolations()
+  }, 500) // Small delay to ensure everything is loaded
+}
+
+const handleProjectChanged = () => {
+  console.log('ViolationsPage: Project changed, reloading violations...')
+  setTimeout(() => {
+    loadViolations()
+  }, 500)
+}
+
+// Watch for project store changes
+watch(
+  () => projectStore.selectedProject,
+  (newProject, oldProject) => {
+    if (newProject && newProject.id !== oldProject?.id) {
+      console.log('ViolationsPage: Project changed, reloading violations...')
+      setTimeout(() => {
+        loadViolations()
+      }, 500)
+    }
+  },
+  { deep: true }
+)
+
+// Watch for current user changes
+watch(
+  () => currentUserId.value,
+  (newUserId, oldUserId) => {
+    if (newUserId && newUserId !== oldUserId) {
+      console.log('ViolationsPage: User changed, reloading violations...')
+      setTimeout(() => {
+        loadViolations()
+      }, 500)
+    }
+  }
+)
+
 // Load violations on mount
 onMounted(async () => {
+  console.log('🚀 ViolationsPage: Component mounted, initializing...')
+  console.log('🚀 ViolationsPage: Current project store state:', {
+    selectedProject: projectStore.selectedProject,
+    hasSelectedProject: projectStore.hasSelectedProject
+  })
+  
+  // Initialize user ID
+  console.log('🚀 ViolationsPage: Initializing user ID...')
   await initializeUserId()
-  loadViolations()
+  console.log('🚀 ViolationsPage: User ID initialized:', currentUserId.value)
+  
+  // Add event listeners
+  console.log('🚀 ViolationsPage: Adding event listeners...')
+  window.addEventListener('projectStoreReady', handleProjectStoreReady)
+  window.addEventListener('projectChanged', handleProjectChanged)
+  
+  // Try to load violations immediately if project and user are ready
+  if (projectStore.selectedProject && currentUserId.value) {
+    console.log('✅ ViolationsPage: Project and user ready, loading violations...')
+    setTimeout(() => {
+      loadViolations()
+    }, 500)
+  } else {
+    console.log('⏳ ViolationsPage: Waiting for project store or user to be ready...')
+    console.log('⏳ ViolationsPage: Project ready:', !!projectStore.selectedProject)
+    console.log('⏳ ViolationsPage: User ready:', !!currentUserId.value)
+  }
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  window.removeEventListener('projectStoreReady', handleProjectStoreReady)
+  window.removeEventListener('projectChanged', handleProjectChanged)
 })
 </script>
 
