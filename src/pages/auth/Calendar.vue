@@ -46,6 +46,8 @@
               'selected': selectedDate?.toDateString() === date.date.toDateString()
             }"
             @click="selectDate(date.date)"
+            @touchstart="handleTouchStart"
+            @touchend="handleTouchEnd"
           >
             <span class="date-number">{{ date.day }}</span>
             <div v-if="date.hasEvents" class="event-indicator"></div>
@@ -269,8 +271,10 @@ const allUpcomingEvents = computed(() => {
   
   const allBookings = academiesStore.userBookings;
   const serviceBookings = serviceBookingStore.getCalendarBookings;
-  console.log('Current user bookings:', allBookings);
-  console.log('Service bookings:', serviceBookings);
+  console.log('📅 Calendar Debug - Current user bookings:', allBookings);
+  console.log('📅 Calendar Debug - Service bookings:', serviceBookings);
+  console.log('📅 Calendar Debug - User bookings count:', allBookings?.length || 0);
+  console.log('📅 Calendar Debug - Service bookings count:', serviceBookings?.length || 0);
   
   const events = [];
   
@@ -306,10 +310,19 @@ const allUpcomingEvents = computed(() => {
   // Add academy programs as events
   allBookings.forEach(booking => {
     if (booking.type === 'academy' && booking.status === 'enrolled') {
+      // Use booking date if available, otherwise use today's date for ongoing programs
+      let eventDate;
+      if (booking.date) {
+        const normalizedDate = normalizeDate(booking.date);
+        eventDate = normalizedDate ? formatDateAsString(normalizedDate) : formatDateAsString(new Date());
+      } else {
+        eventDate = formatDateAsString(new Date()); // Ongoing programs - use today's date
+      }
+      
       events.push({
         id: booking.id,
         title: booking.programName || 'Academy Program',
-        date: formatDateAsString(new Date()), // Ongoing programs - use today's date
+        date: eventDate,
         type: 'academy',
         status: booking.status,
         location: booking.academyName || 'Academy'
@@ -345,10 +358,13 @@ const allUpcomingEvents = computed(() => {
     }
   });
   
-  console.log('Processed events:', events);
+  console.log('📅 Calendar Debug - Processed events:', events);
+  console.log('📅 Calendar Debug - Total events count:', events.length);
   
   // Sort by date
-  return events.sort((a, b) => new Date(a.date) - new Date(b.date));
+  const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
+  console.log('📅 Calendar Debug - Sorted events:', sortedEvents);
+  return sortedEvents;
 });
 
 // Methods
@@ -363,13 +379,12 @@ const getEventsForDate = (date) => {
   console.log('Checking for events on date:', localDateString, 'Original date:', date);
   
   return allUpcomingEvents.value.filter(event => {
-    if (event.type === 'court') {
-      // Normalize the event date
-      const eventDateString = formatDateAsString(event.date);
-      console.log('Comparing event date:', eventDateString, 'with selected date:', localDateString);
-      return eventDateString === localDateString;
-    }
-    return false;
+    // Normalize the event date
+    const eventDateString = formatDateAsString(event.date);
+    console.log('Comparing event date:', eventDateString, 'with selected date:', localDateString);
+    
+    // Check all event types, not just court bookings
+    return eventDateString === localDateString;
   });
 };
 
@@ -446,6 +461,32 @@ const getStatusClass = (status) => {
 const viewEvent = () => {
   // Navigate to event details or booking details
   router.push('/my-bookings');
+};
+
+// iOS touch event handlers
+let touchStartTime = 0;
+const handleTouchStart = (event) => {
+  touchStartTime = Date.now();
+  if (event.currentTarget && event.currentTarget.style) {
+    event.currentTarget.style.backgroundColor = '#f0f0f0';
+  }
+};
+
+const handleTouchEnd = (event) => {
+  const touchDuration = Date.now() - touchStartTime;
+  
+  // Reset background color
+  setTimeout(() => {
+    if (event.currentTarget && event.currentTarget.style) {
+      event.currentTarget.style.backgroundColor = '';
+    }
+  }, 150);
+  
+  // Only trigger click if it's a quick tap (not a long press)
+  if (touchDuration < 300 && event.currentTarget && typeof event.currentTarget.click === 'function') {
+    // The click event will handle the actual selection
+    event.currentTarget.click();
+  }
 };
 
 // Lifecycle
@@ -657,6 +698,15 @@ onMounted(async () => {
   padding: 4px;
   border: 1px solid transparent;
   min-height: 40px;
+  /* iOS touch improvements */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .date-cell:hover {

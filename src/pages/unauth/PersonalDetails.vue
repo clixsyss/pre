@@ -869,6 +869,10 @@ const handleSubmit = async () => {
   transition: border-color 0.3s ease;
   box-sizing: border-box;
   background-color: white;
+  /* iOS improvements */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 .form-input:focus {
@@ -884,6 +888,23 @@ const handleSubmit = async () => {
 
 .date-input-wrapper {
   position: relative;
+}
+
+.date-input-wrapper input[type="date"] {
+  /* iOS date input improvements */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: none;
+}
+
+.date-input-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
 }
 
 .calendar-icon {

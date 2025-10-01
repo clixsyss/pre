@@ -132,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useSupportStore } from '../stores/supportStore';
 import { useNotificationStore } from '../stores/notifications';
@@ -222,6 +222,9 @@ const sendMessage = async () => {
       type: 'text'
     });
 
+    // Refresh the chat to get the updated messages since real-time listeners are disabled
+    await supportStore.fetchSupportChat(supportChatId.value);
+
     newMessage.value = '';
     await nextTick();
     scrollToBottom();
@@ -257,6 +260,9 @@ const handleImageSelect = async (event) => {
       text: `📷 Image: ${file.name}`,
       type: 'text'
     });
+
+    // Refresh the chat to get the updated messages since real-time listeners are disabled
+    await supportStore.fetchSupportChat(supportChatId.value);
 
     showImageUpload.value = false;
     await nextTick();
@@ -305,15 +311,9 @@ const scrollToBottom = () => {
 onMounted(async () => {
   if (supportChatId.value) {
     try {
-      // Set up real-time listener (this will also load the initial data)
-      const unsubscribe = supportStore.listenToSupportChat(supportChatId.value);
-
-      // Clean up listener on unmount
-      onUnmounted(() => {
-        if (unsubscribe) {
-          unsubscribe();
-        }
-      });
+      // Load support chat data (real-time listeners are temporarily disabled)
+      await supportStore.fetchSupportChat(supportChatId.value);
+      console.log('✅ Support chat loaded successfully');
     } catch (error) {
       console.error('Error loading support chat:', error);
       notificationStore.addNotification({
@@ -340,7 +340,7 @@ watch(() => supportChat.value?.messages, () => {
 .complaint-chat {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 150px - 0px);
+  height: calc(100vh - 190px - 0px);
   /* Full height minus header and bottom nav */
   background: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

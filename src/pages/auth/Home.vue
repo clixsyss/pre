@@ -654,7 +654,6 @@ onActivated(async () => {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 20px;
   box-sizing: border-box;
   overflow-x: hidden;
 }
@@ -914,9 +913,6 @@ onActivated(async () => {
 }
 
 @media (max-width: 768px) {
-  .home-page {
-    padding: 16px;
-  }
 
   .hero-section {
     padding: 20px;
@@ -961,10 +957,6 @@ onActivated(async () => {
 }
 
 @media (max-width: 480px) {
-  .home-page {
-    padding: 12px;
-  }
-
   .hero-section {
     padding: 16px;
     border-radius: 12px;
