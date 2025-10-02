@@ -1,9 +1,9 @@
 import firestoreService from './firestoreService'
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
+import optimizedAuthService from './optimizedAuthService'
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
-import { getAuth } from 'firebase/auth'
 import { db, storage } from '../boot/firebase'
 
 // Create a new fine/violation
@@ -68,14 +68,21 @@ export const getUserFines = async (projectId, userId) => {
       console.log('🔍 User ID being searched for:', userId)
       console.log('🔍 User ID length:', userId.length)
       
-      // Check if user is authenticated
-      const auth = getAuth()
-      const currentUser = auth.currentUser
+      // Check if user is authenticated using the optimized auth service
+      const currentUser = await optimizedAuthService.getCurrentUser()
       console.log('🔍 Current user:', currentUser ? currentUser.uid : 'Not authenticated')
       
       if (!currentUser) {
+        console.error('❌ Authentication failed - no current user found')
         throw new Error('User not authenticated')
       }
+      
+      // Verify the user ID matches
+      if (currentUser.uid !== userId) {
+        console.warn('⚠️ User ID mismatch:', { currentUserUid: currentUser.uid, requestedUserId: userId })
+      }
+      
+      console.log('✅ Authentication verified, proceeding with query')
       
       const collectionPath = `projects/${projectId}/fines`
       console.log('🔍 Collection path:', collectionPath)

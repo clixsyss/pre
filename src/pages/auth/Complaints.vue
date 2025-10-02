@@ -91,6 +91,15 @@
 
       <!-- Complaints List -->
       <div v-else class="complaints-list">
+        <!-- Debug info -->
+        <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; font-size: 12px;">
+          <strong>Debug Info:</strong><br>
+          Total complaints: {{ complaintStore.userComplaints.length }}<br>
+          Filtered complaints: {{ filteredComplaints.length }}<br>
+          Selected status: {{ selectedStatus }}<br>
+          Loading: {{ complaintStore.loading }}
+        </div>
+        
         <div v-for="complaint in filteredComplaints" :key="complaint.id" @click="openComplaint(complaint)"
           class="complaint-card">
           <div class="complaint-header">
@@ -333,7 +342,10 @@ const submitComplaint = async () => {
       imageFileName
     };
 
-    await complaintStore.createComplaint(complaintData);
+    const createdComplaint = await complaintStore.createComplaint(complaintData);
+
+    console.log('✅ ComplaintsPage: Complaint created successfully:', createdComplaint);
+    console.log('✅ ComplaintsPage: Current complaints count after creation:', complaintStore.userComplaints.length);
 
     // Reset form
     newComplaint.value = {
@@ -344,6 +356,11 @@ const submitComplaint = async () => {
     };
     removeFile();
     closeModal();
+    
+    // Navigate to the created complaint
+    if (createdComplaint && createdComplaint.id) {
+      router.push(`/complaints/${createdComplaint.id}`);
+    }
   } catch (error) {
     console.error('Error creating complaint:', error);
   }
@@ -413,12 +430,18 @@ const formatFileSize = (bytes) => {
 // Lifecycle
 onMounted(async () => {
   try {
+    console.log('🚀 ComplaintsPage: Component mounted, fetching complaints...');
+    console.log('🚀 ComplaintsPage: Current user complaints before fetch:', complaintStore.userComplaints.length);
+    
     await complaintStore.fetchComplaints();
+    
+    console.log('✅ ComplaintsPage: Complaints fetched, count:', complaintStore.userComplaints.length);
+    console.log('✅ ComplaintsPage: Complaints data:', complaintStore.userComplaints);
 
     // Subscribe to real-time updates
     unsubscribe.value = complaintStore.subscribeToComplaints();
   } catch (error) {
-    console.error('Error loading complaints:', error);
+    console.error('❌ ComplaintsPage: Error loading complaints:', error);
   }
 });
 
@@ -836,7 +859,7 @@ onUnmounted(() => {
   border-radius: 12px;
   width: 100%;
   max-width: 500px;
-  max-height: 90vh;
+  max-height: 80vh;
   overflow-y: auto;
 }
 

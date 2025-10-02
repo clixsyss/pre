@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import complaintService from '../services/complaintService';
 import { useProjectStore } from './projectStore';
-import { getAuth } from 'firebase/auth';
+import optimizedAuthService from '../services/optimizedAuthService';
 
 export const useComplaintStore = defineStore('complaint', () => {
   // State
@@ -41,16 +41,21 @@ export const useComplaintStore = defineStore('complaint', () => {
       loading.value = true;
       error.value = null;
       
+      console.log('🚀 ComplaintStore: Starting fetchComplaints...');
+      
       const projectStore = useProjectStore();
       const projectId = projectStore.selectedProject?.id;
+      
+      console.log('🔍 ComplaintStore: Project ID:', projectId);
       
       if (!projectId) {
         throw new Error('No project selected');
       }
 
-      // Get current user ID to filter complaints
-      const auth = getAuth();
-      const currentUser = auth.currentUser;
+      // Get current user ID to filter complaints using optimized auth service
+      const currentUser = await optimizedAuthService.getCurrentUser();
+      
+      console.log('🔍 ComplaintStore: Current user:', currentUser ? currentUser.uid : 'Not authenticated');
       
       if (!currentUser) {
         throw new Error('User not authenticated');
@@ -62,21 +67,22 @@ export const useComplaintStore = defineStore('complaint', () => {
         userId: currentUser.uid
       };
 
-      console.log('🔍 Fetching complaints with filters:', { projectId, userFilters, currentUserId: currentUser.uid });
+      console.log('🔍 ComplaintStore: Fetching complaints with filters:', { projectId, userFilters, currentUserId: currentUser.uid });
 
       const complaintsData = await complaintService.getComplaints(projectId, userFilters);
       
-      console.log('🔍 Raw complaints data from service:', complaintsData.length, 'complaints');
-      console.log('🔍 Sample complaint user IDs:', complaintsData.map(c => ({ id: c.id, userId: c.userId })));
+      console.log('🔍 ComplaintStore: Raw complaints data from service:', complaintsData.length, 'complaints');
+      console.log('🔍 ComplaintStore: Sample complaint user IDs:', complaintsData.map(c => ({ id: c.id, userId: c.userId })));
       
       complaints.value = complaintsData;
       
-      console.log('✅ Complaints fetched and stored:', complaintsData.length);
+      console.log('✅ ComplaintStore: Complaints fetched and stored:', complaintsData.length);
+      console.log('✅ ComplaintStore: Final complaints array:', complaints.value);
       
       return complaintsData;
     } catch (err) {
       error.value = err.message;
-      console.error('Error fetching complaints:', err);
+      console.error('❌ ComplaintStore: Error fetching complaints:', err);
       throw err;
     } finally {
       loading.value = false;
@@ -120,8 +126,7 @@ export const useComplaintStore = defineStore('complaint', () => {
       error.value = null;
       
       const projectStore = useProjectStore();
-      const auth = getAuth();
-      const user = auth.currentUser;
+      const user = await optimizedAuthService.getCurrentUser();
       const projectId = projectStore.selectedProject?.id;
       
       if (!projectId) {

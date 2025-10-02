@@ -76,10 +76,23 @@ class ComplaintService {
 
         console.log('🔍 Final query filters:', queryFilters)
 
-        const result = await firestoreService.getDocs(collectionPath, queryFilters, orderByClause)
+        // Convert queryFilters to the format expected by firestoreService.getDocs
+        const queryOptions = {
+          filters: Object.entries(queryFilters).map(([field, filter]) => ({
+            field,
+            operator: filter.operator,
+            value: filter.value
+          })),
+          orderBy: orderByClause
+        }
+
+        console.log('🔍 Calling firestoreService.getDocs with:', { collectionPath, queryOptions })
+        const result = await firestoreService.getDocs(collectionPath, queryOptions)
+        console.log('🔍 FirestoreService result:', { docsCount: result.docs?.length, empty: result.empty, size: result.size })
+        
         const complaints = result.docs.map(doc => ({
           id: doc.id,
-          ...doc.data()
+          ...(typeof doc.data === 'function' ? doc.data() : doc.data)
         }));
 
         console.log('🔍 Raw complaints from Firestore:', complaints.map(c => ({ id: c.id, userId: c.userId })))

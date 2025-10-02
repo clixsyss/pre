@@ -48,7 +48,7 @@ class FirestoreService {
    * Ensure authentication context is properly set for Firestore queries
    */
   async ensureAuthContext() {
-    if (!this.isNative) return
+    if (!this.isNative) return true
 
     try {
       console.log('🔐 FirestoreService: Ensuring authentication context...')
@@ -62,8 +62,22 @@ class FirestoreService {
       if (currentUser.user) {
         console.log('✅ FirestoreService: Authentication context verified for user:', currentUser.user.uid)
         
+        // Also check the optimized auth service for consistency
+        try {
+          const { optimizedAuthService } = await import('./optimizedAuthService')
+          const optimizedUser = await optimizedAuthService.getCurrentUser()
+          
+          if (optimizedUser && optimizedUser.uid === currentUser.user.uid) {
+            console.log('✅ FirestoreService: Authentication context is consistent between services')
+          } else {
+            console.warn('⚠️ FirestoreService: Authentication context mismatch between services')
+          }
+        } catch (authError) {
+          console.warn('⚠️ FirestoreService: Could not verify with optimized auth service:', authError)
+        }
+        
         // Force a small delay to ensure auth context is fully propagated
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise(resolve => setTimeout(resolve, 200))
         
         return true
       } else {
@@ -342,11 +356,114 @@ class FirestoreService {
         await this.initialize()
         
         // Ensure authentication context is properly set before making queries
-        await this.ensureAuthContext()
+        const authContextValid = await this.ensureAuthContext()
+        console.log('🔐 FirestoreService: Auth context valid:', authContextValid)
         
-        // Use Capacitor Firebase Firestore plugin for all collections on native platforms
-        // This ensures proper authentication context for security rules
+        if (!authContextValid) {
+          console.warn('⚠️ FirestoreService: Authentication context invalid, but proceeding with query')
+        }
         
+             // For fines and complaints collections, use Web SDK directly to ensure proper authentication context
+             // The Capacitor plugin has authentication context issues with security rules
+             if (collectionPath.includes('/fines') || collectionPath.includes('/complaints')) {
+               console.log('🔄 FirestoreService: Using Web SDK for', collectionPath.includes('/fines') ? 'fines' : 'complaints', 'collection to ensure proper auth context')
+               
+               try {
+                 const { collection, query, getDocs, where, orderBy, limit } = await import('firebase/firestore')
+                 const { db } = await import('../boot/firebase')
+                 
+                 console.log('🔍 FirestoreService: Web SDK imports successful, db instance:', !!db)
+                 console.log('🔍 FirestoreService: Web SDK db type:', typeof db)
+                 console.log('🔍 FirestoreService: Web SDK db app:', db?.app?.name)
+                 
+                 const colRef = collection(db, collectionPath)
+                 let queryConstraints = []
+                 
+                 // Apply filters
+                 if (queryOptions && queryOptions.filters) {
+                   queryOptions.filters.forEach(filter => {
+                     queryConstraints.push(where(filter.field, filter.operator, filter.value))
+                   })
+                 }
+                 
+                 // Apply ordering
+                 if (queryOptions && queryOptions.orderBy) {
+                   if (Array.isArray(queryOptions.orderBy)) {
+                     queryOptions.orderBy.forEach(order => {
+                       queryConstraints.push(orderBy(order.field, order.direction))
+                     })
+                   } else {
+                     queryConstraints.push(orderBy(queryOptions.orderBy.field, queryOptions.orderBy.direction))
+                   }
+                 }
+                 
+                 // Apply limit
+                 if (queryOptions && queryOptions.limit) {
+                   queryConstraints.push(limit(queryOptions.limit))
+                 }
+                 
+                 const q = query(colRef, ...queryConstraints)
+                 console.log('🔍 FirestoreService: Executing Web SDK query with constraints:', queryConstraints.length)
+                 console.log('🔍 FirestoreService: Query constraints details:', queryConstraints.map(c => ({ field: c.field, operator: c.operator, value: c.value })))
+                 
+                 // Add timeout for Web SDK query (increased timeout for native environments)
+                 const webSDKTimeoutPromise = new Promise((_, reject) => {
+                   setTimeout(() => reject(new Error('Web SDK query timeout')), Math.max(timeoutMs, 15000)) // Minimum 15 seconds
+                 })
+                 
+                 console.log('🔍 FirestoreService: Starting Web SDK query execution...')
+                 const startTime = Date.now()
+                 
+                 const querySnapshot = await Promise.race([
+                   getDocs(q),
+                   webSDKTimeoutPromise
+                 ])
+                 
+                 const executionTime = Date.now() - startTime
+                 console.log('🔍 FirestoreService: Web SDK query completed, snapshot size:', querySnapshot.size, 'execution time:', executionTime + 'ms')
+                 
+                 const docs = querySnapshot.docs.map(doc => ({
+                   id: doc.id,
+                   data: () => doc.data()
+                 }))
+                 
+                 const collectionData = {
+                   docs,
+                   empty: docs.length === 0,
+                   size: docs.length
+                 }
+                 
+                 console.log('✅ FirestoreService: Web SDK query successful for', collectionPath.includes('/fines') ? 'fines' : 'complaints', ':', { empty: collectionData.empty, size: collectionData.size })
+                 
+                 // Cache the result
+                 cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
+                 
+                 return collectionData
+               } catch (webSDKError) {
+                 console.error('❌ FirestoreService: Web SDK query failed:', webSDKError)
+                 console.error('❌ Error details:', {
+                   code: webSDKError.code,
+                   message: webSDKError.message,
+                   collectionPath,
+                   errorType: webSDKError.constructor.name,
+                   stack: webSDKError.stack
+                 })
+                 
+                 // Return empty result instead of throwing
+                 const emptyResult = {
+                   docs: [],
+                   empty: true,
+                   size: 0
+                 }
+                 
+                 // Cache empty result for shorter time to allow retries
+                 cacheService.set(cacheKey, emptyResult, 30 * 1000) // 30 seconds cache
+                 
+                 return emptyResult
+               }
+        }
+        
+        // Use Capacitor Firebase Firestore plugin for other collections
         // Create a timeout promise
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Query timeout')), timeoutMs)
