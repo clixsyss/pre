@@ -20,12 +20,8 @@ end
 
 target 'App' do
   capacitor_pods
-  # Add your Pods here
-  pod 'Firebase/Core'
-  pod 'Firebase/Auth'
-  pod 'Firebase/Firestore'
-  pod 'Firebase/Storage'
-  pod 'Firebase/Analytics'
+  # Firebase dependencies are handled by Capacitor Firebase plugins
+  # No need for native Firebase pods
 end
 
 post_install do |installer|
