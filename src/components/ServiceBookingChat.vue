@@ -1,5 +1,5 @@
 <template>
-  <div class="service-booking-chat">
+  <div class="service-booking-chat" :class="{ 'keyboard-visible': isKeyboardVisible }" :style="{ '--keyboard-height': keyboardHeight + 'px' }">
     <!-- Header -->
     <div class="chat-header">
       <button @click="goBack" class="back-btn">
@@ -175,6 +175,7 @@ import { ref, computed, onMounted, nextTick, watch, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useProjectStore } from '../stores/projectStore';
 import serviceBookingService from '../services/serviceBookingService';
+import { Keyboard } from '@capacitor/keyboard';
 
 // Component name for ESLint
 defineOptions({
@@ -196,6 +197,8 @@ const imageInput = ref(null);
 const unsubscribe = ref(null);
 const uploading = ref(false);
 const showImageUpload = ref(false);
+const keyboardHeight = ref(0);
+const isKeyboardVisible = ref(false);
 
 // Get booking ID from route
 const bookingId = route.params.id;
@@ -214,6 +217,9 @@ onMounted(async () => {
   await loadBooking();
   setupRealtimeListener();
   
+  // Set up keyboard listeners
+  setupKeyboardListeners();
+  
   // Focus on message input
   nextTick(() => {
     if (messageInput.value) {
@@ -229,6 +235,8 @@ onUnmounted(() => {
   if (unsubscribe.value) {
     unsubscribe.value();
   }
+  // Clean up keyboard listeners
+  cleanupKeyboardListeners();
 });
 
 // Watch for new messages to auto-scroll
@@ -373,6 +381,44 @@ const scrollToBottom = () => {
   });
 };
 
+// Keyboard handling functions
+const setupKeyboardListeners = async () => {
+  try {
+    // Listen for keyboard events
+    Keyboard.addListener('keyboardWillShow', (info) => {
+      console.log('Keyboard will show:', info);
+      keyboardHeight.value = info.keyboardHeight;
+      isKeyboardVisible.value = true;
+      // Scroll to bottom when keyboard appears
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    });
+
+    Keyboard.addListener('keyboardWillHide', () => {
+      console.log('Keyboard will hide');
+      keyboardHeight.value = 0;
+      isKeyboardVisible.value = false;
+    });
+
+    // Set resize mode to ionic for better keyboard handling
+    await Keyboard.setResizeMode({ mode: 'ionic' });
+    
+    // Set scroll to true to enable keyboard scrolling
+    await Keyboard.setScroll({ isDisabled: false });
+  } catch (error) {
+    console.log('Keyboard API not available:', error);
+  }
+};
+
+const cleanupKeyboardListeners = async () => {
+  try {
+    await Keyboard.removeAllListeners();
+  } catch (error) {
+    console.log('Error cleaning up keyboard listeners:', error);
+  }
+};
+
 const goBack = () => {
   router.go(-1);
 };
@@ -417,6 +463,11 @@ const formatMessageTime = (timestamp) => {
   bottom: 80px; /* Bottom nav height */
   z-index: 100;
   transition: bottom 0.3s ease-in-out;
+}
+
+/* Adjust for keyboard visibility */
+.service-booking-chat.keyboard-visible {
+  bottom: calc(80px + var(--keyboard-height, 0px));
 }
 
 /* When keyboard is visible, expand to full height */

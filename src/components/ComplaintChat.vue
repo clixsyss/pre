@@ -1,5 +1,5 @@
 <template>
-  <div class="complaint-chat">
+  <div class="complaint-chat" :class="{ 'keyboard-visible': isKeyboardVisible }" :style="{ '--keyboard-height': keyboardHeight + 'px' }">
     <!-- Header -->
     <div class="chat-header">
       <button @click="goBack" class="back-btn">
@@ -211,6 +211,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useComplaintStore } from '../stores/complaintStore';
 import { useNotificationStore } from '../stores/notifications';
 import optimizedAuthService from '../services/optimizedAuthService';
+import { Keyboard } from '@capacitor/keyboard';
 
 const router = useRouter();
 const route = useRoute();
@@ -229,6 +230,8 @@ const uploading = ref(false);
 const unsubscribe = ref(null);
 const messagesContainer = ref(null);
 const messageInput = ref(null);
+const keyboardHeight = ref(0);
+const isKeyboardVisible = ref(false);
 
 // Computed properties
 const complaint = computed(() => complaintStore.currentComplaint);
@@ -394,6 +397,44 @@ const formatMessageTime = (timestamp) => {
   return date.toLocaleDateString();
 };
 
+// Keyboard handling functions
+const setupKeyboardListeners = async () => {
+  try {
+    // Listen for keyboard events
+    Keyboard.addListener('keyboardWillShow', (info) => {
+      console.log('Keyboard will show:', info);
+      keyboardHeight.value = info.keyboardHeight;
+      isKeyboardVisible.value = true;
+      // Scroll to bottom when keyboard appears
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    });
+
+    Keyboard.addListener('keyboardWillHide', () => {
+      console.log('Keyboard will hide');
+      keyboardHeight.value = 0;
+      isKeyboardVisible.value = false;
+    });
+
+    // Set resize mode to ionic for better keyboard handling
+    await Keyboard.setResizeMode({ mode: 'ionic' });
+    
+    // Set scroll to true to enable keyboard scrolling
+    await Keyboard.setScroll({ isDisabled: false });
+  } catch (error) {
+    console.log('Keyboard API not available:', error);
+  }
+};
+
+const cleanupKeyboardListeners = async () => {
+  try {
+    await Keyboard.removeAllListeners();
+  } catch (error) {
+    console.log('Error cleaning up keyboard listeners:', error);
+  }
+};
+
 // Watch for new messages to auto-scroll
 watch(() => complaint.value?.messages?.length, () => {
   scrollToBottom();
@@ -407,6 +448,9 @@ onMounted(async () => {
     
     // Subscribe to real-time updates
     unsubscribe.value = complaintStore.subscribeToComplaint(complaintId.value);
+    
+    // Set up keyboard listeners
+    setupKeyboardListeners();
     
     // Focus on message input
     nextTick(() => {
@@ -426,6 +470,8 @@ onUnmounted(() => {
   if (unsubscribe.value) {
     unsubscribe.value();
   }
+  // Clean up keyboard listeners
+  cleanupKeyboardListeners();
 });
 </script>
 
@@ -442,6 +488,11 @@ onUnmounted(() => {
   bottom: 80px; /* Bottom nav height */
   z-index: 100;
   transition: bottom 0.3s ease-in-out;
+}
+
+/* Adjust for keyboard visibility */
+.complaint-chat.keyboard-visible {
+  bottom: calc(80px + var(--keyboard-height, 0px));
 }
 
 /* When keyboard is visible, expand to full height */

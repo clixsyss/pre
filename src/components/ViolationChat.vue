@@ -1,5 +1,5 @@
 <template>
-  <div class="complaint-chat">
+  <div class="complaint-chat" :class="{ 'keyboard-visible': isKeyboardVisible }" :style="{ '--keyboard-height': keyboardHeight + 'px' }">
     <!-- Header -->
     <div class="chat-header">
       <button @click="goBack" class="back-btn">
@@ -210,7 +210,8 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useProjectStore } from '../stores/projectStore';
 import { getFine, addMessage, onFineChange, uploadFineImage, markMessagesAsRead as markViolationMessagesAsRead } from '../services/finesService';
-import { getAuth } from 'firebase/auth';
+import optimizedAuthService from '../services/optimizedAuthService';
+import { Keyboard } from '@capacitor/keyboard';
 
 const router = useRouter();
 const route = useRoute();
@@ -231,6 +232,8 @@ const unsubscribe = ref(null);
 const messagesContainer = ref(null);
 const messageInput = ref(null);
 const imageInput = ref(null);
+const keyboardHeight = ref(0);
+const isKeyboardVisible = ref(false);
 
 // Computed properties
 const isViolationClosed = computed(() => violation.value?.status === 'cancelled');
@@ -317,8 +320,11 @@ const handleImageSelect = async (event) => {
     const imageUrl = await uploadFineImage(projectStore.selectedProject.id, violationId.value, file);
     
     // Send message with image
-    const auth = getAuth();
-    const user = auth.currentUser;
+    const user = await optimizedAuthService.getCurrentUser();
+    if (!user) {
+      console.error('User not authenticated');
+      return;
+    }
     await addMessage(projectStore.selectedProject.id, violationId.value, {
       sender: 'user',
       senderId: user.uid,
@@ -340,8 +346,11 @@ const sendMessage = async () => {
   if (!newMessage.value.trim() || loading.value || isViolationClosed.value) return;
 
   try {
-    const auth = getAuth();
-    const user = auth.currentUser;
+    const user = await optimizedAuthService.getCurrentUser();
+    if (!user) {
+      console.error('User not authenticated');
+      return;
+    }
     await addMessage(projectStore.selectedProject.id, violationId.value, {
       sender: 'user',
       senderId: user.uid,
@@ -367,6 +376,44 @@ const scrollToBottom = () => {
       messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
     }
   });
+};
+
+// Keyboard handling functions
+const setupKeyboardListeners = async () => {
+  try {
+    // Listen for keyboard events
+    Keyboard.addListener('keyboardWillShow', (info) => {
+      console.log('Keyboard will show:', info);
+      keyboardHeight.value = info.keyboardHeight;
+      isKeyboardVisible.value = true;
+      // Scroll to bottom when keyboard appears
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    });
+
+    Keyboard.addListener('keyboardWillHide', () => {
+      console.log('Keyboard will hide');
+      keyboardHeight.value = 0;
+      isKeyboardVisible.value = false;
+    });
+
+    // Set resize mode to ionic for better keyboard handling
+    await Keyboard.setResizeMode({ mode: 'ionic' });
+    
+    // Set scroll to true to enable keyboard scrolling
+    await Keyboard.setScroll({ isDisabled: false });
+  } catch (error) {
+    console.log('Keyboard API not available:', error);
+  }
+};
+
+const cleanupKeyboardListeners = async () => {
+  try {
+    await Keyboard.removeAllListeners();
+  } catch (error) {
+    console.log('Error cleaning up keyboard listeners:', error);
+  }
 };
 
 const getMessageSenderType = (message) => {
@@ -418,21 +465,25 @@ onMounted(async () => {
     violation.value = violationData;
     
     // Mark messages as read
-    const auth = getAuth();
-    if (auth.currentUser) {
-      await markViolationMessagesAsRead(projectStore.selectedProject.id, violationId.value, auth.currentUser.uid);
+    const user = await optimizedAuthService.getCurrentUser();
+    if (user) {
+      await markViolationMessagesAsRead(projectStore.selectedProject.id, violationId.value, user.uid);
     }
     
     // Subscribe to real-time updates
-    unsubscribe.value = onFineChange(projectStore.selectedProject.id, violationId.value, (updatedViolation) => {
+    unsubscribe.value = onFineChange(projectStore.selectedProject.id, violationId.value, async (updatedViolation) => {
       if (updatedViolation) {
         violation.value = updatedViolation;
         // Mark new messages as read
-        if (auth.currentUser) {
-          markViolationMessagesAsRead(projectStore.selectedProject.id, violationId.value, auth.currentUser.uid);
+        const user = await optimizedAuthService.getCurrentUser();
+        if (user) {
+          markViolationMessagesAsRead(projectStore.selectedProject.id, violationId.value, user.uid);
         }
       }
     });
+    
+    // Set up keyboard listeners
+    setupKeyboardListeners();
     
     // Focus on message input
     nextTick(() => {
@@ -454,6 +505,8 @@ onUnmounted(() => {
   if (unsubscribe.value) {
     unsubscribe.value();
   }
+  // Clean up keyboard listeners
+  cleanupKeyboardListeners();
 });
 </script>
 
@@ -470,6 +523,11 @@ onUnmounted(() => {
   bottom: 80px; /* Bottom nav height */
   z-index: 100;
   transition: bottom 0.3s ease-in-out;
+}
+
+/* Adjust for keyboard visibility */
+.complaint-chat.keyboard-visible {
+  bottom: calc(80px + var(--keyboard-height, 0px));
 }
 
 /* When keyboard is visible, expand to full height */

@@ -1,5 +1,5 @@
 <template>
-  <div class="complaint-chat">
+  <div class="complaint-chat" :class="{ 'keyboard-visible': isKeyboardVisible }" :style="{ '--keyboard-height': keyboardHeight + 'px' }">
     <!-- Header -->
     <div class="chat-header">
       <button @click="goBack" class="back-btn">
@@ -132,10 +132,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useSupportStore } from '../stores/supportStore';
 import { useNotificationStore } from '../stores/notifications';
+import { Keyboard } from '@capacitor/keyboard';
 
 const router = useRouter();
 const route = useRoute();
@@ -154,6 +155,8 @@ const fullscreenImage = ref(null);
 const messagesContainer = ref(null);
 const messageInput = ref(null);
 const imageInput = ref(null);
+const keyboardHeight = ref(0);
+const isKeyboardVisible = ref(false);
 
 // Categories mapping
 const categories = {
@@ -307,6 +310,44 @@ const scrollToBottom = () => {
   }
 };
 
+// Keyboard handling functions
+const setupKeyboardListeners = async () => {
+  try {
+    // Listen for keyboard events
+    Keyboard.addListener('keyboardWillShow', (info) => {
+      console.log('Keyboard will show:', info);
+      keyboardHeight.value = info.keyboardHeight;
+      isKeyboardVisible.value = true;
+      // Scroll to bottom when keyboard appears
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    });
+
+    Keyboard.addListener('keyboardWillHide', () => {
+      console.log('Keyboard will hide');
+      keyboardHeight.value = 0;
+      isKeyboardVisible.value = false;
+    });
+
+    // Set resize mode to ionic for better keyboard handling
+    await Keyboard.setResizeMode({ mode: 'ionic' });
+    
+    // Set scroll to true to enable keyboard scrolling
+    await Keyboard.setScroll({ isDisabled: false });
+  } catch (error) {
+    console.log('Keyboard API not available:', error);
+  }
+};
+
+const cleanupKeyboardListeners = async () => {
+  try {
+    await Keyboard.removeAllListeners();
+  } catch (error) {
+    console.log('Error cleaning up keyboard listeners:', error);
+  }
+};
+
 // Lifecycle
 onMounted(async () => {
   if (supportChatId.value) {
@@ -323,9 +364,17 @@ onMounted(async () => {
     }
   }
 
+  // Set up keyboard listeners
+  setupKeyboardListeners();
+
   // Focus input
   await nextTick();
   messageInput.value?.focus();
+});
+
+onUnmounted(() => {
+  // Clean up keyboard listeners
+  cleanupKeyboardListeners();
 });
 
 // Watch for new messages to scroll to bottom
@@ -351,6 +400,11 @@ watch(() => supportChat.value?.messages, () => {
   /* Bottom nav height */
   z-index: 100;
   transition: bottom 0.3s ease-in-out;
+}
+
+/* Adjust for keyboard visibility */
+.complaint-chat.keyboard-visible {
+  bottom: calc(80px + var(--keyboard-height, 0px));
 }
 
 /* When keyboard is visible, expand to full height */
