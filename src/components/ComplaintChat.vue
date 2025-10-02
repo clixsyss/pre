@@ -479,12 +479,13 @@ onUnmounted(() => {
 .complaint-chat {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 195px - 0px); /* Full height minus header and bottom nav */
+  height: calc(100vh - 100px - 80px); /* Full height minus header and bottom nav */
   background: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   position: fixed;
   left: 0;
   right: 0;
+  top: 114px; /* Start below app header */
   bottom: 80px; /* Bottom nav height */
   z-index: 100;
   transition: bottom 0.3s ease-in-out;
@@ -492,7 +493,8 @@ onUnmounted(() => {
 
 /* Adjust for keyboard visibility */
 .complaint-chat.keyboard-visible {
-  bottom: calc(80px + var(--keyboard-height, 0px));
+  bottom: var(--keyboard-height, 0px);
+  height: calc(100vh - 100px - var(--keyboard-height, 0px));
 }
 
 /* When keyboard is visible, expand to full height */

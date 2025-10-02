@@ -152,7 +152,7 @@
     </div>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="main-content" :class="{ 'keyboard-visible': isKeyboardVisible && isChatPage }">
       <slot />
     </main>
 
@@ -868,6 +868,12 @@ onUnmounted(() => {
   overflow-x: hidden; /* Prevent horizontal overflow */
   min-width: 0; /* Allow flex item to shrink below content size */
   margin-bottom: 80px;
+  transition: margin-bottom 0.3s ease-in-out;
+}
+
+/* Adjust main content margin when keyboard is visible on chat pages */
+.main-content.keyboard-visible {
+  margin-bottom: 0;
 }
 
 /* Bottom Navigation */
