@@ -71,6 +71,7 @@ export const getUserFines = async (projectId, userId) => {
       // Check if user is authenticated using the optimized auth service
       const currentUser = await optimizedAuthService.getCurrentUser()
       console.log('🔍 Current user:', currentUser ? currentUser.uid : 'Not authenticated')
+      console.log('🔍 Current user object:', currentUser)
       
       if (!currentUser) {
         console.error('❌ Authentication failed - no current user found')
@@ -82,23 +83,72 @@ export const getUserFines = async (projectId, userId) => {
         console.warn('⚠️ User ID mismatch:', { currentUserUid: currentUser.uid, requestedUserId: userId })
       }
       
+      // Additional auth debugging
+      console.log('🔍 Auth token:', currentUser.accessToken ? 'Present' : 'Missing')
+      console.log('🔍 Auth provider:', currentUser.providerData?.[0]?.providerId || 'Unknown')
+      
       console.log('✅ Authentication verified, proceeding with query')
       
       const collectionPath = `projects/${projectId}/fines`
       console.log('🔍 Collection path:', collectionPath)
       
-      // Query with proper filtering by userId
-      const queryOptions = {
-        filters: [
-          { field: 'userId', operator: '==', value: userId }
-        ],
-        orderBy: { field: 'createdAt', direction: 'desc' },
-        timeoutMs: 10000 // Reduced timeout
+      // First, let's test if we can access the collection at all
+      console.log('🔍 Testing basic collection access...')
+      try {
+        const testResult = await firestoreService.getDocs(collectionPath, { timeoutMs: 5000 })
+        console.log('✅ Basic collection access works, docs count:', testResult.docs?.length || 0)
+      } catch (testError) {
+        console.log('❌ Basic collection access failed:', testError.message)
       }
       
-      console.log('🔍 Query options:', queryOptions)
+      // Try different query strategies
+      let result
       
-      const result = await firestoreService.getDocs(collectionPath, queryOptions)
+      // Strategy 1: Try with filters (original approach)
+      try {
+        const queryOptions = {
+          filters: [
+            { field: 'userId', operator: '==', value: userId }
+          ],
+          orderBy: { field: 'createdAt', direction: 'desc' },
+          timeoutMs: 8000
+        }
+        
+        console.log('🔍 Query options (with filters):', queryOptions)
+        result = await firestoreService.getDocs(collectionPath, queryOptions)
+        console.log('✅ Query with filters succeeded')
+      } catch (filterError) {
+        console.log('⚠️ Query with filters failed, trying without filters:', filterError.message)
+        
+        // Strategy 2: Get all fines and filter client-side
+        try {
+          const allFinesOptions = {
+            orderBy: { field: 'createdAt', direction: 'desc' },
+            timeoutMs: 8000
+          }
+          
+          console.log('🔍 Query options (all fines):', allFinesOptions)
+          const allFinesResult = await firestoreService.getDocs(collectionPath, allFinesOptions)
+          
+          // Filter client-side for user's fines
+          const userFinesDocs = allFinesResult.docs.filter(doc => {
+            const data = typeof doc.data === 'function' ? doc.data() : doc.data
+            return data.userId === userId
+          })
+          
+          // Create result object in the same format
+          result = {
+            docs: userFinesDocs,
+            empty: userFinesDocs.length === 0,
+            size: userFinesDocs.length
+          }
+          
+          console.log('✅ Client-side filtering succeeded')
+        } catch (allFinesError) {
+          console.log('❌ All strategies failed:', allFinesError.message)
+          throw allFinesError
+        }
+      }
       console.log('🔍 Raw Firestore result:', result)
       console.log('🔍 Result docs length:', result.docs?.length || 0)
       console.log('🔍 Result empty:', result.empty)
@@ -119,24 +169,6 @@ export const getUserFines = async (projectId, userId) => {
       
       console.log('✅ User fines retrieved:', { count: userFines.length, userId })
       console.log('🔍 User fines data:', userFines)
-      
-      // Additional debug: If no fines found, let's try to get all fines in the project
-      if (userFines.length === 0) {
-        console.log('🔍 No fines found for user, checking if there are any fines in the project...')
-        try {
-          const allFinesOptions = {
-            orderBy: { field: 'createdAt', direction: 'desc' },
-            timeoutMs: 5000
-          }
-          const allFinesResult = await firestoreService.getDocs(collectionPath, allFinesOptions)
-          console.log('🔍 All fines in project:', allFinesResult.docs?.length || 0)
-          if (allFinesResult.docs && allFinesResult.docs.length > 0) {
-            console.log('🔍 Sample fine data:', allFinesResult.docs[0].data())
-          }
-        } catch (debugError) {
-          console.log('🔍 Debug query failed:', debugError.message)
-        }
-      }
       
       return userFines;
     } catch (error) {

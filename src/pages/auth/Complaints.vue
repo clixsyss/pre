@@ -91,14 +91,6 @@
 
       <!-- Complaints List -->
       <div v-else class="complaints-list">
-        <!-- Debug info -->
-        <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; font-size: 12px;">
-          <strong>Debug Info:</strong><br>
-          Total complaints: {{ complaintStore.userComplaints.length }}<br>
-          Filtered complaints: {{ filteredComplaints.length }}<br>
-          Selected status: {{ selectedStatus }}<br>
-          Loading: {{ complaintStore.loading }}
-        </div>
         
         <div v-for="complaint in filteredComplaints" :key="complaint.id" @click="openComplaint(complaint)"
           class="complaint-card">

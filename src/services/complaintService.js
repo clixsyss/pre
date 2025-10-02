@@ -2,6 +2,7 @@ import firestoreService from './firestoreService'
 import fileUploadService from './fileUploadService'
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
+import optimizedAuthService from './optimizedAuthService'
 
 class ComplaintService {
   constructor() {
@@ -149,6 +150,12 @@ class ComplaintService {
       try {
         console.log('🚀 Adding message to complaint:', { projectId, complaintId, messageData })
         
+        // Verify authentication
+        const user = await optimizedAuthService.getCurrentUser();
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+        
         const docPath = `projects/${projectId}/complaints/${complaintId}`
         
         const now = new Date();
@@ -277,22 +284,6 @@ class ComplaintService {
     });
   }
 
-  // Listen to real-time updates for a specific complaint
-  subscribeToComplaint(projectId, complaintId, callback) {
-    console.log('🔍 Setting up complaint subscription:', { projectId, complaintId });
-    return firestoreService.onSnapshot(`projects/${projectId}/complaints/${complaintId}`, callback);
-  }
-
-  // Listen to real-time updates for all complaints
-  subscribeToComplaints(projectId, filters = {}, callback) {
-    console.log('🔍 Setting up complaints subscription:', { projectId, filters });
-    
-    const collectionPath = `projects/${projectId}/complaints`;
-    
-    // For now, use the basic onSnapshot method
-    // TODO: Implement proper filtering for real-time subscriptions
-    return firestoreService.onSnapshot(collectionPath, callback);
-  }
 
   // Get complaint statistics
   async getComplaintStats(projectId) {
@@ -332,6 +323,74 @@ class ComplaintService {
         throw error;
       }
     });
+  }
+
+  // Subscribe to real-time updates for a specific complaint
+  subscribeToComplaint(projectId, complaintId, callback) {
+    try {
+      console.log('🔔 Setting up real-time subscription for complaint:', { projectId, complaintId });
+      
+      const docPath = `projects/${projectId}/complaints/${complaintId}`;
+      
+      return firestoreService.onSnapshot(docPath, (docSnapshot) => {
+        if (docSnapshot && docSnapshot.exists()) {
+          const data = docSnapshot.data();
+          const complaint = {
+            id: docSnapshot.id,
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || data.createdAt,
+            updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+            lastMessageAt: data.lastMessageAt?.toDate?.() || data.lastMessageAt
+          };
+          console.log('📨 Real-time complaint update received:', complaint);
+          callback(complaint);
+        } else {
+          console.log('📭 Complaint document does not exist');
+          callback(null);
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error setting up complaint subscription:', error);
+      throw error;
+    }
+  }
+
+  // Subscribe to real-time updates for all complaints
+  subscribeToComplaints(projectId, filters, callback) {
+    try {
+      console.log('🔔 Setting up real-time subscription for complaints:', { projectId, filters });
+      
+      const collectionPath = `projects/${projectId}/complaints`;
+      
+      // Build query options
+      const queryOptions = {};
+      if (filters.status) {
+        queryOptions.filters = [{ field: 'status', operator: '==', value: filters.status }];
+      }
+      if (filters.userId) {
+        queryOptions.filters = queryOptions.filters || [];
+        queryOptions.filters.push({ field: 'userId', operator: '==', value: filters.userId });
+      }
+      
+      return firestoreService.onSnapshot(collectionPath, queryOptions, (snapshot) => {
+        const complaints = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          complaints.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || data.createdAt,
+            updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+            lastMessageAt: data.lastMessageAt?.toDate?.() || data.lastMessageAt
+          });
+        });
+        console.log('📨 Real-time complaints update received:', complaints.length, 'complaints');
+        callback(complaints);
+      });
+    } catch (error) {
+      console.error('❌ Error setting up complaints subscription:', error);
+      throw error;
+    }
   }
 }
 

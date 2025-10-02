@@ -210,7 +210,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useComplaintStore } from '../stores/complaintStore';
 import { useNotificationStore } from '../stores/notifications';
-import { getAuth } from 'firebase/auth';
+import optimizedAuthService from '../services/optimizedAuthService';
 
 const router = useRouter();
 const route = useRoute();
@@ -316,8 +316,12 @@ const handleImageSelect = async (event) => {
     const imageData = await complaintStore.uploadImage(file, complaintId.value);
     
     // Send message with image
-    const auth = getAuth();
-    const user = auth.currentUser;
+    const user = await optimizedAuthService.getCurrentUser();
+    if (!user) {
+      notificationStore.showError('You must be logged in to send messages.');
+      return;
+    }
+
     await complaintStore.addMessage(complaintId.value, {
       senderType: 'user',
       senderId: user.uid,
@@ -340,8 +344,12 @@ const sendMessage = async () => {
   if (!newMessage.value.trim() || complaintStore.loading || isComplaintClosed.value) return;
 
   try {
-    const auth = getAuth();
-    const user = auth.currentUser;
+    const user = await optimizedAuthService.getCurrentUser();
+    if (!user) {
+      notificationStore.showError('You must be logged in to send messages.');
+      return;
+    }
+
     await complaintStore.addMessage(complaintId.value, {
       senderType: 'user',
       senderId: user.uid,
@@ -425,7 +433,7 @@ onUnmounted(() => {
 .complaint-chat {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 150px - 0px); /* Full height minus header and bottom nav */
+  height: calc(100vh - 195px - 0px); /* Full height minus header and bottom nav */
   background: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   position: fixed;
