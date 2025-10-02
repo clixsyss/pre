@@ -231,11 +231,11 @@ import { useRouter, useRoute } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { useSmartMirrorStore } from '../stores/smartMirrorStore'
 import { useSwipeNavigation } from '../composables/useSwipeNavigation'
-import { getAuth } from 'firebase/auth'
 import ViolationNotificationPopup from '../components/ViolationNotificationPopup.vue'
 import SuspensionMessage from '../components/SuspensionMessage.vue'
 import { markViolationsAsShown, hasActiveViolations, clearOldNotificationHistory } from '../services/violationNotificationService'
 import { checkUserSuspension, getSuspensionMessage } from '../services/suspensionService'
+import optimizedAuthService from '../services/optimizedAuthService'
 
 // Component name for ESLint
 defineOptions({
@@ -386,20 +386,19 @@ const checkForViolations = async () => {
   console.log('🔍 checkForViolations called')
   console.log('🔍 Current project:', currentProject.value)
   
-  const auth = getAuth()
-  const currentUser = auth?.currentUser
-  console.log('🔍 Current user:', currentUser?.uid)
-  console.log('🔍 Auth object:', auth ? 'initialized' : 'not initialized')
-  
-  if (!currentProject.value || !currentUser) {
-    console.warn('⚠️ Cannot check violations: missing project or user')
-    return
-  }
-  
   try {
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    console.log('🔍 Current user:', currentUser?.uid)
+    console.log('🔍 Auth object:', currentUser ? 'initialized' : 'not initialized')
+    
+    if (!currentProject.value || !currentUser) {
+      console.warn('⚠️ Cannot check violations: missing project or user')
+      return
+    }
+    
     console.log('🔍 Checking for active violations...')
     // Check for any active violations (issued or disputed) that need attention
-    const result = await hasActiveViolations(currentProject.value.id, getAuth().currentUser.uid)
+    const result = await hasActiveViolations(currentProject.value.id, currentUser.uid)
     
     console.log('✅ Violation check result:', result)
     
@@ -420,6 +419,9 @@ const checkForViolations = async () => {
     }
   } catch (error) {
     console.error('❌ Error checking for violations:', error)
+    // On error, don't show violation notifications
+    showViolationNotification.value = false
+    violationCount.value = 0
   }
 }
 
@@ -434,11 +436,11 @@ const viewViolations = () => {
 
 // Suspension check methods
 const checkUserSuspensionStatus = async () => {
-  const auth = getAuth()
-  if (!auth.currentUser) return
-  
   try {
-    const suspensionStatus = await checkUserSuspension(auth.currentUser.uid)
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    if (!currentUser) return
+    
+    const suspensionStatus = await checkUserSuspension(currentUser.uid)
     
     if (suspensionStatus.isSuspended) {
       isUserSuspended.value = true

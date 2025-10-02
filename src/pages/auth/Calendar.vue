@@ -147,7 +147,6 @@ import { useAcademiesStore } from '../../stores/academyStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useServiceBookingStore } from '../../stores/serviceBookingStore';
 import { auth } from '../../boot/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
 import PageHeader from '../../components/PageHeader.vue';
 
 // Component name for ESLint
@@ -488,42 +487,41 @@ const handleTouchEnd = (event) => {
 
 // Lifecycle
 onMounted(async () => {
-  // Listen for auth state changes
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      currentUser.value = user;
+  // Get current user from auth service
+  const user = auth.currentUser
+  if (user) {
+    currentUser.value = user;
+    
+    // Check if project is selected, if not redirect to project selection
+    if (!projectStore.hasSelectedProject) {
+      // Try to load the selected project from localStorage
+      projectStore.loadSelectedProject();
       
-      // Check if project is selected, if not redirect to project selection
+      // If still no project selected, redirect to project selection
       if (!projectStore.hasSelectedProject) {
-        // Try to load the selected project from localStorage
-        projectStore.loadSelectedProject();
-        
-        // If still no project selected, redirect to project selection
-        if (!projectStore.hasSelectedProject) {
-          router.push('/project-selection');
-          return;
-        }
+        router.push('/project-selection');
+        return;
       }
-      
-      try {
-        // Fetch user bookings with both user ID and project ID
-        await academiesStore.fetchUserBookings(user.uid, projectStore.selectedProject.id);
-        console.log('User bookings fetched:', academiesStore.userBookings);
-        
-        // Fetch service bookings
-        await serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid);
-        console.log('Service bookings fetched:', serviceBookingStore.getBookings);
-        
-        console.log('Current project:', projectStore.selectedProject);
-      } catch (error) {
-        console.error("Error fetching user bookings:", error);
-      }
-    } else {
-      currentUser.value = null;
-      // Redirect to login if no user
-      router.push('/login');
     }
-  });
+    
+    try {
+      // Fetch user bookings with both user ID and project ID
+      await academiesStore.fetchUserBookings(user.uid, projectStore.selectedProject.id);
+      console.log('User bookings fetched:', academiesStore.userBookings);
+      
+      // Fetch service bookings
+      await serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid);
+      console.log('Service bookings fetched:', serviceBookingStore.getBookings);
+      
+      console.log('Current project:', projectStore.selectedProject);
+    } catch (error) {
+      console.error("Error fetching user bookings:", error);
+    }
+  } else {
+    currentUser.value = null;
+    // Redirect to login if no user
+    router.push('/login');
+  }
 });
 </script>
 

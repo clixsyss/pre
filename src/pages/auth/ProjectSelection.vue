@@ -12,7 +12,6 @@
       <div class="welcome-section">
         <h1>Welcome Back, {{ userDisplayName }}!</h1>
         <p>Select your project to continue</p>
-        <div class="welcome-subtitle">Tap any project to get started</div>
       </div>
 
       <!-- Loading State -->
@@ -146,7 +145,7 @@ import { onMounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../../stores/projectStore'
 import { auth } from '../../boot/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import optimizedAuthService from '../../services/optimizedAuthService'
 
 // Component name for ESLint
 defineOptions({
@@ -209,10 +208,10 @@ const goToHome = () => {
 
 // Lifecycle
 onMounted(async () => {
-  // Listen for auth state changes
-  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+  // Wait for auth state to be established - use optimized auth service instead of direct auth.currentUser
+  try {
+    const user = await optimizedAuthService.getCurrentUser()
     if (user) {
-      // Store current user data
       currentUser.value = user
       
       // Fetch user projects from their saved data
@@ -232,13 +231,16 @@ onMounted(async () => {
       }
     } else {
       // User not authenticated, redirect to sign in
+      console.log('No authenticated user found in ProjectSelection component, redirecting to signin')
       currentUser.value = null
       router.push('/signin')
     }
-  })
-
-  // Cleanup subscription
-  return () => unsubscribe()
+  } catch (error) {
+    console.error('Error getting current user in ProjectSelection component:', error)
+    // On error, redirect to sign in as fallback
+    currentUser.value = null
+    router.push('/signin')
+  }
 })
 </script>
 
@@ -254,6 +256,7 @@ onMounted(async () => {
 .clean-header {
   background: #2a2a2a;
   padding: 20px;
+  padding-top: 60px;
   border-bottom: 1px solid #e1e5e9;
 }
 
@@ -558,7 +561,7 @@ onMounted(async () => {
   background: white;
   border: 1px solid #e1e5e9;
   border-radius: 20px;
-  padding: 28px;
+  padding: 14px;
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -578,15 +581,15 @@ onMounted(async () => {
   transition: transform 0.3s ease;
 }
 
-.project-card:hover {
+/* .project-card:hover {
   border-color: transparent;
   transform: translateY(-6px) scale(1.02);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
-}
+} */
 
-.project-card:hover::before {
+/* .project-card:hover::before {
   transform: scaleX(1);
-}
+} */
 
 .project-card.selected {
   border-color: transparent;
@@ -619,10 +622,10 @@ onMounted(async () => {
   transition: all 0.3s ease;
 }
 
-.project-card:hover .project-icon {
+/* .project-card:hover .project-icon {
   transform: scale(1.05);
   box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
-}
+} */
 
 .project-logo {
   color: white;
@@ -670,9 +673,9 @@ onMounted(async () => {
   transition: color 0.3s ease;
 }
 
-.project-card:hover .project-name {
+/* .project-card:hover .project-name {
   color: #AF1E23;
-}
+} */
 
 .project-description {
   color: #7f8c8d;
@@ -695,19 +698,19 @@ onMounted(async () => {
   transition: all 0.3s ease;
 }
 
-.project-card:hover .project-location {
+/* .project-card:hover .project-location {
   background: #fff5f2;
   color: #AF1E23;
-}
+} */
 
 .project-location svg {
   color: #AF1E23;
   transition: transform 0.3s ease;
 }
 
-.project-card:hover .project-location svg {
+/* .project-card:hover .project-location svg {
   transform: scale(1.1);
-}
+} */
 
 /* User Info */
 .user-info {
@@ -745,11 +748,11 @@ onMounted(async () => {
   color: #7b1fa2;
 }
 
-.user-unit:hover,
+/* .user-unit:hover,
 .user-role:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
+} */
 
 .user-unit svg,
 .user-role svg {
@@ -757,10 +760,10 @@ onMounted(async () => {
   transition: transform 0.3s ease;
 }
 
-.user-unit:hover svg,
+/* .user-unit:hover svg,
 .user-role:hover svg {
   transform: scale(1.1);
-}
+} */
 
 /* Click Indicator */
 .click-indicator {
@@ -776,10 +779,10 @@ onMounted(async () => {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
-.project-card:hover .click-indicator {
+/* .project-card:hover .click-indicator {
   opacity: 1;
   transform: scale(1.1);
-}
+} */
 
 /* Continue Section */
 .continue-section {
@@ -851,11 +854,11 @@ onMounted(async () => {
   transition: all 0.3s ease;
 }
 
-.continue-btn:hover {
+/* .continue-btn:hover {
   background: #AF1E23;
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
-}
+} */
 
 /* Help Section */
 .help-section {
@@ -887,10 +890,10 @@ onMounted(async () => {
   transition: all 0.3s ease;
 }
 
-.help-btn:hover {
+/* .help-btn:hover {
   background: #AF1E23;
   color: white;
-}
+} */
 
 /* Back to Home Section */
 .back-home-section {
@@ -934,11 +937,11 @@ onMounted(async () => {
   transition: all 0.3s ease;
 }
 
-.back-home-btn:hover {
+/* .back-home-btn:hover {
   background: #AF1E23;
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
-}
+} */
 
 /* Responsive Design */
 @media (max-width: 768px) {

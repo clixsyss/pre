@@ -299,8 +299,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, onActivated } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { auth } from '../../boot/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
 import { useProjectStore } from '../../stores/projectStore'
 import { useAcademiesStore } from '../../stores/academyStore'
 import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
@@ -310,6 +308,7 @@ import SmartDeviceWidget from '../../components/SmartDeviceWidget.vue'
 import AdsCarousel from '../../components/AdsCarousel.vue'
 // import sampleDataService from '../../services/sampleDataService.js' // Disabled - using real Firebase data only
 import notificationService from '../../services/notificationService.js'
+import optimizedAuthService from '../../services/optimizedAuthService'
 
 // Component name for ESLint
 defineOptions({
@@ -538,7 +537,9 @@ const goToProjectSelection = () => {
 
 // Method to check and load the correct project data
 const checkAndLoadProjectData = async () => {
-  if (!user.value || !projectStore.selectedProject) return
+  // Get current user to ensure we have the latest auth state
+  const currentUser = await optimizedAuthService.getCurrentUser()
+  if (!currentUser || !projectStore.selectedProject) return
 
   try {
     // Switch to the selected project in the smart mirror service
@@ -551,8 +552,9 @@ const checkAndLoadProjectData = async () => {
 }
 
 onMounted(async () => {
-  // Listen for auth state changes
-  onAuthStateChanged(auth, async (currentUser) => {
+  // Wait for auth state to be established - use optimized auth service instead of direct auth.currentUser
+  try {
+    const currentUser = await optimizedAuthService.getCurrentUser()
     if (currentUser) {
       user.value = currentUser
 
@@ -588,19 +590,20 @@ onMounted(async () => {
         console.error('Error initializing Smart Mirror app:', error)
       }
 
-      // Sample data initialization disabled - using real Firebase data only
-      // try {
-      //   if (projectStore.selectedProject?.id) {
-      //     await sampleDataService.initializeAllSampleData(projectStore.selectedProject.id)
-      //   }
-      // } catch (error) {
-      //   console.error('Error initializing sample data:', error)
-      // }
-
       // Fetch notifications
       await fetchNotifications()
+    } else {
+      // User not authenticated, redirect to sign in
+      console.log('No authenticated user found in Home component, redirecting to signin')
+      user.value = null
+      router.push('/signin')
     }
-  })
+  } catch (error) {
+    console.error('Error getting current user in Home component:', error)
+    // On error, redirect to sign in as fallback
+    user.value = null
+    router.push('/signin')
+  }
 
   // Listen for project changes from MainLayout
   const handleProjectChange = async (event) => {
@@ -622,7 +625,6 @@ onMounted(async () => {
     }
   }
 
-
   // Add event listener for project changes
   window.addEventListener('projectChanged', handleProjectChange)
 
@@ -634,14 +636,18 @@ onMounted(async () => {
 
 // Watch for route changes to check project data
 watch(() => route.path, async () => {
-  if (route.path === '/home' && user.value) {
-    await checkAndLoadProjectData()
+  if (route.path === '/home') {
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    if (currentUser) {
+      await checkAndLoadProjectData()
+    }
   }
 })
 
 // Check project data when component is activated (when navigating back to this page)
 onActivated(async () => {
-  if (user.value) {
+  const currentUser = await optimizedAuthService.getCurrentUser()
+  if (currentUser) {
     await checkAndLoadProjectData()
   }
 })

@@ -1270,7 +1270,7 @@ onMounted(() => {
 
 .order-items-count {
   font-size: 0.85rem;
-  color: #E88B65;
+  color: #AF1E23;
   font-weight: 600;
   background: #fef7f0;
   padding: 4px 8px;
@@ -1342,7 +1342,7 @@ onMounted(() => {
 }
 
 .item-quantity-badge {
-  background: #E88B65;
+  background: #AF1E23;
   color: white;
   padding: 6px 12px;
   border-radius: 12px;
@@ -1417,7 +1417,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #E88B65;
+  color: #AF1E23;
 }
 
 .delivery-header h4 {
@@ -1447,7 +1447,7 @@ onMounted(() => {
 .delivery-value {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #E88B65;
+  color: #AF1E23;
   background: #fef7f0;
   padding: 6px 12px;
   border-radius: 8px;
