@@ -363,10 +363,65 @@ class FirestoreService {
           console.warn('⚠️ FirestoreService: Authentication context invalid, but proceeding with query')
         }
         
-             // For fines and complaints collections, use Web SDK directly to ensure proper authentication context
-             // The Capacitor plugin has authentication context issues with security rules
+             // For fines and complaints collections, try Capacitor plugin first
              if (collectionPath.includes('/fines') || collectionPath.includes('/complaints')) {
-               console.log('🔄 FirestoreService: Using Web SDK for', collectionPath.includes('/fines') ? 'fines' : 'complaints', 'collection to ensure proper auth context')
+               console.log('🔄 FirestoreService: Trying Capacitor plugin for', collectionPath.includes('/fines') ? 'fines' : 'complaints', 'collection first')
+               
+               // Try Capacitor plugin first
+               try {
+                 const timeoutPromise = new Promise((_, reject) => {
+                   setTimeout(() => reject(new Error('Capacitor query timeout')), timeoutMs)
+                 })
+                 
+                 const queryPromise = this.capacitorFirestore.getCollection({
+                   reference: collectionPath
+                 })
+                 
+                 const result = await Promise.race([queryPromise, timeoutPromise])
+                 
+                 console.log('✅ FirestoreService: Capacitor plugin query successful for', collectionPath.includes('/fines') ? 'fines' : 'complaints')
+                 
+                 const docs = result.snapshots || []
+                 let filteredDocs = docs
+                 
+                 // Apply client-side filtering if queryOptions has filters
+                 if (queryOptions.filters && Array.isArray(queryOptions.filters)) {
+                   filteredDocs = docs.filter(doc => {
+                     return queryOptions.filters.every(filter => {
+                       const fieldValue = this.getNestedValue(doc.data, filter.field)
+                       switch (filter.operator) {
+                         case '==': return fieldValue === filter.value
+                         case '!=': return fieldValue !== filter.value
+                         case '>': return fieldValue > filter.value
+                         case '>=': return fieldValue >= filter.value
+                         case '<': return fieldValue < filter.value
+                         case '<=': return fieldValue <= filter.value
+                         case 'array-contains': return Array.isArray(fieldValue) && fieldValue.includes(filter.value)
+                         default: return true
+                       }
+                     })
+                   })
+                 }
+                 
+                 const collectionData = {
+                   docs: filteredDocs.map(doc => ({
+                     id: doc.id,
+                     data: () => doc.data || {}
+                   })),
+                   empty: filteredDocs.length === 0,
+                   size: filteredDocs.length
+                 }
+                 
+                 // Cache the result
+                 cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
+                 
+                 return collectionData
+               } catch (capacitorError) {
+                 console.warn('⚠️ FirestoreService: Capacitor plugin failed, falling back to Web SDK:', capacitorError.message)
+               }
+               
+               // Fallback to Web SDK
+               console.log('🔄 FirestoreService: Falling back to Web SDK for', collectionPath.includes('/fines') ? 'fines' : 'complaints', 'collection')
                
                try {
                  const { collection, query, getDocs, where, orderBy, limit } = await import('firebase/firestore')
@@ -406,9 +461,9 @@ class FirestoreService {
                  console.log('🔍 FirestoreService: Executing Web SDK query with constraints:', queryConstraints.length)
                  console.log('🔍 FirestoreService: Query constraints details:', queryConstraints.map(c => ({ field: c.field, operator: c.operator, value: c.value })))
                  
-                 // Add timeout for Web SDK query (increased timeout for native environments)
+                 // Add timeout for Web SDK query (reduced timeout for better UX)
                  const webSDKTimeoutPromise = new Promise((_, reject) => {
-                   setTimeout(() => reject(new Error('Web SDK query timeout')), Math.max(timeoutMs, 15000)) // Minimum 15 seconds
+                   setTimeout(() => reject(new Error('Web SDK query timeout')), Math.min(timeoutMs, 8000)) // Maximum 8 seconds
                  })
                  
                  console.log('🔍 FirestoreService: Starting Web SDK query execution...')

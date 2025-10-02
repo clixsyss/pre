@@ -87,19 +87,30 @@ export const getUserFines = async (projectId, userId) => {
       const collectionPath = `projects/${projectId}/fines`
       console.log('🔍 Collection path:', collectionPath)
       
-      // Now filtering by userId field which exists in the database
+      // Query with proper filtering by userId
       const queryOptions = {
         filters: [
           { field: 'userId', operator: '==', value: userId }
         ],
         orderBy: { field: 'createdAt', direction: 'desc' },
-        timeoutMs: 8000
+        timeoutMs: 10000 // Reduced timeout
       }
       
       console.log('🔍 Query options:', queryOptions)
       
       const result = await firestoreService.getDocs(collectionPath, queryOptions)
       console.log('🔍 Raw Firestore result:', result)
+      console.log('🔍 Result docs length:', result.docs?.length || 0)
+      console.log('🔍 Result empty:', result.empty)
+      console.log('🔍 Result size:', result.size)
+      
+      // Debug: Log first few docs if any exist
+      if (result.docs && result.docs.length > 0) {
+        console.log('🔍 First few docs:', result.docs.slice(0, 3).map(doc => ({
+          id: doc.id,
+          data: doc.data()
+        })))
+      }
       
       const userFines = result.docs.map(doc => ({
         id: doc.id,
@@ -107,7 +118,26 @@ export const getUserFines = async (projectId, userId) => {
       }));
       
       console.log('✅ User fines retrieved:', { count: userFines.length, userId })
-      console.log('🔍 Fines data:', userFines)
+      console.log('🔍 User fines data:', userFines)
+      
+      // Additional debug: If no fines found, let's try to get all fines in the project
+      if (userFines.length === 0) {
+        console.log('🔍 No fines found for user, checking if there are any fines in the project...')
+        try {
+          const allFinesOptions = {
+            orderBy: { field: 'createdAt', direction: 'desc' },
+            timeoutMs: 5000
+          }
+          const allFinesResult = await firestoreService.getDocs(collectionPath, allFinesOptions)
+          console.log('🔍 All fines in project:', allFinesResult.docs?.length || 0)
+          if (allFinesResult.docs && allFinesResult.docs.length > 0) {
+            console.log('🔍 Sample fine data:', allFinesResult.docs[0].data())
+          }
+        } catch (debugError) {
+          console.log('🔍 Debug query failed:', debugError.message)
+        }
+      }
+      
       return userFines;
     } catch (error) {
       console.error('❌ Error fetching user fines:', error);

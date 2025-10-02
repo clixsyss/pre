@@ -643,10 +643,10 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages', 'lastMessageAt', 'updatedAt']);
     }
     
-    // Allow listing fines (users can list their own, admins can list all)
-    // This rule allows both list and read operations for collection queries
+    // Allow listing fines (admins can list all, users can query their own fines)
     match /projects/{projectId}/fines {
-      allow list, get, read: if request.auth != null;
+      // Allow all authenticated users to query fines collection
+      allow list, read, get: if request.auth != null;
     }
     
     // Project Support Chats - allow authenticated users to read/write support chats within project
