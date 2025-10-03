@@ -1,7 +1,6 @@
 import { 
   collection, 
-  addDoc, 
-  serverTimestamp
+  addDoc
 } from 'firebase/firestore';
 import { 
   ref as storageRef, 
@@ -51,8 +50,8 @@ class RequestSubmissionService {
       const submissionDoc = {
         ...submissionData,
         mediaFiles: uploadedFiles,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        createdAt: new Date().toISOString(), // Use ISO string instead of serverTimestamp for iOS compatibility
+        updatedAt: new Date().toISOString()  // Use ISO string instead of serverTimestamp for iOS compatibility
       };
 
       console.log('📝 RequestSubmissionService: Prepared submission document', {
@@ -84,10 +83,50 @@ class RequestSubmissionService {
       let docRef;
       try {
         console.log('📝 RequestSubmissionService: Attempting to add document to Firestore...');
-        docRef = await addDoc(
-          collection(db, `projects/${submissionData.projectId}/requestSubmissions`), 
-          submissionDoc
-        );
+        
+        // iOS-specific: Use firestoreService for better compatibility
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        if (isIOS) {
+          console.log('📱 iOS: Using firestoreService for better iOS compatibility');
+          console.log('📱 iOS: Submission data before firestoreService:', {
+            projectId: submissionData.projectId,
+            categoryId: submissionData.categoryId,
+            userId: submissionData.userId,
+            formDataKeys: Object.keys(submissionData.formData || {}),
+            hasFieldMetadata: !!submissionData.fieldMetadata,
+            mediaFilesCount: submissionData.mediaFiles?.length || 0
+          });
+          
+          try {
+            const { default: firestoreService } = await import('./firestoreService');
+            console.log('📱 iOS: firestoreService imported successfully');
+            
+            await firestoreService.initialize();
+            console.log('📱 iOS: firestoreService initialized successfully');
+            
+            console.log('📱 iOS: Calling firestoreService.addDoc...');
+            docRef = await firestoreService.addDoc(
+              `projects/${submissionData.projectId}/requestSubmissions`, 
+              submissionDoc
+            );
+            console.log('📱 iOS: firestoreService.addDoc completed successfully:', docRef);
+          } catch (firestoreServiceError) {
+            console.warn('⚠️ iOS: firestoreService failed, falling back to Web SDK:', firestoreServiceError.message);
+            console.log('📱 iOS: Falling back to Web SDK for submission');
+            docRef = await addDoc(
+              collection(db, `projects/${submissionData.projectId}/requestSubmissions`), 
+              submissionDoc
+            );
+            console.log('📱 iOS: Web SDK fallback completed successfully:', docRef);
+          }
+        } else {
+          console.log('🌐 Web: Using Web SDK for submission');
+          docRef = await addDoc(
+            collection(db, `projects/${submissionData.projectId}/requestSubmissions`), 
+            submissionDoc
+          );
+        }
+        
         console.log('✅ RequestSubmissionService: Document added successfully, ID:', docRef.id);
       } catch (firestoreError) {
         console.error('❌ RequestSubmissionService: Firestore addDoc error:', firestoreError);
@@ -96,6 +135,19 @@ class RequestSubmissionService {
           code: firestoreError.code,
           stack: firestoreError.stack
         });
+        
+        // iOS-specific: Provide more helpful error messages
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        if (isIOS) {
+          if (firestoreError.message?.includes('permission')) {
+            throw new Error('Permission denied. Please make sure you are logged in and have the correct permissions.');
+          } else if (firestoreError.message?.includes('network')) {
+            throw new Error('Network error. Please check your internet connection and try again.');
+          } else if (firestoreError.message?.includes('timeout')) {
+            throw new Error('Request timed out. Please try again.');
+          }
+        }
+        
         throw firestoreError;
       }
 
@@ -613,7 +665,7 @@ class RequestSubmissionService {
       const submissionRef = doc(db, `projects/${projectId}/requestSubmissions/${submissionId}`);
       await updateDoc(submissionRef, {
         status,
-        updatedAt: serverTimestamp(),
+        updatedAt: new Date().toISOString(), // Use ISO string instead of serverTimestamp for iOS compatibility
         updatedBy: adminId
       });
 
@@ -644,7 +696,7 @@ class RequestSubmissionService {
       const messagesRef = collection(db, `projects/${projectId}/requestSubmissions/${submissionId}/messages`);
       const messageDoc = {
         ...messageData,
-        createdAt: serverTimestamp()
+        createdAt: new Date().toISOString() // Use ISO string instead of serverTimestamp for iOS compatibility
       };
       
       const docRef = await addDoc(messagesRef, messageDoc);
@@ -658,6 +710,49 @@ class RequestSubmissionService {
     } catch (error) {
       console.error('❌ RequestSubmissionService: Error adding message:', error);
       throw new Error(`Failed to add message: ${error.message}`);
+    }
+  }
+
+  /**
+   * Test function for debugging iOS submission issues
+   * Call this from browser console: requestSubmissionService.testIOSSubmission()
+   */
+  async testIOSSubmission() {
+    console.log('🧪 Testing iOS submission...');
+    
+    try {
+      // Create a test submission
+      const testSubmissionData = {
+        categoryId: 'test-category',
+        categoryName: 'Test Category',
+        userId: 'test-user-id',
+        userName: 'Test User',
+        userEmail: 'test@example.com',
+        userPhone: '1234567890',
+        formData: {
+          testField: 'test value'
+        },
+        fieldMetadata: [{
+          id: 'testField',
+          fieldName: 'Test Field',
+          fieldType: 'text',
+          required: true,
+          placeholder: 'Enter test value'
+        }],
+        mediaFiles: [],
+        status: 'pending',
+        projectId: 'test-project'
+      };
+
+      console.log('🧪 Test submission data:', testSubmissionData);
+      
+      // Try to submit
+      const result = await this.submitRequest(testSubmissionData, []);
+      console.log('✅ Test submission successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Test submission failed:', error);
+      throw error;
     }
   }
 }

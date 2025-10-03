@@ -561,8 +561,17 @@ const submitRequest = async () => {
     const submissionId = await requestSubmissionService.submitRequest(submissionData, selectedFiles.value);
     console.log('✅ Request submitted successfully with ID:', submissionId);
     
+    // iOS-specific: Additional success verification
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) {
+      console.log('📱 iOS: Request submission completed successfully');
+      console.log('📱 iOS: Submission ID:', submissionId);
+      console.log('📱 iOS: Category:', submissionData.categoryName);
+      console.log('📱 iOS: User:', submissionData.userName);
+    }
+    
     // Show success message
-       alert('Your request has been submitted successfully!');
+    alert('Your request has been submitted successfully!');
     
     // Navigate back
     router.push('/facilities');

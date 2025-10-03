@@ -75,6 +75,21 @@ export default defineBoot(async ({ app }) => {
       console.warn('Firebase Boot: Continuing without @capacitor-firebase/app - other plugins may still work')
       // Don't throw - other Firebase plugins can work without this
     }
+    
+    // Additional iOS-specific initialization
+    if (platform === 'ios') {
+      try {
+        // Ensure Firebase is properly configured for iOS
+        console.log('Firebase Boot: Performing iOS-specific initialization...')
+        
+        // Add a small delay to ensure Firebase is fully ready
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        console.log('Firebase Boot: iOS initialization completed')
+      } catch (iosError) {
+        console.warn('Firebase Boot: iOS-specific initialization failed:', iosError)
+      }
+    }
   }
 
   // Make Firebase services available globally

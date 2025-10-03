@@ -76,8 +76,10 @@ class FirestoreService {
           console.warn('⚠️ FirestoreService: Could not verify with optimized auth service:', authError)
         }
         
-        // Force a small delay to ensure auth context is fully propagated
-        await new Promise(resolve => setTimeout(resolve, 200))
+        // iOS-specific: Longer delay to ensure auth context is fully propagated
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const delay = isIOS ? 500 : 200;
+        await new Promise(resolve => setTimeout(resolve, delay))
         
         return true
       } else {
@@ -86,6 +88,23 @@ class FirestoreService {
       }
     } catch (error) {
       console.error('❌ FirestoreService: Failed to ensure authentication context:', error)
+      
+      // iOS-specific: Try fallback authentication check
+      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        try {
+          console.log('📱 iOS: Trying fallback authentication check...')
+          const { optimizedAuthService } = await import('./optimizedAuthService')
+          const fallbackUser = await optimizedAuthService.getCurrentUser()
+          
+          if (fallbackUser && fallbackUser.uid) {
+            console.log('✅ iOS: Fallback authentication successful for user:', fallbackUser.uid)
+            return true
+          }
+        } catch (fallbackError) {
+          console.warn('⚠️ iOS: Fallback authentication also failed:', fallbackError)
+        }
+      }
+      
       return false
     }
   }
