@@ -792,6 +792,10 @@ onActivated(async () => {
   letter-spacing: -0.01em;
 }
 
+.section-title h2{
+  line-height: normal;
+}
+
 .actions-scroll {
   display: flex;
   gap: 12px;

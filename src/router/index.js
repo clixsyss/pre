@@ -91,7 +91,13 @@ const routes = [
   {
     path: '/facilities',
     name: 'Facilities',
-    component: () => import('../pages/auth/Facilities.vue'),
+    component: () => import('../pages/auth/Requests.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/request-category/:id',
+    name: 'RequestCategoryDetails',
+    component: () => import('../pages/auth/RequestCategoryDetails.vue'),
     meta: { requiresAuth: true }
   },
   {
@@ -233,7 +239,19 @@ const routes = [
     component: SupportChatPage,
     meta: { requiresAuth: true }
   },
+  {
+    path: '/request-chat/:id',
+    name: 'RequestChat',
+    component: () => import('../components/RequestChat.vue'),
+    meta: { requiresAuth: true }
+  },
 
+  {
+    path: '/request-category/:id',
+    name: 'RequestCategoryDetails',
+    component: () => import('../pages/auth/RequestCategoryDetails.vue'),
+    meta: { requiresAuth: true }
+  },
   // Catch all route - redirect to onboarding
   {
     path: '/:pathMatch(.*)*',

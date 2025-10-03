@@ -162,7 +162,10 @@ const authenticatedRoutes = [
   '/violation-chat/:id',
   '/support',
   '/support-chat',
-  '/support-chat/:id'
+  '/support-chat/:id',
+  '/request-category',
+  '/request-chat/:id',
+  '/request-category/:id'
 ]
 
 // Check if current route should show main layout
@@ -218,6 +221,14 @@ const isAuthenticatedPage = computed(() => {
   }
 
   if (route.path.startsWith('/support-chat/')) {
+    return true
+  }
+
+  if (route.path.startsWith('/request-chat/')) {
+    return true
+  }
+
+  if (route.path.startsWith('/request-category/')) {
     return true
   }
   

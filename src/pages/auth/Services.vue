@@ -12,12 +12,8 @@
     <!-- Tabs Navigation -->
     <div class="tabs-container">
       <div class="tabs-nav">
-        <button 
-          v-for="tab in tabs" 
-          :key="tab.id"
-          :class="['tab-btn', { active: activeTab === tab.id }]"
-          @click="activeTab = tab.id"
-        >
+        <button v-for="tab in tabs" :key="tab.id" :class="['tab-btn', { active: activeTab === tab.id }]"
+          @click="activeTab = tab.id">
           <span class="tab-icon">{{ tab.icon }}</span>
           <span class="tab-label">{{ tab.label }}</span>
           <span v-if="tab.count !== undefined" class="tab-count">{{ tab.count }}</span>
@@ -43,67 +39,138 @@
 
         <!-- Services Grid -->
         <div v-else class="services-grid">
-      <!-- Dynamic Service Categories -->
-      <div 
-        v-for="category in serviceCategoriesStore.getCategories" 
-        :key="category.id" 
-        class="service-card" 
-        @click="navigateToCategory(category)"
-      >
-        <div class="service-icon">
-          <img 
-            v-if="category.imageUrl" 
-            :src="category.imageUrl" 
-            :alt="category.englishTitle"
-            class="service-image"
-          />
-          <svg 
-            v-else 
-            width="32" 
-            height="32" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            xmlns="http://www.w3.org/2000/svg"
-            class="default-icon"
-          >
-            <path d="M14.7 6.3C14.7 4.4 13.3 3 11.4 3C9.5 3 8.1 4.4 8.1 6.3C8.1 8.2 9.5 9.6 11.4 9.6C13.3 9.6 14.7 8.2 14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M20 12C20 16.4 16.4 20 12 20C7.6 20 4 16.4 4 12C4 7.6 7.6 4 12 4C16.4 4 20 7.6 20 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 8V12L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="service-content">
-          <h3 class="service-name">{{ category.englishTitle }}</h3>
-        </div>
-        <div class="service-arrow">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-      </div>
+          <!-- Dynamic Service Categories -->
+          <div v-for="category in serviceCategoriesStore.getCategories" :key="category.id" class="service-card"
+            @click="navigateToCategory(category)">
+            <div class="service-icon">
+              <img v-if="category.imageUrl" :src="category.imageUrl" :alt="category.englishTitle"
+                class="service-image" />
+              <svg v-else width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                class="default-icon">
+                <path
+                  d="M14.7 6.3C14.7 4.4 13.3 3 11.4 3C9.5 3 8.1 4.4 8.1 6.3C8.1 8.2 9.5 9.6 11.4 9.6C13.3 9.6 14.7 8.2 14.7 6.3Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M20 12C20 16.4 16.4 20 12 20C7.6 20 4 16.4 4 12C4 7.6 7.6 4 12 4C16.4 4 20 7.6 20 12Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M12 8V12L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div class="service-content">
+              <h3 class="service-name">{{ category.englishTitle }}</h3>
+            </div>
+            <div class="service-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
 
-      <!-- Static Services -->
-      <!-- Smart Devices -->
-      <div class="service-card" @click="navigateToSmartDevices">
-        <div class="service-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 21C9 21.5523 9.44772 22 10 22H14C14.5523 22 15 21.5523 15 21V20H9V21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="service-content">
-          <h3 class="service-name">Smart Devices</h3>
-          <p class="service-description">Control your smart home devices and automation</p>
-      </div>
-        <div class="service-arrow">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-      </div>
+          <!-- Static Services -->
+          <!-- Smart Devices -->
+          <div class="service-card" @click="navigateToSmartDevices">
+            <div class="service-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 21C9 21.5523 9.44772 22 10 22H14C14.5523 22 15 21.5523 15 21V20H9V21Z" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path
+                  d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div class="service-content">
+              <h3 class="service-name">Smart Devices</h3>
+              <p class="service-description">Control your smart home devices and automation</p>
+            </div>
+            <div class="service-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
 
-      <!-- Calendar  -->
-       <div class="service-card" @click="navigateToCalendar">
+          <!-- Court Booking -->
+          <div class="facility-card" @click="navigateToCourtBooking">
+            <div class="facility-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div class="facility-content">
+              <h3 class="facility-name">Court Booking</h3>
+              <p class="facility-description">Book tennis, basketball, and other sports courts</p>
+            </div>
+            <div class="facility-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Academy Programs -->
+          <div class="facility-card" @click="navigateToAcademyPrograms">
+            <div class="facility-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15C10.9391 15 9.92172 15.4214 9.17157 16.1716C8.42143 16.9217 8 17.9391 8 19V21"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M12 11V15" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M9 13H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div class="facility-content">
+              <h3 class="facility-name">Academy Programs</h3>
+              <p class="facility-description">Join sports academies and training programs</p>
+            </div>
+            <div class="facility-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Stores & Shopping -->
+          <div class="facility-card" @click="navigateToStores">
+            <div class="facility-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M3 6H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path
+                  d="M16 10C16 11.0609 15.5786 12.0783 14.8284 12.8284C14.0783 13.5786 13.0609 14 12 14C10.9391 14 9.92172 13.5786 9.17157 12.8284C8.42143 12.0783 8 11.0609 8 10"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div class="facility-content">
+              <h3 class="facility-name">Shopping</h3>
+              <p class="facility-description">Browse and shop at our retail stores</p>
+            </div>
+            <div class="facility-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Calendar  -->
+          <!-- <div class="service-card" @click="navigateToCalendar">
         <div class="service-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -123,29 +190,33 @@
             <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-       </div>
+       </div> -->
 
-      <!-- My Bookings -->
-      <div class="service-card" @click="navigateToMyBookings">
-        <div class="service-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
-          </svg>
-        </div>
-        <div class="service-content">
-          <h3 class="service-name">My Bookings</h3>
-          <p class="service-description">Manage your reservations and appointments</p>
-      </div>
-        <div class="service-arrow">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-      </div>
+          <!-- My Bookings -->
+          <!-- <div class="service-card" @click="navigateToMyBookings">
+            <div class="service-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path
+                  d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                  stroke="currentColor" stroke-width="2" />
+              </svg>
+            </div>
+            <div class="service-content">
+              <h3 class="service-name">My Bookings</h3>
+              <p class="service-description">Manage your reservations and appointments</p>
+            </div>
+            <div class="service-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div> -->
 
-      <!-- Equipment Rental -->
-      <!-- <div class="service-card coming-soon">
+          <!-- Equipment Rental -->
+          <!-- <div class="service-card coming-soon">
         <div class="service-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -155,8 +226,8 @@
         <span class="coming-soon-badge">Coming Soon</span>
       </div> -->
 
-      <!-- Event Planning -->
-      <!-- <div class="service-card coming-soon">
+          <!-- Event Planning -->
+          <!-- <div class="service-card coming-soon">
         <div class="service-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -171,8 +242,8 @@
         <span class="coming-soon-badge">Coming Soon</span>
       </div> -->
 
-      <!-- Membership Plans -->
-      <!-- <div class="service-card coming-soon">
+          <!-- Membership Plans -->
+          <!-- <div class="service-card coming-soon">
         <div class="service-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -184,7 +255,7 @@
         <span class="service-name">Membership Plans</span>
         <span class="coming-soon-badge">Coming Soon</span>
       </div> -->
-    </div>
+        </div>
       </div>
 
       <!-- Open Bookings Tab -->
@@ -196,20 +267,16 @@
         <div v-else-if="openBookings.length === 0" class="empty-state">
           <div class="empty-icon">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="10" stroke="#ccc" stroke-width="2"/>
-              <path d="M12 8V12L15 15" stroke="#ccc" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="12" cy="12" r="10" stroke="#ccc" stroke-width="2" />
+              <path d="M12 8V12L15 15" stroke="#ccc" stroke-width="2" stroke-linecap="round" />
             </svg>
           </div>
           <h3>No Open Bookings</h3>
           <p>You don't have any open service bookings at the moment.</p>
         </div>
         <div v-else class="bookings-list">
-          <div 
-            v-for="booking in openBookings" 
-            :key="booking.id"
-            class="booking-card"
-            @click="openBookingModal(booking)"
-          >
+          <div v-for="booking in openBookings" :key="booking.id" class="booking-card"
+            @click="openBookingModal(booking)">
             <div class="booking-header">
               <h3 class="booking-title">{{ booking.serviceName }}</h3>
               <div class="header-right">
@@ -243,20 +310,17 @@
         <div v-else-if="closedBookings.length === 0" class="empty-state">
           <div class="empty-icon">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="10" stroke="#ccc" stroke-width="2"/>
-              <path d="M9 12L11 14L15 10" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="12" r="10" stroke="#ccc" stroke-width="2" />
+              <path d="M9 12L11 14L15 10" stroke="#ccc" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </div>
           <h3>No Closed Bookings</h3>
           <p>You don't have any closed service bookings yet.</p>
         </div>
         <div v-else class="bookings-list">
-          <div 
-            v-for="booking in closedBookings" 
-            :key="booking.id"
-            class="booking-card"
-            @click="openBookingModal(booking)"
-          >
+          <div v-for="booking in closedBookings" :key="booking.id" class="booking-card"
+            @click="openBookingModal(booking)">
             <div class="booking-header">
               <h3 class="booking-title">{{ booking.serviceName }}</h3>
               <div class="header-right">
@@ -283,12 +347,8 @@
     </div>
 
     <!-- Service Booking Modal -->
-    <ServiceBookingModal
-      :isOpen="showBookingModal"
-      :booking="selectedBooking"
-      @close="closeBookingModal"
-      @openChat="openBookingChat"
-    />
+    <ServiceBookingModal :isOpen="showBookingModal" :booking="selectedBooking" @close="closeBookingModal"
+      @openChat="openBookingChat" />
   </div>
 </template>
 
@@ -320,22 +380,22 @@ const selectedBooking = ref(null);
 
 // Computed properties
 const tabs = computed(() => [
-  { 
-    id: 'services', 
-    label: 'Services', 
-    icon: '' 
+  {
+    id: 'services',
+    label: 'Services',
+    icon: ''
   },
-  { 
-    id: 'open', 
-    label: 'Open', 
-    icon: '', 
-    count: openBookings.value.length 
+  {
+    id: 'open',
+    label: 'Open',
+    icon: '',
+    count: openBookings.value.length
   },
-  { 
-    id: 'closed', 
-    label: 'Closed', 
-    icon: '', 
-    count: closedBookings.value.length 
+  {
+    id: 'closed',
+    label: 'Closed',
+    icon: '',
+    count: closedBookings.value.length
   }
 ]);
 
@@ -365,13 +425,26 @@ const navigateToCategory = (category) => {
   router.push(`/service-category/${category.id}`);
 };
 
-const navigateToMyBookings = () => {
-  router.push('/my-bookings');
+
+const navigateToCourtBooking = () => {
+  router.push('/court-booking');
 };
 
-const navigateToCalendar = () => {
-  router.push('/calendar');
+const navigateToAcademyPrograms = () => {
+  router.push('/academy-programs');
 };
+
+const navigateToStores = () => {
+  router.push('/stores-shopping');
+};
+
+// const navigateToMyBookings = () => {
+//   router.push('/my-bookings');
+// };
+
+// const navigateToCalendar = () => {
+//   router.push('/calendar');
+// };
 
 const navigateToSmartDevices = () => {
   router.push('/smart-devices');
@@ -380,25 +453,25 @@ const navigateToSmartDevices = () => {
 // Load bookings function
 const loadBookings = async () => {
   if (!projectStore.selectedProject?.id) return;
-  
+
   try {
     loadingBookings.value = true;
-    
+
     // Get current user
     const user = await optimizedAuthService.getCurrentUser();
-    
+
     if (!user) {
       console.error('User not authenticated');
       return;
     }
-    
+
     // Load open bookings (including processing)
     const [openResults, processingResults, closedResults] = await Promise.all([
       serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'open'),
       serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'processing'),
       serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'closed')
     ]);
-    
+
     openBookings.value = [...openResults, ...processingResults];
     closedBookings.value = closedResults;
   } catch (error) {
@@ -410,14 +483,14 @@ const loadBookings = async () => {
 
 // Open booking modal
 const openBookingModal = (booking) => {
-  console.log('🔍 Services: openBookingModal called', { 
+  console.log('🔍 Services: openBookingModal called', {
     bookingId: booking?.id,
-    booking: booking 
+    booking: booking
   });
-  
+
   selectedBooking.value = booking;
   showBookingModal.value = true;
-  
+
   console.log('🔍 Services: Modal state updated', {
     showBookingModal: showBookingModal.value,
     selectedBooking: selectedBooking.value
@@ -438,7 +511,7 @@ const openBookingChat = (booking) => {
 // Format date
 const formatDate = (dateString) => {
   if (!dateString) return '';
-  
+
   // Handle both ISO date strings and formatted date strings
   let date;
   if (dateString.includes('-')) {
@@ -448,23 +521,23 @@ const formatDate = (dateString) => {
     // Already formatted or other format
     date = new Date(dateString);
   }
-  
+
   // Check if date is valid
   if (isNaN(date.getTime())) {
     return dateString; // Return original if can't parse
   }
-  
-  return date.toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
+
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
   });
 };
 
 // Format time
 const formatTime = (timestamp) => {
   if (!timestamp) return '';
-  
+
   let date;
   if (timestamp.seconds) {
     // Firestore timestamp
@@ -472,14 +545,14 @@ const formatTime = (timestamp) => {
   } else {
     date = new Date(timestamp);
   }
-  
+
   const now = new Date();
   const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-  
+
   if (diffInMinutes < 1) return 'Just now';
   if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
   if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-  
+
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
@@ -488,27 +561,27 @@ const getUnreadCount = (booking) => {
   if (!booking.messages || booking.messages.length === 0) {
     return 0;
   }
-  
+
   // Get the last message ID that the user has read
   const lastReadId = localStorage.getItem(`lastReadMessage_${booking.id}`);
-  
+
   if (!lastReadId) {
     // If no last read message, count all admin/system messages
-    return booking.messages.filter(msg => 
+    return booking.messages.filter(msg =>
       msg.senderType === 'admin' || msg.senderType === 'system'
     ).length;
   }
-  
+
   // Count messages after the last read message
   const lastReadIndex = booking.messages.findIndex(msg => msg.id === lastReadId);
   if (lastReadIndex === -1) {
-    return booking.messages.filter(msg => 
+    return booking.messages.filter(msg =>
       msg.senderType === 'admin' || msg.senderType === 'system'
     ).length;
   }
-  
+
   const unreadMessages = booking.messages.slice(lastReadIndex + 1);
-  return unreadMessages.filter(msg => 
+  return unreadMessages.filter(msg =>
     msg.senderType === 'admin' || msg.senderType === 'system'
   ).length;
 };
@@ -518,9 +591,9 @@ const getLastMessagePreview = (booking) => {
   if (!booking.messages || booking.messages.length === 0) {
     return 'No messages yet';
   }
-  
+
   const lastMessage = booking.messages[booking.messages.length - 1];
-  
+
   if (lastMessage.messageType === 'status_update') {
     return 'Status updated';
   } else if (lastMessage.messageType === 'details_update') {
@@ -593,11 +666,11 @@ const getLastMessagePreview = (booking) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.service-card:hover {
+/* .service-card:hover {
   transform: translateY(-2px);
   border-color: #AF1E23;
   box-shadow: 0 8px 24px rgba(175, 30, 35, 0.12);
-}
+} */
 
 .service-card.coming-soon {
   opacity: 0.6;
@@ -641,10 +714,10 @@ const getLastMessagePreview = (booking) => {
   transition: all 0.2s ease;
 }
 
-.service-card:hover .service-arrow {
+/* .service-card:hover .service-arrow {
   color: #AF1E23;
   transform: translateX(4px);
-}
+} */
 
 .coming-soon-badge {
   position: absolute;
@@ -660,28 +733,28 @@ const getLastMessagePreview = (booking) => {
 
 /* Tablet and Desktop */
 @media (min-width: 768px) {
-  
+
   .hero-section {
     margin-bottom: 24px;
   }
-  
+
   .hero-title {
     font-size: 2rem;
   }
-  
+
   .services-grid {
     max-width: 800px;
     gap: 20px;
   }
-  
+
   .service-card {
     padding: 32px;
   }
-  
+
   .service-name {
     font-size: 1.375rem;
   }
-  
+
   .service-description {
     font-size: 1rem;
   }
@@ -691,20 +764,20 @@ const getLastMessagePreview = (booking) => {
   .hero-title {
     font-size: 2.25rem;
   }
-  
+
   .services-grid {
     max-width: 1000px;
     gap: 24px;
   }
-  
+
   .service-card {
     padding: 40px;
   }
-  
+
   .service-name {
     font-size: 1.5rem;
   }
-  
+
   .service-description {
     font-size: 1.125rem;
   }
@@ -731,8 +804,13 @@ const getLastMessagePreview = (booking) => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .error-container {
@@ -760,9 +838,9 @@ const getLastMessagePreview = (booking) => {
   font-weight: 500;
 }
 
-.retry-btn:hover {
+/* .retry-btn:hover {
   background: #8B1A1E;
-}
+} */
 
 /* Service Image Styles */
 .service-image {
@@ -851,6 +929,7 @@ const getLastMessagePreview = (booking) => {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -876,11 +955,11 @@ const getLastMessagePreview = (booking) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.booking-card:hover {
+/* .booking-card:hover {
   transform: translateY(-2px);
   border-color: #AF1E23;
   box-shadow: 0 8px 24px rgba(175, 30, 35, 0.12);
-}
+} */
 
 .booking-header {
   display: flex;
@@ -1020,13 +1099,179 @@ const getLastMessagePreview = (booking) => {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.1);
     opacity: 0.8;
+  }
+}
+
+
+.facilities-page {
+  background: #fafafa;
+  min-height: 100vh;
+}
+
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  color: #F6F6F6;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(175, 30, 35, 0.2);
+}
+
+.hero-content {
+  width: 100%;
+}
+
+.hero-text {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.hero-subtitle {
+  font-size: 0.9rem;
+  margin: 0;
+  opacity: 0.9;
+  font-weight: 400;
+  margin-top: 4px;
+}
+
+.facilities-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.facility-card {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 16px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* .facility-card:hover {
+  transform: translateY(-2px);
+  border-color: #AF1E23;
+  box-shadow: 0 8px 24px rgba(175, 30, 35, 0.12);
+} */
+
+.facility-icon {
+  color: #AF1E23;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.facility-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.facility-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+}
+
+.facility-description {
+  font-size: 0.875rem;
+  color: #666;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.facility-arrow {
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+/* .facility-card:hover .facility-arrow {
+  color: #AF1E23;
+  transform: translateX(4px);
+} */
+
+/* Tablet and Desktop */
+@media (min-width: 768px) {
+
+  .hero-section {
+    margin-bottom: 24px;
+  }
+
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  .facilities-grid {
+    max-width: 800px;
+    gap: 20px;
+  }
+
+  .facility-card {
+    padding: 32px;
+  }
+
+  .facility-name {
+    font-size: 1.375rem;
+  }
+
+  .facility-description {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+
+  .hero-title {
+    font-size: 2.25rem;
+  }
+
+  .facilities-grid {
+    max-width: 1000px;
+    gap: 24px;
+  }
+
+  .facility-card {
+    padding: 40px;
+  }
+
+  .facility-name {
+    font-size: 1.5rem;
+  }
+
+  .facility-description {
+    font-size: 1.125rem;
   }
 }
 </style>

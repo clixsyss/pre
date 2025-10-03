@@ -29,7 +29,7 @@ export function useSwipeNavigation() {
   const mainTabs = [
     { path: '/home', name: 'Home' },
     { path: '/services', name: 'Services' },
-    { path: '/facilities', name: 'Facilities' },
+    { path: '/facilities', name: 'Requests' },
     { path: '/profile', name: 'Profile' }
   ]
   

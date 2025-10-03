@@ -6,6 +6,7 @@
 import cacheService from './cacheService'
 import performanceService from './performanceService'
 import firestoreService from './firestoreService'
+import errorHandlingService from './errorHandlingService'
 
 class FastCollectionService {
   constructor() {
@@ -275,6 +276,117 @@ class FastCollectionService {
    */
   getCacheStats() {
     return cacheService.getStats()
+  }
+
+  /**
+   * Get request categories for a project (optimized with real Firebase data)
+   */
+  async getRequestCategories(projectId, availableOnly = true, useCache = true) {
+    
+    // Check cache first
+    if (useCache) {
+      const cachedCategories = cacheService.getCollectionData(`projects/${projectId}/requestCategories`, { availableOnly })
+      if (cachedCategories) {
+        console.log(`🚀 FastCollection: Using cached request categories for project ${projectId}`)
+        return cachedCategories
+      }
+    }
+
+    try {
+      console.log(`🚀 FastCollection: Fetching real request categories for project ${projectId}`)
+      
+      // Use the optimized firestoreService with timeout handling
+      const snapshot = await firestoreService.getDocs(`projects/${projectId}/requestCategories`, { timeoutMs: 6000 }) // 6 second timeout
+      
+      if (snapshot.empty) {
+        console.log(`🚀 FastCollection: No request categories found for project ${projectId}`)
+        const emptyResult = []
+        cacheService.setCollectionData(`projects/${projectId}/requestCategories`, { availableOnly }, emptyResult)
+        return emptyResult
+      }
+      
+      // Process the real data
+      let categories = snapshot.docs.map(doc => ({
+        id: doc.id,
+        projectId,
+        ...doc.data()
+      }))
+      
+      // Apply client-side filtering
+      if (availableOnly) {
+        categories = categories.filter(cat => cat.status === 'available')
+      }
+      
+      // Sort by name
+      categories.sort((a, b) => (a.englishTitle || '').localeCompare(b.englishTitle || ''))
+      
+      // Cache the processed data
+      cacheService.setCollectionData(`projects/${projectId}/requestCategories`, { availableOnly }, categories)
+      
+      console.log(`🚀 FastCollection: Successfully fetched ${categories.length} request categories for project ${projectId}`)
+      return categories
+      
+    } catch (error) {
+      console.warn(`🚀 FastCollection: Error fetching request categories for project ${projectId}:`, error)
+      errorHandlingService.handleFirestoreError(error, 'getRequestCategories')
+      return []
+    }
+  }
+
+  /**
+   * Get request categories by category (optimized with real Firebase data)
+   */
+  async getRequestCategoriesByCategory(projectId, categoryId, availableOnly = true, useCache = true) {
+    
+    // Check cache first
+    if (useCache) {
+      const cachedRequestCategories = cacheService.getCollectionData(`projects/${projectId}/requestCategories/${categoryId}/requestCategories`, { availableOnly })
+      if (cachedRequestCategories) {
+        console.log(`🚀 FastCollection: Using cached request categories for category ${categoryId}`)
+        return cachedRequestCategories
+      }
+    }
+
+    try {
+      console.log(`🚀 FastCollection: Fetching real request categories for category ${categoryId}`)
+      
+      // Use the optimized firestoreService with timeout handling
+      const snapshot = await firestoreService.getDocs(`projects/${projectId}/requestCategories/${categoryId}/requestCategories`, { timeoutMs: 6000 }) // 6 second timeout
+      
+      if (snapshot.empty) {
+        console.log(`🚀 FastCollection: No request categories found for category ${categoryId}`)
+        const emptyResult = []
+        cacheService.setCollectionData(`projects/${projectId}/requestCategories/${categoryId}/requestCategories`, { availableOnly }, emptyResult)
+        return emptyResult
+      }
+      
+      // Process the real data
+      let requestCategories = snapshot.docs.map(doc => ({
+        id: doc.id,
+        categoryId,
+        projectId,
+        ...doc.data()
+      }))
+      
+      // Apply client-side filtering
+      if (availableOnly) {
+        requestCategories = requestCategories.filter(requestCategory => requestCategory.status === 'available')
+      }
+      
+      // Sort by name
+      requestCategories.sort((a, b) => (a.englishTitle || '').localeCompare(b.englishTitle || ''))
+      
+      // Cache the processed data
+      cacheService.setCollectionData(`projects/${projectId}/requestCategories/${categoryId}/requestCategories`, { availableOnly }, requestCategories)
+      
+      console.log(`🚀 FastCollection: Successfully fetched ${requestCategories.length} request categories for category ${categoryId}`)
+      return requestCategories
+      
+    } catch (error) {
+      console.warn(`🚀 FastCollection: Error fetching request categories for category ${categoryId}:`, error)
+      errorHandlingService.handleFirestoreError(error, 'getRequestCategoriesByCategory')
+      return []
+    }
   }
 
   /**
