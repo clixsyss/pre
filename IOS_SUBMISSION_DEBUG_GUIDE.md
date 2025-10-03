@@ -1,8 +1,8 @@
 # iOS Request Submission Debug Guide
 
-## Issue: Data Retrieval Works, But Submission Fails
+## Issue: Submission Works, But Request Retrieval Hangs
 
-Since data retrieval is working perfectly but submission is failing, this indicates the issue is specifically with the **write operations** to Firestore on iOS.
+The submission is now working, but the `getUserSubmissions` method was hanging on iOS because it was using Firebase Web SDK directly instead of the iOS-compatible `firestoreService`.
 
 ## Key Fixes Applied
 
@@ -14,7 +14,15 @@ Since data retrieval is working perfectly but submission is failing, this indica
 - **Problem**: iOS needs different handling for Firestore operations
 - **Fix**: iOS now uses `firestoreService` with fallback to Web SDK
 
-### 3. **Enhanced Error Handling and Debugging**
+### 3. **Fixed Request Retrieval Methods**
+- **Problem**: `getUserSubmissions`, `getCategorySubmissions`, and `getAllSubmissions` were using Firebase Web SDK directly
+- **Fix**: All retrieval methods now use `firestoreService` on iOS for consistency
+
+### 4. **Fixed Image Upload on iOS**
+- **Problem**: Firebase Web SDK `uploadBytes` function doesn't work properly with Capacitor Firebase plugins on iOS
+- **Fix**: iOS now uses `@capacitor-firebase/storage` with base64 conversion and fallback to Web SDK
+
+### 5. **Enhanced Error Handling and Debugging**
 - Added comprehensive logging for iOS submission process
 - Added fallback mechanism if firestoreService fails
 - Better error messages for iOS-specific issues
@@ -24,7 +32,7 @@ Since data retrieval is working perfectly but submission is failing, this indica
 ### Step 1: Check Console Logs
 When you try to submit a request on iOS, look for these specific log messages:
 
-#### Expected Success Flow:
+#### Expected Success Flow for Submission:
 ```
 🚀 RequestSubmissionService: Submitting request
 📱 iOS: Using firestoreService for better iOS compatibility
@@ -34,6 +42,13 @@ When you try to submit a request on iOS, look for these specific log messages:
 📱 iOS: Calling firestoreService.addDoc...
 📱 iOS: firestoreService.addDoc completed successfully: {...}
 ✅ RequestSubmissionService: Document added successfully, ID: [submission-id]
+```
+
+#### Expected Success Flow for Retrieval:
+```
+🚀 RequestSubmissionService: Getting user submissions
+📱 iOS: Using firestoreService for getUserSubmissions
+✅ RequestSubmissionService: Retrieved user submissions via firestoreService
 ```
 
 #### If firestoreService Fails (Fallback):

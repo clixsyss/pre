@@ -108,7 +108,49 @@
           <h3>Attachments</h3>
           <p class="media-description">Upload files or images to support your request</p>
           
-          <div class="file-upload-area" @dragover.prevent @drop.prevent="handleFileDrop">
+          <!-- Simple Upload Button -->
+          <div class="upload-section">
+            <button 
+              type="button" 
+              @click="showUploadOptions = !showUploadOptions"
+              class="upload-button"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16 13H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16 17H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Add Files
+            </button>
+
+            <!-- Upload Options Dropdown -->
+            <div v-if="showUploadOptions" class="upload-options">
+              <button type="button" @click="triggerImageLibrary" class="upload-option">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
+                  <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Choose from Library
+              </button>
+              <button type="button" @click="triggerFileUpload" class="upload-option">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Choose Files
+              </button>
+              <button type="button" @click="triggerCameraUpload" class="upload-option">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 4H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Take Photo
+              </button>
+            </div>
+
             <!-- Hidden file inputs -->
             <input
               ref="fileInput"
@@ -117,7 +159,15 @@
               accept="image/*,application/pdf,.doc,.docx,.txt,.heic,.heif"
               @change="handleFileSelect"
               class="file-input"
-              webkitdirectory="false"
+              style="display: none;"
+            />
+            <input
+              ref="imageInput"
+              type="file"
+              multiple
+              accept="image/*"
+              @change="handleFileSelect"
+              class="file-input"
               style="display: none;"
             />
             <input
@@ -126,37 +176,9 @@
               accept="image/*"
               capture="environment"
               @change="handleFileSelect"
-              class="file-input camera-input"
+              class="file-input"
               style="display: none;"
             />
-            
-            <div class="upload-content">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M16 13H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M16 17H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <p class="upload-text">Choose how to add files</p>
-              <p class="upload-hint">Images, PDFs, and documents supported</p>
-              <div class="upload-actions">
-                <button type="button" @click="triggerFileUpload" class="upload-btn">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Choose Files
-                </button>
-                <button type="button" @click="triggerCameraUpload" class="upload-btn camera-btn">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 4H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2"/>
-                  </svg>
-                  Take Photo
-                </button>
-              </div>
-            </div>
           </div>
 
           <!-- Selected Files -->
@@ -235,6 +257,7 @@ const error = ref(null);
 const submitting = ref(false);
 const formData = ref({});
 const selectedFiles = ref([]);
+const showUploadOptions = ref(false);
 
 // Computed
 const categoryId = computed(() => route.params.id);
@@ -291,11 +314,13 @@ const initializeFormData = () => {
 
 // File handling
 const fileInput = ref(null);
+const imageInput = ref(null);
 const cameraInput = ref(null);
 
 const triggerFileUpload = () => {
   try {
     console.log('📁 Triggering file picker');
+    showUploadOptions.value = false;
     if (fileInput.value) {
       fileInput.value.click();
     } else {
@@ -306,9 +331,24 @@ const triggerFileUpload = () => {
   }
 };
 
+const triggerImageLibrary = () => {
+  try {
+    console.log('🖼️ Triggering image library');
+    showUploadOptions.value = false;
+    if (imageInput.value) {
+      imageInput.value.click();
+    } else {
+      console.error('Image input not found');
+    }
+  } catch (error) {
+    console.error('Error triggering image library:', error);
+  }
+};
+
 const triggerCameraUpload = () => {
   try {
     console.log('📷 Triggering camera');
+    showUploadOptions.value = false;
     if (cameraInput.value) {
       cameraInput.value.click();
     } else {
@@ -348,24 +388,6 @@ const handleFileSelect = (event) => {
   }
 };
 
-const handleFileDrop = (event) => {
-  try {
-    console.log('📁 File drop event triggered');
-    event.preventDefault();
-    
-    if (!event.dataTransfer || !event.dataTransfer.files) {
-      console.warn('No files in drop event');
-      return;
-    }
-    
-    const files = Array.from(event.dataTransfer.files);
-    console.log('📁 Files dropped:', files.length);
-    addFiles(files);
-  } catch (error) {
-    console.error('❌ Error handling file drop:', error);
-    alert('Error handling dropped files. Please try again.');
-  }
-};
 
 const addFiles = (files) => {
   try {
@@ -854,6 +876,71 @@ const submitRequest = async () => {
 
 .file-input {
   display: none;
+}
+
+/* New Upload Button Styles */
+.upload-section {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.upload-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #AF1E23;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.upload-button:hover {
+  background: #8b1619;
+}
+
+.upload-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  margin-top: 4px;
+}
+
+.upload-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.upload-option:hover {
+  background: #f9fafb;
+}
+
+.upload-option:first-child {
+  border-radius: 8px 8px 0 0;
+}
+
+.upload-option:last-child {
+  border-radius: 0 0 8px 8px;
 }
 
 .upload-content {

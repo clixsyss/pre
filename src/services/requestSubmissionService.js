@@ -332,15 +332,80 @@ class RequestSubmissionService {
                    }
                  }
                  
-                 // Create upload promise with iOS-specific timeout
-                 const uploadTimeout = isIOS ? 180000 : 120000; // 3 minutes for iOS, 2 for others
-                 const uploadPromise = uploadBytes(fileRef, fileToUpload);
-                 const timeoutPromise = new Promise((_, reject) => 
-                   setTimeout(() => reject(new Error('Upload timeout')), uploadTimeout)
-                 );
-                 
-                 console.log(`📤 Starting upload race with ${uploadTimeout/1000}s timeout...`);
-                 snapshot = await Promise.race([uploadPromise, timeoutPromise]);
+                 // iOS-specific: Use Capacitor Firebase Storage for better compatibility
+                 if (isIOS) {
+                   console.log(`📱 iOS: Using Capacitor Firebase Storage for upload`);
+                   try {
+                     const { FirebaseStorage } = await import('@capacitor-firebase/storage');
+                     
+                     // Convert File to Blob for Capacitor
+                     const fileBlob = await fileToUpload.arrayBuffer();
+                     const base64Data = btoa(String.fromCharCode(...new Uint8Array(fileBlob)));
+                     
+                     console.log(`📱 iOS: File converted to base64, size: ${base64Data.length} characters`);
+                     
+                     const uploadTimeout = 120000; // 2 minutes for iOS
+                     const uploadPromise = FirebaseStorage.uploadFile({
+                       path: storagePath,
+                       data: base64Data,
+                       metadata: {
+                         contentType: fileToUpload.type,
+                         customMetadata: {
+                           originalName: fileToUpload.name,
+                           uploadedAt: new Date().toISOString()
+                         }
+                       }
+                     });
+                     
+                     const timeoutPromise = new Promise((_, reject) => 
+                       setTimeout(() => reject(new Error('Upload timeout')), uploadTimeout)
+                     );
+                     
+                     console.log(`📤 Starting iOS upload race with ${uploadTimeout/1000}s timeout...`);
+                     const result = await Promise.race([uploadPromise, timeoutPromise]);
+                     
+                     // Get download URL
+                     const downloadURL = await FirebaseStorage.getDownloadUrl({
+                       path: storagePath
+                     });
+                     
+                     console.log(`✅ iOS file ${file.name} uploaded successfully:`, result);
+                     console.log(`✅ iOS download URL:`, downloadURL.url);
+                     
+                     snapshot = {
+                       ref: { 
+                         fullPath: storagePath,
+                         downloadURL: downloadURL.url
+                       },
+                       metadata: result.metadata,
+                       downloadURL: downloadURL.url
+                     };
+                     
+                   } catch (capacitorError) {
+                     console.warn(`⚠️ iOS: Capacitor Firebase Storage failed, falling back to Web SDK:`, capacitorError.message);
+                     
+                     // Fallback to Web SDK
+                     const uploadTimeout = 120000; // 2 minutes
+                     const uploadPromise = uploadBytes(fileRef, fileToUpload);
+                     const timeoutPromise = new Promise((_, reject) => 
+                       setTimeout(() => reject(new Error('Upload timeout')), uploadTimeout)
+                     );
+                     
+                     console.log(`📤 Starting Web SDK fallback upload with ${uploadTimeout/1000}s timeout...`);
+                     snapshot = await Promise.race([uploadPromise, timeoutPromise]);
+                   }
+                 } else {
+                   // Web: Use Firebase Web SDK directly
+                   console.log(`🌐 Web: Using Firebase Web SDK for upload`);
+                   const uploadTimeout = 120000; // 2 minutes
+                   const uploadPromise = uploadBytes(fileRef, fileToUpload);
+                   const timeoutPromise = new Promise((_, reject) => 
+                     setTimeout(() => reject(new Error('Upload timeout')), uploadTimeout)
+                   );
+                   
+                   console.log(`📤 Starting Web upload race with ${uploadTimeout/1000}s timeout...`);
+                   snapshot = await Promise.race([uploadPromise, timeoutPromise]);
+                 }
                  console.log(`✅ File ${file.name} uploaded successfully to path: ${storagePath}`);
                  break; // Success, exit retry loop
                } catch (uploadError) {
@@ -408,8 +473,16 @@ class RequestSubmissionService {
         }
         
         // Get the download URL
-        const downloadURL = await getDownloadURL(snapshot.ref);
-        console.log(`🔗 Download URL obtained for ${file.name}`);
+        let downloadURL;
+        if (isIOS && snapshot.ref && snapshot.ref.fullPath) {
+          // iOS: Use the download URL we already got from Capacitor Firebase Storage
+          downloadURL = snapshot.downloadURL || snapshot.ref.downloadURL;
+          console.log(`🔗 iOS Download URL obtained for ${file.name}:`, downloadURL);
+        } else {
+          // Web: Use Firebase Web SDK
+          downloadURL = await getDownloadURL(snapshot.ref);
+          console.log(`🔗 Web Download URL obtained for ${file.name}:`, downloadURL);
+        }
         
         return {
           name: file.name,
@@ -542,25 +615,56 @@ class RequestSubmissionService {
         userId
       });
 
-      const { getDocs, query, where, orderBy } = await import('firebase/firestore');
-      
-      const q = query(
-        collection(db, `projects/${projectId}/requestSubmissions`),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      );
+      // iOS-specific: Use firestoreService for better compatibility
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        console.log('📱 iOS: Using firestoreService for getUserSubmissions');
+        const { default: firestoreService } = await import('./firestoreService');
+        await firestoreService.initialize();
+        
+        const collectionPath = `projects/${projectId}/requestSubmissions`;
+        const queryOptions = {
+          filters: [
+            { field: 'userId', operator: '==', value: userId }
+          ],
+          orderBy: { field: 'createdAt', direction: 'desc' },
+          timeoutMs: 10000
+        };
+        
+        const result = await firestoreService.getDocs(collectionPath, queryOptions);
+        const submissions = result.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
 
-      const querySnapshot = await getDocs(q);
-      const submissions = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+        console.log('✅ RequestSubmissionService: Retrieved user submissions via firestoreService', {
+          count: submissions.length
+        });
 
-      console.log('✅ RequestSubmissionService: Retrieved user submissions', {
-        count: submissions.length
-      });
+        return submissions;
+      } else {
+        // Web: Use Firebase Web SDK directly
+        console.log('🌐 Web: Using Firebase Web SDK for getUserSubmissions');
+        const { getDocs, query, where, orderBy, collection } = await import('firebase/firestore');
+        
+        const q = query(
+          collection(db, `projects/${projectId}/requestSubmissions`),
+          where('userId', '==', userId),
+          orderBy('createdAt', 'desc')
+        );
 
-      return submissions;
+        const querySnapshot = await getDocs(q);
+        const submissions = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        console.log('✅ RequestSubmissionService: Retrieved user submissions via Web SDK', {
+          count: submissions.length
+        });
+
+        return submissions;
+      }
 
     } catch (error) {
       console.error('❌ RequestSubmissionService: Error getting user submissions:', error);
@@ -581,25 +685,56 @@ class RequestSubmissionService {
         categoryId
       });
 
-      const { getDocs, query, where, orderBy } = await import('firebase/firestore');
-      
-      const q = query(
-        collection(db, `projects/${projectId}/requestSubmissions`),
-        where('categoryId', '==', categoryId),
-        orderBy('createdAt', 'desc')
-      );
+      // iOS-specific: Use firestoreService for better compatibility
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        console.log('📱 iOS: Using firestoreService for getCategorySubmissions');
+        const { default: firestoreService } = await import('./firestoreService');
+        await firestoreService.initialize();
+        
+        const collectionPath = `projects/${projectId}/requestSubmissions`;
+        const queryOptions = {
+          filters: [
+            { field: 'categoryId', operator: '==', value: categoryId }
+          ],
+          orderBy: { field: 'createdAt', direction: 'desc' },
+          timeoutMs: 10000
+        };
+        
+        const result = await firestoreService.getDocs(collectionPath, queryOptions);
+        const submissions = result.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
 
-      const querySnapshot = await getDocs(q);
-      const submissions = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+        console.log('✅ RequestSubmissionService: Retrieved category submissions via firestoreService', {
+          count: submissions.length
+        });
 
-      console.log('✅ RequestSubmissionService: Retrieved category submissions', {
-        count: submissions.length
-      });
+        return submissions;
+      } else {
+        // Web: Use Firebase Web SDK directly
+        console.log('🌐 Web: Using Firebase Web SDK for getCategorySubmissions');
+        const { getDocs, query, where, orderBy, collection } = await import('firebase/firestore');
+        
+        const q = query(
+          collection(db, `projects/${projectId}/requestSubmissions`),
+          where('categoryId', '==', categoryId),
+          orderBy('createdAt', 'desc')
+        );
 
-      return submissions;
+        const querySnapshot = await getDocs(q);
+        const submissions = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        console.log('✅ RequestSubmissionService: Retrieved category submissions via Web SDK', {
+          count: submissions.length
+        });
+
+        return submissions;
+      }
 
     } catch (error) {
       console.error('❌ RequestSubmissionService: Error getting category submissions:', error);
@@ -618,24 +753,52 @@ class RequestSubmissionService {
         projectId
       });
 
-      const { getDocs, query, orderBy } = await import('firebase/firestore');
-      
-      const q = query(
-        collection(db, `projects/${projectId}/requestSubmissions`),
-        orderBy('createdAt', 'desc')
-      );
+      // iOS-specific: Use firestoreService for better compatibility
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        console.log('📱 iOS: Using firestoreService for getAllSubmissions');
+        const { default: firestoreService } = await import('./firestoreService');
+        await firestoreService.initialize();
+        
+        const collectionPath = `projects/${projectId}/requestSubmissions`;
+        const queryOptions = {
+          orderBy: { field: 'createdAt', direction: 'desc' },
+          timeoutMs: 10000
+        };
+        
+        const result = await firestoreService.getDocs(collectionPath, queryOptions);
+        const submissions = result.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
 
-      const querySnapshot = await getDocs(q);
-      const submissions = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+        console.log('✅ RequestSubmissionService: Retrieved all submissions via firestoreService', {
+          count: submissions.length
+        });
 
-      console.log('✅ RequestSubmissionService: Retrieved all submissions', {
-        count: submissions.length
-      });
+        return submissions;
+      } else {
+        // Web: Use Firebase Web SDK directly
+        console.log('🌐 Web: Using Firebase Web SDK for getAllSubmissions');
+        const { getDocs, query, orderBy, collection } = await import('firebase/firestore');
+        
+        const q = query(
+          collection(db, `projects/${projectId}/requestSubmissions`),
+          orderBy('createdAt', 'desc')
+        );
 
-      return submissions;
+        const querySnapshot = await getDocs(q);
+        const submissions = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        console.log('✅ RequestSubmissionService: Retrieved all submissions via Web SDK', {
+          count: submissions.length
+        });
+
+        return submissions;
+      }
 
     } catch (error) {
       console.error('❌ RequestSubmissionService: Error getting all submissions:', error);
