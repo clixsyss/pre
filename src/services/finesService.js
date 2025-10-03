@@ -101,66 +101,18 @@ export const getUserFines = async (projectId, userId) => {
         console.log('❌ Basic collection access failed:', testError.message)
       }
       
-      // Try different query strategies
-      let result
-      
-      // Strategy 1: Try with filters (original approach)
-      try {
-        const queryOptions = {
-          filters: [
-            { field: 'userId', operator: '==', value: userId }
-          ],
-          orderBy: { field: 'createdAt', direction: 'desc' },
-          timeoutMs: 8000
-        }
-        
-        console.log('🔍 Query options (with filters):', queryOptions)
-        result = await firestoreService.getDocs(collectionPath, queryOptions)
-        console.log('✅ Query with filters succeeded')
-      } catch (filterError) {
-        console.log('⚠️ Query with filters failed, trying without filters:', filterError.message)
-        
-        // Strategy 2: Get all fines and filter client-side
-        try {
-          const allFinesOptions = {
-            orderBy: { field: 'createdAt', direction: 'desc' },
-            timeoutMs: 8000
-          }
-          
-          console.log('🔍 Query options (all fines):', allFinesOptions)
-          const allFinesResult = await firestoreService.getDocs(collectionPath, allFinesOptions)
-          
-          // Filter client-side for user's fines
-          const userFinesDocs = allFinesResult.docs.filter(doc => {
-            const data = typeof doc.data === 'function' ? doc.data() : doc.data
-            return data.userId === userId
-          })
-          
-          // Create result object in the same format
-          result = {
-            docs: userFinesDocs,
-            empty: userFinesDocs.length === 0,
-            size: userFinesDocs.length
-          }
-          
-          console.log('✅ Client-side filtering succeeded')
-        } catch (allFinesError) {
-          console.log('❌ All strategies failed:', allFinesError.message)
-          throw allFinesError
-        }
+      // Use Firestore where clause for secure server-side filtering
+      const queryOptions = {
+        filters: [
+          { field: 'userId', operator: '==', value: userId }
+        ],
+        orderBy: { field: 'createdAt', direction: 'desc' },
+        timeoutMs: 8000
       }
-      console.log('🔍 Raw Firestore result:', result)
-      console.log('🔍 Result docs length:', result.docs?.length || 0)
-      console.log('🔍 Result empty:', result.empty)
-      console.log('🔍 Result size:', result.size)
       
-      // Debug: Log first few docs if any exist
-      if (result.docs && result.docs.length > 0) {
-        console.log('🔍 First few docs:', result.docs.slice(0, 3).map(doc => ({
-          id: doc.id,
-          data: doc.data()
-        })))
-      }
+      console.log('🔍 Query options (with server-side filtering):', queryOptions)
+      const result = await firestoreService.getDocs(collectionPath, queryOptions)
+      console.log('✅ Query with server-side filtering succeeded')
       
       const userFines = result.docs.map(doc => ({
         id: doc.id,
@@ -180,9 +132,9 @@ export const getUserFines = async (projectId, userId) => {
         userId
       });
       
-      // If it's a permission error, return empty array instead of throwing
-      if (error.code === 'permission-denied') {
-        console.warn('⚠️ Permission denied for fines collection, returning empty array')
+      // If it's a permission error or timeout, return empty array instead of throwing
+      if (error.code === 'permission-denied' || error.message?.includes('timeout')) {
+        console.warn('⚠️ Permission denied or timeout for fines collection, returning empty array')
         return []
       }
       
