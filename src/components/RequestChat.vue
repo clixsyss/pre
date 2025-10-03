@@ -220,13 +220,12 @@ const handleImageUpload = async (file) => {
 const emit = defineEmits(['back', 'close']);
 
 const goBack = () => {
-  // If used as a modal component (has props), emit events
+  // If used as a modal component (has props), emit close event
   if (props.requestId && props.projectId) {
-    emit('back');
     emit('close');
   } else {
-    // If used as a route component, navigate back
-    router.back();
+    // If used as a route component, navigate back to requests page
+    router.push('/requests');
   }
 };
 

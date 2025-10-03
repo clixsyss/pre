@@ -535,18 +535,13 @@ watch(
       // Reset violation notifications when switching projects
       resetViolationNotifications()
       
-      // Force a small delay to ensure all stores are updated
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // Check for violations IMMEDIATELY (highest priority)
+      checkForViolations() // No delay - load violations first when switching projects
       
       // Emit a custom event that child components can listen to
       window.dispatchEvent(new CustomEvent('projectChanged', {
         detail: { newProject, oldProject }
       }))
-      
-      // Check for violations in the new project
-      setTimeout(() => {
-        checkForViolations()
-      }, 500)
       
       // Check user suspension status when switching projects
       setTimeout(() => {
@@ -580,9 +575,7 @@ const handleSuspensionMessage = (event) => {
 
 // Listen for project store ready event to check violations
 const handleProjectStoreReady = () => {
-  setTimeout(() => {
-    checkForViolations()
-  }, 1000) // Small delay to ensure everything is loaded
+  checkForViolations() // No delay - load violations immediately when project is ready
 }
 
 // Load user projects when component mounts
@@ -592,11 +585,9 @@ onMounted(async () => {
   
   window.addEventListener('projectStoreReady', handleProjectStoreReady)
   
-  // Check for violations if project is already loaded
+  // Check for violations IMMEDIATELY if project is already loaded (highest priority)
   if (projectStore.hasSelectedProject) {
-    setTimeout(() => {
-      checkForViolations()
-    }, 1000)
+    checkForViolations() // No delay - load violations first
   }
   
   // Check user suspension status
