@@ -21,8 +21,7 @@ end
 
 target 'App' do
   capacitor_pods
-  # Firebase dependencies are handled by Capacitor Firebase plugins
-  # No need for native Firebase pods
+  # Add your Pods here
 end
 
 post_install do |installer|

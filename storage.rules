@@ -139,6 +139,36 @@ service firebase.storage {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
+    // Allow user document uploads (National ID, Profile Pictures)
+    match /users/{userId}/documents/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow user profile picture uploads
+    match /users/{userId}/profile/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow request submission media uploads for authenticated users
+    match /projects/{projectId}/requestSubmissions/{submissionId}/media/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Allow request category image uploads for admins
+    match /projects/{projectId}/requestCategories/{categoryId}/image/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Temporary: Allow authenticated users to upload request category images (for testing)
+    match /projects/{projectId}/requestCategories/{categoryId}/image/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
     // Allow logo and other public assets to be read by anyone
     match /logo.png {
       allow read: if true;

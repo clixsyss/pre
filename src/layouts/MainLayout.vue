@@ -271,7 +271,8 @@ const currentProjectId = computed(() => currentProject.value?.id)
 
 // Hide bottom navigation when keyboard is visible on chat pages
 const shouldHideBottomNav = computed(() => {
-  return isKeyboardVisible.value && isChatPage.value
+  // return isKeyboardVisible.value && isChatPage.value
+  return false
 })
 
 // Methods
@@ -887,7 +888,9 @@ onUnmounted(() => {
   align-items: flex-end;
   position: fixed;
   bottom: 0;
-  z-index: 100;
+  left: 0;
+  right: 0;
+  z-index: 1000;
   width: 100%;
   transition: transform 0.3s ease-in-out;
 }

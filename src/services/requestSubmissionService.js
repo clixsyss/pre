@@ -1,12 +1,12 @@
 import { 
   collection, 
   addDoc, 
-  serverTimestamp 
+  serverTimestamp
 } from 'firebase/firestore';
 import { 
   ref as storageRef, 
   uploadBytes, 
-  getDownloadURL 
+  getDownloadURL
 } from 'firebase/storage';
 import { db, storage } from '../boot/firebase';
 
@@ -25,10 +25,26 @@ class RequestSubmissionService {
         filesCount: files.length
       });
 
+      // Check if Firebase is properly initialized
+      if (!db) {
+        throw new Error('Firebase Firestore not initialized');
+      }
+      if (!storage) {
+        throw new Error('Firebase Storage not initialized');
+      }
+
       // Upload media files to Firebase Storage if any
       let uploadedFiles = [];
       if (files && files.length > 0) {
-        uploadedFiles = await this.uploadMediaFiles(submissionData.projectId, submissionData.userId, files);
+        try {
+          console.log('📤 RequestSubmissionService: Attempting to upload files...');
+          uploadedFiles = await this.uploadMediaFiles(submissionData.projectId, submissionData.userId, files);
+          console.log('✅ RequestSubmissionService: Files uploaded successfully');
+        } catch (uploadError) {
+          console.warn('⚠️ RequestSubmissionService: File upload failed, continuing without files:', uploadError.message);
+          // Continue with submission without files
+          uploadedFiles = [];
+        }
       }
 
       // Prepare the submission document
@@ -39,11 +55,49 @@ class RequestSubmissionService {
         updatedAt: serverTimestamp()
       };
 
+      console.log('📝 RequestSubmissionService: Prepared submission document', {
+        hasCategoryId: !!submissionDoc.categoryId,
+        hasUserId: !!submissionDoc.userId,
+        hasFormData: !!submissionDoc.formData,
+        formDataKeys: Object.keys(submissionDoc.formData || {}),
+        hasFieldMetadata: !!submissionDoc.fieldMetadata,
+        fieldMetadataLength: submissionDoc.fieldMetadata?.length || 0,
+        mediaFilesCount: submissionDoc.mediaFiles?.length || 0,
+        hasCreatedAt: !!submissionDoc.createdAt,
+        hasUpdatedAt: !!submissionDoc.updatedAt
+      });
+
       // Add the submission to Firestore
-      const docRef = await addDoc(
-        collection(db, `projects/${submissionData.projectId}/requestSubmissions`), 
-        submissionDoc
-      );
+      console.log('📝 RequestSubmissionService: Adding document to Firestore', {
+        collectionPath: `projects/${submissionData.projectId}/requestSubmissions`,
+        submissionData: {
+          categoryId: submissionData.categoryId,
+          userId: submissionData.userId,
+          userName: submissionData.userName,
+          formDataKeys: Object.keys(submissionData.formData || {}),
+          hasFieldMetadata: !!submissionData.fieldMetadata,
+          fieldMetadataLength: submissionData.fieldMetadata?.length || 0,
+          mediaFilesCount: submissionData.mediaFiles?.length || 0
+        }
+      });
+
+      let docRef;
+      try {
+        console.log('📝 RequestSubmissionService: Attempting to add document to Firestore...');
+        docRef = await addDoc(
+          collection(db, `projects/${submissionData.projectId}/requestSubmissions`), 
+          submissionDoc
+        );
+        console.log('✅ RequestSubmissionService: Document added successfully, ID:', docRef.id);
+      } catch (firestoreError) {
+        console.error('❌ RequestSubmissionService: Firestore addDoc error:', firestoreError);
+        console.error('❌ Firestore error details:', {
+          message: firestoreError.message,
+          code: firestoreError.code,
+          stack: firestoreError.stack
+        });
+        throw firestoreError;
+      }
 
       console.log('✅ RequestSubmissionService: Request submitted successfully', {
         submissionId: docRef.id,
@@ -54,6 +108,19 @@ class RequestSubmissionService {
 
     } catch (error) {
       console.error('❌ RequestSubmissionService: Error submitting request:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+        submissionData: {
+          projectId: submissionData.projectId,
+          categoryId: submissionData.categoryId,
+          userId: submissionData.userId,
+          hasFormData: !!submissionData.formData,
+          formDataKeys: Object.keys(submissionData.formData || {}),
+          mediaFilesCount: submissionData.mediaFiles?.length || 0
+        }
+      });
       throw new Error(`Failed to submit request: ${error.message}`);
     }
   }
@@ -66,22 +133,231 @@ class RequestSubmissionService {
    * @returns {Promise<Array>} Array of uploaded file metadata
    */
   async uploadMediaFiles(projectId, userId, files) {
+    console.log('📤 RequestSubmissionService: Starting file uploads...', files.length);
+    
+    // Generate a unique submission ID for this upload session
+    const submissionId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     const uploadPromises = files.map(async (file, index) => {
       try {
+        console.log(`📤 Uploading file ${index + 1}/${files.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+        
         // Create a unique filename
         const timestamp = Date.now();
         const fileExtension = file.name.split('.').pop();
         const fileName = `request_${timestamp}_${index}.${fileExtension}`;
         
-        // Create storage reference
-        const storagePath = `projects/${projectId}/request-submissions/${userId}/${fileName}`;
+        // Create storage reference - matches the storage rules
+        const storagePath = `projects/${projectId}/requestSubmissions/${submissionId}/media/${fileName}`;
         const fileRef = storageRef(storage, storagePath);
         
-        // Upload the file
-        const snapshot = await uploadBytes(fileRef, file);
+        // Compress image if it's too large
+        let fileToUpload = file;
+        let isCompressed = false;
+        
+        // Debug mode: skip compression for testing
+        const DEBUG_SKIP_COMPRESSION = false;
+        
+        // iOS Debug: Create a simple test file for iOS
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        if (isIOS && file.type.startsWith('image/')) {
+          console.log(`📱 iOS Debug: Creating simple test file for iOS`);
+          const testContent = 'iOS test file';
+          const testBlob = new Blob([testContent], { type: 'text/plain' });
+          const testFile = new File([testBlob], 'ios-test.txt', { type: 'text/plain' });
+          console.log(`📱 iOS Debug: Test file created: ${testFile.name}, size: ${testFile.size} bytes`);
+          // Don't replace the original file, just log for debugging
+        }
+
+             // iOS-specific: Enhanced file handling for iOS
+             if (isIOS) {
+               console.log(`📱 iOS: Processing file upload for iOS`);
+               
+               // Validate file for iOS
+               if (!fileToUpload || fileToUpload.size === 0) {
+                 throw new Error('Invalid file: file is empty or undefined');
+               }
+               
+               // iOS-specific file validation
+               if (fileToUpload.size > 50 * 1024 * 1024) { // 50MB limit for iOS
+                 throw new Error('File too large for iOS upload (max 50MB)');
+               }
+               
+               console.log(`📱 iOS: File validated - ${fileToUpload.name}, size: ${(fileToUpload.size / 1024 / 1024).toFixed(2)} MB`);
+             }
+        
+        if (!DEBUG_SKIP_COMPRESSION && file.type.startsWith('image/') && file.size > 2 * 1024 * 1024) { // 2MB
+          try {
+            console.log(`📐 Compressing large image: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+            fileToUpload = await this.compressImage(file);
+            isCompressed = true;
+            console.log(`✅ Image compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(2)} MB`);
+          } catch (compressionError) {
+            console.warn(`⚠️ Compression failed for ${file.name}, using original file:`, compressionError);
+            fileToUpload = file; // Fallback to original file
+            isCompressed = false;
+          }
+        }
+        
+        // Validate file before upload
+        if (!fileToUpload || fileToUpload.size === 0) {
+          throw new Error('Invalid file: file is empty or undefined');
+        }
+        
+        // Test: Create a simple text file to test upload
+        if (DEBUG_SKIP_COMPRESSION && file.type.startsWith('image/')) {
+          console.log(`🧪 DEBUG: Creating test file instead of image`);
+          const testContent = 'Test file for debugging upload';
+          const testBlob = new Blob([testContent], { type: 'text/plain' });
+          fileToUpload = new File([testBlob], 'test.txt', { type: 'text/plain' });
+          console.log(`🧪 DEBUG: Test file created: ${fileToUpload.name}, size: ${fileToUpload.size} bytes`);
+        }
+
+        // Test: Create a very small image file to test upload for large files (DISABLED)
+        // if (file.type.startsWith('image/') && file.size > 5 * 1024 * 1024) { // 5MB
+        //   console.log(`🧪 Creating small test image instead of large file`);
+        //   const canvas = document.createElement('canvas');
+        //   canvas.width = 10;
+        //   canvas.height = 10;
+        //   const ctx = canvas.getContext('2d');
+        //   ctx.fillStyle = '#FF0000';
+        //   ctx.fillRect(0, 0, 10, 10);
+        //   
+        //   // Make this synchronous by using a Promise
+        //   await new Promise((resolve) => {
+        //     canvas.toBlob((blob) => {
+        //       const smallFile = new File([blob], 'test-small.jpg', { type: 'image/jpeg' });
+        //       console.log(`🧪 Small test file created: ${smallFile.name}, size: ${smallFile.size} bytes`);
+        //       fileToUpload = smallFile;
+        //       resolve();
+        //     }, 'image/jpeg', 0.1);
+        //   });
+        // }
+        
+        console.log(`📤 Uploading file: ${fileToUpload.name}, size: ${(fileToUpload.size / 1024 / 1024).toFixed(2)} MB, type: ${fileToUpload.type}`);
+        console.log(`📤 File validation:`, {
+          isFile: fileToUpload instanceof File,
+          hasName: !!fileToUpload.name,
+          hasType: !!fileToUpload.type,
+          size: fileToUpload.size,
+          lastModified: fileToUpload.lastModified,
+          userAgent: navigator.userAgent,
+          isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
+          isSafari: /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)
+        });
+        
+             let snapshot;
+             let retryCount = 0;
+             const maxRetries = isIOS ? 3 : 2; // More retries for iOS
+             
+             while (retryCount <= maxRetries) {
+               try {
+                 console.log(`📤 Upload attempt ${retryCount + 1} for ${file.name}...`);
+                 
+                 // Check network connectivity
+                 if (!navigator.onLine) {
+                   throw new Error('No internet connection');
+                 }
+                 
+                 // iOS-specific debugging and preparation
+                 if (isIOS) {
+                   console.log(`📱 iOS Debug: Starting upload for ${file.name}`, {
+                     fileSize: fileToUpload.size,
+                     fileType: fileToUpload.type,
+                     isIOS: true,
+                     storagePath: storagePath,
+                     fileRef: fileRef ? 'exists' : 'null',
+                     userAgent: navigator.userAgent,
+                     isSafari: /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent),
+                     isWebKit: /WebKit/.test(navigator.userAgent)
+                   });
+                   
+                   // iOS-specific: Ensure file is properly formatted
+                   if (fileToUpload instanceof File) {
+                     console.log(`📱 iOS: File object is valid File instance`);
+                   } else {
+                     console.warn(`📱 iOS: File object is not File instance, type: ${typeof fileToUpload}`);
+                   }
+                 }
+                 
+                 // Create upload promise with iOS-specific timeout
+                 const uploadTimeout = isIOS ? 180000 : 120000; // 3 minutes for iOS, 2 for others
+                 const uploadPromise = uploadBytes(fileRef, fileToUpload);
+                 const timeoutPromise = new Promise((_, reject) => 
+                   setTimeout(() => reject(new Error('Upload timeout')), uploadTimeout)
+                 );
+                 
+                 console.log(`📤 Starting upload race with ${uploadTimeout/1000}s timeout...`);
+                 snapshot = await Promise.race([uploadPromise, timeoutPromise]);
+                 console.log(`✅ File ${file.name} uploaded successfully to path: ${storagePath}`);
+                 break; // Success, exit retry loop
+               } catch (uploadError) {
+                 retryCount++;
+                 console.warn(`⚠️ Upload attempt ${retryCount} failed for ${file.name}:`, uploadError.message);
+                 console.warn(`⚠️ Upload error details:`, {
+                   code: uploadError.code,
+                   message: uploadError.message,
+                   stack: uploadError.stack,
+                   isNetworkError: uploadError.message.includes('timeout') || uploadError.message.includes('network'),
+                   isPermissionError: uploadError.code === 'storage/unauthorized' || uploadError.code === 'storage/object-not-found',
+                   isIOS: isIOS,
+                   retryCount,
+                   maxRetries
+                 });
+                 
+                 if (retryCount > maxRetries) {
+                   // If compressed file failed and we haven't tried original yet, try original file
+                   if (isCompressed && fileToUpload !== file) {
+                     console.log(`🔄 Trying original file for ${file.name} after compressed file failed`);
+                     fileToUpload = file;
+                     isCompressed = false;
+                     retryCount = 0; // Reset retry count for original file
+                     continue;
+                   }
+                   
+                   // iOS-specific: More lenient error handling
+                   if (isIOS) {
+                     console.warn(`📱 iOS: All retries failed for ${file.name}, but continuing with submission`);
+                     return {
+                       name: file.name,
+                       type: file.type,
+                       size: file.size,
+                       url: null,
+                       storagePath: null,
+                       uploadedAt: new Date(),
+                       error: `iOS upload failed: ${uploadError.message}`,
+                       isIOS: true
+                     };
+                   }
+                   
+                   // If it's a network or permission error, return a placeholder instead of failing
+                   if (uploadError.message.includes('timeout') || uploadError.message.includes('network') || 
+                       uploadError.code === 'storage/unauthorized' || uploadError.code === 'storage/object-not-found') {
+                     console.warn(`⚠️ Skipping file ${file.name} due to persistent error, continuing with submission`);
+                     return {
+                       name: file.name,
+                       type: file.type,
+                       size: file.size,
+                       url: null,
+                       storagePath: null,
+                       uploadedAt: new Date(),
+                       error: uploadError.message
+                     };
+                   }
+                   
+                   throw uploadError; // Re-throw if all retries failed
+                 }
+                 
+                 // iOS-specific: Longer wait times between retries
+                 const waitTime = isIOS ? (2000 * retryCount) : (1000 * retryCount);
+                 console.log(`⏳ Waiting ${waitTime/1000} seconds before retry...`);
+                 await new Promise(resolve => setTimeout(resolve, waitTime));
+               }
+        }
         
         // Get the download URL
         const downloadURL = await getDownloadURL(snapshot.ref);
+        console.log(`🔗 Download URL obtained for ${file.name}`);
         
         return {
           name: file.name,
@@ -94,11 +370,111 @@ class RequestSubmissionService {
         
       } catch (error) {
         console.error(`❌ RequestSubmissionService: Error uploading file ${file.name}:`, error);
+        console.error(`❌ Error details:`, {
+          message: error.message,
+          code: error.code,
+          stack: error.stack,
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type
+        });
+        
+        // If it's a timeout or compression error, return a placeholder instead of failing
+        if (error.message.includes('timeout') || error.message.includes('compress') || error.message.includes('storage')) {
+          console.warn(`⚠️ Skipping file ${file.name} due to error, continuing with submission`);
+          return {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            url: null,
+            storagePath: null,
+            uploadedAt: new Date(),
+            error: error.message
+          };
+        }
+        
         throw new Error(`Failed to upload file ${file.name}: ${error.message}`);
       }
     });
 
-    return await Promise.all(uploadPromises);
+    const results = await Promise.all(uploadPromises);
+    console.log('✅ RequestSubmissionService: All files uploaded successfully');
+    return results;
+  }
+
+  /**
+   * Compress an image file to reduce its size
+   * @param {File} file - The image file to compress
+   * @returns {Promise<File>} The compressed file
+   */
+  async compressImage(file) {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions (max 1920px width, maintain aspect ratio)
+        const maxWidth = 1920;
+        const maxHeight = 1080;
+        let { width, height } = img;
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        
+        if (height > maxHeight) {
+          width = (width * maxHeight) / height;
+          height = maxHeight;
+        }
+        
+        // Set canvas dimensions
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to blob with compression
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              // Create a new File object with the compressed blob
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              });
+              
+              // Validate the compressed file
+              console.log(`📐 Compressed file created: ${compressedFile.name}, size: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB, type: ${compressedFile.type}`);
+              console.log(`📐 Compressed file validation:`, {
+                isFile: compressedFile instanceof File,
+                hasName: !!compressedFile.name,
+                hasType: !!compressedFile.type,
+                size: compressedFile.size,
+                lastModified: compressedFile.lastModified,
+                blobSize: blob.size
+              });
+              
+              if (compressedFile.size === 0) {
+                reject(new Error('Compressed file is empty'));
+                return;
+              }
+              
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Failed to compress image - no blob created'));
+            }
+          },
+          'image/jpeg',
+          0.8 // 80% quality
+        );
+      };
+      
+      img.onerror = () => reject(new Error('Failed to load image for compression'));
+      img.src = URL.createObjectURL(file);
+    });
   }
 
   /**

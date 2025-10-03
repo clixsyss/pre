@@ -184,7 +184,7 @@ const startAutoPlay = () => {
   console.log('AdsCarousel: Starting auto-play with interval:', props.autoPlayInterval);
   autoPlayTimer.value = setInterval(() => {
     if (!isHovered.value) {
-      console.log('AdsCarousel: Auto-advancing to next slide');
+      // console.log('AdsCarousel: Auto-advancing to next slide');
       nextSlide();
     }
   }, props.autoPlayInterval);

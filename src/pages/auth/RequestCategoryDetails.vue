@@ -21,11 +21,7 @@
     <!-- Request Form -->
     <div v-else-if="category" class="request-form-container">
       <form @submit.prevent="submitRequest" class="request-form">
-        <!-- Category Description -->
-        <div v-if="category.description" class="description-section">
-          <p>{{ category.description }}</p>
-        </div>
-
+        
         <!-- Dynamic Form Fields -->
         <div class="form-fields">
           <h3>Request Details</h3>
@@ -72,6 +68,28 @@
               />
             </div>
             
+            <!-- Phone Number Input -->
+            <input
+              v-else-if="field.fieldType === 'phone'"
+              :id="field.id"
+              v-model="formData[field.id]"
+              type="tel"
+              :placeholder="field.placeholder || `Enter ${field.fieldName.toLowerCase()}`"
+              :required="field.required"
+              class="field-input"
+            />
+            
+            <!-- Email Input -->
+            <input
+              v-else-if="field.fieldType === 'email'"
+              :id="field.id"
+              v-model="formData[field.id]"
+              type="email"
+              :placeholder="field.placeholder || `Enter ${field.fieldName.toLowerCase()}`"
+              :required="field.required"
+              class="field-input"
+            />
+            
             <!-- Description (Long Text) -->
             <textarea
               v-else-if="field.fieldType === 'description'"
@@ -90,15 +108,28 @@
           <h3>Attachments</h3>
           <p class="media-description">Upload files or images to support your request</p>
           
-          <div class="file-upload-area" @click="triggerFileUpload" @dragover.prevent @drop.prevent="handleFileDrop">
+          <div class="file-upload-area" @dragover.prevent @drop.prevent="handleFileDrop">
+            <!-- Hidden file inputs -->
             <input
               ref="fileInput"
               type="file"
               multiple
-              accept="image/*,application/pdf,.doc,.docx,.txt"
+              accept="image/*,application/pdf,.doc,.docx,.txt,.heic,.heif"
               @change="handleFileSelect"
               class="file-input"
+              webkitdirectory="false"
+              style="display: none;"
             />
+            <input
+              ref="cameraInput"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              @change="handleFileSelect"
+              class="file-input camera-input"
+              style="display: none;"
+            />
+            
             <div class="upload-content">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -107,8 +138,24 @@
                 <path d="M16 17H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <p class="upload-text">Tap to upload files or drag and drop</p>
+              <p class="upload-text">Choose how to add files</p>
               <p class="upload-hint">Images, PDFs, and documents supported</p>
+              <div class="upload-actions">
+                <button type="button" @click="triggerFileUpload" class="upload-btn">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Choose Files
+                </button>
+                <button type="button" @click="triggerCameraUpload" class="upload-btn camera-btn">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 4H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  Take Photo
+                </button>
+              </div>
             </div>
           </div>
 
@@ -144,9 +191,18 @@
         <!-- Submit Button -->
         <div class="form-actions">
           <button type="submit" :disabled="submitting" class="submit-btn">
-            <div v-if="submitting" class="loading-spinner small"></div>
-            <span>{{ submitting ? 'Submitting...' : 'Submit Request' }}</span>
+            <span>{{ submitting ? 'Uploading files...' : 'Submit Request' }}</span>
           </button>
+          <div v-if="submitting" class="upload-progress">
+            <p>Please wait while we process and upload your files...</p>
+            <div class="progress-bar">
+              <div class="progress-fill"></div>
+            </div>
+            <p class="upload-note">Large images are automatically compressed for faster upload</p>
+            <!-- <button type="button" @click="submitWithoutFiles" class="skip-files-btn">
+              Skip file upload and submit without files
+            </button> -->
+          </div>
         </div>
       </form>
     </div>
@@ -217,51 +273,180 @@ const loadCategory = async () => {
 };
 
 const initializeFormData = () => {
-  if (!category.value?.fields) return;
+  if (!category.value?.fields) {
+    console.warn('No fields found in category');
+    return;
+  }
+  
+  console.log('🔧 Initializing form data for fields:', category.value.fields.map(f => f.id));
   
   const initialData = {};
   category.value.fields.forEach(field => {
     initialData[field.id] = '';
   });
   formData.value = initialData;
+  
+  console.log('✅ Form data initialized:', formData.value);
 };
 
 // File handling
 const fileInput = ref(null);
+const cameraInput = ref(null);
 
 const triggerFileUpload = () => {
-  fileInput.value?.click();
+  try {
+    console.log('📁 Triggering file picker');
+    if (fileInput.value) {
+      fileInput.value.click();
+    } else {
+      console.error('File input not found');
+    }
+  } catch (error) {
+    console.error('Error triggering file upload:', error);
+  }
+};
+
+const triggerCameraUpload = () => {
+  try {
+    console.log('📷 Triggering camera');
+    if (cameraInput.value) {
+      cameraInput.value.click();
+    } else {
+      console.error('Camera input not found');
+    }
+  } catch (error) {
+    console.error('Error triggering camera:', error);
+  }
 };
 
 const handleFileSelect = (event) => {
-  const files = Array.from(event.target.files);
-  addFiles(files);
+  try {
+    console.log('📁 File selection event triggered');
+    
+    if (!event.target || !event.target.files) {
+      console.warn('No files in event target');
+      return;
+    }
+    
+    const files = Array.from(event.target.files);
+    console.log('📁 Files selected:', files.length, files.map(f => f.name));
+    
+    if (files.length === 0) {
+      console.log('No files selected');
+      return;
+    }
+    
+    addFiles(files);
+    
+    // Reset the input to allow selecting the same file again
+    if (event.target) {
+      event.target.value = '';
+    }
+  } catch (error) {
+    console.error('❌ Error handling file selection:', error);
+    alert('Error selecting files. Please try again.');
+  }
 };
 
 const handleFileDrop = (event) => {
-  const files = Array.from(event.dataTransfer.files);
-  addFiles(files);
+  try {
+    console.log('📁 File drop event triggered');
+    event.preventDefault();
+    
+    if (!event.dataTransfer || !event.dataTransfer.files) {
+      console.warn('No files in drop event');
+      return;
+    }
+    
+    const files = Array.from(event.dataTransfer.files);
+    console.log('📁 Files dropped:', files.length);
+    addFiles(files);
+  } catch (error) {
+    console.error('❌ Error handling file drop:', error);
+    alert('Error handling dropped files. Please try again.');
+  }
 };
 
 const addFiles = (files) => {
-  const validFiles = files.filter(file => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+  try {
+    console.log('📁 Processing files:', files.length);
     
-    if (file.size > maxSize) {
-      alert(`File ${file.name} is too large. Maximum size is 10MB.`);
-      return false;
+    if (!files || !Array.isArray(files) || files.length === 0) {
+      console.warn('No files to process');
+      return;
     }
     
-    if (!allowedTypes.includes(file.type)) {
-      alert(`File type ${file.type} is not supported.`);
-      return false;
+    const validFiles = files.filter(file => {
+      try {
+        // Basic file validation
+        if (!file || !file.name) {
+          console.warn('Invalid file object');
+          return false;
+        }
+        
+        // iOS-specific: Larger file size limit and more lenient validation
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const maxSize = isIOS ? 50 * 1024 * 1024 : 10 * 1024 * 1024; // 50MB for iOS, 10MB for others
+        const allowedTypes = [
+          'image/jpeg', 
+          'image/jpg', 
+          'image/png', 
+          'image/gif', 
+          'image/webp',
+          'image/heic', // iOS HEIC format
+          'image/heif', // iOS HEIF format
+          'application/pdf', 
+          'text/plain', 
+          'application/msword', 
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+        
+        // Check file size
+        if (file.size > maxSize) {
+          console.warn(`File ${file.name} is too large: ${file.size} bytes`);
+          const maxSizeMB = Math.round(maxSize / 1024 / 1024);
+          alert(`File ${file.name} is too large. Maximum size is ${maxSizeMB}MB.`);
+          return false;
+        }
+        
+        // Check file type (be more lenient for iOS)
+        const fileType = file.type || '';
+        const fileName = file.name.toLowerCase();
+        const isImage = fileType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i.test(fileName);
+        const isDocument = allowedTypes.includes(fileType) || /\.(pdf|doc|docx|txt)$/i.test(fileName);
+        
+        // iOS-specific: More lenient file type checking
+        if (isIOS && !fileType && fileName) {
+          console.log(`📱 iOS: File type not detected for ${file.name}, using filename extension`);
+        }
+        
+        if (!isImage && !isDocument) {
+          console.warn(`File type not supported: ${fileType} for file ${file.name}`);
+          alert(`File type not supported for ${file.name}. Please use images, PDF, or document files.`);
+          return false;
+        }
+        
+        console.log(`✅ File ${file.name} is valid`);
+        return true;
+      } catch (fileError) {
+        console.error(`Error validating file ${file.name}:`, fileError);
+        return false;
+      }
+    });
+    
+    if (validFiles.length > 0) {
+      selectedFiles.value = [...selectedFiles.value, ...validFiles];
+      console.log(`✅ Added ${validFiles.length} valid files`);
     }
     
-    return true;
-  });
-  
-  selectedFiles.value = [...selectedFiles.value, ...validFiles];
+    if (validFiles.length !== files.length) {
+      console.warn(`⚠️ ${files.length - validFiles.length} files were rejected`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing files:', error);
+    alert('Error processing files. Please try again.');
+  }
 };
 
 const removeFile = (index) => {
@@ -278,30 +463,67 @@ const formatFileSize = (bytes) => {
 
 // Form submission
 const submitRequest = async () => {
-  if (!category.value) return;
+  if (!category.value) {
+    console.error('No category found');
+    return;
+  }
   
   try {
     submitting.value = true;
+    console.log('🚀 Starting request submission...');
+    console.log('📋 Current form data:', formData.value);
+    console.log('📋 Category fields:', category.value.fields);
     
     // Validate required fields
     const missingFields = [];
     category.value.fields.forEach(field => {
-      if (field.required && (!formData.value[field.id] || formData.value[field.id].trim() === '')) {
+      const fieldValue = formData.value[field.id];
+      console.log(`🔍 Checking field ${field.id} (${field.fieldName}):`, fieldValue, 'Type:', typeof fieldValue, 'Required:', field.required);
+      
+      if (field.required && (!fieldValue || (typeof fieldValue === 'string' && fieldValue.trim() === '') || fieldValue === null || fieldValue === undefined)) {
         missingFields.push(field.fieldName);
       }
     });
     
     if (missingFields.length > 0) {
+      console.warn('Missing required fields:', missingFields);
       alert(`Please fill in the following required fields: ${missingFields.join(', ')}`);
       return;
     }
     
     // Get current user
+    console.log('🔐 Getting current user...');
     const user = await optimizedAuthService.getCurrentUser();
     if (!user) {
+      console.error('No user found');
       alert('You must be logged in to submit a request');
       return;
     }
+    console.log('✅ User found:', user.uid);
+    
+    // Check project
+    if (!projectStore.selectedProject?.id) {
+      console.error('No project selected');
+      alert('No project selected. Please try again.');
+      return;
+    }
+    console.log('✅ Project found:', projectStore.selectedProject.id);
+    
+    // Clean and prepare form data
+    const cleanedFormData = {};
+    category.value.fields.forEach(field => {
+      const value = formData.value[field.id];
+      // Ensure all values are properly handled
+      if (value === null || value === undefined) {
+        cleanedFormData[field.id] = '';
+      } else if (typeof value === 'string') {
+        cleanedFormData[field.id] = value.trim();
+      } else {
+        cleanedFormData[field.id] = String(value);
+      }
+    });
+    
+    console.log('🧹 Cleaned form data:', cleanedFormData);
     
     // Prepare submission data
     const submissionData = {
@@ -311,7 +533,15 @@ const submitRequest = async () => {
       userName: user.displayName || 'Unknown User',
       userEmail: user.email,
       userPhone: user.phoneNumber || '',
-      formData: formData.value,
+      formData: cleanedFormData,
+      // Add field metadata for admin dashboard display
+      fieldMetadata: category.value.fields.map(field => ({
+        id: field.id,
+        fieldName: field.fieldName,
+        fieldType: field.fieldType,
+        required: field.required,
+        placeholder: field.placeholder
+      })),
       mediaFiles: selectedFiles.value.map(file => ({
         name: file.name,
         type: file.type,
@@ -322,22 +552,34 @@ const submitRequest = async () => {
       projectId: projectStore.selectedProject.id
     };
     
+    console.log('📝 Submission data prepared:', submissionData);
+    console.log('📝 Field metadata:', submissionData.fieldMetadata);
+    console.log('📝 Category fields:', category.value.fields);
+    console.log('📁 Files to upload:', selectedFiles.value.length);
+    
     // Submit the request
-    await requestSubmissionService.submitRequest(submissionData, selectedFiles.value);
+    const submissionId = await requestSubmissionService.submitRequest(submissionData, selectedFiles.value);
+    console.log('✅ Request submitted successfully with ID:', submissionId);
     
     // Show success message
-    alert('Your request has been submitted successfully!');
+       alert('Your request has been submitted successfully!');
     
     // Navigate back
     router.push('/facilities');
     
   } catch (err) {
-    console.error('Error submitting request:', err);
-    alert('Failed to submit request. Please try again.');
+    console.error('❌ Error submitting request:', err);
+    console.error('Error details:', {
+      message: err.message,
+      code: err.code,
+      stack: err.stack
+    });
+    alert(`Failed to submit request: ${err.message || 'Please try again.'}`);
   } finally {
     submitting.value = false;
   }
 };
+
 </script>
 
 <style scoped>
@@ -593,6 +835,7 @@ const submitRequest = async () => {
   text-align: center;
   cursor: pointer;
   transition: border-color 0.2s, background-color 0.2s;
+  position: relative;
 }
 
 .file-upload-area:hover {
@@ -606,18 +849,160 @@ const submitRequest = async () => {
 
 .upload-content {
   color: #6b7280;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 .upload-text {
-  font-size: 1rem;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.upload-hint {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.upload-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 500;
-  margin: 12px 0 4px 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.upload-btn:hover {
+  background-color: #dc2626;
+  transform: translateY(-1px);
+}
+
+.camera-btn {
+  background-color: #059669;
+}
+
+.camera-btn:hover {
+  background-color: #047857;
 }
 
 .upload-hint {
   font-size: 0.875rem;
-  margin: 0;
+  margin: 0 0 16px 0;
 }
+
+.upload-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.unified-upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background-color: #AF1E23;
+  border: 1px solid #AF1E23;
+  border-radius: 8px;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  justify-content: center;
+}
+
+.unified-upload-btn:hover {
+  background-color: #8b161a;
+  border-color: #8b161a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(175, 30, 35, 0.3);
+}
+
+.upload-progress {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.upload-progress p {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0 0 12px 0;
+}
+
+.upload-note {
+  color: #9ca3af !important;
+  font-size: 0.75rem !important;
+  margin: 8px 0 0 0 !important;
+  font-style: italic;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background-color: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #AF1E23;
+  border-radius: 2px;
+  animation: progress-animation 2s ease-in-out infinite;
+}
+
+@keyframes progress-animation {
+  0% {
+    width: 0%;
+    transform: translateX(-100%);
+  }
+  50% {
+    width: 100%;
+    transform: translateX(0%);
+  }
+  100% {
+    width: 100%;
+    transform: translateX(100%);
+  }
+}
+
+/* .skip-files-btn {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background-color: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #6b7280;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.skip-files-btn:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+  color: #374151;
+} */
 
 .selected-files {
   margin-top: 20px;
@@ -628,10 +1013,6 @@ const submitRequest = async () => {
   font-weight: 600;
   color: #333;
   margin: 0 0 12px 0;
-}
-
-.file-list {
-  /* space-y: 8px; - handled by margin-bottom on .file-item */
 }
 
 .file-item {
