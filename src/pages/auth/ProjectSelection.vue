@@ -92,7 +92,7 @@
                 <div class="project-details">
                   <div class="detail-item">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" stroke-width="2" />
                     </svg>
                     <span>{{ project.location || 'Location not set' }}</span>
                   </div>
@@ -654,7 +654,7 @@ onMounted(async () => {
 .detail-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 4px;
   color: #64748b;
   font-size: 0.875rem;
   font-weight: 500;
