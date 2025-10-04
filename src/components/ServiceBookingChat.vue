@@ -24,6 +24,8 @@ import { useProjectStore } from '../stores/projectStore';
 import serviceBookingService from '../services/serviceBookingService';
 import fileUploadService from '../services/fileUploadService';
 import UnifiedChat from './UnifiedChat.vue';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Capacitor } from '@capacitor/core';
 
 // Component name for ESLint
 defineOptions({
@@ -261,9 +263,9 @@ const handleSendMessage = async (messageText) => {
 
 const handleImageUpload = async (file) => {
   console.log('🔍 ServiceBookingChat: handleImageUpload called', {
-    fileName: file.name,
-    fileSize: file.size,
-    fileType: file.type,
+    fileName: file?.name || 'unknown',
+    fileSize: file?.size || 0,
+    fileType: file?.type || 'unknown',
     bookingId: bookingId,
     projectId: projectStore.selectedProject.id
   });
@@ -273,6 +275,136 @@ const handleImageUpload = async (file) => {
     return;
   }
 
+  // Check if we're on iOS native platform and use Capacitor Camera API
+  const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform();
+  
+  if (isIOS) {
+    console.log('📱 iOS detected, using Capacitor Camera API...');
+    return await handleImageUploadWithCapacitor();
+  } else {
+    console.log('🌐 Web platform detected, using file input...');
+    return await handleImageUploadWithFile(file);
+  }
+};
+
+// Capacitor-based image upload for iOS
+const handleImageUploadWithCapacitor = async () => {
+  try {
+    console.log('📱 Starting Capacitor image picker...');
+    
+    // Take/select photo using Capacitor Camera
+    const image = await Camera.getPhoto({
+      quality: 90,
+      allowEditing: false,
+      resultType: CameraResultType.DataUrl, // Use DataUrl instead of Uri for better iOS compatibility
+      source: CameraSource.Prompt // Let user choose camera or photo library
+    });
+    
+    console.log('📱 Image selected:', image);
+    
+    if (!image.dataUrl) {
+      throw new Error('No image selected');
+    }
+    
+    // Create temporary message
+    const tempMessage = {
+      id: `temp_image_${Date.now()}`,
+      text: `📎 Uploading image...`,
+      senderType: 'user',
+      senderId: 'current_user',
+      senderName: 'You',
+      timestamp: new Date(),
+      messageType: 'chat',
+      isTemporary: true,
+      isUploading: true
+    };
+
+    // Add the temporary message to the local state immediately
+    if (!booking.value.messages) {
+      booking.value.messages = [];
+    }
+    booking.value.messages.push(tempMessage);
+    console.log('📱 Added temporary upload message to local state');
+
+    // Extract base64 data from dataUrl
+    const base64Data = image.dataUrl.split(',')[1]; // Remove data:image/jpeg;base64, prefix
+    console.log('📱 Base64 data extracted, length:', base64Data.length);
+    
+    // Generate filename
+    const mimeType = image.format ? `image/${image.format}` : 'image/jpeg';
+    const timestamp = Date.now();
+    const extension = image.format || 'jpg';
+    const fileName = `image_${timestamp}.${extension}`;
+    
+    console.log('📱 Generated filename:', fileName);
+    
+    // Convert base64 to Blob
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: mimeType });
+    
+    console.log('📱 Blob created:', { size: blob.size, type: blob.type });
+    
+    // Upload to Firebase Storage using fileUploadService
+    const storagePath = `projects/${projectStore.selectedProject.id}/serviceBookings/${bookingId}/images/`;
+    const imageUrl = await fileUploadService.uploadFile(blob, storagePath, fileName);
+    
+    console.log('✅ Image uploaded successfully:', imageUrl);
+    
+    // Remove the temporary upload message
+    const tempIndex = booking.value.messages.findIndex(msg => msg.id === tempMessage.id);
+    if (tempIndex !== -1) {
+      booking.value.messages.splice(tempIndex, 1);
+      console.log('📱 Removed temporary upload message');
+    }
+    
+    // Send the image message to the chat
+    await serviceBookingService.addMessage(
+      projectStore.selectedProject.id,
+      bookingId,
+      {
+        text: `📎 ${fileName}`,
+        senderType: 'user',
+        imageUrl: imageUrl
+      }
+    );
+    
+    console.log('✅ Image message sent successfully');
+    
+  } catch (error) {
+    console.error('❌ Capacitor image upload error:', error);
+    
+    // Remove temporary message if it exists
+    const tempMessages = booking.value.messages?.filter(msg => msg.isTemporary && msg.isUploading) || [];
+    tempMessages.forEach(msg => {
+      const index = booking.value.messages.findIndex(m => m.id === msg.id);
+      if (index !== -1) {
+        booking.value.messages.splice(index, 1);
+      }
+    });
+    
+    // Send error message
+    await serviceBookingService.addMessage(
+      projectStore.selectedProject.id,
+      bookingId,
+      {
+        text: '❌ Failed to upload image. Please try again.',
+        senderType: 'user'
+      }
+    );
+    
+    throw error;
+  }
+};
+
+// File-based image upload for web platforms
+const handleImageUploadWithFile = async (file) => {
   // Create a temporary message to show immediately
   const tempMessage = {
     id: `temp_image_${Date.now()}`,
@@ -296,161 +428,20 @@ const handleImageUpload = async (file) => {
   try {
     console.log('🔍 ServiceBookingChat: Starting image upload...');
     
-    // iOS-specific file handling
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    console.log('🔍 ServiceBookingChat: Platform detection:', { isIOS, userAgent: navigator.userAgent });
-    
-    let fileToUpload = file;
-    
-    if (isIOS) {
-      console.log('🔍 ServiceBookingChat: iOS detected, processing file for iOS compatibility...');
-      
-      try {
-        // For iOS, try multiple approaches to ensure file compatibility
-        let processedFile = file;
-        
-        // Method 1: Try to create a new File object
-        if (typeof File !== 'undefined' && Object.prototype.isPrototypeOf.call(File.prototype, file)) {
-          try {
-            const newFile = new File([file], file.name, {
-              type: file.type || 'image/jpeg',
-              lastModified: file.lastModified || Date.now()
-            });
-            processedFile = newFile;
-            console.log('🔍 ServiceBookingChat: Method 1 - Created new File object for iOS');
-          } catch (error) {
-            console.log('🔍 ServiceBookingChat: Method 1 failed, trying Method 2:', error.message);
-          }
-        }
-        
-        // Method 2: If File constructor fails, try to create a Blob and convert
-        if (processedFile === file) {
-          try {
-            const reader = new FileReader();
-            const blob = await new Promise((resolve, reject) => {
-              reader.onload = () => {
-                const arrayBuffer = reader.result;
-                const blob = new Blob([arrayBuffer], { type: file.type || 'image/jpeg' });
-                resolve(blob);
-              };
-              reader.onerror = reject;
-              reader.readAsArrayBuffer(file);
-            });
-            
-            // Create a new File from the blob
-            const newFile = new File([blob], file.name, {
-              type: file.type || 'image/jpeg',
-              lastModified: file.lastModified || Date.now()
-            });
-            processedFile = newFile;
-            console.log('🔍 ServiceBookingChat: Method 2 - Created File from Blob for iOS');
-          } catch (error) {
-            console.log('🔍 ServiceBookingChat: Method 2 failed, using original file:', error.message);
-          }
-        }
-        
-        // Method 3: If all else fails, try to ensure the file has proper properties
-        if (processedFile === file) {
-          // Ensure the file has required properties
-          if (!file.type) {
-            Object.defineProperty(file, 'type', {
-              value: 'image/jpeg',
-              writable: false
-            });
-          }
-          if (!file.lastModified) {
-            Object.defineProperty(file, 'lastModified', {
-              value: Date.now(),
-              writable: false
-            });
-          }
-          processedFile = file;
-          console.log('🔍 ServiceBookingChat: Method 3 - Enhanced original file properties for iOS');
-        }
-        
-        fileToUpload = processedFile;
-        
-        console.log('🔍 ServiceBookingChat: iOS file processing completed:', {
-          name: fileToUpload.name,
-          size: fileToUpload.size,
-          type: fileToUpload.type,
-          lastModified: fileToUpload.lastModified,
-          constructor: fileToUpload.constructor.name,
-          isFile: fileToUpload instanceof File,
-          isBlob: fileToUpload instanceof Blob,
-          hasArrayBuffer: typeof fileToUpload.arrayBuffer === 'function',
-          hasStream: typeof fileToUpload.stream === 'function'
-        });
-        
-      } catch (iosError) {
-        console.error('❌ ServiceBookingChat: All iOS file processing methods failed:', iosError);
-        console.log('🔍 ServiceBookingChat: Using original file as fallback');
-        fileToUpload = file;
-      }
-    }
-    
     // Generate unique filename
     const timestamp = Date.now();
-    const fileExtension = fileToUpload.name.split('.').pop() || 'jpg';
+    const fileExtension = file.name.split('.').pop() || 'jpg';
     const fileName = `image_${timestamp}.${fileExtension}`;
     
     console.log('🔍 ServiceBookingChat: Uploading file:', {
       fileName: fileName,
-      fileSize: fileToUpload.size,
-      fileType: fileToUpload.type,
-      isIOS: isIOS
+      fileSize: file.size,
+      fileType: file.type
     });
     
-    // Add timeout for iOS uploads to prevent infinite loading
-    const uploadTimeout = isIOS ? 30000 : 15000; // 30 seconds for iOS, 15 for others
-    console.log('🔍 ServiceBookingChat: Setting upload timeout:', uploadTimeout + 'ms');
-    
-    // Create a timeout promise
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`Upload timeout after ${uploadTimeout}ms`));
-      }, uploadTimeout);
-    });
-    
-    // Upload image to Firebase Storage with timeout
+    // Upload image to Firebase Storage
     const storagePath = `projects/${projectStore.selectedProject.id}/serviceBookings/${bookingId}/images/`;
-    
-    console.log('🔍 ServiceBookingChat: Starting upload with details:', {
-      storagePath: storagePath,
-      fileName: fileName,
-      fileSize: fileToUpload.size,
-      fileType: fileToUpload.type,
-      isIOS: isIOS,
-      timeout: uploadTimeout,
-      fileConstructor: fileToUpload.constructor.name,
-      fileIsFile: fileToUpload instanceof File,
-      fileIsBlob: fileToUpload instanceof Blob
-    });
-    
-    let uploadPromise;
-    try {
-      console.log('🔍 ServiceBookingChat: Creating upload promise...');
-      uploadPromise = fileUploadService.uploadFile(fileToUpload, storagePath, fileName);
-      console.log('🔍 ServiceBookingChat: Upload promise created successfully');
-    } catch (syncError) {
-      console.error('❌ ServiceBookingChat: Synchronous error creating upload promise:', syncError);
-      throw syncError;
-    }
-    
-    console.log('🔍 ServiceBookingChat: Upload promise created, racing against timeout...');
-    
-    // Add detailed error handling to the upload promise
-    const uploadPromiseWithErrorHandling = uploadPromise.catch(error => {
-      console.error('❌ ServiceBookingChat: Upload promise rejected with error:', error);
-      console.error('❌ ServiceBookingChat: Error type:', typeof error);
-      console.error('❌ ServiceBookingChat: Error constructor:', error?.constructor?.name);
-      console.error('❌ ServiceBookingChat: Error message:', error?.message);
-      console.error('❌ ServiceBookingChat: Error stack:', error?.stack);
-      console.error('❌ ServiceBookingChat: Full error object:', JSON.stringify(error, null, 2));
-      throw error; // Re-throw to maintain the promise chain
-    });
-    
-    const imageUrl = await Promise.race([uploadPromiseWithErrorHandling, timeoutPromise]);
+    const imageUrl = await fileUploadService.uploadFile(file, storagePath, fileName);
     
     console.log('✅ ServiceBookingChat: Image uploaded successfully:', imageUrl);
     
@@ -461,28 +452,20 @@ const handleImageUpload = async (file) => {
       console.log('🔍 ServiceBookingChat: Removed temporary upload message');
     }
     
-    // Send the image message with the actual image URL
+    // Send the image message to the chat
     await serviceBookingService.addMessage(
       projectStore.selectedProject.id,
       bookingId,
       {
         text: `📎 ${file.name}`,
-        imageUrl: imageUrl,
-        senderType: 'user'
+        senderType: 'user',
+        imageUrl: imageUrl
       }
     );
     
     console.log('✅ ServiceBookingChat: Image message sent successfully');
   } catch (error) {
     console.error('❌ ServiceBookingChat: Error uploading image:', error);
-    console.error('❌ ServiceBookingChat: Error details:', {
-      message: error.message,
-      name: error.name,
-      stack: error.stack,
-      isIOS: isIOS,
-      fileSize: file?.size,
-      fileType: file?.type
-    });
     
     // Remove the temporary upload message on error
     const tempIndex = booking.value.messages.findIndex(msg => msg.id === tempMessage.id);
@@ -491,65 +474,12 @@ const handleImageUpload = async (file) => {
       console.log('🔍 ServiceBookingChat: Removed temporary upload message due to error');
     }
     
-    // iOS fallback: Try base64 upload first, then text message
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (isIOS) {
-      console.log('🔍 ServiceBookingChat: iOS upload failed, trying base64 fallback...');
-      
-      try {
-        // Try to convert image to base64 and upload as text
-        const base64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        
-        console.log('🔍 ServiceBookingChat: Image converted to base64, length:', base64.length);
-        
-        // For large images, truncate the base64 for display but keep it functional
-        const displayBase64 = base64.length > 1000 ? base64.substring(0, 1000) + '...' : base64;
-        
-        // Send as base64 message
-        await serviceBookingService.addMessage(
-          projectStore.selectedProject.id,
-          bookingId,
-          {
-            text: `📎 ${file.name} (Base64 - ${(base64.length / 1024).toFixed(1)}KB)\n${displayBase64}`,
-            senderType: 'user'
-          }
-        );
-        
-        console.log('✅ ServiceBookingChat: Base64 fallback message sent successfully');
-        return; // Exit successfully
-      } catch (base64Error) {
-        console.error('❌ ServiceBookingChat: Base64 fallback failed:', base64Error);
-        
-        // Final fallback: Send image info as text message
-        try {
-          await serviceBookingService.addMessage(
-            projectStore.selectedProject.id,
-            bookingId,
-            {
-              text: `📎 ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB) - Image upload failed on iOS, but file info recorded`,
-              senderType: 'user'
-            }
-          );
-          
-          console.log('✅ ServiceBookingChat: Text fallback message sent successfully');
-          return; // Exit successfully
-        } catch (textError) {
-          console.error('❌ ServiceBookingChat: All iOS fallbacks failed:', textError);
-        }
-      }
-    }
-    
     // Send an error message
     await serviceBookingService.addMessage(
       projectStore.selectedProject.id,
       bookingId,
       {
-        text: `❌ Failed to upload ${file.name}: ${error.message}`,
+        text: '❌ Failed to upload image. Please try again.',
         senderType: 'user'
       }
     );

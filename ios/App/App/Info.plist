@@ -86,5 +86,16 @@
 	<string>This app needs access to the camera to allow you to take photos for your request submissions.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app needs access to your photo library to allow you to select images for your request submissions.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs access to your camera to let you take and upload photos.</string>
+
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to your photo library to let you choose images to upload.</string>
+
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app needs permission to save photos to your library.</string>
+
+	<key>UIFileSharingEnabled</key>
+	<true/>
 </dict>
 </plist>

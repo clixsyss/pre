@@ -1153,7 +1153,12 @@ PODS:
   - BoringSSL-GRPC/Interface (0.0.36)
   - Capacitor (7.4.3):
     - CapacitorCordova
+  - CapacitorCamera (7.0.2):
+    - Capacitor
   - CapacitorCordova (7.4.3)
+  - CapacitorFilesystem (7.1.4):
+    - Capacitor
+    - IONFilesystemLib (~> 1.0.1)
   - CapacitorFirebaseApp (7.3.1):
     - Capacitor
     - FirebaseCore (~> 11.7.0)
@@ -1333,6 +1338,7 @@ PODS:
   - gRPC-Core/Interface (1.65.5)
   - gRPC-Core/Privacy (1.65.5)
   - GTMSessionFetcher/Core (4.5.0)
+  - IONFilesystemLib (1.0.1)
   - leveldb-library (1.22.6)
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
@@ -1343,7 +1349,9 @@ PODS:
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
   - "CapacitorFirebaseApp (from `../../node_modules/@capacitor-firebase/app`)"
   - "CapacitorFirebaseAuthentication (from `../../node_modules/@capacitor-firebase/authentication`)"
   - "CapacitorFirebaseFirestore (from `../../node_modules/@capacitor-firebase/firestore`)"
@@ -1369,6 +1377,7 @@ SPEC REPOS:
     - "gRPC-C++"
     - gRPC-Core
     - GTMSessionFetcher
+    - IONFilesystemLib
     - leveldb-library
     - nanopb
     - RecaptchaInterop
@@ -1376,8 +1385,12 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorCamera:
+    :path: "../../node_modules/@capacitor/camera"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorFilesystem:
+    :path: "../../node_modules/@capacitor/filesystem"
   CapacitorFirebaseApp:
     :path: "../../node_modules/@capacitor-firebase/app"
   CapacitorFirebaseAuthentication:
@@ -1395,7 +1408,9 @@ SPEC CHECKSUMS:
   abseil: d121da9ef7e2ff4cab7666e76c5a3e0915ae08c3
   BoringSSL-GRPC: ca6a8e5d04812fce8ffd6437810c2d46f925eaeb
   Capacitor: b4741ca7affb32c1b70debd03df92cbf522d8a80
+  CapacitorCamera: 6e18d54c8ab30d7dc7b8cd93d96f9b4f57e9202a
   CapacitorCordova: 435121e81a2df4d0034f0fb11fcefab5104cfdb5
+  CapacitorFilesystem: ac0a386949ed6c295a3dffa129ecd26b881ae5be
   CapacitorFirebaseApp: 364829ede2b72a4e0f622c0d949e3a2240ffdf37
   CapacitorFirebaseAuthentication: e86d4bbb1d926c53a290114f3054c7c017f8ef65
   CapacitorFirebaseFirestore: 0be1092f15de26c5d0e475804e8c981177438d69
@@ -1416,10 +1431,11 @@ SPEC CHECKSUMS:
   "gRPC-C++": 2fa52b3141e7789a28a737f251e0c45b4cb20a87
   gRPC-Core: a27c294d6149e1c39a7d173527119cfbc3375ce4
   GTMSessionFetcher: fc75fc972958dceedee61cb662ae1da7a83a91cf
+  IONFilesystemLib: 89258b8e3e85465da93127d25d7ce37f977e8a6f
   leveldb-library: cc8b8f8e013647a295ad3f8cd2ddf49a6f19be19
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
 
-PODFILE CHECKSUM: 8976dc56aaad4722bb4f28f9c065d739658f83d2
+PODFILE CHECKSUM: 154a5d913a0be9a67b1f8d911a89fd44ea03afd3
 
 COCOAPODS: 1.16.2

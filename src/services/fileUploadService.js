@@ -44,41 +44,61 @@ class FileUploadService {
         const isNative = Capacitor.isNativePlatform()
         
         if (isIOS && isNative) {
-          console.log('📱 iOS detected, using Capacitor Firebase Storage...')
+          console.log('📱 iOS detected, using Web SDK for better compatibility...')
           
-          // Use Capacitor Firebase Storage for iOS
-          const { FirebaseStorage } = await import('@capacitor-firebase/storage')
-          
-          // Convert File to base64 for Capacitor
-          const fileBlob = await file.arrayBuffer()
-          const base64Data = btoa(String.fromCharCode(...new Uint8Array(fileBlob)))
-          
-          console.log('📱 iOS: File converted to base64, size:', base64Data.length, 'characters')
-          
-          const fullPath = `${path}${fileName}`
-          console.log('📱 iOS: Uploading to path:', fullPath)
-          
-          // Upload using Capacitor Firebase Storage
-          const uploadResult = await FirebaseStorage.uploadFile({
-            path: fullPath,
-            data: base64Data,
-            metadata: {
-              contentType: file.type,
-              customMetadata: {
-                originalName: file.name,
-                uploadedAt: new Date().toISOString()
-              }
-            }
+          // Check authentication status
+          const { getAuth } = await import('firebase/auth')
+          const auth = getAuth()
+          const user = auth.currentUser
+          console.log('📱 iOS: Auth status:', {
+            isAuthenticated: !!user,
+            uid: user?.uid,
+            email: user?.email
           })
           
+          // Ensure user is authenticated before proceeding
+          if (!user) {
+            console.log('📱 iOS: User not authenticated, waiting for auth state...')
+            
+            // Wait for authentication with a timeout
+            const authPromise = new Promise((resolve, reject) => {
+              const unsubscribe = auth.onAuthStateChanged((user) => {
+                unsubscribe()
+                if (user) {
+                  console.log('📱 iOS: User authenticated after wait:', user.uid)
+                  resolve(user)
+                } else {
+                  reject(new Error('User authentication failed'))
+                }
+              })
+            })
+            
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('Authentication timeout')), 5000)
+            })
+            
+            await Promise.race([authPromise, timeoutPromise])
+          }
+          
+          // Use Web SDK directly for iOS (more reliable than Capacitor plugin)
+          console.log('📱 iOS: Using Web SDK for upload...')
+          
+          // Create storage reference
+          const fullPath = `${path}${fileName}`
+          console.log('📱 iOS: Creating storage reference:', { fullPath, path, fileName })
+          
+          const fileRef = storageRef(storage, fullPath)
+          console.log('📱 iOS: Storage reference created:', { fileRef: !!fileRef, refPath: fileRef?.fullPath })
+
+          // Upload file using Web SDK
+          console.log('📱 iOS: Starting uploadBytes...')
+          const snapshot = await uploadBytes(fileRef, file)
           console.log('📱 iOS: Upload completed, getting download URL...')
           
           // Get download URL
-          const downloadURL = await FirebaseStorage.getDownloadUrl({
-            path: fullPath
-          })
-          
+          const downloadURL = await getDownloadURL(snapshot.ref)
           console.log('📱 iOS: Download URL obtained:', downloadURL)
+          
           return downloadURL
         } else {
           // Use Web SDK for web and other platforms

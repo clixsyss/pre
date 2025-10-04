@@ -153,25 +153,13 @@
     </div>
 
     <!-- Request Chat Modal -->
-    <div v-if="showRequestChat" class="modal-overlay" @click="closeRequestChat">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>{{ selectedRequest?.categoryName }}</h3>
-          <button @click="closeRequestChat" class="close-btn">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-        </div>
-        <div class="modal-body">
-          <RequestChat 
-            v-if="selectedRequest"
-            :request-id="selectedRequest.id"
-            :project-id="projectStore.selectedProject?.id"
-            @close="closeRequestChat"
-          />
-        </div>
-      </div>
+    <div v-if="showRequestChat" class="chat-modal-overlay">
+      <RequestChat 
+        v-if="selectedRequest"
+        :request-id="selectedRequest.id"
+        :project-id="projectStore.selectedProject?.id"
+        @close="closeRequestChat"
+      />
     </div>
   </div>
 </template>
@@ -699,68 +687,15 @@ const getRequestPreview = (request) => {
   transform: translateY(-1px);
 }
 
-/* Modal Styles */
-.modal-overlay {
+/* Chat Modal Styles */
+.chat-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 1000;
-  padding: 20px;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 800px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e8e8e8;
-  flex-shrink: 0;
-}
-
-.modal-header h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #333;
-  margin: 0;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: #666;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-
-.close-btn:hover {
-  background: #f5f5f5;
-  color: #333;
-}
-
-.modal-body {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  background: transparent;
 }
 
 /* Loading and Error States */
@@ -879,10 +814,5 @@ const getRequestPreview = (request) => {
     padding: 16px;
   }
   
-  .modal-content {
-    margin: 0;
-    border-radius: 16px 16px 0 0;
-    max-height: 95vh;
-  }
 }
 </style>

@@ -1,10 +1,12 @@
 <template>
-  <div class="unified-chat" :class="{ 'keyboard-visible': isKeyboardVisible }" :style="{ '--keyboard-height': keyboardHeight + 'px' }">
+  <div class="unified-chat" :class="{ 'keyboard-visible': isKeyboardVisible }"
+    :style="{ '--keyboard-height': keyboardHeight + 'px' }">
     <!-- Header -->
     <div class="chat-header">
       <button @click="goBack" class="back-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
         </svg>
       </button>
       <div class="header-info">
@@ -20,7 +22,9 @@
         <div class="header-actions">
           <button @click="toggleFullscreen" class="action-btn" title="Toggle Fullscreen">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 3H5C3.89543 3 3 3.89543 3 5V8M21 3H19C17.8954 3 17 3.89543 17 5V8M3 16V19C3 20.1046 3.89543 21 5 21H8M16 21H19C20.1046 21 21 20.1046 21 19V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path
+                d="M8 3H5C3.89543 3 3 3.89543 3 5V8M21 3H19C17.8954 3 17 3.89543 17 5V8M3 16V19C3 20.1046 3.89543 21 5 21H8M16 21H19C20.1046 21 21 20.1046 21 19V16"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
         </div>
@@ -37,9 +41,9 @@
       <div v-else-if="!chatData" class="error-state">
         <div class="error-icon">
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="#fbbf24" stroke-width="2"/>
-            <line x1="12" y1="8" x2="12" y2="12" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
-            <line x1="12" y1="16" x2="12.01" y2="16" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="12" r="10" stroke="#fbbf24" stroke-width="2" />
+            <line x1="12" y1="8" x2="12" y2="12" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" />
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" />
           </svg>
         </div>
         <h3 class="error-title">{{ errorTitle }}</h3>
@@ -48,22 +52,25 @@
       </div>
 
       <div v-else class="messages-list">
-        <div 
-          v-for="message in messages" 
-          :key="message.id"
-          :class="['message-wrapper', message.senderType]"
-        >
+        <div v-for="message in messages" :key="message.id" :class="['message-wrapper', message.senderType]">
           <!-- Message Avatar -->
           <div class="message-avatar">
             <div :class="['avatar', message.senderType]">
-              <svg v-if="message.senderType === 'user'" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <svg v-if="message.senderType === 'user'" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
               <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
             </div>
           </div>
@@ -76,16 +83,17 @@
                 <img :src="message.imageUrl" :alt="'Image message'" />
                 <div class="image-overlay">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M15 3H21V9M21 3L3 21M21 3V9H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M15 3H21V9M21 3L3 21M21 3V9H15" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
                 </div>
               </div>
-              
+
               <!-- Text Message -->
               <div v-if="message.text" class="message-text">
                 {{ message.text }}
               </div>
-              
+
               <!-- Message Time -->
               <div class="message-time">
                 {{ formatMessageTime(message.timestamp || message.createdAt) }}
@@ -102,86 +110,77 @@
       <div v-if="isClosed" class="closed-notice">
         <div class="closed-notice-content">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-            <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+            <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+            <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
           </svg>
           <span>{{ closedMessage }}</span>
         </div>
       </div>
-      
+
       <div class="message-input" :class="{ 'disabled': isClosed }">
-        <button @click="toggleImageUpload" class="attachment-btn" :disabled="uploading || isClosed" title="Attach Image">
+        <button @click="toggleImageUpload" class="attachment-btn" :disabled="uploading || isClosed"
+          title="Attach Image">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21.44 11.05L12.25 20.24C11.1242 21.3658 9.59722 21.9983 8.005 21.9983C6.41278 21.9983 4.88583 21.3658 3.76 20.24C2.63417 19.1142 2.00167 17.5872 2.00167 15.995C2.00167 14.4028 2.63417 12.8758 3.76 11.75L12.95 2.56C13.7006 1.80944 14.7186 1.38787 15.79 1.38787C16.8614 1.38787 17.8794 1.80944 18.63 2.56C19.3806 3.31056 19.8021 4.32856 19.8021 5.4C19.8021 6.47144 19.3806 7.48944 18.63 8.24L9.41 17.46C9.03473 17.8353 8.53127 18.0499 8.005 18.0499C7.47873 18.0499 6.97527 17.8353 6.6 17.46C6.22473 17.0847 6.01013 16.5813 6.01013 16.055C6.01013 15.5287 6.22473 15.0253 6.6 14.65L15.07 6.18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path
+              d="M21.44 11.05L12.25 20.24C11.1242 21.3658 9.59722 21.9983 8.005 21.9983C6.41278 21.9983 4.88583 21.3658 3.76 20.24C2.63417 19.1142 2.00167 17.5872 2.00167 15.995C2.00167 14.4028 2.63417 12.8758 3.76 11.75L12.95 2.56C13.7006 1.80944 14.7186 1.38787 15.79 1.38787C16.8614 1.38787 17.8794 1.80944 18.63 2.56C19.3806 3.31056 19.8021 4.32856 19.8021 5.4C19.8021 6.47144 19.3806 7.48944 18.63 8.24L9.41 17.46C9.03473 17.8353 8.53127 18.0499 8.005 18.0499C7.47873 18.0499 6.97527 17.8353 6.6 17.46C6.22473 17.0847 6.01013 16.5813 6.01013 16.055C6.01013 15.5287 6.22473 15.0253 6.6 14.65L15.07 6.18"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </button>
-        
+
         <div class="input-wrapper">
-          <textarea 
-            ref="messageInput"
-            v-model="newMessage"
-            @keydown.enter.prevent="handleEnterKey"
-            @input="adjustTextareaHeight"
-            :placeholder="isClosed ? closedPlaceholder : 'Type your message...'"
-            :disabled="loading || isClosed"
-            rows="1"
-            class="message-textarea"
-          ></textarea>
+          <textarea ref="messageInput" v-model="newMessage" @keydown.enter.prevent="handleEnterKey"
+            @input="adjustTextareaHeight" :placeholder="isClosed ? closedPlaceholder : 'Type your message...'"
+            :disabled="loading || isClosed" rows="1" class="message-textarea"></textarea>
           <div v-if="uploading" class="upload-indicator">
             <div class="upload-spinner"></div>
           </div>
         </div>
-        
+
         <!-- Admin Send Button (only for services) -->
-        <button 
-          v-if="allowAdminSend && props.onAdminSend"
-          @click="sendAsAdmin" 
-          :disabled="!newMessage.trim() || loading || uploading || isClosed" 
-          class="admin-send-btn"
-          :title="isClosed ? 'Cannot send messages' : 'Send as Admin'"
-        >
+        <button v-if="allowAdminSend && props.onAdminSend" @click="sendAsAdmin"
+          :disabled="!newMessage.trim() || loading || uploading || isClosed" class="admin-send-btn"
+          :title="isClosed ? 'Cannot send messages' : 'Send as Admin'">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+            <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+            <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
           </svg>
         </button>
-        
-        <button 
-          @click="sendMessage" 
-          :disabled="!newMessage.trim() || loading || uploading || isClosed" 
-          class="send-btn"
-          :title="isClosed ? 'Cannot send messages' : 'Send Message'"
-        >
+
+        <button @click="sendMessage" :disabled="!newMessage.trim() || loading || uploading || isClosed" class="send-btn"
+          :title="isClosed ? 'Cannot send messages' : 'Send Message'">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </button>
       </div>
-      
+
       <!-- Image Upload -->
       <div v-if="showImageUpload" class="image-upload">
-        <input 
-          ref="imageInput"
-          type="file" 
-          accept="image/*,video/*" 
-          @change="handleImageSelect"
-          style="display: none"
-        />
+        <input ref="imageInput" type="file" accept="image/*,video/*" @change="handleImageSelect"
+          style="display: none" />
         <div class="upload-options">
           <button @click="$refs.imageInput.click()" class="select-image-btn">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
-              <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2" />
+              <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" />
             </svg>
             Select Image/Video
           </button>
           <button @click="showImageUpload = false" class="cancel-btn">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+              <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
             Cancel
           </button>
@@ -195,22 +194,29 @@
         <div class="fullscreen-header">
           <button @click="closeFullscreen" class="close-btn">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+              <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </button>
           <div class="media-actions">
             <button @click="downloadMedia" class="action-btn" title="Download">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path
+                  d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
             </button>
           </div>
         </div>
         <div class="media-container">
-          <img v-if="isImageFile(previewImageUrl)" :src="previewImageUrl" alt="Image preview" class="fullscreen-image" />
+          <img v-if="isImageFile(previewImageUrl)" :src="previewImageUrl" alt="Image preview"
+            class="fullscreen-image" />
           <video v-else :src="previewImageUrl" controls class="fullscreen-video">
             Your browser does not support the video tag.
           </video>
@@ -443,7 +449,7 @@ const getStatusClass = (status) => {
 
 const getCategoryInfo = (chatData) => {
   if (!chatData) return '';
-  
+
   switch (props.chatType) {
     case 'complaint':
       return chatData.categoryName || 'Other';
@@ -462,7 +468,7 @@ const getCategoryInfo = (chatData) => {
 
 const formatMessageTime = (timestamp) => {
   if (!timestamp) return '';
-  
+
   let date;
   if (timestamp.toDate) {
     // Firestore Timestamp
@@ -474,10 +480,10 @@ const formatMessageTime = (timestamp) => {
     // Regular Date or timestamp
     date = new Date(timestamp);
   }
-  
+
   const now = new Date();
   const diffInMinutes = (now - date) / (1000 * 60);
-  
+
   if (diffInMinutes < 1) return 'Just now';
   if (diffInMinutes < 60) return `${Math.floor(diffInMinutes)}m ago`;
   if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
@@ -506,7 +512,7 @@ const setupKeyboardListeners = async () => {
 
     // Set resize mode to ionic for better keyboard handling
     await Keyboard.setResizeMode({ mode: 'ionic' });
-    
+
     // Set scroll to true to enable keyboard scrolling
     await Keyboard.setScroll({ isDisabled: false });
   } catch (error) {
@@ -531,14 +537,14 @@ watch(() => props.messages?.length, () => {
 onMounted(async () => {
   // Set up keyboard listeners
   setupKeyboardListeners();
-  
+
   // Focus on message input
   nextTick(() => {
     if (messageInput.value) {
       messageInput.value.focus();
     }
   });
-  
+
   // Scroll to bottom
   scrollToBottom();
 });
@@ -553,14 +559,17 @@ onUnmounted(() => {
 .unified-chat {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 100px - 80px); /* Full height minus header and bottom nav */
+  height: calc(100vh - 100px - 106px);
+  /* Full height minus header and bottom nav */
   background: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   position: fixed;
   left: 0;
   right: 0;
-  top: 114px; /* Start below app header */
-  bottom: 80px; /* Bottom nav height */
+  top: 114px;
+  /* Start below app header */
+  bottom: 80px;
+  /* Bottom nav height */
   z-index: 100;
   transition: bottom 0.3s ease-in-out;
 }
@@ -648,12 +657,15 @@ onUnmounted(() => {
   color: #1d4ed8;
 }
 
-.status-badge.processing, .status-badge.in-progress {
+.status-badge.processing,
+.status-badge.in-progress {
   background: #fed7aa;
   color: #ea580c;
 }
 
-.status-badge.closed, .status-badge.completed, .status-badge.resolved {
+.status-badge.closed,
+.status-badge.completed,
+.status-badge.resolved {
   background: #f3f4f6;
   color: #6b7280;
 }
@@ -703,7 +715,8 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
-.loading-state, .error-state {
+.loading-state,
+.error-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -725,8 +738,13 @@ onUnmounted(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-state p {
@@ -1118,6 +1136,7 @@ onUnmounted(() => {
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1268,45 +1287,46 @@ onUnmounted(() => {
   .unified-chat {
     bottom: 72px;
   }
-  
+
   .chat-header {
     padding: 0.75rem 1rem;
   }
-  
+
   .messages-container {
     padding: 1rem;
+    padding-bottom: 20px;
   }
-  
+
   .message-input-container {
     padding: 0.75rem 1rem;
   }
-  
+
   .header-title h2 {
     font-size: 1.125rem;
   }
-  
+
   .message-content {
     max-width: fit-content;
   }
-  
+
   .avatar {
     width: 36px;
     height: 36px;
   }
-  
+
   .message-bubble {
     padding: 0.625rem 0.875rem;
   }
-  
+
   .message-text {
     font-size: 0.875rem;
   }
-  
+
   .upload-options {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .select-image-btn,
   .cancel-btn {
     justify-content: center;
@@ -1317,42 +1337,44 @@ onUnmounted(() => {
   .chat-header {
     padding: 0.5rem 0.75rem;
   }
-  
+
   .header-title h2 {
     font-size: 1rem;
   }
-  
+
   .status-badge {
     font-size: 0.625rem;
     padding: 0.125rem 0.5rem;
   }
-  
+
   .category {
     font-size: 0.75rem;
     padding: 0.125rem 0.375rem;
   }
-  
+
   .messages-container {
     padding: 0.75rem;
+    padding-bottom: 20px;
+
   }
-  
+
   .message-input-container {
     padding: 0.5rem 0.75rem;
   }
-  
+
   .message-bubble {
     padding: 0.5rem 0.75rem;
   }
-  
+
   .message-text {
     font-size: 0.8rem;
   }
-  
+
   .back-btn {
     width: 40px;
     height: 40px;
   }
-  
+
   .send-btn {
     width: 40px;
     height: 40px;
