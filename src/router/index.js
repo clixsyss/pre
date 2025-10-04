@@ -210,12 +210,6 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/violation-chat/:id',
-    name: 'ViolationChat',
-    component: () => import('../components/ViolationChat.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
     path: '/smart-devices',
     name: 'SmartDevices',
     component: () => import('../pages/auth/SmartDevices.vue'),

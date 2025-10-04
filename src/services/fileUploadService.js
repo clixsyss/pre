@@ -1,7 +1,7 @@
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { storage } from '../boot/firebase'
 import performanceService from './performanceService'
-import errorHandlingService from './errorHandlingService'
+import { Capacitor } from '@capacitor/core'
 
 class FileUploadService {
   /**
@@ -15,6 +15,12 @@ class FileUploadService {
     return performanceService.timeOperation('uploadFile', async () => {
       try {
         console.log('🚀 Uploading file:', { path, fileName, fileSize: file?.size })
+        console.log('🔍 Firebase Storage check:', {
+          storage: !!storage,
+          storageApp: storage?.app,
+          storageBucket: storage?.bucket,
+          isNative: typeof window === 'undefined' || window.Capacitor
+        })
         
         // Validate file
         if (!file) {
@@ -33,21 +39,81 @@ class FileUploadService {
           throw new Error('File size must be less than 10MB')
         }
 
-        // Create storage reference
-        const fullPath = `${path}${fileName}`
-        const fileRef = storageRef(storage, fullPath)
+        // Check if we're on iOS and use Capacitor Firebase Storage
+        const isIOS = Capacitor.getPlatform() === 'ios'
+        const isNative = Capacitor.isNativePlatform()
+        
+        if (isIOS && isNative) {
+          console.log('📱 iOS detected, using Capacitor Firebase Storage...')
+          
+          // Use Capacitor Firebase Storage for iOS
+          const { FirebaseStorage } = await import('@capacitor-firebase/storage')
+          
+          // Convert File to base64 for Capacitor
+          const fileBlob = await file.arrayBuffer()
+          const base64Data = btoa(String.fromCharCode(...new Uint8Array(fileBlob)))
+          
+          console.log('📱 iOS: File converted to base64, size:', base64Data.length, 'characters')
+          
+          const fullPath = `${path}${fileName}`
+          console.log('📱 iOS: Uploading to path:', fullPath)
+          
+          // Upload using Capacitor Firebase Storage
+          const uploadResult = await FirebaseStorage.uploadFile({
+            path: fullPath,
+            data: base64Data,
+            metadata: {
+              contentType: file.type,
+              customMetadata: {
+                originalName: file.name,
+                uploadedAt: new Date().toISOString()
+              }
+            }
+          })
+          
+          console.log('📱 iOS: Upload completed, getting download URL...')
+          
+          // Get download URL
+          const downloadURL = await FirebaseStorage.getDownloadUrl({
+            path: fullPath
+          })
+          
+          console.log('📱 iOS: Download URL obtained:', downloadURL)
+          return downloadURL
+        } else {
+          // Use Web SDK for web and other platforms
+          console.log('🌐 Using Firebase Web SDK for upload...')
+          
+          // Create storage reference
+          const fullPath = `${path}${fileName}`
+          console.log('🔍 Creating storage reference:', { fullPath, path, fileName })
+          
+          const fileRef = storageRef(storage, fullPath)
+          console.log('🔍 Storage reference created:', { fileRef: !!fileRef, refPath: fileRef?.fullPath })
 
-        // Upload file
-        const snapshot = await uploadBytes(fileRef, file)
-        
-        // Get download URL
-        const downloadURL = await getDownloadURL(snapshot.ref)
-        
-        console.log('✅ File uploaded successfully:', downloadURL)
-        return downloadURL
+          // Upload file
+          console.log('🔍 Starting uploadBytes...')
+          const snapshot = await uploadBytes(fileRef, file)
+          console.log('🔍 Upload completed, getting download URL...')
+          
+          // Get download URL
+          const downloadURL = await getDownloadURL(snapshot.ref)
+          console.log('🔍 Download URL obtained:', downloadURL)
+          
+          return downloadURL
+        }
       } catch (error) {
         console.error('❌ Error uploading file:', error)
-        errorHandlingService.handleFirestoreError(error, 'uploadFile')
+        console.error('❌ Error type:', typeof error)
+        console.error('❌ Error constructor:', error?.constructor?.name)
+        console.error('❌ Error message:', error?.message)
+        console.error('❌ Error code:', error?.code)
+        console.error('❌ Error stack:', error?.stack)
+        console.error('❌ Full error object:', JSON.stringify(error, null, 2))
+        console.error('❌ Error keys:', Object.keys(error || {}))
+        
+        // Temporarily bypass errorHandlingService to see raw error
+        // errorHandlingService.handleFirestoreError(error, 'uploadFile')
         throw error
       }
     })

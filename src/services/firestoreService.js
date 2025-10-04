@@ -728,22 +728,57 @@ class FirestoreService {
     }
 
   // Listen to document or collection changes (for real-time updates)
-  async onSnapshot(path) {
-      try {
-        console.log('🔍 onSnapshot called for path:', path)
+  async onSnapshot(path, callback) {
+    try {
+      console.log('🔍 onSnapshot called for path:', path)
 
-        // For now, return a simple no-op unsubscribe function to prevent issues
-        // TODO: Implement proper real-time listening later
-        console.log('⚠️ onSnapshot temporarily disabled to prevent app hanging')
-        return () => {
-          console.log('Unsubscribed from listener (no-op)')
-        }
-
-      } catch (error) {
-        console.error('Error setting up listener:', error)
-        return () => { } // Return no-op unsubscribe function
+      if (this.isNative) {
+        // Native platforms - use Capacitor Firebase
+        const { onSnapshot: nativeOnSnapshot } = await import('@capacitor-firebase/firestore')
+        const { getApp } = await import('firebase/app')
+        
+        const app = getApp()
+        const unsubscribe = await nativeOnSnapshot({
+          app: app,
+          path: path,
+          callback: callback
+        })
+        
+        console.log('✅ Native onSnapshot listener setup successfully')
+        return unsubscribe
+      } else {
+        // Web SDK - use regular onSnapshot
+        const { onSnapshot, doc } = await import('firebase/firestore')
+        const { getFirestore } = await import('firebase/firestore')
+        
+        const db = getFirestore()
+        const docRef = doc(db, path)
+        
+        const unsubscribe = onSnapshot(docRef, (doc) => {
+          if (doc.exists()) {
+            callback({
+              id: doc.id,
+              data: () => doc.data(),
+              exists: () => true
+            })
+          } else {
+            callback(null)
+          }
+        }, (error) => {
+          console.error('❌ onSnapshot error:', error)
+          callback(null)
+        })
+        
+        console.log('✅ Web onSnapshot listener setup successfully')
+        return unsubscribe
+      }
+    } catch (error) {
+      console.error('❌ Error setting up onSnapshot listener:', error)
+      return () => {
+        console.log('Unsubscribed from listener (no-op due to error)')
       }
     }
+  }
   }
 
   // Create and export singleton instance

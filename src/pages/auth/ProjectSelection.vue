@@ -287,7 +287,7 @@ onMounted(async () => {
 /* Welcome Section */
 .welcome-section {
   text-align: center;
-  margin-bottom: 50px;
+  margin-bottom: 20px;
   color: #333;
   position: relative;
 }

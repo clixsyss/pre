@@ -135,13 +135,13 @@
             <span v-if="unreadCount > 0" class="chat-badge">{{ unreadCount }}</span>
           </button>
           
-          <button v-if="booking?.status !== 'closed'" @click="closeModal" class="secondary-btn">
+          <!-- <button v-if="booking?.status !== 'closed'" @click="closeModal" class="secondary-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M11 4H4C2.89543 4 2 4.89543 2 6V18C2 19.1046 2.89543 20 4 20H16C17.1046 20 18 19.1046 18 18V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <span>View Details</span>
-          </button>
+          </button> -->
         </div>
       </div>
     </div>
@@ -235,34 +235,40 @@ const lastMessagePreview = computed(() => {
 });
 
 // Watch for booking changes to setup real-time listener
-watch(() => props.booking?.id, (newBookingId) => {
+watch(() => props.booking?.id, async (newBookingId) => {
   if (newBookingId && props.isOpen) {
-    setupRealtimeListener(newBookingId);
+    await setupRealtimeListener(newBookingId);
   }
 }, { immediate: true });
 
 // Watch for modal open/close
-watch(() => props.isOpen, (isOpen) => {
+watch(() => props.isOpen, async (isOpen) => {
   if (isOpen && props.booking?.id) {
-    setupRealtimeListener(props.booking.id);
+    await setupRealtimeListener(props.booking.id);
   } else {
     cleanupListener();
   }
 });
 
 // Setup real-time listener
-const setupRealtimeListener = (bookingId) => {
+const setupRealtimeListener = async (bookingId) => {
   if (!projectStore.selectedProject?.id || !bookingId) return;
   
   cleanupListener(); // Clean up any existing listener
   
-  unsubscribe.value = serviceBookingService.onServiceBookingChange(
-    projectStore.selectedProject.id,
-    bookingId,
-    (updatedBooking) => {
-      realtimeBooking.value = updatedBooking;
-    }
-  );
+  try {
+    const unsubscribeFn = await serviceBookingService.onServiceBookingChange(
+      projectStore.selectedProject.id,
+      bookingId,
+      (updatedBooking) => {
+        realtimeBooking.value = updatedBooking;
+      }
+    );
+    unsubscribe.value = unsubscribeFn;
+  } catch (error) {
+    console.error('❌ ServiceBookingModal: Error setting up real-time listener:', error);
+    unsubscribe.value = null;
+  }
 };
 
 // Cleanup listener
@@ -284,11 +290,17 @@ const closeModal = () => {
 const openChat = () => {
   console.log('🔍 ServiceBookingModal: openChat called', { 
     bookingId: currentBooking.value?.id,
-    booking: currentBooking.value 
+    booking: currentBooking.value,
+    realtimeBooking: realtimeBooking.value,
+    propsBooking: props.booking
   });
   
   if (!currentBooking.value?.id) {
-    console.error('❌ ServiceBookingModal: No booking ID available');
+    console.error('❌ ServiceBookingModal: No booking ID available', {
+      currentBooking: currentBooking.value,
+      realtimeBooking: realtimeBooking.value,
+      propsBooking: props.booking
+    });
     return;
   }
   
@@ -305,9 +317,14 @@ const openChat = () => {
   console.log('🚀 ServiceBookingModal: Navigating to chat route:', chatRoute);
   
   router.push(chatRoute).then(() => {
-    console.log('✅ ServiceBookingModal: Navigation successful');
+    console.log('✅ ServiceBookingModal: Navigation successful to:', chatRoute);
   }).catch((error) => {
     console.error('❌ ServiceBookingModal: Navigation failed:', error);
+    console.error('❌ ServiceBookingModal: Navigation error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
   });
 };
 

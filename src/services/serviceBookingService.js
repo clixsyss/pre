@@ -379,6 +379,11 @@ class ServiceBookingService {
           messageType: 'chat'
         };
 
+        // Add imageUrl if provided
+        if (messageData.imageUrl) {
+          message.imageUrl = messageData.imageUrl;
+        }
+
         console.log('💬 New message object:', message)
 
         const docPath = `projects/${projectId}/serviceBookings/${bookingId}`;
