@@ -22,7 +22,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useProjectStore } from '../stores/projectStore';
 import serviceBookingService from '../services/serviceBookingService';
-import fileUploadService from '../services/fileUploadService';
 import UnifiedChat from './UnifiedChat.vue';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
@@ -278,14 +277,52 @@ const handleImageUpload = async (file) => {
   // Check if we're on iOS native platform and use Capacitor Camera API
   const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform();
   
-  if (isIOS) {
+  if (isIOS && !file) {
+    // Only use Capacitor Camera API if no file is provided (direct camera call)
     console.log('📱 iOS detected, using Capacitor Camera API...');
     return await handleImageUploadWithCapacitor();
   } else {
-    console.log('🌐 Web platform detected, using file input...');
+    // Use the provided file (from file input or web)
+    console.log('🌐 Using provided file for upload...');
     return await handleImageUploadWithFile(file);
   }
 };
+
+// Image compression function
+const compressImage = (blob, quality = 0.8) => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      // Calculate new dimensions (max 1200px width)
+      const maxWidth = 1200;
+      const maxHeight = 1200;
+      let { width, height } = img;
+      
+      if (width > maxWidth || height > maxHeight) {
+        if (width > height) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        } else {
+          width = (width * maxHeight) / height;
+          height = maxHeight;
+        }
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Draw and compress
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(resolve, 'image/jpeg', quality);
+    };
+    
+    img.src = URL.createObjectURL(blob);
+  });
+};
+
 
 // Capacitor-based image upload for iOS
 const handleImageUploadWithCapacitor = async () => {
@@ -293,17 +330,30 @@ const handleImageUploadWithCapacitor = async () => {
     console.log('📱 Starting Capacitor image picker...');
     
     // Take/select photo using Capacitor Camera
-    const image = await Camera.getPhoto({
-      quality: 90,
+    const photo = await Camera.getPhoto({
+      quality: 60, // Reduced quality for faster upload
       allowEditing: false,
-      resultType: CameraResultType.DataUrl, // Use DataUrl instead of Uri for better iOS compatibility
+      resultType: CameraResultType.Uri, // Use Uri for iOS compatibility
       source: CameraSource.Prompt // Let user choose camera or photo library
     });
     
-    console.log('📱 Image selected:', image);
+    console.log('📱 Image selected:', photo);
     
-    if (!image.dataUrl) {
-      throw new Error('No image selected');
+    if (!photo.webPath) {
+      throw new Error('No image webPath found');
+    }
+    
+    // Fetch the image file as a Blob (crucial for iOS)
+    console.log('📱 Fetching image as blob from:', photo.webPath);
+    const response = await fetch(photo.webPath);
+    let blob = await response.blob();
+    console.log('📱 Original blob:', { size: blob.size, type: blob.type });
+    
+    // Compress image if it's too large (> 1MB)
+    if (blob.size > 1024 * 1024) {
+      console.log('📱 Compressing large image...');
+      blob = await compressImage(blob, 0.7); // 70% quality
+      console.log('📱 Compressed blob:', { size: blob.size, type: blob.type });
     }
     
     // Create temporary message
@@ -326,56 +376,148 @@ const handleImageUploadWithCapacitor = async () => {
     booking.value.messages.push(tempMessage);
     console.log('📱 Added temporary upload message to local state');
 
-    // Extract base64 data from dataUrl
-    const base64Data = image.dataUrl.split(',')[1]; // Remove data:image/jpeg;base64, prefix
-    console.log('📱 Base64 data extracted, length:', base64Data.length);
+    // Ensure user is authenticated before uploading
+    console.log('📱 Ensuring user authentication before upload...');
+    const { getAuth, signInAnonymously } = await import('firebase/auth');
+    const auth = getAuth();
     
-    // Generate filename
-    const mimeType = image.format ? `image/${image.format}` : 'image/jpeg';
-    const timestamp = Date.now();
-    const extension = image.format || 'jpg';
-    const fileName = `image_${timestamp}.${extension}`;
+    // Check if user is authenticated
+    let currentUser = auth.currentUser;
+    console.log('📱 Current auth state:', { 
+      hasUser: !!currentUser, 
+      userId: currentUser?.uid,
+      isAnonymous: currentUser?.isAnonymous 
+    });
     
-    console.log('📱 Generated filename:', fileName);
-    
-    // Convert base64 to Blob
-    const byteCharacters = atob(base64Data);
-    const byteNumbers = new Array(byteCharacters.length);
-    
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: mimeType });
-    
-    console.log('📱 Blob created:', { size: blob.size, type: blob.type });
-    
-    // Upload to Firebase Storage using fileUploadService
-    const storagePath = `projects/${projectStore.selectedProject.id}/serviceBookings/${bookingId}/images/`;
-    const imageUrl = await fileUploadService.uploadFile(blob, storagePath, fileName);
-    
-    console.log('✅ Image uploaded successfully:', imageUrl);
-    
-    // Remove the temporary upload message
-    const tempIndex = booking.value.messages.findIndex(msg => msg.id === tempMessage.id);
-    if (tempIndex !== -1) {
-      booking.value.messages.splice(tempIndex, 1);
-      console.log('📱 Removed temporary upload message');
-    }
-    
-    // Send the image message to the chat
-    await serviceBookingService.addMessage(
-      projectStore.selectedProject.id,
-      bookingId,
-      {
-        text: `📎 ${fileName}`,
-        senderType: 'user',
-        imageUrl: imageUrl
+    if (!currentUser) {
+      console.log('📱 No authenticated user, signing in anonymously...');
+      try {
+        const userCredential = await signInAnonymously(auth);
+        currentUser = userCredential.user;
+        console.log('📱 Anonymous sign-in successful:', { 
+          uid: currentUser.uid,
+          isAnonymous: currentUser.isAnonymous 
+        });
+      } catch (authError) {
+        console.error('📱 Anonymous sign-in failed:', {
+          code: authError.code,
+          message: authError.message,
+          stack: authError.stack
+        });
+        throw new Error(`Authentication failed: ${authError.message}`);
       }
-    );
+    } else {
+      console.log('📱 User already authenticated:', { 
+        uid: currentUser.uid,
+        isAnonymous: currentUser.isAnonymous 
+      });
+    }
+
+    // Upload using uploadBytesResumable with Blob
+    const fileName = `image_${Date.now()}.jpg`;
+    const { ref: storageRef, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
+    const { storage } = await import('../boot/firebase');
     
-    console.log('✅ Image message sent successfully');
+    const fullPath = `projects/${projectStore.selectedProject.id}/serviceBookings/${bookingId}/images/${fileName}`;
+    const fileRef = storageRef(storage, fullPath);
+    
+    console.log('📱 Starting uploadBytesResumable with Blob...', {
+      fullPath,
+      blobSize: blob.size,
+      blobType: blob.type,
+      userId: currentUser.uid,
+      isAnonymous: currentUser.isAnonymous
+    });
+    
+    try {
+      // Use uploadBytesResumable for better reliability
+      const uploadTask = uploadBytesResumable(fileRef, blob, {
+        contentType: 'image/jpeg',
+        customMetadata: {
+          uploadedBy: currentUser.uid,
+          uploadedAt: new Date().toISOString(),
+          isAnonymous: currentUser.isAnonymous.toString()
+        }
+      });
+      
+      // Wait for upload completion with timeout
+      const uploadPromise = new Promise((resolve, reject) => {
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log('📱 Upload progress:', `${progress.toFixed(2)}% (${snapshot.bytesTransferred}/${snapshot.totalBytes} bytes)`);
+          },
+          (error) => {
+            console.error('📱 Upload error:', {
+              code: error.code,
+              message: error.message,
+              serverResponse: error.serverResponse,
+              customData: error.customData
+            });
+            reject(error);
+          },
+          () => {
+            console.log('📱 Upload completed successfully');
+            resolve(uploadTask.snapshot);
+          }
+        );
+      });
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+      );
+      
+      const snapshot = await Promise.race([uploadPromise, timeoutPromise]);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      console.log('📱 Upload successful! URL:', downloadURL);
+      
+      // Remove the temporary upload message
+      const tempIndex = booking.value.messages.findIndex(msg => msg.id === tempMessage.id);
+      if (tempIndex !== -1) {
+        booking.value.messages.splice(tempIndex, 1);
+        console.log('📱 Removed temporary upload message');
+      }
+      
+      // Send the image message to the chat
+      await serviceBookingService.addMessage(
+        projectStore.selectedProject.id,
+        bookingId,
+        {
+          text: `📎 ${fileName}`,
+          senderType: 'user',
+          imageUrl: downloadURL
+        }
+      );
+      
+      console.log('✅ Image message sent successfully');
+      
+    } catch (uploadError) {
+      console.error('📱 Upload failed with detailed error:', {
+        code: uploadError.code,
+        message: uploadError.message,
+        serverResponse: uploadError.serverResponse,
+        stack: uploadError.stack
+      });
+      
+      // Remove temporary message on error
+      const tempIndex = booking.value.messages.findIndex(msg => msg.isTemporary && msg.isUploading);
+      if (tempIndex !== -1) {
+        booking.value.messages.splice(tempIndex, 1);
+      }
+      
+      // Send error message with detailed error info
+      await serviceBookingService.addMessage(
+        projectStore.selectedProject.id,
+        bookingId,
+        {
+          text: `❌ Upload failed: ${uploadError.message} (Code: ${uploadError.code || 'unknown'})`,
+          senderType: 'user'
+        }
+      );
+      
+      throw uploadError;
+    }
     
   } catch (error) {
     console.error('❌ Capacitor image upload error:', error);
@@ -388,6 +530,28 @@ const handleImageUploadWithCapacitor = async () => {
         booking.value.messages.splice(index, 1);
       }
     });
+    
+    // Check if it's an authentication error and try to refresh
+    if (error.message.includes('Authentication') || error.message.includes('auth') || error.message.includes('timeout')) {
+      console.log('📱 Authentication error detected, attempting to refresh auth...');
+      try {
+        // Try to refresh the authentication
+        const { getAuth } = await import('firebase/auth');
+        const auth = getAuth();
+        const currentUser = auth.currentUser;
+        
+        if (currentUser) {
+          console.log('📱 Refreshing authentication token...');
+          await currentUser.getIdToken(true); // Force refresh
+          console.log('📱 Authentication refreshed, retrying upload...');
+          
+          // Retry the upload once
+          return await handleImageUploadWithCapacitor();
+        }
+      } catch (refreshError) {
+        console.error('📱 Failed to refresh authentication:', refreshError);
+      }
+    }
     
     // Send error message
     await serviceBookingService.addMessage(
@@ -425,23 +589,116 @@ const handleImageUploadWithFile = async (file) => {
   booking.value.messages.push(tempMessage);
   console.log('🔍 ServiceBookingChat: Added temporary upload message to local state');
 
+  // Compress image if it's too large (> 1MB)
+  let fileToUpload = file;
+  if (file.size > 1024 * 1024) {
+    console.log('🌐 Compressing large image...');
+    const compressedBlob = await compressImage(file, 0.7);
+    fileToUpload = new File([compressedBlob], file.name, { type: 'image/jpeg' });
+    console.log('🌐 Compressed file:', { 
+      originalSize: file.size, 
+      compressedSize: fileToUpload.size 
+    });
+  }
+
   try {
     console.log('🔍 ServiceBookingChat: Starting image upload...');
+    
+    // Ensure user is authenticated before uploading
+    console.log('🌐 Ensuring user authentication before upload...');
+    const { getAuth, signInAnonymously } = await import('firebase/auth');
+    const auth = getAuth();
+    
+    // Check if user is authenticated
+    let currentUser = auth.currentUser;
+    console.log('🌐 Current auth state:', { 
+      hasUser: !!currentUser, 
+      userId: currentUser?.uid,
+      isAnonymous: currentUser?.isAnonymous 
+    });
+    
+    if (!currentUser) {
+      console.log('🌐 No authenticated user, signing in anonymously...');
+      try {
+        const userCredential = await signInAnonymously(auth);
+        currentUser = userCredential.user;
+        console.log('🌐 Anonymous sign-in successful:', { 
+          uid: currentUser.uid,
+          isAnonymous: currentUser.isAnonymous 
+        });
+      } catch (authError) {
+        console.error('🌐 Anonymous sign-in failed:', {
+          code: authError.code,
+          message: authError.message,
+          stack: authError.stack
+        });
+        throw new Error(`Authentication failed: ${authError.message}`);
+      }
+    } else {
+      console.log('🌐 User already authenticated:', { 
+        uid: currentUser.uid,
+        isAnonymous: currentUser.isAnonymous 
+      });
+    }
     
     // Generate unique filename
     const timestamp = Date.now();
     const fileExtension = file.name.split('.').pop() || 'jpg';
     const fileName = `image_${timestamp}.${fileExtension}`;
     
-    console.log('🔍 ServiceBookingChat: Uploading file:', {
+    console.log('🌐 Uploading file with direct Firebase Storage:', {
       fileName: fileName,
-      fileSize: file.size,
-      fileType: file.type
+      fileSize: fileToUpload.size,
+      fileType: fileToUpload.type,
+      userId: currentUser.uid
     });
     
-    // Upload image to Firebase Storage
-    const storagePath = `projects/${projectStore.selectedProject.id}/serviceBookings/${bookingId}/images/`;
-    const imageUrl = await fileUploadService.uploadFile(file, storagePath, fileName);
+    // Upload using uploadBytesResumable with Blob
+    const { ref: storageRef, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
+    const { storage } = await import('../boot/firebase');
+    
+    const fullPath = `projects/${projectStore.selectedProject.id}/serviceBookings/${bookingId}/images/${fileName}`;
+    const fileRef = storageRef(storage, fullPath);
+    
+    // Use uploadBytesResumable for better reliability
+    const uploadTask = uploadBytesResumable(fileRef, fileToUpload, {
+      contentType: fileToUpload.type,
+      customMetadata: {
+        uploadedBy: currentUser.uid,
+        uploadedAt: new Date().toISOString(),
+        isAnonymous: currentUser.isAnonymous.toString()
+      }
+    });
+    
+    // Wait for upload completion with timeout
+    const uploadPromise = new Promise((resolve, reject) => {
+      uploadTask.on('state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log('🌐 Upload progress:', `${progress.toFixed(2)}% (${snapshot.bytesTransferred}/${snapshot.totalBytes} bytes)`);
+        },
+        (error) => {
+          console.error('🌐 Upload error:', {
+            code: error.code,
+            message: error.message,
+            serverResponse: error.serverResponse,
+            customData: error.customData
+          });
+          reject(error);
+        },
+        () => {
+          console.log('🌐 Upload completed successfully');
+          resolve(uploadTask.snapshot);
+        }
+      );
+    });
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+    );
+    
+    const snapshot = await Promise.race([uploadPromise, timeoutPromise]);
+    const imageUrl = await getDownloadURL(snapshot.ref);
     
     console.log('✅ ServiceBookingChat: Image uploaded successfully:', imageUrl);
     

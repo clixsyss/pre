@@ -730,8 +730,8 @@ onMounted(async () => {
 
 .help-button {
   background: transparent;
-  color: #3b82f6;
-  border: 2px solid #3b82f6;
+  color: #AF1E23;
+  border: 2px solid #AF1E23;
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-size: 0.875rem;

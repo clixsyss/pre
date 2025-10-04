@@ -120,8 +120,7 @@
             >
               <div class="project-info">
                 <h4>{{ project.name }}</h4>
-                <p>{{ project.location }}</p>
-                <span class="project-role">{{ project.userRole }} • Unit {{ project.userUnit }}</span>
+                <span class="project-role">{{ project.location }} • Unit {{ project.userUnit }}</span>
               </div>
               
               <div class="project-actions">
