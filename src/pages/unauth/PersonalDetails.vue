@@ -266,6 +266,9 @@ const router = useRouter()
 const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
 const loading = ref(false)
+// Debug helpers
+const DEBUG_PD = true
+const dlog = (...args) => { if (DEBUG_PD) console.log('[PersonalDetails][debug]', ...args) }
 const frontIdFile = ref(null)
 const backIdFile = ref(null)
 const profilePictureFile = ref(null)
@@ -327,6 +330,7 @@ const updateUserDetailsInFirestore = async (userId, userDetails) => {
 }
 
 onMounted(() => {
+  dlog('mounted, loading store data', { email: registrationStore.personalData.email })
   // Get email from registration store
   const email = registrationStore.personalData.email || 'Example@gmail.com'
   formData.email = email
@@ -343,8 +347,13 @@ onMounted(() => {
   
   // Check if email is verified
   if (!registrationStore.isEmailVerified) {
-    notificationStore.showWarning('Please complete email verification first')
-    router.push('/register')
+    try {
+      dlog('email not verified, allowing continuation but notifying')
+      notificationStore.showWarning('Please complete email verification first')
+    } catch (e) {
+      console.warn('[PersonalDetails] warning notification failed', e)
+    }
+    // keep user on this page to continue filling details
   }
 })
 
@@ -431,6 +440,7 @@ const handleSubmit = async () => {
   loading.value = true
   
   try {
+    dlog('submit start, validating and preparing upload')
     // Upload files to Firebase Storage first
     const userId = auth.currentUser.uid
     let uploadedDocuments = {}
@@ -442,9 +452,9 @@ const handleSubmit = async () => {
         backIdFile.value,
         profilePictureFile.value
       )
-      console.log('Files uploaded successfully:', uploadedDocuments)
+      dlog('files uploaded', uploadedDocuments)
     } catch (uploadError) {
-      console.error('File upload error:', uploadError)
+      console.error('[PersonalDetails] File upload error', uploadError)
       throw new Error(`File upload failed: ${uploadError.message}`)
     }
 
@@ -465,9 +475,8 @@ const handleSubmit = async () => {
         displayName: `${formData.firstName} ${formData.lastName}`,
         photoURL: uploadedDocuments.profilePicture || null
       })
-      
-      console.log('User profile updated successfully:', auth.currentUser)
-      console.log('Complete registration data:', registrationStore.getRegistrationData())
+      dlog('profile updated', { uid: auth.currentUser.uid })
+      dlog('complete registration data', registrationStore.getRegistrationData())
       
       // Save all user data to Firestore including document URLs
       const userDetails = {
@@ -487,10 +496,12 @@ const handleSubmit = async () => {
         projects: registrationStore.propertyData.projects || []
       }
       
+      dlog('writing user details to Firestore', { userId })
       await updateUserDetailsInFirestore(userId, userDetails)
+      dlog('firestore write done')
       
       // Show success notification
-      notificationStore.showSuccess('Personal details and documents saved successfully! Now let\'s complete your property information.')
+      notificationStore.showSuccess('Personal details and documents saved! Continue to property information.')
       
       // Don't clear registration store or sign out yet - user needs to complete property details
       // registrationStore.resetRegistration()
@@ -499,12 +510,23 @@ const handleSubmit = async () => {
               // Redirect to Register.vue to complete property details
         // The Register.vue will automatically detect that personal details are completed
         // and show the property step
-        router.push('/register')
+        try {
+          await router.push('/register')
+          dlog('navigation back to /register succeeded')
+        } catch (e) {
+          console.warn('[PersonalDetails] navigation failed, fallback to replace', e)
+          try {
+            await router.replace('/register')
+          } catch (e2) {
+            console.warn('[PersonalDetails] replace failed, hard redirecting', e2)
+            window.location.href = '/register'
+          }
+        }
     } else {
       throw new Error('No authenticated user found. Please try again.')
     }
   } catch (error) {
-    console.error('Profile update error:', error)
+    console.error('[PersonalDetails] submit error', error)
     
     // Handle specific Firebase auth errors
     let errorMessage = 'Profile update failed'

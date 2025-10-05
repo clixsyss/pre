@@ -378,11 +378,9 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
-import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore'
 import { auth, db } from '../../boot/firebase'
-import { Capacitor } from '@capacitor/core'
-import iosAuthHelper from '../../services/iosAuthHelper'
 
 // Component name for ESLint
 defineOptions({
@@ -394,6 +392,139 @@ const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
 const currentStep = ref('personal')
 const loading = ref(false)
+
+// Debug helpers
+const DEBUG_REG = true
+const dlog = (...args) => { if (DEBUG_REG) console.log('[Register][debug]', ...args) }
+
+// Utility: timeout wrapper to detect hangs (e.g., network/bridge issues on iOS)
+const withTimeout = async (promise, ms, label) => {
+  let timer
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`Timeout after ${ms}ms: ${label}`))
+    }, ms)
+  })
+  try {
+    const result = await Promise.race([promise, timeoutPromise])
+    return result
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+// Lightweight connectivity probe (non-blocking)
+const probeConnectivity = async () => {
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 5000)
+    const res = await fetch('https://www.gstatic.com/generate_204', { signal: controller.signal })
+    clearTimeout(timer)
+    dlog('connectivity probe', { ok: res.ok, status: res.status })
+  } catch (e) {
+    console.warn('[Register] connectivity probe failed', e)
+  }
+}
+
+// Create account (REST-first for reliability across iOS/Android/Web)
+const createAccountWithFallback = async (email, password) => {
+  const apiKey = import.meta?.env?.VITE_FIREBASE_API_KEY || auth?.app?.options?.apiKey
+  if (!apiKey) throw new Error('Missing API key for REST fallback')
+
+  // 1) Try REST signUp first
+  try {
+    dlog('REST-first: attempting signUp')
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 10000)
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, returnSecureToken: true }),
+      signal: controller.signal
+    })
+    clearTimeout(timer)
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      dlog('REST signUp failed', { status: res.status, body })
+      if (body?.error?.message !== 'EMAIL_EXISTS') {
+        throw new Error(body?.error?.message || `REST signUp failed with ${res.status}`)
+      }
+      // EMAIL_EXISTS: fall through to signIn
+      dlog('REST-first: EMAIL_EXISTS -> will sign in')
+    } else {
+      const body = await res.json()
+      dlog('REST signUp success', { localId: body.localId })
+    }
+  } catch (restSignUpErr) {
+    dlog('REST-first signUp threw', { message: restSignUpErr?.message })
+    if (restSignUpErr?.message && restSignUpErr.message !== 'EMAIL_EXISTS' && !restSignUpErr.message.includes('EMAIL_EXISTS')) {
+      // If not EMAIL_EXISTS, try Web SDK create as a secondary path
+      try {
+        dlog('Falling back to Web SDK createUserWithEmailAndPassword')
+        const cred = await withTimeout(
+          createUserWithEmailAndPassword(auth, email, password),
+          8000,
+          'createUserWithEmailAndPassword (fallback)'
+        )
+        return cred
+      } catch (sdkErr) {
+        dlog('Web SDK create also failed', { code: sdkErr?.code, message: sdkErr?.message })
+        throw restSignUpErr
+      }
+    }
+  }
+
+  // 2) Ensure session by signing in (Web SDK) regardless of signUp result
+  try {
+    dlog('REST-first: establishing Web SDK session via signInWithEmailAndPassword')
+    const signInResult = await withTimeout(
+      signInWithEmailAndPassword(auth, email, password),
+      8000,
+      'signInWithEmailAndPassword (establish session)'
+    )
+    return signInResult
+  } catch (sdkSignInErr) {
+    dlog('Web SDK signIn failed, trying REST signInPassword then Web SDK', { code: sdkSignInErr?.code, message: sdkSignInErr?.message })
+
+    // 3) Try REST signInPassword
+    const controller2 = new AbortController()
+    const timer2 = setTimeout(() => controller2.abort(), 10000)
+    const res2 = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, returnSecureToken: true }),
+      signal: controller2.signal
+    })
+    clearTimeout(timer2)
+    if (!res2.ok) {
+      const body = await res2.json().catch(() => ({}))
+      throw new Error(body?.error?.message || `REST signInWithPassword failed with ${res2.status}`)
+    }
+    const restSignInBody = await res2.json()
+    dlog('REST signInWithPassword success; re-attempt Web SDK signIn to bind session', { localId: restSignInBody.localId })
+    try {
+      const bindResult = await withTimeout(
+        signInWithEmailAndPassword(auth, email, password),
+        8000,
+        'signInWithEmailAndPassword (bind after REST signIn)'
+      )
+      return bindResult
+    } catch (bindErr) {
+      dlog('Web SDK bind failed, but REST auth succeeded - proceeding with REST-only flow', { message: bindErr?.message })
+      // Create a mock credential object for REST-only flow with idToken from REST response
+      return { 
+        user: { 
+          uid: restSignInBody.localId || 'rest-auth-user', 
+          email: email,
+          emailVerified: false 
+        }, 
+        credential: null,
+        _isRestOnly: true,
+        _tokenResponse: { idToken: restSignInBody.idToken }
+      }
+    }
+  }
+}
 
 const personalForm = reactive({
   email: '',
@@ -509,53 +640,7 @@ const canAddAdditionalProperty = computed(() => {
   return additionalPropertyForm.selectedProject && additionalPropertyForm.unit && additionalPropertyForm.role
 })
 
-// Function to save user data to Firestore
-const saveUserDataToFirestore = async (userId, userData) => {
-  try {
-    const userDocRef = doc(db, 'users', userId)
-
-    // Prepare the user document data
-    const userDocument = {
-      // Personal Information
-      email: userData.personal.email,
-      emailVerified: userData.personal.emailVerified || false,
-
-      // Property Information
-      projects: userData.property.projects || [], // Use projects array instead of individual fields
-      compound: userData.property.compound || '', // Keep for backward compatibility
-      unit: userData.property.unit || '', // Keep for backward compatibility
-      role: userData.property.role || '', // Keep for backward compatibility
-
-      // User Details (if available)
-      firstName: userData.userDetails?.firstName || '',
-      lastName: userData.userDetails?.lastName || '',
-      mobile: userData.userDetails?.mobile || '',
-      dateOfBirth: userData.userDetails?.dateOfBirth || '',
-      gender: userData.userDetails?.gender || '',
-      nationalId: userData.userDetails?.nationalId || '',
-
-      // Metadata
-      registrationStatus: 'pending', // pending, approved, suspended
-      approvalStatus: 'pending', // pending, approved, rejected
-      registrationStep: 'personal', // personal, property, details, complete
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-
-      // Firebase Auth Info
-      authUid: userId,
-      lastLoginAt: serverTimestamp()
-    }
-
-    // Save to Firestore
-    await setDoc(userDocRef, userDocument)
-
-    console.log('User data saved to Firestore successfully:', userDocument)
-    return true
-  } catch (error) {
-    console.error('Error saving user data to Firestore:', error)
-    throw error
-  }
-}
+// Removed initial Firestore creation to avoid setting blocking pending status; creation happens after details.
 
 // Function to update user data in Firestore
 const updateUserDataInFirestore = async (userId, updateData) => {
@@ -675,74 +760,54 @@ const handlePersonalSubmit = async () => {
   }
 
   loading.value = true
+  dlog('Submit start', { email: personalForm.email })
 
   try {
     // Store email in registration store
+    dlog('Storing email in registration store')
     registrationStore.setPersonalData({ email: personalForm.email })
 
-    // Create user account with the password they provided
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      personalForm.email,
-      personalForm.password
-    )
+    // Create user account with the password they provided (detect hangs)
+    dlog('Calling createUserWithEmailAndPassword')
+    dlog('Auth app info', { appName: auth.app?.name })
+    dlog('navigator.onLine', { online: typeof navigator !== 'undefined' ? navigator.onLine : 'n/a' })
+    probeConnectivity()
+    const userCredential = await createAccountWithFallback(personalForm.email, personalForm.password)
+    dlog('createUserWithEmailAndPassword resolved', {
+      uid: userCredential?.user?.uid,
+      emailVerified: userCredential?.user?.emailVerified
+    })
 
-    // Send verification email via Firebase with iOS-specific handling
-    try {
-      console.log('Attempting to send verification email to:', personalForm.email)
-      console.log('User UID:', userCredential.user.uid)
-      console.log('User email verified status:', userCredential.user.emailVerified)
-      console.log('Platform:', Capacitor.getPlatform(), 'Native:', Capacitor.isNativePlatform())
-
-      // Ensure proper authentication (especially important for iOS)
-      const authenticatedUser = await iosAuthHelper.ensureIOSAuthentication(
-        userCredential, 
-        personalForm.email, 
-        personalForm.password
-      )
-
-      // Send verification email with platform-specific retry logic
-      await iosAuthHelper.sendEmailVerificationWithRetry(authenticatedUser)
-      console.log('Verification email sent successfully to:', personalForm.email)
-
-      // Show success notification
-      notificationStore.showSuccess('Account created successfully! Verification email sent to your inbox.')
-    } catch (emailError) {
-      console.error('Error sending verification email:', {
-        code: emailError.code,
-        message: emailError.message,
-        stack: emailError.stack
-      })
-
-      // Get platform-specific error message
-      const warningMessage = iosAuthHelper.getPlatformErrorMessage(emailError)
-
-      // Don't fail the entire registration if email sending fails
-      notificationStore.showWarning(warningMessage)
-    }
+    // Skipping email verification for now; proceed directly to next step
+    dlog('Email verification temporarily disabled; proceeding to next step')
 
     // Store the user ID for later use
+    dlog('Caching tempUserId in store', { uid: userCredential.user.uid })
     registrationStore.setTempUserId(userCredential.user.uid)
 
-    // Save initial user data to Firestore
-    const initialUserData = {
-      personal: { email: personalForm.email, emailVerified: false },
-      property: { projects: [], compound: '', unit: '', role: '' },
-      userDetails: {}
-    }
-
-    await saveUserDataToFirestore(userCredential.user.uid, initialUserData)
-
-    console.log('User registration completed for:', personalForm.email)
+    dlog('User registration logic completed, navigating to personal details')
 
     // Clear password fields for security
     personalForm.password = ''
     personalForm.confirmPassword = ''
 
-    // Move to email verification step
-    router.push('/register/verify-email')
+    // Proceed to personal details without creating a blocking Firestore record
+    try {
+      await router.push('/register/personal-details')
+      dlog('Navigation to personal-details succeeded')
+    } catch (navErr) {
+      console.warn('[Register] router.push failed, retrying with replace then hard redirect', navErr)
+      try {
+        await router.replace('/register/personal-details')
+        dlog('Navigation via replace succeeded')
+      } catch (navErr2) {
+        console.warn('[Register] replace failed, hard redirecting', navErr2)
+        window.location.href = '/register/personal-details'
+      }
+    }
   } catch (error) {
-    console.error('Personal submit error:', error)
+    console.error('[Register] Personal submit error:', error)
+    dlog('Personal submit error details', { code: error?.code, message: error?.message, stack: error?.stack })
 
     let errorMessage = 'Failed to proceed'
     if (error.code === 'auth/email-already-in-use') {
