@@ -97,6 +97,7 @@ class NewsService {
         category: newsData.category || 'general',
         featured: newsData.featured || false,
         isPublished: newsData.isPublished || false,
+        interactionsEnabled: newsData.interactionsEnabled !== false, // Default to true if undefined
         mediaUrl: newsData.mediaUrl || null,
         mediaType: newsData.mediaType || 'image',
         mediaFileName: newsData.mediaFileName || null,

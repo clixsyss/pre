@@ -202,8 +202,17 @@
             </div>
 
             <!-- Compact Comments Section -->
-            <div class="dialog-comments-compact">
-              <NewsComments :news-id="selectedNewsItem.id" />
+            <div v-if="selectedNewsItem.interactionsEnabled" class="dialog-comments-compact">
+              <NewsComments :news-id="selectedNewsItem.id" :interactions-enabled="selectedNewsItem.interactionsEnabled" />
+            </div>
+            <div v-else class="dialog-comments-disabled">
+              <div class="interactions-disabled-message">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <p>Interactions are disabled for this news item</p>
+              </div>
             </div>
           </div>
 
@@ -375,7 +384,7 @@ const getCategoryLabel = (category) => {
 }
 
 const formatTime = (timestamp) => {
-  if (!timestamp) return 'Just now'
+  if (!timestamp) return 'Recently'
 
   try {
     let date
@@ -385,6 +394,9 @@ const formatTime = (timestamp) => {
     } else if (timestamp instanceof Date) {
       // Already a Date object
       date = timestamp
+    } else if (timestamp.seconds && typeof timestamp.seconds === 'number') {
+      // Firestore timestamp object with seconds
+      date = new Date(timestamp.seconds * 1000)
     } else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
       // String or number timestamp
       date = new Date(timestamp)
@@ -432,20 +444,28 @@ const formatTime = (timestamp) => {
       return `${weeks}w ago`
     }
     
-    // Less than 1 year
-    if (diffInSeconds < 31536000) {
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric'
-      })
-    }
+    // Calculate months more accurately
+    const nowYear = now.getFullYear()
+    const nowMonth = now.getMonth()
+    const dateYear = date.getFullYear()
+    const dateMonth = date.getMonth()
     
-    // More than 1 year
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
+    const monthDiff = (nowYear - dateYear) * 12 + (nowMonth - dateMonth)
+    
+    if (monthDiff === 1) {
+      return '1 month ago'
+    } else if (monthDiff < 12) {
+      return `${monthDiff} months ago`
+    } else if (monthDiff < 24) {
+      return '1 year ago'
+    } else {
+      const years = Math.floor(monthDiff / 12)
+      if (years === 1) {
+        return '1 year ago'
+      } else {
+        return `${years} years ago`
+      }
+    }
   } catch (error) {
     console.warn('Error formatting date:', error, 'Timestamp:', timestamp)
     return 'Recently'
@@ -625,23 +645,29 @@ const fetchNews = async () => {
     console.log('✅ ModernNewsFeed: News service returned:', news?.length || 0, 'items')
 
     // Transform news items to display format
-    newsItems.value = news.map(item => ({
-      id: item.id,
-      title: item.title,
-      message: item.content,
-      excerpt: item.excerpt || item.content?.substring(0, 150) + '...',
-      type: item.category,
-      category: item.category,
-      priority: 'normal',
-      featured: item.featured || false,
-      mediaUrl: item.mediaUrl || null,
-      mediaType: item.mediaType || 'image',
-      thumbnailUrl: item.thumbnailUrl || null,
-      linkUrl: item.linkUrl || null,
-      linkTitle: item.linkTitle || null,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt
-    }))
+    newsItems.value = news.map(item => {
+      // Use updatedAt as fallback if createdAt is missing
+      const displayCreatedAt = item.createdAt || item.updatedAt || new Date()
+      
+      return {
+        id: item.id,
+        title: item.title,
+        message: item.content,
+        excerpt: item.excerpt || item.content?.substring(0, 150) + '...',
+        type: item.category,
+        category: item.category,
+        priority: 'normal',
+        featured: item.featured || false,
+        interactionsEnabled: item.interactionsEnabled !== false, // Default to true if undefined
+        mediaUrl: item.mediaUrl || null,
+        mediaType: item.mediaType || 'image',
+        thumbnailUrl: item.thumbnailUrl || null,
+        linkUrl: item.linkUrl || null,
+        linkTitle: item.linkTitle || null,
+        createdAt: displayCreatedAt,
+        updatedAt: item.updatedAt
+      }
+    })
   } catch (error) {
     console.error('❌ ModernNewsFeed: Error fetching news:', error)
     console.error('❌ ModernNewsFeed: Error details:', {
@@ -2120,6 +2146,72 @@ onUnmounted(() => {
   
   .dialog-actions {
     padding: 16px 24px 24px 24px;
+  }
+}
+
+/* Interactions Disabled Styles */
+.dialog-comments-disabled {
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 0 0 16px 16px;
+  text-align: center;
+}
+
+.interactions-disabled-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  border: 2px dashed #cbd5e1;
+}
+
+.interactions-disabled-message svg {
+  color: #94a3b8;
+  opacity: 0.7;
+}
+
+.interactions-disabled-message p {
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .dialog-comments-disabled {
+    padding: 16px;
+  }
+  
+  .interactions-disabled-message {
+    padding: 16px;
+    gap: 10px;
+  }
+  
+  .interactions-disabled-message p {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dialog-comments-disabled {
+    padding: 14px;
+  }
+  
+  .interactions-disabled-message {
+    padding: 14px;
+    gap: 8px;
+  }
+  
+  .interactions-disabled-message svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .interactions-disabled-message p {
+    font-size: 0.8rem;
   }
 }
 

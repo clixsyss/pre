@@ -150,7 +150,28 @@ export default {
       if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
       if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
       
-      return commentTime.toLocaleDateString();
+      // Calculate months more accurately
+      const nowYear = now.getFullYear();
+      const nowMonth = now.getMonth();
+      const dateYear = commentTime.getFullYear();
+      const dateMonth = commentTime.getMonth();
+      
+      const monthDiff = (nowYear - dateYear) * 12 + (nowMonth - dateMonth);
+      
+      if (monthDiff === 1) {
+        return '1 month ago';
+      } else if (monthDiff < 12) {
+        return `${monthDiff} months ago`;
+      } else if (monthDiff < 24) {
+        return '1 year ago';
+      } else {
+        const years = Math.floor(monthDiff / 12);
+        if (years === 1) {
+          return '1 year ago';
+        } else {
+          return `${years} years ago`;
+        }
+      }
     };
     
     const toggleReactions = () => {

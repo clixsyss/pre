@@ -75,6 +75,16 @@ class FastCollectionService {
       const cachedNews = cacheService.getCollectionData(`projects/${projectId}/news`, options)
       if (cachedNews) {
         console.log(`🚀 FastCollection: Using cached news for project ${projectId} (${cachedNews.length} items)`)
+        // Debug cached data
+        if (cachedNews.length > 0) {
+          console.log('🔍 Cached news sample:', {
+            id: cachedNews[0].id,
+            title: cachedNews[0].title,
+            createdAt: cachedNews[0].createdAt,
+            createdAtType: typeof cachedNews[0].createdAt,
+            hasToDate: cachedNews[0].createdAt && typeof cachedNews[0].createdAt.toDate === 'function'
+          })
+        }
         return cachedNews
       }
     }
@@ -103,11 +113,24 @@ class FastCollectionService {
       }
       
       // Process the real data
-      let news = snapshot.docs.map(doc => ({
-        id: doc.id,
-        projectId,
-        ...doc.data()
-      }))
+      let news = snapshot.docs.map(doc => {
+        const docData = doc.data()
+        console.log('🔍 Raw Firestore doc data for news:', {
+          id: doc.id,
+          createdAt: docData.createdAt,
+          createdAtType: typeof docData.createdAt,
+          hasToDate: docData.createdAt && typeof docData.createdAt.toDate === 'function',
+          updatedAt: docData.updatedAt,
+          updatedAtType: typeof docData.updatedAt,
+          allFields: Object.keys(docData)
+        })
+        
+        return {
+          id: doc.id,
+          projectId,
+          ...docData
+        }
+      })
       
       // Apply client-side filtering based on options
       if (options.publishedOnly) {

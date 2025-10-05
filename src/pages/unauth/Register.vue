@@ -378,9 +378,11 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth'
+import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore'
 import { auth, db } from '../../boot/firebase'
+import { Capacitor } from '@capacitor/core'
+import iosAuthHelper from '../../services/iosAuthHelper'
 
 // Component name for ESLint
 defineOptions({
@@ -685,14 +687,26 @@ const handlePersonalSubmit = async () => {
       personalForm.password
     )
 
-    // Send verification email via Firebase
+    // Send verification email via Firebase with iOS-specific handling
     try {
       console.log('Attempting to send verification email to:', personalForm.email)
       console.log('User UID:', userCredential.user.uid)
       console.log('User email verified status:', userCredential.user.emailVerified)
+      console.log('Platform:', Capacitor.getPlatform(), 'Native:', Capacitor.isNativePlatform())
 
-      await sendEmailVerification(userCredential.user)
+      // Ensure proper authentication (especially important for iOS)
+      const authenticatedUser = await iosAuthHelper.ensureIOSAuthentication(
+        userCredential, 
+        personalForm.email, 
+        personalForm.password
+      )
+
+      // Send verification email with platform-specific retry logic
+      await iosAuthHelper.sendEmailVerificationWithRetry(authenticatedUser)
       console.log('Verification email sent successfully to:', personalForm.email)
+
+      // Show success notification
+      notificationStore.showSuccess('Account created successfully! Verification email sent to your inbox.')
     } catch (emailError) {
       console.error('Error sending verification email:', {
         code: emailError.code,
@@ -700,13 +714,8 @@ const handlePersonalSubmit = async () => {
         stack: emailError.stack
       })
 
-      let warningMessage = 'Account created but verification email failed to send. Please try signing in and request a new verification email.'
-
-      if (emailError.code === 'auth/too-many-requests') {
-        warningMessage = 'Account created but too many verification emails sent. Please wait before requesting another email.'
-      } else if (emailError.code === 'auth/network-request-failed') {
-        warningMessage = 'Account created but network error prevented email sending. Please check your connection and try signing in to request a new verification email.'
-      }
+      // Get platform-specific error message
+      const warningMessage = iosAuthHelper.getPlatformErrorMessage(emailError)
 
       // Don't fail the entire registration if email sending fails
       notificationStore.showWarning(warningMessage)
@@ -725,7 +734,6 @@ const handlePersonalSubmit = async () => {
     await saveUserDataToFirestore(userCredential.user.uid, initialUserData)
 
     console.log('User registration completed for:', personalForm.email)
-    notificationStore.showSuccess('Account created successfully! Please check your email for verification instructions.')
 
     // Clear password fields for security
     personalForm.password = ''
@@ -816,6 +824,7 @@ const goToOnboarding = () => {
 const goToSignIn = () => {
   router.push('/signin')
 }
+
 </script>
 
 <style scoped>

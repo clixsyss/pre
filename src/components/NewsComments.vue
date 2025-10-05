@@ -1,7 +1,7 @@
 <template>
   <div class="news-interactions">
     <!-- Reaction Summary (like Facebook) -->
-    <div v-if="totalReactions > 0" class="reaction-summary">
+    <div v-if="interactionsEnabled && totalReactions > 0" class="reaction-summary">
       <div class="reaction-emojis">
         <span 
           v-for="(reaction, emoji) in reactionSummary" 
@@ -15,7 +15,7 @@
     </div>
 
     <!-- Action Buttons (like Facebook) -->
-    <div class="action-buttons">
+    <div v-if="interactionsEnabled" class="action-buttons">
       <button 
         @click="toggleReaction('like')"
         class="action-btn"
@@ -39,8 +39,8 @@
       
     </div>
 
-    <!-- Comment Input (always visible) -->
-    <div class="comment-input-section">
+    <!-- Comment Input (only visible if interactions enabled) -->
+    <div v-if="interactionsEnabled" class="comment-input-section">
       <div class="comment-input-wrapper">
         <textarea
           v-model="newComment"
@@ -63,7 +63,7 @@
     </div>
 
     <!-- Comments List (collapsible) -->
-    <div v-if="activeComments.length > 0" class="comments-section">
+    <div v-if="interactionsEnabled && activeComments.length > 0" class="comments-section">
       <div class="comments-header">
         <span class="comments-count">{{ activeComments.length }} comments</span>
         <div class="sort-dropdown">
@@ -129,6 +129,10 @@ export default {
     newsId: {
       type: String,
       required: true
+    },
+    interactionsEnabled: {
+      type: Boolean,
+      default: true
     }
   },
   setup(props) {

@@ -92,5 +92,13 @@
 	<string>This app needs access to the microphone for video recording features.</string>
 	<key>UIFileSharingEnabled</key>
 	<true/>
+
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

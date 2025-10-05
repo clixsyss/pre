@@ -228,9 +228,11 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
-import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth'
+import { onAuthStateChanged } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../../boot/firebase'
+import { Capacitor } from '@capacitor/core'
+import iosAuthHelper from '../../services/iosAuthHelper'
 
 // Component name for ESLint
 defineOptions({
@@ -483,13 +485,22 @@ const resendCode = async () => {
   if (resendCountdown.value > 0) return
 
   try {
-    // Resend verification email via Firebase
+    // Resend verification email via Firebase with iOS-specific handling
     if (auth.currentUser) {
       console.log('Attempting to resend verification email to:', auth.currentUser.email)
       console.log('User email verified status:', auth.currentUser.emailVerified)
       console.log('User UID:', auth.currentUser.uid)
+      console.log('Platform:', Capacitor.getPlatform(), 'Native:', Capacitor.isNativePlatform())
 
-      await sendEmailVerification(auth.currentUser)
+      // Use iOS-specific authentication helper for resend
+      if (iosAuthHelper.isIOSNative()) {
+        console.log('iOS native detected - using enhanced resend approach')
+        await iosAuthHelper.waitForIOSAuthStabilization()
+        await iosAuthHelper.refreshUserToken(auth.currentUser)
+      }
+
+      // Send verification email with platform-specific retry logic
+      await iosAuthHelper.sendEmailVerificationWithRetry(auth.currentUser)
       console.log('Verification email resent successfully to:', formData.email)
 
       // Restart countdown
@@ -507,18 +518,8 @@ const resendCode = async () => {
       stack: error.stack
     })
 
-    let errorMessage = 'Failed to resend email'
-    if (error.code === 'auth/too-many-requests') {
-      errorMessage = 'Too many requests. Please wait before requesting another email.'
-    } else if (error.code === 'auth/user-not-found') {
-      errorMessage = 'User not found. Please try signing up again.'
-    } else if (error.code === 'auth/invalid-email') {
-      errorMessage = 'Invalid email address.'
-    } else if (error.code === 'auth/network-request-failed') {
-      errorMessage = 'Network error. Please check your connection and try again.'
-    } else {
-      errorMessage = `Failed to resend email: ${error.message}`
-    }
+    // Use platform-specific error message helper
+    const errorMessage = iosAuthHelper.getPlatformErrorMessage(error) || `Failed to resend email: ${error.message}`
 
     notificationStore.showError(errorMessage)
   }
