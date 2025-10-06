@@ -152,15 +152,7 @@
       </div>
     </div>
 
-    <!-- Request Chat Modal -->
-    <div v-if="showRequestChat" class="chat-modal-overlay">
-      <RequestChat 
-        v-if="selectedRequest"
-        :request-id="selectedRequest.id"
-        :project-id="projectStore.selectedProject?.id"
-        @close="closeRequestChat"
-      />
-    </div>
+    <!-- Request chat now opens as a dedicated page via router -->
   </div>
 </template>
 
@@ -171,7 +163,6 @@ import { useRequestCategoriesStore } from '../../stores/requestCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
 import requestSubmissionService from '../../services/requestSubmissionService';
 import optimizedAuthService from '../../services/optimizedAuthService';
-import RequestChat from '../../components/RequestChat.vue';
 
 // Component name for ESLint
 defineOptions({
@@ -188,8 +179,7 @@ const loadingRequests = ref(false);
 const myRequests = ref([]);
 const openRequests = ref([]);
 const closedRequests = ref([]);
-const showRequestChat = ref(false);
-const selectedRequest = ref(null);
+// Modal state removed; navigation is used instead
 
 // Computed properties
 const tabs = computed(() => [
@@ -267,13 +257,8 @@ const navigateToRequestCategory = (category) => {
 };
 
 const openRequestChat = (request) => {
-  selectedRequest.value = request;
-  showRequestChat.value = true;
-};
-
-const closeRequestChat = () => {
-  showRequestChat.value = false;
-  selectedRequest.value = null;
+  if (!request?.id) return;
+  router.push(`/request-chat/${request.id}`);
 };
 
 const formatDate = (timestamp) => {
@@ -688,15 +673,7 @@ const getRequestPreview = (request) => {
 }
 
 /* Chat Modal Styles */
-.chat-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1000;
-  background: transparent;
-}
+/* Removed chat-modal-overlay styles as chat opens in a page */
 
 /* Loading and Error States */
 .loading-container {
