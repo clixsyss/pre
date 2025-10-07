@@ -1155,6 +1155,8 @@ PODS:
     - CapacitorCordova
   - CapacitorCamera (7.0.2):
     - Capacitor
+  - CapacitorCommunityHttp (1.4.1):
+    - Capacitor
   - CapacitorCordova (7.4.3)
   - CapacitorFilesystem (7.1.4):
     - Capacitor
@@ -1350,6 +1352,7 @@ PODS:
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
+  - "CapacitorCommunityHttp (from `../../node_modules/@capacitor-community/http`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
   - "CapacitorFirebaseApp (from `../../node_modules/@capacitor-firebase/app`)"
@@ -1387,6 +1390,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorCamera:
     :path: "../../node_modules/@capacitor/camera"
+  CapacitorCommunityHttp:
+    :path: "../../node_modules/@capacitor-community/http"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorFilesystem:
@@ -1409,6 +1414,7 @@ SPEC CHECKSUMS:
   BoringSSL-GRPC: ca6a8e5d04812fce8ffd6437810c2d46f925eaeb
   Capacitor: b4741ca7affb32c1b70debd03df92cbf522d8a80
   CapacitorCamera: 6e18d54c8ab30d7dc7b8cd93d96f9b4f57e9202a
+  CapacitorCommunityHttp: 7be90668527ef14ee10d08135b0e00fac9cf8247
   CapacitorCordova: 435121e81a2df4d0034f0fb11fcefab5104cfdb5
   CapacitorFilesystem: ac0a386949ed6c295a3dffa129ecd26b881ae5be
   CapacitorFirebaseApp: 364829ede2b72a4e0f622c0d949e3a2240ffdf37
@@ -1436,6 +1442,6 @@ SPEC CHECKSUMS:
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
 
-PODFILE CHECKSUM: 154a5d913a0be9a67b1f8d911a89fd44ea03afd3
+PODFILE CHECKSUM: 35b590dbd34e2cec7523d7195928c3cea72bcc98
 
 COCOAPODS: 1.16.2

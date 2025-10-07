@@ -111,6 +111,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { Capacitor } from '@capacitor/core'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
 import { useNotificationStore } from '../../stores/notifications'
@@ -148,11 +149,27 @@ const togglePassword = () => {
 const checkUserApprovalStatus = async (userId) => {
   try {
     console.log('🔍 Checking approval status for user:', userId)
-    const userDoc = await firestoreService.getDoc(`users/${userId}`)
     
-    if (userDoc.exists()) {
-      const userData = userDoc.data()
-      console.log('📋 User document data:', userData)
+    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    let userData
+    
+    if (isIOS) {
+      console.log('🔍 Using Capacitor Firestore for iOS...')
+      const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
+      const result = await FirebaseFirestore.getDocument({
+        reference: `users/${userId}`
+      })
+      userData = result.snapshot?.data
+      console.log('📋 User document data (iOS):', userData)
+    } else {
+      const userDoc = await firestoreService.getDoc(`users/${userId}`)
+      if (userDoc.exists()) {
+        userData = userDoc.data()
+        console.log('📋 User document data:', userData)
+      }
+    }
+    
+    if (userData) {
       console.log('✅ Approval status field:', userData.approvalStatus)
       console.log('✅ Registration status field:', userData.registrationStatus)
       
@@ -179,11 +196,31 @@ const handleSignIn = async () => {
   loading.value = true
   
   try {
-    const userCredential = await optimizedAuthService.signInWithEmailAndPassword(formData.email, formData.password)
-    const user = userCredential.user
+    console.log('[SignIn] Starting sign in...')
+    
+    // Use REST API for iOS to avoid hanging
+    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    
+    let userId
+    if (isIOS) {
+      console.log('[SignIn] Using REST API for iOS...')
+      const firebaseRestAuth = (await import('../../services/firebaseRestAuth')).default
+      const authResult = await firebaseRestAuth.signIn(formData.email, formData.password)
+      userId = authResult.uid
+      console.log('[SignIn] ✅ REST auth successful:', userId)
+      
+      // Fire Web SDK sign in (non-blocking) for Capacitor plugin auth
+      console.log('[SignIn] Signing in to Web SDK (non-blocking)...')
+      optimizedAuthService.signInWithEmailAndPassword(formData.email, formData.password)
+        .then(cred => console.log('[SignIn] ✅ Web SDK signed in:', cred.user.uid))
+        .catch(err => console.warn('[SignIn] Web SDK sign in hung/failed (OK):', err?.code))
+    } else {
+      const userCredential = await optimizedAuthService.signInWithEmailAndPassword(formData.email, formData.password)
+      userId = userCredential.user.uid
+    }
     
     // Check user approval status
-    const status = await checkUserApprovalStatus(user.uid)
+    const status = await checkUserApprovalStatus(userId)
     console.log('🚀 Sign-in approval check result:', status)
     
     if (status.approvalStatus === 'pending') {

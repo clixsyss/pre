@@ -34,7 +34,7 @@
               stroke-linejoin="round" />
           </svg>
           <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 6L9 17L4 12" stroke="#2196F3" stroke-width="2" stroke-linecap="round"
+            <path d="M20 6L9 17L4 12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
               stroke-linejoin="round" />
           </svg>
         </div>
@@ -380,6 +380,7 @@ import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../boot/firebase'
+import { Capacitor } from '@capacitor/core'
 import firebaseRestAuth from '../../services/firebaseRestAuth'
 
 // Component name for ESLint
@@ -418,14 +419,33 @@ const additionalPropertyForm = reactive({
 // Function to fetch available projects from Firestore
 const fetchAvailableProjects = async () => {
   try {
-    const projectsRef = collection(db, 'projects')
-    const snapshot = await getDocs(projectsRef)
-    availableProjects.value = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }))
+    console.log('[Register] Fetching projects...')
+    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    
+    if (isIOS) {
+      console.log('[Register] Using Capacitor Firestore to fetch projects...')
+      const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
+      
+      const result = await FirebaseFirestore.getCollection({
+        reference: 'projects'
+      })
+      
+      availableProjects.value = result.snapshots.map(snap => ({
+        id: snap.id,
+        ...snap.data
+      }))
+      console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects')
+    } else {
+      const projectsRef = collection(db, 'projects')
+      const snapshot = await getDocs(projectsRef)
+      availableProjects.value = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects')
+    }
   } catch (error) {
-    console.error('Error fetching available projects:', error)
+    console.error('[Register] Error fetching projects:', error)
     notificationStore.showError('Failed to load projects. Please try again later.')
   }
 }
@@ -666,6 +686,8 @@ const handlePropertySubmit = async () => {
   loading.value = true
 
   try {
+    console.log('[Register] Property submit - selected projects:', selectedProjects.value)
+    
     // Store property data in registration store
     registrationStore.setPropertyData({
       compound: '',
@@ -674,24 +696,168 @@ const handlePropertySubmit = async () => {
       projects: selectedProjects.value
     })
 
-    // Save to Firestore
+    // Save COMPLETE user data to Firestore
     if (registrationStore.tempUserId) {
-      await setDoc(doc(db, 'users', registrationStore.tempUserId), {
+      console.log('[Register] Saving complete registration to Firestore...')
+      console.log('[Register] Projects to save:', selectedProjects.value)
+      
+      const userDetails = registrationStore.userDetails
+      const now = new Date().toISOString()
+      
+      const completeUserData = {
+        // Personal info
         email: registrationStore.personalData.email,
+        firstName: userDetails.firstName,
+        lastName: userDetails.lastName,
+        mobile: userDetails.mobile,
+        dateOfBirth: userDetails.dateOfBirth,
+        gender: userDetails.gender,
+        nationalId: userDetails.nationalId,
+        fullName: `${userDetails.firstName} ${userDetails.lastName}`,
+        
+        // Documents
+        documents: userDetails.documents || {},
+        
+        // Projects (with proper structure)
         projects: selectedProjects.value,
+        compound: '',
+        unit: '',
+        role: '',
+        
+        // Registration status
         registrationStep: 'completed',
         registrationStatus: 'completed',
-        updatedAt: serverTimestamp()
-      }, { merge: true })
+        isProfileComplete: true,
+        
+        // Approval status (auto-approve for now)
+        approvalStatus: 'approved',
+        approvedBy: 'system',
+        approvedAt: now,
+        
+        // Auth and verification
+        authUid: registrationStore.tempUserId,
+        emailVerified: false,
+        
+        // Suspension fields (initialize as not suspended)
+        isSuspended: false,
+        suspendedAt: null,
+        suspendedBy: null,
+        suspensionReason: null,
+        suspensionType: null,
+        suspensionEndDate: null,
+        unsuspendedAt: null,
+        unsuspendedBy: null,
+        
+        // Timestamps
+        createdAt: now,
+        updatedAt: now,
+        lastLoginAt: now
+      }
       
-      console.log('Property saved')
+      const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+      
+      if (isIOS) {
+        console.log('[Register] Using Firestore REST API for iOS...')
+        console.log('[Register] FINAL DATA:', JSON.stringify(completeUserData, null, 2))
+        
+        try {
+          const { Http } = await import('@capacitor-community/http')
+          
+          // Convert data to Firestore REST API format
+          const convertToFirestoreFormat = (obj) => {
+            const result = { fields: {} }
+            for (const [key, value] of Object.entries(obj)) {
+              if (value === null) {
+                result.fields[key] = { nullValue: null }
+              } else if (typeof value === 'string') {
+                result.fields[key] = { stringValue: value }
+              } else if (typeof value === 'number') {
+                result.fields[key] = { doubleValue: value }
+              } else if (typeof value === 'boolean') {
+                result.fields[key] = { booleanValue: value }
+              } else if (Array.isArray(value)) {
+                result.fields[key] = {
+                  arrayValue: {
+                    values: value.map(item => {
+                      if (typeof item === 'object') {
+                        return { mapValue: convertToFirestoreFormat(item) }
+                      }
+                      return { stringValue: String(item) }
+                    })
+                  }
+                }
+              } else if (typeof value === 'object') {
+                result.fields[key] = { mapValue: convertToFirestoreFormat(value) }
+              }
+            }
+            return result
+          }
+          
+          const firestoreData = convertToFirestoreFormat(completeUserData)
+          
+          const projectId = 'pre-group'
+          const collection = 'users'
+          const documentId = registrationStore.tempUserId
+          
+          // Get auth token from REST auth
+          const firebaseRestAuth = (await import('../../services/firebaseRestAuth')).default
+          const authResult = await firebaseRestAuth.signIn(
+            registrationStore.personalData.email,
+            registrationStore.userDetails.password || 'temp'
+          )
+          
+          const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${documentId}?updateMask.fieldPaths=*`
+          
+          console.log('[Register] Saving to Firestore REST API...')
+          const response = await Http.request({
+            url,
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authResult.idToken}`
+            },
+            data: firestoreData,
+            connectTimeout: 15000,
+            readTimeout: 15000
+          })
+          
+          if (response.status >= 200 && response.status < 300) {
+            console.log('[Register] ✅ Complete data saved via REST API')
+          } else {
+            throw new Error(`HTTP ${response.status}`)
+          }
+        } catch (e) {
+          console.error('[Register] REST API save failed:', e)
+          // Fall back to Web SDK
+          console.log('[Register] Falling back to Web SDK...')
+          try {
+            await setDoc(doc(db, 'users', registrationStore.tempUserId), {
+              ...completeUserData,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            }, { merge: true })
+            console.log('[Register] ✅ Saved via Web SDK fallback')
+          } catch (fallbackError) {
+            console.error('[Register] Web SDK fallback also failed:', fallbackError)
+          }
+        }
+      } else {
+        await setDoc(doc(db, 'users', registrationStore.tempUserId), {
+          ...completeUserData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }, { merge: true })
+        console.log('[Register] ✅ Complete data saved (Web SDK)')
+      }
     }
 
+    console.log('[Register] Showing success notification')
     notificationStore.showSuccess('Registration completed!')
     
-    // Navigate to sign in
+    console.log('[Register] Navigating to /signin')
     setTimeout(() => {
       router.push('/signin')
+      console.log('[Register] ✅ Navigation triggered')
     }, 500)
   } catch (error) {
     console.error('Property save error:', error)
@@ -876,13 +1042,13 @@ const goToSignIn = () => {
 .progress-step.completed .step-icon {
   background-color: #e1e5e9;
   border-color: #e1e5e9;
-  color: #2196F3;
+  color: #AF1E23;
   width: 48px;
   height: 48px;
 }
 
 .progress-step.completed .step-label {
-  color: #2196F3;
+  color: #AF1E23;
   font-weight: 600;
   font-size: 1rem;
   margin-top: 12px;
@@ -925,7 +1091,7 @@ const goToSignIn = () => {
 }
 
 .progress-step.completed .step-icon svg {
-  stroke: #2196F3;
+  stroke: #AF1E23;
 }
 
 .progress-step:not(.active):not(.completed) .step-icon svg {
@@ -989,8 +1155,8 @@ const goToSignIn = () => {
 }
 
 .google-btn {
-  border-color: #4285F4;
-  color: #4285F4;
+  border-color: #AF1E23;
+  color: #AF1E23;
 }
 
 .google-btn svg {
@@ -1147,7 +1313,7 @@ select.form-input:disabled {
 
 .add-project-btn {
   width: 100%;
-  background-color: #2196F3;
+  background-color: #AF1E23;
   color: white;
   border: none;
   padding: 16px;
@@ -1273,7 +1439,7 @@ select.form-input:disabled {
 }
 
 .additional-properties {
-  border-left: 4px solid #2196F3;
+  border-left: 4px solid #AF1E23;
 }
 
 .primary-property-summary {
@@ -1451,8 +1617,8 @@ select.form-input:disabled {
 .add-another-btn {
   width: 100%;
   background-color: transparent;
-  color: #2196F3;
-  border: 2px dashed #2196F3;
+  color: #AF1E23;
+  border: 2px dashed #AF1E23;
   padding: 16px;
   border-radius: 8px;
   font-size: 1rem;
@@ -1481,7 +1647,7 @@ select.form-input:disabled {
 
 .add-property-btn {
   flex: 2;
-  background-color: #2196F3;
+  background-color: #AF1E23;
   color: white;
   border: none;
   padding: 14px;

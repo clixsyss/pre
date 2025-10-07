@@ -15,6 +15,7 @@
     "postinstall": "quasar prepare"
   },
   "dependencies": {
+    "@capacitor-community/http": "^1.4.1",
     "@capacitor-firebase/app": "^7.3.1",
     "@capacitor-firebase/authentication": "^7.3.1",
     "@capacitor-firebase/firestore": "^7.3.1",
