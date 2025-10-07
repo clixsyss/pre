@@ -249,12 +249,12 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { updateProfile } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../../boot/firebase'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 import fileUploadService from '../../services/fileUploadService'
+import firebaseRestAuth from '../../services/firebaseRestAuth'
 
 // Component name for ESLint
 defineOptions({
@@ -380,20 +380,56 @@ const handleSubmit = async () => {
   loading.value = true
   
   try {
-    if (!auth.currentUser) {
-      throw new Error('Not authenticated. Please start over.')
+    console.log('[PersonalDetails] Getting user ID...')
+    
+    let userId = registrationStore.tempUserId
+    const email = registrationStore.personalData.email
+    const password = registrationStore.userDetails.password
+    
+    if (!email || !password) {
+      throw new Error('Missing credentials. Please start registration over.')
+    }
+    
+    // Fire Web SDK sign in (non-blocking) for Capacitor plugin auth
+    console.log('[PersonalDetails] Signing in to Web SDK (non-blocking)...')
+    const { signInWithEmailAndPassword } = await import('firebase/auth')
+    signInWithEmailAndPassword(auth, email, password)
+      .then(cred => {
+        console.log('[PersonalDetails] ✅ Web SDK signed in:', cred.user.uid)
+      })
+      .catch(err => {
+        console.warn('[PersonalDetails] Web SDK sign in hung/failed (OK):', err?.code)
+      })
+    
+    // Wait a bit for auth to propagate
+    console.log('[PersonalDetails] Waiting 1.5s for auth to propagate...')
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    // Use REST auth for userId
+    if (!userId) {
+      console.log('[PersonalDetails] Getting userId via REST...')
+      const authResult = await firebaseRestAuth.signIn(email, password)
+      userId = authResult.uid
+      registrationStore.setTempUserId(userId)
     }
 
-    const userId = auth.currentUser.uid
+    console.log('[PersonalDetails] Using userId:', userId)
     
-    // Upload files
+    // Upload files with detailed logging
+    console.log('[PersonalDetails] Starting file upload...', {
+      userId,
+      hasFrontId: !!frontIdFile.value,
+      hasBackId: !!backIdFile.value,
+      hasProfile: !!profilePictureFile.value
+    })
+    
     const uploadedDocuments = await fileUploadService.uploadUserDocuments(
       userId,
       frontIdFile.value,
       backIdFile.value,
       profilePictureFile.value
     )
-    console.log('Documents uploaded')
+    console.log('[PersonalDetails] ✅ Documents uploaded:', uploadedDocuments)
 
     // Save user details to store
     registrationStore.setUserDetails({
@@ -405,12 +441,13 @@ const handleSubmit = async () => {
       nationalId: formData.nationalId,
     })
     
-    // Update Firebase profile
-    await updateProfile(auth.currentUser, {
-      displayName: `${formData.firstName} ${formData.lastName}`,
-      photoURL: uploadedDocuments.profilePicture || null
+    console.log('[PersonalDetails] Saving user data to Firestore...')
+    console.log('[PersonalDetails] Data to save:', {
+      userId,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      hasDocuments: !!uploadedDocuments.frontId
     })
-    console.log('Profile updated')
       
     // Save to Firestore
     await setDoc(doc(db, 'users', userId), {
@@ -433,15 +470,26 @@ const handleSubmit = async () => {
       isProfileComplete: true,
       updatedAt: serverTimestamp()
     }, { merge: true })
-    console.log('User data saved')
+    console.log('[PersonalDetails] ✅ Firestore save complete')
+    
+    // Clear stored password for security
+    console.log('[PersonalDetails] Clearing stored password')
+    registrationStore.setUserDetails({ password: '' })
       
+    console.log('[PersonalDetails] Showing success notification')
     notificationStore.showSuccess('Details saved! Continue to property selection.')
       
-    // Navigate back to register
+    console.log('[PersonalDetails] NAVIGATING to /register')
     router.push('/register')
+    console.log('[PersonalDetails] ✅ Navigation triggered')
   } catch (error) {
-    console.error('Save error:', error)
-    notificationStore.showError('Failed to save: ' + error.message)
+    console.error('[PersonalDetails] ❌ Save error:', error)
+    console.error('[PersonalDetails] Error type:', typeof error)
+    console.error('[PersonalDetails] Error code:', error?.code)
+    console.error('[PersonalDetails] Error message:', error?.message)
+    console.error('[PersonalDetails] Error stack:', error?.stack)
+    
+    notificationStore.showError('Failed to save: ' + (error?.message || 'Unknown error'))
   } finally {
     loading.value = false
   }

@@ -378,9 +378,9 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
 import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { auth, db } from '../../boot/firebase'
+import { db } from '../../boot/firebase'
+import firebaseRestAuth from '../../services/firebaseRestAuth'
 
 // Component name for ESLint
 defineOptions({
@@ -609,36 +609,21 @@ const handlePersonalSubmit = async () => {
   loading.value = true
 
   try {
-    console.log('[Register] STEP 1: Storing email and password in store')
+    console.log('[Register] STEP 1: Storing credentials')
     registrationStore.setPersonalData({ email: personalForm.email })
-    
-    // Store password temporarily for re-auth after iOS workaround
-    registrationStore.setUserDetails({ 
-      password: personalForm.password 
+    registrationStore.setUserDetails({ password: personalForm.password })
+
+    console.log('[Register] STEP 2: Creating account via REST API...')
+    const authResult = await firebaseRestAuth.registerOrSignIn(personalForm.email, personalForm.password)
+    console.log('[Register] ✅ Auth successful:', authResult.uid)
+
+    console.log('[Register] STEP 3: Storing user ID and token')
+    registrationStore.setTempUserId(authResult.uid)
+    registrationStore.setUserDetails({
+      password: personalForm.password,
+      authToken: authResult.idToken,
+      refreshToken: authResult.refreshToken
     })
-
-    console.log('[Register] STEP 2: Starting account creation (non-blocking on iOS)...')
-    
-    // Fire and forget on iOS - the SDK hangs but account IS created
-    createUserWithEmailAndPassword(auth, personalForm.email, personalForm.password)
-      .then(cred => {
-        console.log('[Register] ✅ Account created successfully:', cred.user.uid)
-        registrationStore.setTempUserId(cred.user.uid)
-      })
-      .catch(error => {
-        console.log('[Register] Auth error (might be OK if account exists):', error?.code)
-        // Try to sign in if account exists
-        if (error.code === 'auth/email-already-in-use') {
-          signInWithEmailAndPassword(auth, personalForm.email, personalForm.password)
-            .then(cred => {
-              console.log('[Register] ✅ Signed in:', cred.user.uid)
-              registrationStore.setTempUserId(cred.user.uid)
-            })
-        }
-      })
-
-    console.log('[Register] STEP 3: Waiting 2s for auth to complete in background...')
-    await new Promise(resolve => setTimeout(resolve, 2000))
 
     console.log('[Register] STEP 4: Clearing password fields')
     personalForm.password = ''
