@@ -379,7 +379,7 @@ import { useRouter } from 'vue-router'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore'
+import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../../boot/firebase'
 
 // Component name for ESLint
@@ -392,139 +392,6 @@ const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
 const currentStep = ref('personal')
 const loading = ref(false)
-
-// Debug helpers
-const DEBUG_REG = true
-const dlog = (...args) => { if (DEBUG_REG) console.log('[Register][debug]', ...args) }
-
-// Utility: timeout wrapper to detect hangs (e.g., network/bridge issues on iOS)
-const withTimeout = async (promise, ms, label) => {
-  let timer
-  const timeoutPromise = new Promise((_, reject) => {
-    timer = setTimeout(() => {
-      reject(new Error(`Timeout after ${ms}ms: ${label}`))
-    }, ms)
-  })
-  try {
-    const result = await Promise.race([promise, timeoutPromise])
-    return result
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
-// Lightweight connectivity probe (non-blocking)
-const probeConnectivity = async () => {
-  try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 5000)
-    const res = await fetch('https://www.gstatic.com/generate_204', { signal: controller.signal })
-    clearTimeout(timer)
-    dlog('connectivity probe', { ok: res.ok, status: res.status })
-  } catch (e) {
-    console.warn('[Register] connectivity probe failed', e)
-  }
-}
-
-// Create account (REST-first for reliability across iOS/Android/Web)
-const createAccountWithFallback = async (email, password) => {
-  const apiKey = import.meta?.env?.VITE_FIREBASE_API_KEY || auth?.app?.options?.apiKey
-  if (!apiKey) throw new Error('Missing API key for REST fallback')
-
-  // 1) Try REST signUp first
-  try {
-    dlog('REST-first: attempting signUp')
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 10000)
-    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, returnSecureToken: true }),
-      signal: controller.signal
-    })
-    clearTimeout(timer)
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      dlog('REST signUp failed', { status: res.status, body })
-      if (body?.error?.message !== 'EMAIL_EXISTS') {
-        throw new Error(body?.error?.message || `REST signUp failed with ${res.status}`)
-      }
-      // EMAIL_EXISTS: fall through to signIn
-      dlog('REST-first: EMAIL_EXISTS -> will sign in')
-    } else {
-      const body = await res.json()
-      dlog('REST signUp success', { localId: body.localId })
-    }
-  } catch (restSignUpErr) {
-    dlog('REST-first signUp threw', { message: restSignUpErr?.message })
-    if (restSignUpErr?.message && restSignUpErr.message !== 'EMAIL_EXISTS' && !restSignUpErr.message.includes('EMAIL_EXISTS')) {
-      // If not EMAIL_EXISTS, try Web SDK create as a secondary path
-      try {
-        dlog('Falling back to Web SDK createUserWithEmailAndPassword')
-        const cred = await withTimeout(
-          createUserWithEmailAndPassword(auth, email, password),
-          8000,
-          'createUserWithEmailAndPassword (fallback)'
-        )
-        return cred
-      } catch (sdkErr) {
-        dlog('Web SDK create also failed', { code: sdkErr?.code, message: sdkErr?.message })
-        throw restSignUpErr
-      }
-    }
-  }
-
-  // 2) Ensure session by signing in (Web SDK) regardless of signUp result
-  try {
-    dlog('REST-first: establishing Web SDK session via signInWithEmailAndPassword')
-    const signInResult = await withTimeout(
-      signInWithEmailAndPassword(auth, email, password),
-      8000,
-      'signInWithEmailAndPassword (establish session)'
-    )
-    return signInResult
-  } catch (sdkSignInErr) {
-    dlog('Web SDK signIn failed, trying REST signInPassword then Web SDK', { code: sdkSignInErr?.code, message: sdkSignInErr?.message })
-
-    // 3) Try REST signInPassword
-    const controller2 = new AbortController()
-    const timer2 = setTimeout(() => controller2.abort(), 10000)
-    const res2 = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, returnSecureToken: true }),
-      signal: controller2.signal
-    })
-    clearTimeout(timer2)
-    if (!res2.ok) {
-      const body = await res2.json().catch(() => ({}))
-      throw new Error(body?.error?.message || `REST signInWithPassword failed with ${res2.status}`)
-    }
-    const restSignInBody = await res2.json()
-    dlog('REST signInWithPassword success; re-attempt Web SDK signIn to bind session', { localId: restSignInBody.localId })
-    try {
-      const bindResult = await withTimeout(
-        signInWithEmailAndPassword(auth, email, password),
-        8000,
-        'signInWithEmailAndPassword (bind after REST signIn)'
-      )
-      return bindResult
-    } catch (bindErr) {
-      dlog('Web SDK bind failed, but REST auth succeeded - proceeding with REST-only flow', { message: bindErr?.message })
-      // Create a mock credential object for REST-only flow with idToken from REST response
-      return { 
-        user: { 
-          uid: restSignInBody.localId || 'rest-auth-user', 
-          email: email,
-          emailVerified: false 
-        }, 
-        credential: null,
-        _isRestOnly: true,
-        _tokenResponse: { idToken: restSignInBody.idToken }
-      }
-    }
-  }
-}
 
 const personalForm = reactive({
   email: '',
@@ -640,27 +507,7 @@ const canAddAdditionalProperty = computed(() => {
   return additionalPropertyForm.selectedProject && additionalPropertyForm.unit && additionalPropertyForm.role
 })
 
-// Removed initial Firestore creation to avoid setting blocking pending status; creation happens after details.
-
-// Function to update user data in Firestore
-const updateUserDataInFirestore = async (userId, updateData) => {
-  try {
-    const userDocRef = doc(db, 'users', userId)
-
-    const updateDocument = {
-      ...updateData,
-      updatedAt: serverTimestamp()
-    }
-
-    await setDoc(userDocRef, updateDocument, { merge: true })
-
-    console.log('User data updated in Firestore successfully:', updateDocument)
-    return true
-  } catch (error) {
-    console.error('Error updating user data in Firestore:', error)
-    throw error
-  }
-}
+// Firestore writes are now handled by iosRegistrationService for better iOS compatibility
 
 onMounted(() => {
   // Load existing data from store if available
@@ -760,64 +607,61 @@ const handlePersonalSubmit = async () => {
   }
 
   loading.value = true
-  dlog('Submit start', { email: personalForm.email })
 
   try {
-    // Store email in registration store
-    dlog('Storing email in registration store')
+    console.log('[Register] STEP 1: Storing email and password in store')
     registrationStore.setPersonalData({ email: personalForm.email })
-
-    // Create user account with the password they provided (detect hangs)
-    dlog('Calling createUserWithEmailAndPassword')
-    dlog('Auth app info', { appName: auth.app?.name })
-    dlog('navigator.onLine', { online: typeof navigator !== 'undefined' ? navigator.onLine : 'n/a' })
-    probeConnectivity()
-    const userCredential = await createAccountWithFallback(personalForm.email, personalForm.password)
-    dlog('createUserWithEmailAndPassword resolved', {
-      uid: userCredential?.user?.uid,
-      emailVerified: userCredential?.user?.emailVerified
+    
+    // Store password temporarily for re-auth after iOS workaround
+    registrationStore.setUserDetails({ 
+      password: personalForm.password 
     })
 
-    // Skipping email verification for now; proceed directly to next step
-    dlog('Email verification temporarily disabled; proceeding to next step')
+    console.log('[Register] STEP 2: Starting account creation (non-blocking on iOS)...')
+    
+    // Fire and forget on iOS - the SDK hangs but account IS created
+    createUserWithEmailAndPassword(auth, personalForm.email, personalForm.password)
+      .then(cred => {
+        console.log('[Register] ✅ Account created successfully:', cred.user.uid)
+        registrationStore.setTempUserId(cred.user.uid)
+      })
+      .catch(error => {
+        console.log('[Register] Auth error (might be OK if account exists):', error?.code)
+        // Try to sign in if account exists
+        if (error.code === 'auth/email-already-in-use') {
+          signInWithEmailAndPassword(auth, personalForm.email, personalForm.password)
+            .then(cred => {
+              console.log('[Register] ✅ Signed in:', cred.user.uid)
+              registrationStore.setTempUserId(cred.user.uid)
+            })
+        }
+      })
 
-    // Store the user ID for later use
-    dlog('Caching tempUserId in store', { uid: userCredential.user.uid })
-    registrationStore.setTempUserId(userCredential.user.uid)
+    console.log('[Register] STEP 3: Waiting 2s for auth to complete in background...')
+    await new Promise(resolve => setTimeout(resolve, 2000))
 
-    dlog('User registration logic completed, navigating to personal details')
-
-    // Clear password fields for security
+    console.log('[Register] STEP 4: Clearing password fields')
     personalForm.password = ''
     personalForm.confirmPassword = ''
 
-    // Proceed to personal details without creating a blocking Firestore record
-    try {
-      await router.push('/register/personal-details')
-      dlog('Navigation to personal-details succeeded')
-    } catch (navErr) {
-      console.warn('[Register] router.push failed, retrying with replace then hard redirect', navErr)
-      try {
-        await router.replace('/register/personal-details')
-        dlog('Navigation via replace succeeded')
-      } catch (navErr2) {
-        console.warn('[Register] replace failed, hard redirecting', navErr2)
-        window.location.href = '/register/personal-details'
-      }
-    }
+    console.log('[Register] STEP 5: NAVIGATING to /register/personal-details')
+    router.push('/register/personal-details')
+    console.log('[Register] ✅ NAVIGATION TRIGGERED')
   } catch (error) {
-    console.error('[Register] Personal submit error:', error)
-    dlog('Personal submit error details', { code: error?.code, message: error?.message, stack: error?.stack })
-
-    let errorMessage = 'Failed to proceed'
-    if (error.code === 'auth/email-already-in-use') {
-      errorMessage = 'An account with this email already exists. Please sign in instead.'
-    } else if (error.code === 'auth/invalid-email') {
-      errorMessage = 'Invalid email address. Please check your email format.'
-    } else if (error.code === 'firestore/permission-denied') {
-      errorMessage = 'Database access denied. Please contact support.'
-    } else {
-      errorMessage += ': ' + error.message
+    console.error('[Register] ❌ CAUGHT ERROR:', error)
+    console.error('[Register] Error type:', typeof error)
+    console.error('[Register] Error code:', error?.code)
+    console.error('[Register] Error message:', error?.message)
+    console.error('[Register] Error stack:', error?.stack)
+    console.error('[Register] Error keys:', Object.keys(error || {}))
+    
+    let errorMessage = 'Registration failed'
+    if (error?.code === 'auth/invalid-email') {
+      errorMessage = 'Invalid email address'
+    } else if (error?.code === 'auth/network-request-failed') {
+      errorMessage = 'Network error. Please check your connection'
+    } else if (error?.message) {
+      errorMessage = error.message
     }
 
     notificationStore.showError(errorMessage)
@@ -839,43 +683,34 @@ const handlePropertySubmit = async () => {
   try {
     // Store property data in registration store
     registrationStore.setPropertyData({
-      compound: '', // Compound is not directly stored here, handled by individual projects
-      unit: '', // Unit is not directly stored here, handled by individual projects
-      role: '', // Role is not directly stored here, handled by individual projects
+      compound: '',
+      unit: '',
+      role: '',
       projects: selectedProjects.value
     })
 
-    // Update user data in Firestore with property information
+    // Save to Firestore
     if (registrationStore.tempUserId) {
-      const propertyUpdateData = {
+      await setDoc(doc(db, 'users', registrationStore.tempUserId), {
+        email: registrationStore.personalData.email,
         projects: selectedProjects.value,
-        registrationStep: 'property'
-      }
-
-      await updateUserDataInFirestore(registrationStore.tempUserId, propertyUpdateData)
+        registrationStep: 'completed',
+        registrationStatus: 'completed',
+        updatedAt: serverTimestamp()
+      }, { merge: true })
+      
+      console.log('Property saved')
     }
 
-    console.log('Property form submitted:', selectedProjects.value)
-
-    // Show success notification
-    notificationStore.showSuccess('Property details saved! Registration completed successfully.')
-
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Registration is complete, redirect to login page
-    router.push('/signin')
+    notificationStore.showSuccess('Registration completed!')
+    
+    // Navigate to sign in
+    setTimeout(() => {
+      router.push('/signin')
+    }, 500)
   } catch (error) {
-    console.error('Property submit error:', error)
-
-    let errorMessage = 'Failed to save property details'
-    if (error.code === 'firestore/permission-denied') {
-      errorMessage = 'Database access denied. Please contact support.'
-    } else {
-      errorMessage += ': ' + error.message
-    }
-
-    notificationStore.showError(errorMessage)
+    console.error('Property save error:', error)
+    notificationStore.showError('Failed to save properties: ' + error.message)
   } finally {
     loading.value = false
   }

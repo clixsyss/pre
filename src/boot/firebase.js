@@ -64,31 +64,24 @@ if (auth) {
 }
 
 export default defineBoot(async ({ app }) => {
-  // Initialize Capacitor Firebase plugins for native platforms
-  if (isNative) {
+  console.log('Firebase Boot: Starting initialization...', { isNative, platform })
+  
+  // Skip Capacitor Firebase plugins - use Web SDK exclusively for reliability
+  console.log('Firebase Boot: Using Firebase Web SDK for all platforms (no Capacitor plugins)')
+  
+  // Simple iOS-specific initialization
+  if (platform === 'ios' && isNative) {
     try {
-      const { FirebaseApp } = await import('@capacitor-firebase/app')
-      await FirebaseApp.initializeApp()
-      console.log('Firebase Boot: Capacitor Firebase App initialized')
-    } catch (error) {
-      console.error('Firebase Boot: Failed to initialize Capacitor Firebase App:', error)
-      console.warn('Firebase Boot: Continuing without @capacitor-firebase/app - other plugins may still work')
-      // Don't throw - other Firebase plugins can work without this
-    }
-    
-    // Additional iOS-specific initialization
-    if (platform === 'ios') {
-      try {
-        // Ensure Firebase is properly configured for iOS
-        console.log('Firebase Boot: Performing iOS-specific initialization...')
-        
-        // Add a small delay to ensure Firebase is fully ready
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        console.log('Firebase Boot: iOS initialization completed')
-      } catch (iosError) {
-        console.warn('Firebase Boot: iOS-specific initialization failed:', iosError)
-      }
+      console.log('Firebase Boot: iOS - Waiting for services to stabilize...')
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      console.log('Firebase Boot: iOS - Services ready', {
+        auth: !!auth,
+        db: !!db,
+        storage: !!storage
+      })
+    } catch (iosError) {
+      console.error('Firebase Boot: iOS initialization error:', iosError)
     }
   }
 
@@ -100,6 +93,8 @@ export default defineBoot(async ({ app }) => {
   app.config.globalProperties.$googleProvider = googleProvider
   app.config.globalProperties.$isNative = isNative
   app.config.globalProperties.$platform = platform
+  
+  console.log('Firebase Boot: Complete - Web SDK ready')
 })
 
 // Export Firebase services for use in components

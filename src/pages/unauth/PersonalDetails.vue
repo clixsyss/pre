@@ -262,13 +262,9 @@ defineOptions({
 })
 
 const router = useRouter()
-// route removed - not needed in this component
 const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
 const loading = ref(false)
-// Debug helpers
-const DEBUG_PD = true
-const dlog = (...args) => { if (DEBUG_PD) console.log('[PersonalDetails][debug]', ...args) }
 const frontIdFile = ref(null)
 const backIdFile = ref(null)
 const profilePictureFile = ref(null)
@@ -285,52 +281,7 @@ const formData = reactive({
   nationalId: '',
 })
 
-// Function to update user data in Firestore with personal details
-const updateUserDetailsInFirestore = async (userId, userDetails) => {
-  try {
-    const userDocRef = doc(db, 'users', userId)
-    
-    const updateDocument = {
-      // Personal Details
-      firstName: userDetails.firstName,
-      lastName: userDetails.lastName,
-      mobile: userDetails.mobile,
-      dateOfBirth: userDetails.dateOfBirth,
-      gender: userDetails.gender,
-      nationalId: userDetails.nationalId,
-      
-      // Document URLs (if provided)
-      ...(userDetails.documents && {
-        documents: userDetails.documents
-      }),
-      
-      // Projects data (if provided)
-      ...(userDetails.projects && {
-        projects: userDetails.projects
-      }),
-      
-      // Update registration status
-      registrationStatus: 'completed',
-      registrationStep: 'complete',
-      updatedAt: serverTimestamp(),
-      
-      // Additional metadata
-      fullName: `${userDetails.firstName} ${userDetails.lastName}`,
-      isProfileComplete: true
-    }
-    
-    await setDoc(userDocRef, updateDocument, { merge: true })
-    
-    console.log('User details saved to Firestore successfully:', updateDocument)
-    return true
-  } catch (error) {
-    console.error('Error saving user details to Firestore:', error)
-    throw error
-  }
-}
-
 onMounted(() => {
-  dlog('mounted, loading store data', { email: registrationStore.personalData.email })
   // Get email from registration store
   const email = registrationStore.personalData.email || 'Example@gmail.com'
   formData.email = email
@@ -343,17 +294,6 @@ onMounted(() => {
     formData.dateOfBirth = registrationStore.userDetails.dateOfBirth
     formData.gender = registrationStore.userDetails.gender
     formData.nationalId = registrationStore.userDetails.nationalId
-  }
-  
-  // Check if email is verified
-  if (!registrationStore.isEmailVerified) {
-    try {
-      dlog('email not verified, allowing continuation but notifying')
-      notificationStore.showWarning('Please complete email verification first')
-    } catch (e) {
-      console.warn('[PersonalDetails] warning notification failed', e)
-    }
-    // keep user on this page to continue filling details
   }
 })
 
@@ -440,23 +380,20 @@ const handleSubmit = async () => {
   loading.value = true
   
   try {
-    dlog('submit start, validating and preparing upload')
-    // Upload files to Firebase Storage first
-    const userId = auth.currentUser.uid
-    let uploadedDocuments = {}
-    
-    try {
-      uploadedDocuments = await fileUploadService.uploadUserDocuments(
-        userId,
-        frontIdFile.value,
-        backIdFile.value,
-        profilePictureFile.value
-      )
-      dlog('files uploaded', uploadedDocuments)
-    } catch (uploadError) {
-      console.error('[PersonalDetails] File upload error', uploadError)
-      throw new Error(`File upload failed: ${uploadError.message}`)
+    if (!auth.currentUser) {
+      throw new Error('Not authenticated. Please start over.')
     }
+
+    const userId = auth.currentUser.uid
+    
+    // Upload files
+    const uploadedDocuments = await fileUploadService.uploadUserDocuments(
+      userId,
+      frontIdFile.value,
+      backIdFile.value,
+      profilePictureFile.value
+    )
+    console.log('Documents uploaded')
 
     // Save user details to store
     registrationStore.setUserDetails({
@@ -468,77 +405,43 @@ const handleSubmit = async () => {
       nationalId: formData.nationalId,
     })
     
-    // Update the existing Firebase user's profile
-    if (auth.currentUser) {
-      // Update the user's profile with personal information and profile picture
-      await updateProfile(auth.currentUser, {
-        displayName: `${formData.firstName} ${formData.lastName}`,
-        photoURL: uploadedDocuments.profilePicture || null
-      })
-      dlog('profile updated', { uid: auth.currentUser.uid })
-      dlog('complete registration data', registrationStore.getRegistrationData())
+    // Update Firebase profile
+    await updateProfile(auth.currentUser, {
+      displayName: `${formData.firstName} ${formData.lastName}`,
+      photoURL: uploadedDocuments.profilePicture || null
+    })
+    console.log('Profile updated')
       
-      // Save all user data to Firestore including document URLs
-      const userDetails = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        mobile: formData.mobile,
-        dateOfBirth: formData.dateOfBirth,
-        gender: formData.gender,
-        nationalId: formData.nationalId,
-        // Include document URLs
-        documents: {
-          frontIdUrl: uploadedDocuments.frontId,
-          backIdUrl: uploadedDocuments.backId,
-          profilePictureUrl: uploadedDocuments.profilePicture || null
-        },
-        // Include projects data from registration store
-        projects: registrationStore.propertyData.projects || []
-      }
+    // Save to Firestore
+    await setDoc(doc(db, 'users', userId), {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      mobile: formData.mobile,
+      dateOfBirth: formData.dateOfBirth,
+      gender: formData.gender,
+      nationalId: formData.nationalId,
+      email: formData.email,
+      fullName: `${formData.firstName} ${formData.lastName}`,
+      documents: {
+        frontIdUrl: uploadedDocuments.frontId,
+        backIdUrl: uploadedDocuments.backId,
+        profilePictureUrl: uploadedDocuments.profilePicture || null
+      },
+      projects: registrationStore.propertyData.projects || [],
+      registrationStep: 'personal_complete',
+      registrationStatus: 'in_progress',
+      isProfileComplete: true,
+      updatedAt: serverTimestamp()
+    }, { merge: true })
+    console.log('User data saved')
       
-      dlog('writing user details to Firestore', { userId })
-      await updateUserDetailsInFirestore(userId, userDetails)
-      dlog('firestore write done')
+    notificationStore.showSuccess('Details saved! Continue to property selection.')
       
-      // Show success notification
-      notificationStore.showSuccess('Personal details and documents saved! Continue to property information.')
-      
-      // Don't clear registration store or sign out yet - user needs to complete property details
-      // registrationStore.resetRegistration()
-      // await signOut(auth)
-      
-              // Redirect to Register.vue to complete property details
-        // The Register.vue will automatically detect that personal details are completed
-        // and show the property step
-        try {
-          await router.push('/register')
-          dlog('navigation back to /register succeeded')
-        } catch (e) {
-          console.warn('[PersonalDetails] navigation failed, fallback to replace', e)
-          try {
-            await router.replace('/register')
-          } catch (e2) {
-            console.warn('[PersonalDetails] replace failed, hard redirecting', e2)
-            window.location.href = '/register'
-          }
-        }
-    } else {
-      throw new Error('No authenticated user found. Please try again.')
-    }
+    // Navigate back to register
+    router.push('/register')
   } catch (error) {
-    console.error('[PersonalDetails] submit error', error)
-    
-    // Handle specific Firebase auth errors
-    let errorMessage = 'Profile update failed'
-    if (error.code === 'auth/requires-recent-login') {
-      errorMessage = 'Session expired. Please sign in again.'
-    } else if (error.code === 'firestore/permission-denied') {
-      errorMessage = 'Database access denied. Please contact support.'
-    } else {
-      errorMessage += ': ' + error.message
-    }
-    
-    notificationStore.showError(errorMessage)
+    console.error('Save error:', error)
+    notificationStore.showError('Failed to save: ' + error.message)
   } finally {
     loading.value = false
   }

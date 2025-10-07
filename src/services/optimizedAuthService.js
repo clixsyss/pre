@@ -18,16 +18,9 @@ class OptimizedAuthService {
   }
 
   async initialize() {
-    if (this.isNative && !this.initialized) {
-      try {
-        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
-        this.capacitorAuth = FirebaseAuthentication
-        this.initialized = true
-        console.log('OptimizedAuthService: Capacitor Firebase Authentication initialized')
-      } catch (error) {
-        console.error('OptimizedAuthService: Failed to initialize Capacitor Firebase Authentication:', error)
-      }
-    }
+    // Skip Capacitor Firebase - use Web SDK exclusively
+    console.log('OptimizedAuthService: Using Web SDK for all platforms')
+    this.initialized = true
   }
 
   /**
@@ -49,15 +42,9 @@ class OptimizedAuthService {
     }
 
     try {
-      if (this.isNative) {
-        await this.initialize()
-        const result = await this.capacitorAuth.getCurrentUser()
-        this.currentUser = result.user
-        console.log('🚀 OptimizedAuthService: Fetched fresh current user from Capacitor:', this.currentUser ? 'authenticated' : 'not authenticated')
-      } else {
-        this.currentUser = this.auth.currentUser
-        console.log('🚀 OptimizedAuthService: Fetched fresh current user from Web SDK:', this.currentUser ? 'authenticated' : 'not authenticated')
-      }
+      // Use Web SDK for all platforms (simpler and more reliable)
+      this.currentUser = this.auth.currentUser
+      console.log('🚀 OptimizedAuthService: Current user from Web SDK:', this.currentUser ? 'authenticated' : 'not authenticated')
       
       return this.currentUser
     } catch (error) {
@@ -72,24 +59,12 @@ class OptimizedAuthService {
    */
   async signInWithEmailAndPassword(email, password) {
     try {
-      if (this.isNative) {
-        await this.initialize()
-        const result = await this.capacitorAuth.signInWithEmailAndPassword({
-          email,
-          password
-        })
-        this.currentUser = result.user
-        return {
-          user: result.user,
-          credential: result.credential
-        }
-      } else {
-        const result = await signInWithEmailAndPassword(this.auth, email, password)
-        this.currentUser = result.user
-        return {
-          user: result.user,
-          credential: result.credential
-        }
+      // Use Web SDK for all platforms
+      const result = await signInWithEmailAndPassword(this.auth, email, password)
+      this.currentUser = result.user
+      return {
+        user: result.user,
+        credential: result.credential
       }
     } catch (error) {
       console.error('Sign in error:', error)
@@ -102,24 +77,12 @@ class OptimizedAuthService {
    */
   async createUserWithEmailAndPassword(email, password) {
     try {
-      if (this.isNative) {
-        await this.initialize()
-        const result = await this.capacitorAuth.createUserWithEmailAndPassword({
-          email,
-          password
-        })
-        this.currentUser = result.user
-        return {
-          user: result.user,
-          credential: result.credential
-        }
-      } else {
-        const result = await createUserWithEmailAndPassword(this.auth, email, password)
-        this.currentUser = result.user
-        return {
-          user: result.user,
-          credential: result.credential
-        }
+      // Use Web SDK for all platforms
+      const result = await createUserWithEmailAndPassword(this.auth, email, password)
+      this.currentUser = result.user
+      return {
+        user: result.user,
+        credential: result.credential
       }
     } catch (error) {
       console.error('Create user error:', error)
@@ -132,12 +95,8 @@ class OptimizedAuthService {
    */
   async signOut() {
     try {
-      if (this.isNative) {
-        await this.initialize()
-        await this.capacitorAuth.signOut()
-      } else {
-        await firebaseSignOut(this.auth)
-      }
+      // Use Web SDK for all platforms
+      await firebaseSignOut(this.auth)
       
       // Clear cached user
       this.currentUser = null
@@ -154,35 +113,18 @@ class OptimizedAuthService {
    * Listen to auth state changes with caching
    */
   onAuthStateChanged(callback) {
-    if (this.isNative) {
-      this.initialize().then(() => {
-        return this.capacitorAuth.addListener('authStateChange', (result) => {
-          console.log('🚀 OptimizedAuthService: Auth state changed, user:', result.user ? 'authenticated' : 'not authenticated')
-          this.currentUser = result.user
-          
-          // Clear cache on sign out
-          if (!result.user) {
-            cacheService.clear()
-          }
-          
-          callback(result.user)
-        })
-      })
-      // Return a dummy unsubscribe function for native
-      return () => {}
-    } else {
-      return onAuthStateChanged(this.auth, (user) => {
-        console.log('🚀 OptimizedAuthService: Auth state changed, user:', user ? 'authenticated' : 'not authenticated')
-        this.currentUser = user
-        
-        // Clear cache on sign out
-        if (!user) {
-          cacheService.clear()
-        }
-        
-        callback(user)
-      })
-    }
+    // Use Web SDK for all platforms
+    return onAuthStateChanged(this.auth, (user) => {
+      console.log('🚀 OptimizedAuthService: Auth state changed, user:', user ? 'authenticated' : 'not authenticated')
+      this.currentUser = user
+      
+      // Clear cache on sign out
+      if (!user) {
+        cacheService.clear()
+      }
+      
+      callback(user)
+    })
   }
 
   /**
@@ -190,13 +132,9 @@ class OptimizedAuthService {
    */
   async sendEmailVerification(user) {
     try {
-      if (this.isNative) {
-        await this.initialize()
-        await this.capacitorAuth.sendEmailVerification()
-      } else {
-        const { sendEmailVerification } = await import('firebase/auth')
-        await sendEmailVerification(user)
-      }
+      // Use Web SDK for all platforms
+      const { sendEmailVerification } = await import('firebase/auth')
+      await sendEmailVerification(user)
     } catch (error) {
       console.error('Send email verification error:', error)
       throw error
@@ -208,13 +146,9 @@ class OptimizedAuthService {
    */
   async updateProfile(user, profile) {
     try {
-      if (this.isNative) {
-        await this.initialize()
-        await this.capacitorAuth.updateProfile(profile)
-      } else {
-        const { updateProfile } = await import('firebase/auth')
-        await updateProfile(user, profile)
-      }
+      // Use Web SDK for all platforms
+      const { updateProfile } = await import('firebase/auth')
+      await updateProfile(user, profile)
       
       // Invalidate user cache
       if (user && user.uid) {
@@ -231,23 +165,14 @@ class OptimizedAuthService {
    */
   async signInWithGoogle() {
     try {
-      if (this.isNative) {
-        await this.initialize()
-        const result = await this.capacitorAuth.signInWithGoogle()
-        this.currentUser = result.user
-        return {
-          user: result.user,
-          credential: result.credential
-        }
-      } else {
-        const { signInWithPopup, GoogleAuthProvider } = await import('firebase/auth')
-        const provider = new GoogleAuthProvider()
-        const result = await signInWithPopup(this.auth, provider)
-        this.currentUser = result.user
-        return {
-          user: result.user,
-          credential: result.credential
-        }
+      // Use Web SDK for all platforms
+      const { signInWithPopup, GoogleAuthProvider } = await import('firebase/auth')
+      const provider = new GoogleAuthProvider()
+      const result = await signInWithPopup(this.auth, provider)
+      this.currentUser = result.user
+      return {
+        user: result.user,
+        credential: result.credential
       }
     } catch (error) {
       console.error('Google sign in error:', error)

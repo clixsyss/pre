@@ -1,5 +1,5 @@
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
-import { storage } from '../boot/firebase'
+import { storage, auth } from '../boot/firebase'
 import performanceService from './performanceService'
 import { Capacitor } from '@capacitor/core'
 
@@ -39,46 +39,19 @@ class FileUploadService {
           throw new Error('File size must be less than 10MB')
         }
 
-        // Check if we're on iOS and use Capacitor Firebase Storage
+        // Check if we're on iOS
         const isIOS = Capacitor.getPlatform() === 'ios'
         const isNative = Capacitor.isNativePlatform()
         
         if (isIOS && isNative) {
-          console.log('📱 iOS detected, using Web SDK for better compatibility...')
+          console.log('📱 iOS detected, using Web SDK...')
           
-          // Check authentication status
-          const { getAuth } = await import('firebase/auth')
-          const auth = getAuth()
-          const user = auth.currentUser
-          console.log('📱 iOS: Auth status:', {
-            isAuthenticated: !!user,
-            uid: user?.uid,
-            email: user?.email
-          })
-          
-          // Ensure user is authenticated before proceeding
-          if (!user) {
-            console.log('📱 iOS: User not authenticated, waiting for auth state...')
-            
-            // Wait for authentication with a timeout
-            const authPromise = new Promise((resolve, reject) => {
-              const unsubscribe = auth.onAuthStateChanged((user) => {
-                unsubscribe()
-                if (user) {
-                  console.log('📱 iOS: User authenticated after wait:', user.uid)
-                  resolve(user)
-                } else {
-                  reject(new Error('User authentication failed'))
-                }
-              })
-            })
-            
-            const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('Authentication timeout')), 5000)
-            })
-            
-            await Promise.race([authPromise, timeoutPromise])
+          // Check authentication
+          if (!auth.currentUser) {
+            throw new Error('Not authenticated. Please sign in.')
           }
+          
+          console.log('📱 iOS: User authenticated:', auth.currentUser.uid)
           
           // Use Web SDK directly for iOS (more reliable than Capacitor plugin)
           console.log('📱 iOS: Using Web SDK for upload...')

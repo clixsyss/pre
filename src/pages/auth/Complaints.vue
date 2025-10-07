@@ -129,12 +129,15 @@
     <!-- New Complaint Modal -->
     <div v-if="showNewComplaintModal" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>New Complaint</h3>
-          <button @click="closeModal" class="close-btn">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
+        <ModalHeader title="New Complaint" subtitle="Tell us what went wrong" @close="closeModal">
+          <template #icon>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 8V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="17" r="1" fill="currentColor"/>
+            </svg>
+          </template>
+        </ModalHeader>
 
         <form @submit.prevent="submitComplaint" class="complaint-form">
           <div class="form-group">
@@ -240,6 +243,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useComplaintStore } from '../../stores/complaintStore';
 import { useNotificationStore } from '../../stores/notifications';
+import ModalHeader from '../../components/ModalHeader.vue';
 
 // Component name for ESLint
 defineOptions({
@@ -859,8 +863,9 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fafbfc;
 }
 
 .modal-header h3 {
@@ -868,19 +873,52 @@ onUnmounted(() => {
   color: #1f2937;
 }
 
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #AF1E23;
+  background: #fff5f2;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.15);
+}
+
+.modal-title-text h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.modal-title-text p {
+  margin: 2px 0 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
 .close-btn {
-  background: none;
+  background: #f1f5f9;
   border: none;
-  font-size: 1.25rem;
-  color: #6b7280;
+  color: #64748b;
   cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 50%;
-  transition: background 0.2s;
+  padding: 8px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .close-btn:hover {
-  background: #f3f4f6;
+  background: #e2e8f0;
+  color: #334155;
 }
 
 .complaint-form {

@@ -2,19 +2,18 @@
   <div v-if="isOpen" class="modal-overlay" @click="closeModal">
     <div class="modal-content" @click.stop>
       <!-- Modal Header -->
-      <div class="modal-header">
-        <div class="header-left">
-          <h2 class="modal-title">{{ booking?.serviceName || 'Service Booking' }}</h2>
+      <ModalHeader :title="booking?.serviceName || 'Service Booking'" subtitle="Booking details" @close="closeModal">
+        <template #icon>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </template>
+        <template #right>
           <span :class="['status-badge', booking?.status?.toLowerCase()]">
             {{ booking?.status || 'Loading...' }}
           </span>
-        </div>
-        <button @click="closeModal" class="close-btn">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-      </div>
+        </template>
+      </ModalHeader>
 
       <!-- Modal Body -->
       <div class="modal-body">
@@ -153,6 +152,7 @@ import { ref, computed, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProjectStore } from '../stores/projectStore';
 import serviceBookingService from '../services/serviceBookingService';
+import ModalHeader from './ModalHeader.vue';
 
 // Component name for ESLint
 defineOptions({

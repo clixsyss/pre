@@ -337,23 +337,41 @@ const filteredNews = computed(() => {
   
   // For homepage (showAll = false), show latest 3 news items with featured priority
   if (!props.showAll) {
-    // Sort by featured status first, then by date
+    // Sort by featured status first, then by date (createdAt → publishedAt → updatedAt)
+    const coerceDate = (val) => {
+      if (!val) return null
+      if (val.toDate && typeof val.toDate === 'function') return val.toDate()
+      if (typeof val === 'object' && typeof val.seconds === 'number') return new Date(val.seconds * 1000)
+      const d = new Date(val)
+      return isNaN(d.getTime()) ? null : d
+    }
+
     filtered.sort((a, b) => {
-      // Featured items first
       if (a.featured && !b.featured) return -1
       if (!a.featured && b.featured) return 1
-      
-      // Then by creation date (newest first)
-      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt)
-      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt)
-      return dateB - dateA
+
+      const aDate = coerceDate(a.createdAt) || coerceDate(a.publishedAt) || coerceDate(a.updatedAt) || new Date(0)
+      const bDate = coerceDate(b.createdAt) || coerceDate(b.publishedAt) || coerceDate(b.updatedAt) || new Date(0)
+      return bDate - aDate
     })
-    
+
     // Take only the latest 3
     return filtered.slice(0, 3)
   }
   
-  return filtered
+  // For All News listing, also sort by createdAt → publishedAt → updatedAt to ensure stable order
+  const coerceDate = (val) => {
+    if (!val) return null
+    if (val.toDate && typeof val.toDate === 'function') return val.toDate()
+    if (typeof val === 'object' && typeof val.seconds === 'number') return new Date(val.seconds * 1000)
+    const d = new Date(val)
+    return isNaN(d.getTime()) ? null : d
+  }
+  return filtered.slice().sort((a, b) => {
+    const aDate = coerceDate(a.createdAt) || coerceDate(a.publishedAt) || coerceDate(a.updatedAt) || new Date(0)
+    const bDate = coerceDate(b.createdAt) || coerceDate(b.publishedAt) || coerceDate(b.updatedAt) || new Date(0)
+    return bDate - aDate
+  })
 })
 
 const getTabCount = (tabValue) => {
@@ -387,85 +405,74 @@ const formatTime = (timestamp) => {
   if (!timestamp) return 'Recently'
 
   try {
-    let date
-    if (timestamp.toDate && typeof timestamp.toDate === 'function') {
-      // Firestore Timestamp
-      date = timestamp.toDate()
-    } else if (timestamp instanceof Date) {
-      // Already a Date object
-      date = timestamp
-    } else if (timestamp.seconds && typeof timestamp.seconds === 'number') {
-      // Firestore timestamp object with seconds
-      date = new Date(timestamp.seconds * 1000)
-    } else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
-      // String or number timestamp
-      date = new Date(timestamp)
-    } else {
-      console.warn('Unknown timestamp format:', timestamp)
-      return 'Recently'
+    // Normalize input to a valid Date for all environments (including iOS Safari)
+    const normalizeToDate = (ts) => {
+      if (!ts) return null
+      // Firestore Timestamp instance
+      if (ts.toDate && typeof ts.toDate === 'function') return ts.toDate()
+      // Firestore-like object { seconds, nanoseconds }
+      if (typeof ts === 'object' && typeof ts.seconds === 'number') return new Date(ts.seconds * 1000)
+      // Date instance
+      if (ts instanceof Date) return ts
+      // Milliseconds since epoch
+      if (typeof ts === 'number') return new Date(ts)
+      // String parsing with iOS-safe normalization
+      if (typeof ts === 'string') {
+        // Try native parse first
+        const firstPass = new Date(ts)
+        if (!isNaN(firstPass.getTime())) return firstPass
+
+        // Attempt to normalize formats like: "October 5, 2025 at 11:59:46 AM UTC+3"
+        let s = ts
+        s = s.replace(' at ', ' ')
+        s = s.replace('UTC+', '+').replace('UTC-', '-')
+        // If timezone has no colon (e.g. +3), make it +03:00
+        s = s.replace(/([+-])(\d{1,2})(?!:)/, (m, sign, hh) => `${sign}${hh.padStart(2, '0')}:00`)
+        const secondPass = new Date(s)
+        if (!isNaN(secondPass.getTime())) return secondPass
+        return null
+      }
+      return null
     }
 
-    // Check if date is valid
-    if (isNaN(date.getTime())) {
-      console.warn('Invalid date:', timestamp)
-      return 'Recently'
-    }
+    const date = normalizeToDate(timestamp)
+    if (!date || isNaN(date.getTime())) return 'Recently'
 
     const now = new Date()
-    const diffInSeconds = Math.floor((now - date) / 1000)
+    let diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
-    // Handle future dates (shouldn't happen but just in case)
-    if (diffInSeconds < 0) return 'Just now'
+    // Clamp obvious future dates (clock skew or tz issues) to treat as past
+    if (diffInSeconds < 0) diffInSeconds = Math.abs(diffInSeconds)
 
-    // Less than 1 minute
     if (diffInSeconds < 60) return 'Just now'
-    
-    // Less than 1 hour
     if (diffInSeconds < 3600) {
       const minutes = Math.floor(diffInSeconds / 60)
       return `${minutes}m ago`
     }
-    
-    // Less than 24 hours
     if (diffInSeconds < 86400) {
       const hours = Math.floor(diffInSeconds / 3600)
       return `${hours}h ago`
     }
-    
-    // Less than 7 days
     if (diffInSeconds < 604800) {
       const days = Math.floor(diffInSeconds / 86400)
       return `${days}d ago`
     }
-    
-    // Less than 30 days
     if (diffInSeconds < 2592000) {
       const weeks = Math.floor(diffInSeconds / 604800)
       return `${weeks}w ago`
     }
-    
-    // Calculate months more accurately
+
     const nowYear = now.getFullYear()
     const nowMonth = now.getMonth()
     const dateYear = date.getFullYear()
     const dateMonth = date.getMonth()
-    
     const monthDiff = (nowYear - dateYear) * 12 + (nowMonth - dateMonth)
-    
-    if (monthDiff === 1) {
-      return '1 month ago'
-    } else if (monthDiff < 12) {
-      return `${monthDiff} months ago`
-    } else if (monthDiff < 24) {
-      return '1 year ago'
-    } else {
-      const years = Math.floor(monthDiff / 12)
-      if (years === 1) {
-        return '1 year ago'
-      } else {
-        return `${years} years ago`
-      }
-    }
+
+    if (monthDiff === 1) return '1 month ago'
+    if (monthDiff < 12) return `${monthDiff} months ago`
+    if (monthDiff < 24) return '1 year ago'
+    const years = Math.floor(monthDiff / 12)
+    return years === 1 ? '1 year ago' : `${years} years ago`
   } catch (error) {
     console.warn('Error formatting date:', error, 'Timestamp:', timestamp)
     return 'Recently'
@@ -646,8 +653,8 @@ const fetchNews = async () => {
 
     // Transform news items to display format
     newsItems.value = news.map(item => {
-      // Use updatedAt as fallback if createdAt is missing
-      const displayCreatedAt = item.createdAt || item.updatedAt || new Date()
+      // Prefer createdAt, then publishedAt, then updatedAt for display; no fallback to now
+      const displayCreatedAt = item.createdAt || item.publishedAt || item.updatedAt || null
       
       return {
         id: item.id,
@@ -665,7 +672,8 @@ const fetchNews = async () => {
         linkUrl: item.linkUrl || null,
         linkTitle: item.linkTitle || null,
         createdAt: displayCreatedAt,
-        updatedAt: item.updatedAt
+        updatedAt: item.updatedAt,
+        publishedAt: item.publishedAt
       }
     })
   } catch (error) {

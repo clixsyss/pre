@@ -261,7 +261,7 @@ onMounted(() => {
   border-radius: 16px;
   width: 100%;
   max-width: 500px;
-  max-height: 90vh;
+  max-height: 85vh;
   overflow: hidden;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   animation: modal-slide-up 0.3s ease-out;
@@ -335,7 +335,7 @@ onMounted(() => {
 }
 
 .modal-body {
-  max-height: calc(90vh - 100px);
+  max-height: calc(85vh - 100px);
   overflow-y: auto;
 }
 

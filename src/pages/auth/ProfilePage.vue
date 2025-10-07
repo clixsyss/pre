@@ -250,7 +250,7 @@
               </svg>
             </div>
             <div class="section-text">
-              <h3>Complaints & Support</h3>
+              <h3>Complaints</h3>
               <p>Submit and track your complaints</p>
             </div>
           </div>

@@ -301,10 +301,25 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
         const isProfileComplete = userData.isProfileComplete
         
         if (!isProfileComplete) {
-          console.log('Profile incomplete, redirecting to onboarding')
-          next('/onboarding')
-          resolve()
-          return
+          // Check if user actually has required fields but profile is marked incomplete
+          const hasRequiredFields = userData.firstName && userData.lastName && userData.mobile && userData.email
+          
+          if (hasRequiredFields) {
+            console.log('Profile has required fields but marked incomplete, fixing...')
+            // Import and use markProfileComplete
+            const { markProfileComplete } = await import('../utils/firestore')
+            try {
+              await markProfileComplete(user.uid)
+              console.log('Profile marked as complete in navigation guard')
+            } catch (error) {
+              console.error('Error marking profile complete:', error)
+            }
+          } else {
+            console.log('Profile incomplete and missing required fields, redirecting to onboarding')
+            next('/onboarding')
+            resolve()
+            return
+          }
         }
       }
       
