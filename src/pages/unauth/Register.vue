@@ -786,7 +786,8 @@ const handlePropertySubmit = async () => {
               }
             }
             return cleaned
-          }
+          } 
+          
           
           const cleanedData = cleanData(completeUserData)
           console.log('[Register] Cleaned data (nulls removed):', JSON.stringify(cleanedData, null, 2))
