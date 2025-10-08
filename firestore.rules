@@ -658,26 +658,19 @@ service cloud.firestore {
     
     // Fines and Violations
     match /projects/{projectId}/fines/{fineId} {
-      // Allow read access for collection queries (where clauses need this)
-      // Security is maintained by the where clause filtering
+      // TEMPORARY: Allow all authenticated users to read (for debugging)
+      // We'll filter on client-side and see what userId values exist
       allow read: if request.auth != null;
-      // Admins can write everything
-      allow write: if request.auth != null && 
+      
+      // Admins can create/delete everything
+      allow create, delete: if request.auth != null && 
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      
       // Allow users to update their own fines (for adding messages)
+      // Admins can update any fine
       allow update: if request.auth != null && 
-        resource.data.userId == request.auth.uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages', 'lastMessageAt', 'updatedAt']);
-    }
-    
-    // Allow listing fines with proper security
-    match /projects/{projectId}/fines {
-      // Allow authenticated users to query fines (needed for where clauses)
-      // Security is maintained by the where clause filtering in the application
-      allow read: if request.auth != null;
-      // Only admins can write to the collection
-      allow write: if request.auth != null && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+        (resource.data.userId == request.auth.uid || 
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
     
     // Project Support Chats - allow authenticated users to read/write support chats within project

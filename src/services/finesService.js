@@ -92,15 +92,6 @@ export const getUserFines = async (projectId, userId) => {
       const collectionPath = `projects/${projectId}/fines`
       console.log('🔍 Collection path:', collectionPath)
       
-      // First, let's test if we can access the collection at all
-      console.log('🔍 Testing basic collection access...')
-      try {
-        const testResult = await firestoreService.getDocs(collectionPath, { timeoutMs: 5000 })
-        console.log('✅ Basic collection access works, docs count:', testResult.docs?.length || 0)
-      } catch (testError) {
-        console.log('❌ Basic collection access failed:', testError.message)
-      }
-      
       // Use Firestore where clause for secure server-side filtering
       const queryOptions = {
         filters: [

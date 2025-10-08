@@ -213,10 +213,17 @@ const loadViolations = async () => {
     console.log('ViolationsPage: Loaded violations:', userViolations.length)
     console.log('ViolationsPage: Violations data:', userViolations)
     
-    violations.value = userViolations
+    // Additional client-side filtering for extra security
+    const filteredViolations = userViolations.filter(v => {
+      console.log('ViolationsPage: Checking violation:', { violationId: v.id, violationUserId: v.userId, currentUserId: currentUserId.value })
+      return v.userId === currentUserId.value
+    })
+    console.log('ViolationsPage: After client-side filter:', filteredViolations.length)
     
-    // Calculate stats
-    const stats = userViolations.reduce((acc, violation) => {
+    violations.value = filteredViolations
+    
+    // Calculate stats from filtered violations
+    const stats = filteredViolations.reduce((acc, violation) => {
       acc.total++
       acc[violation.status] = (acc[violation.status] || 0) + 1
       return acc
