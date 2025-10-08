@@ -465,10 +465,6 @@ const isDeviceLoading = (deviceId) => {
   transition: background-color 0.2s ease;
 }
 
-.widget-header:hover {
-  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
-}
-
 .widget-header::before {
   content: '';
   position: absolute;
@@ -511,10 +507,6 @@ const isDeviceLoading = (deviceId) => {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.accordion-toggle:hover {
-  background: rgba(255, 255, 255, 0.3);
 }
 
 .accordion-toggle.expanded {
@@ -570,11 +562,11 @@ const isDeviceLoading = (deviceId) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.view-all-btn:hover {
+/* .view-all-btn:hover {
   background: #F6F6F6;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
+} */
 
 /* Not Connected State */
 .not-connected-state {
@@ -631,11 +623,11 @@ const isDeviceLoading = (deviceId) => {
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
 
-.connect-btn:hover {
+/* .connect-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-}
+} */
 
 /* Accordion Content */
 .accordion-content {
@@ -659,10 +651,10 @@ const isDeviceLoading = (deviceId) => {
   transition: all 0.2s ease;
 }
 
-.single-device-card:hover {
+/* .single-device-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
-}
+} */
 
 .device-grid {
   display: grid;
@@ -753,9 +745,9 @@ const isDeviceLoading = (deviceId) => {
   border-radius: 2px;
 }
 
-.device-list::-webkit-scrollbar-thumb:hover {
+/* .device-list::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
-}
+} */
 
 .many-devices-message {
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -802,11 +794,11 @@ const isDeviceLoading = (deviceId) => {
   cursor: pointer;
 }
 
-.device-card:hover {
+/* .device-card:hover {
   border-color: #AF1E23;
   box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);
   transform: translateY(-2px);
-}
+} */
 
 .device-content {
   flex: 1;

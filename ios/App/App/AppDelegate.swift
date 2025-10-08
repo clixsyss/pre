@@ -9,19 +9,38 @@ import FirebaseStorage
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    var primaryApp: FirebaseApp?
+    var secondaryApp: FirebaseApp?
 
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+    ) -> Bool {
+        print("🔥 Firebase initialization starting...")
         
-        // Initialize Firebase first
+        // Initialize the primary (default) Firebase project (PRE)
+        // This uses native iOS Firebase for better performance and native features
         FirebaseApp.configure()
+        print("✅ Primary Firebase (PRE) initialized successfully (Native iOS)")
+
+        // Note: Secondary Firebase (Smart Mirror) is initialized via Web SDK in JavaScript
+        // This avoids conflicts and ensures proper auth functionality
+        print("ℹ️  Secondary Firebase (Smart Mirror) will be initialized via Web SDK")
+        print("   → Web SDK initialization is platform-independent and more reliable for secondary apps")
+
+        // Store primary app reference
+        primaryApp = FirebaseApp.app()
         
-        // Initialize Capacitor with traditional approach
+        print("🎯 Firebase initialization complete:")
+        print("   → Primary (PRE): \(primaryApp?.options.projectID ?? "none") [Native iOS]")
+        print("   → Secondary (Smart Mirror): Will use Web SDK [JavaScript]")
+
+        // Initialize Capacitor bridge
         self.window = UIWindow(frame: UIScreen.main.bounds)
         let bridge = CAPBridgeViewController()
         self.window?.rootViewController = bridge
         self.window?.makeKeyAndVisible()
-        
+
         return true
     }
 

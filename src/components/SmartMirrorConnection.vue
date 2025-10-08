@@ -357,11 +357,11 @@ const goToDevices = () => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
-.project-connection-item:hover {
+/* .project-connection-item:hover {
   border-color: #AF1E23;
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.15);
   transform: translateY(-2px);
-}
+} */
 
 .project-info {
   flex: 1;
@@ -420,11 +420,11 @@ const goToDevices = () => {
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
 }
-
+/* 
 .control-devices-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.6);
-}
+} */
 
 .control-devices-btn:disabled {
   opacity: 0.6;
@@ -464,10 +464,10 @@ const goToDevices = () => {
   box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
 }
 
-.connect-btn:hover:not(:disabled) {
+/* .connect-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.6);
-}
+} */
 
 .no-projects {
   text-align: center;
@@ -568,10 +568,10 @@ const goToDevices = () => {
   align-self: flex-start;
 }
 
-.connect-btn:hover:not(:disabled) {
+/* .connect-btn:hover:not(:disabled) {
   background: #AF1E23;
   transform: translateY(-2px);
-}
+} */
 
 .connect-btn:disabled {
   background: #ccc;
@@ -627,10 +627,10 @@ const goToDevices = () => {
   transition: all 0.3s ease;
 }
 
-.control-btn:hover {
+/* .control-btn:hover {
   background: #218838;
   transform: translateY(-1px);
-}
+} */
 
 .disconnect-btn {
   display: inline-flex;
@@ -647,10 +647,10 @@ const goToDevices = () => {
   transition: all 0.3s ease;
 }
 
-.disconnect-btn:hover {
+/* .disconnect-btn:hover {
   background: #dc3545;
   color: white;
-}
+} */
 
 /* Modal Styles */
 .modal-overlay {
@@ -773,10 +773,10 @@ const goToDevices = () => {
   justify-content: center;
 }
 
-.close-btn:hover:not(:disabled) {
+/* .close-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.2);
   transform: scale(1.05);
-}
+} */
 
 .close-btn:disabled {
   opacity: 0.5;
@@ -933,12 +933,12 @@ const goToDevices = () => {
   min-width: 100px;
 }
 
-.cancel-btn:hover:not(:disabled) {
+/* .cancel-btn:hover:not(:disabled) {
   background: #e5e7eb;
   border-color: #d1d5db;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
+} */
 
 .cancel-btn:disabled {
   cursor: not-allowed;
@@ -964,10 +964,10 @@ const goToDevices = () => {
   box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
 }
 
-.connect-btn:hover:not(:disabled) {
+/* .connect-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.6);
-}
+} */
 
 .connect-btn:disabled {
   opacity: 0.6;

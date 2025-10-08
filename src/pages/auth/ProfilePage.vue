@@ -964,7 +964,6 @@
             </div>
             <div class="project-details">
               <h4>{{userProjects.find(p => p.id === selectedProjectId)?.name || 'Selected Project'}}</h4>
-              <p>{{userProjects.find(p => p.id === selectedProjectId)?.location || 'Location not set'}}</p>
               <div v-if="isProjectSmartHomeConnected(selectedProjectId)" class="existing-connection">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -1032,22 +1031,6 @@
             </button>
             <button @click="handleLogin" class="connect-btn"
               :disabled="smartMirrorStore.isConnecting || !loginForm.email || !loginForm.password" type="submit">
-              <svg v-if="smartMirrorStore.isConnecting" class="loading-spinner" width="16" height="16"
-                viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" stroke-linecap="round"
-                  stroke-dasharray="31.416" stroke-dashoffset="31.416">
-                  <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416"
-                    repeatCount="indefinite" />
-                  <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416"
-                    repeatCount="indefinite" />
-                </circle>
-              </svg>
-              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22 11.08V12A10 10 0 1 1 5.93 5.93" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round" />
-                <polyline points="22,4 12,14.01 9,11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
               <span v-if="smartMirrorStore.isConnecting">Connecting...</span>
               <span v-else>Connect Account</span>
             </button>
@@ -3402,7 +3385,6 @@ onMounted(() => {
   background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   position: relative;
-  flex-direction: column;
 }
 
 .modal-header::after {
@@ -3779,7 +3761,7 @@ onMounted(() => {
 
 .device-management-modal .modal-header h3 {
   margin: 0 0 12px 0;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: white;
   display: flex;
@@ -3793,7 +3775,7 @@ onMounted(() => {
 
 .device-management-modal .modal-header p {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.9);
   line-height: 1.5;
   font-weight: 400;

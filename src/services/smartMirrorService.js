@@ -25,13 +25,32 @@ class SmartMirrorService {
     return performanceService.timeOperation('smartMirrorLogin', async () => {
       try {
         console.log('🚀 Smart mirror login:', { projectId, email })
+        console.log('📍 Step 1: Checking auth instance:', { 
+          authExists: !!smartMirrorAuth, 
+          authApp: smartMirrorAuth?.app?.name,
+          authProjectId: smartMirrorAuth?.app?.options?.projectId 
+        })
         
         // Authenticate with Firebase
-        const result = await signInWithEmailAndPassword(smartMirrorAuth, email, password)
+        console.log('📍 Step 2: Attempting signInWithEmailAndPassword...')
+        
+        // Add timeout to detect hanging auth
+        const authPromise = signInWithEmailAndPassword(smartMirrorAuth, email, password)
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Authentication timeout after 15 seconds')), 15000)
+        )
+        
+        const result = await Promise.race([authPromise, timeoutPromise])
+        console.log('✅ Step 2 complete: Sign in successful', { uid: result.user.uid })
         
         // Fetch user profile and devices for this specific project
+        console.log('📍 Step 3: Fetching user profile...')
         const userProfile = await this.fetchUserProfileForUser(result.user)
+        console.log('✅ Step 3 complete: User profile fetched')
+        
+        console.log('📍 Step 4: Fetching devices...')
         const { rooms, devices } = await this.fetchDevicesForUser(result.user)
+        console.log('✅ Step 4 complete: Devices fetched', { roomCount: rooms.length, deviceCount: devices.length })
         
         // Store connection for this project with project-specific data
         this.projectConnections.set(projectId, {
@@ -64,6 +83,11 @@ class SmartMirrorService {
       return { success: true, user: result.user }
       } catch (error) {
         console.error('❌ Smart Mirror login error:', error)
+        console.error('❌ Error details:', {
+          code: error.code,
+          message: error.message,
+          name: error.name
+        })
         errorHandlingService.handleFirestoreError(error, 'smartMirrorLogin')
         throw error
       }
