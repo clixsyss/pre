@@ -730,7 +730,7 @@ const handlePropertySubmit = async () => {
         isProfileComplete: true,
         
         // Approval status (auto-approve for now)
-        approvalStatus: 'approved',
+        approvalStatus: 'pending',
         approvedBy: 'system',
         approvedAt: now,
         
@@ -757,32 +757,52 @@ const handlePropertySubmit = async () => {
       const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
       
       if (isIOS) {
-        console.log('[Register] Using Web SDK without serverTimestamp for iOS...')
+        console.log('[Register] Using Capacitor Firestore plugin for iOS...')
         console.log('[Register] FINAL DATA:', JSON.stringify(completeUserData, null, 2))
         
         try {
-          // iOS: Use plain strings instead of serverTimestamp() which hangs
-          console.log('[Register] Saving with 10s timeout (no serverTimestamp)...')
-          const savePromise = setDoc(doc(db, 'users', registrationStore.tempUserId), completeUserData, { merge: true })
+          const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
           
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Firestore save timeout')), 10000)
+          // Clean null values for Capacitor plugin compatibility
+          const cleanData = (obj) => {
+            const cleaned = {}
+            for (const [key, value] of Object.entries(obj)) {
+              if (value === null || value === undefined) {
+                // Skip null/undefined values
+                continue
+              } else if (typeof value === 'object' && !Array.isArray(value)) {
+                // Recursively clean nested objects
+                const cleanedNested = cleanData(value)
+                if (Object.keys(cleanedNested).length > 0) {
+                  cleaned[key] = cleanedNested
+                }
+              } else if (Array.isArray(value)) {
+                // Keep arrays, clean their items if they're objects
+                cleaned[key] = value.map(item => 
+                  typeof item === 'object' && !Array.isArray(item) ? cleanData(item) : item
+                )
+              } else {
+                cleaned[key] = value
+              }
+            }
+            return cleaned
+          }
+          
+          const cleanedData = cleanData(completeUserData)
+          console.log('[Register] Cleaned data (nulls removed):', JSON.stringify(cleanedData, null, 2))
+          
+          console.log('[Register] Saving via Capacitor Firestore plugin...')
+          await FirebaseFirestore.setDocument({
+            reference: `users/${registrationStore.tempUserId}`,
+            data: cleanedData,
+            merge: true
           })
           
-          await Promise.race([savePromise, timeoutPromise])
-          console.log('[Register] ✅ Complete data saved (Web SDK)')
+          console.log('[Register] ✅ Complete data saved via Capacitor Firestore')
         } catch (e) {
-          console.error('[Register] Web SDK save failed or timed out:', e)
-          console.log('[Register] Error message:', e?.message)
-          console.log('[Register] Error code:', e?.code)
-          
-          // Try fire-and-forget - navigate anyway since PersonalDetails already saved the important data
-          console.log('[Register] PersonalDetails already saved documents, proceeding anyway...')
-          setDoc(doc(db, 'users', registrationStore.tempUserId), completeUserData, { merge: true }).then(() => {
-            console.log('[Register] ✅ Background save completed')
-          }).catch((bgError) => {
-            console.error('[Register] Background save also failed:', bgError)
-          })
+          console.error('[Register] Capacitor Firestore save failed:', e)
+          console.log('[Register] Error details:', JSON.stringify(e))
+          throw new Error('Failed to save registration data: ' + (e.message || 'Unknown error'))
         }
       } else {
         await setDoc(doc(db, 'users', registrationStore.tempUserId), {
