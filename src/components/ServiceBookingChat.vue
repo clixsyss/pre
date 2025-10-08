@@ -413,15 +413,11 @@ const handleImageUploadWithCapacitor = async () => {
       });
     }
 
-    // Upload using uploadBytesResumable with Blob
+    // Upload using Firebase Storage REST API for iOS
     const fileName = `image_${Date.now()}.jpg`;
-    const { ref: storageRef, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
-    const { storage } = await import('../boot/firebase');
-    
     const fullPath = `projects/${projectStore.selectedProject.id}/serviceBookings/${bookingId}/images/${fileName}`;
-    const fileRef = storageRef(storage, fullPath);
     
-    console.log('📱 Starting uploadBytesResumable with Blob...', {
+    console.log('📱 Starting REST API upload with Blob...', {
       fullPath,
       blobSize: blob.size,
       blobType: blob.type,
@@ -430,45 +426,46 @@ const handleImageUploadWithCapacitor = async () => {
     });
     
     try {
-      // Use uploadBytesResumable for better reliability
-      const uploadTask = uploadBytesResumable(fileRef, blob, {
-        contentType: 'image/jpeg',
-        customMetadata: {
-          uploadedBy: currentUser.uid,
-          uploadedAt: new Date().toISOString(),
-          isAnonymous: currentUser.isAnonymous.toString()
-        }
-      });
+      // Convert blob to ArrayBuffer for REST API
+      const arrayBuffer = await blob.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
       
-      // Wait for upload completion with timeout
-      const uploadPromise = new Promise((resolve, reject) => {
-        uploadTask.on('state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log('📱 Upload progress:', `${progress.toFixed(2)}% (${snapshot.bytesTransferred}/${snapshot.totalBytes} bytes)`);
-          },
-          (error) => {
-            console.error('📱 Upload error:', {
-              code: error.code,
-              message: error.message,
-              serverResponse: error.serverResponse,
-              customData: error.customData
-            });
-            reject(error);
-          },
-          () => {
-            console.log('📱 Upload completed successfully');
-            resolve(uploadTask.snapshot);
-          }
-        );
-      });
+      // Convert to base64
+      let binary = ''
+      const len = uint8Array.byteLength
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(uint8Array[i])
+      }
+      const base64 = btoa(binary)
       
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
-      );
+      console.log('📱 Converted blob to base64, size:', base64.length)
       
-      const snapshot = await Promise.race([uploadPromise, timeoutPromise]);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+      // Upload using Storage REST API via Capacitor HTTP
+      const { Http } = await import('@capacitor-community/http')
+      const bucket = 'pre-group.firebasestorage.app'
+      const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fullPath)}`
+      
+      console.log('📱 Uploading to:', uploadUrl)
+      
+      const uploadResponse = await Http.request({
+        url: uploadUrl,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'image/jpeg'
+        },
+        data: base64,
+        connectTimeout: 60000,
+        readTimeout: 60000
+      })
+      
+      console.log('📱 Upload response status:', uploadResponse.status)
+      
+      if (uploadResponse.status < 200 || uploadResponse.status >= 300) {
+        throw new Error(`Upload failed with status ${uploadResponse.status}`)
+      }
+      
+      // Get download URL
+      const downloadURL = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
       
       console.log('📱 Upload successful! URL:', downloadURL);
       
@@ -646,59 +643,66 @@ const handleImageUploadWithFile = async (file) => {
     const fileExtension = file.name.split('.').pop() || 'jpg';
     const fileName = `image_${timestamp}.${fileExtension}`;
     
-    console.log('🌐 Uploading file with direct Firebase Storage:', {
+    console.log('🌐 Uploading file:', {
       fileName: fileName,
       fileSize: fileToUpload.size,
       fileType: fileToUpload.type,
       userId: currentUser.uid
     });
     
-    // Upload using uploadBytesResumable with Blob
-    const { ref: storageRef, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
-    const { storage } = await import('../boot/firebase');
-    
     const fullPath = `projects/${projectStore.selectedProject.id}/serviceBookings/${bookingId}/images/${fileName}`;
-    const fileRef = storageRef(storage, fullPath);
     
-    // Use uploadBytesResumable for better reliability
-    const uploadTask = uploadBytesResumable(fileRef, fileToUpload, {
-      contentType: fileToUpload.type,
-      customMetadata: {
-        uploadedBy: currentUser.uid,
-        uploadedAt: new Date().toISOString(),
-        isAnonymous: currentUser.isAnonymous.toString()
+    // Check if iOS and use REST API
+    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    let imageUrl
+    
+    if (isIOS) {
+      console.log('📱 iOS detected, using Storage REST API for service booking chat...')
+      
+      // Convert file to ArrayBuffer
+      const arrayBuffer = await fileToUpload.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
+      
+      // Convert to base64
+      let binary = ''
+      const len = uint8Array.byteLength
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(uint8Array[i])
       }
-    });
-    
-    // Wait for upload completion with timeout
-    const uploadPromise = new Promise((resolve, reject) => {
-      uploadTask.on('state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          console.log('🌐 Upload progress:', `${progress.toFixed(2)}% (${snapshot.bytesTransferred}/${snapshot.totalBytes} bytes)`);
+      const base64 = btoa(binary)
+      
+      // Upload using Storage REST API
+      const { Http } = await import('@capacitor-community/http')
+      const bucket = 'pre-group.firebasestorage.app'
+      const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fullPath)}`
+      
+      const uploadResponse = await Http.request({
+        url: uploadUrl,
+        method: 'POST',
+        headers: {
+          'Content-Type': fileToUpload.type
         },
-        (error) => {
-          console.error('🌐 Upload error:', {
-            code: error.code,
-            message: error.message,
-            serverResponse: error.serverResponse,
-            customData: error.customData
-          });
-          reject(error);
-        },
-        () => {
-          console.log('🌐 Upload completed successfully');
-          resolve(uploadTask.snapshot);
-        }
-      );
-    });
-    
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
-    );
-    
-    const snapshot = await Promise.race([uploadPromise, timeoutPromise]);
-    const imageUrl = await getDownloadURL(snapshot.ref);
+        data: base64,
+        connectTimeout: 60000,
+        readTimeout: 60000
+      })
+      
+      if (uploadResponse.status >= 200 && uploadResponse.status < 300) {
+        imageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
+        console.log('📱 iOS: ✅ Image uploaded successfully')
+      } else {
+        throw new Error(`Upload failed with status ${uploadResponse.status}`)
+      }
+    } else {
+      // Use Web SDK for web and other platforms
+      console.log('🌐 Using Firebase Web SDK for upload...')
+      const { ref: storageRef, uploadBytes, getDownloadURL } = await import('firebase/storage');
+      const { storage } = await import('../boot/firebase');
+      
+      const fileRef = storageRef(storage, fullPath);
+      const snapshot = await uploadBytes(fileRef, fileToUpload);
+      imageUrl = await getDownloadURL(snapshot.ref);
+    }
     
     console.log('✅ ServiceBookingChat: Image uploaded successfully:', imageUrl);
     

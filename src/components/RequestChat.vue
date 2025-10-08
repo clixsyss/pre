@@ -190,14 +190,62 @@ const handleImageUpload = async (file) => {
       throw new Error('Missing projectId or requestId');
     }
 
-    // Upload image to Firebase Storage
+    // Upload image to Firebase Storage with iOS compatibility
     const timestamp = Date.now();
     const fileName = `message_${timestamp}_${file.name}`;
-    const storagePath = `projects/${projectId.value}/request-submissions/${requestId.value}/messages/${fileName}`;
-    const fileRef = storageRef(storage, storagePath);
+    const storagePath = `projects/${projectId.value}/request-submissions/${requestId.value}/messages/`;
     
-    const snapshot = await uploadBytes(fileRef, file);
-    const imageUrl = await getDownloadURL(snapshot.ref);
+    // Check if iOS native platform
+    const { Capacitor } = await import('@capacitor/core')
+    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    
+    let imageUrl
+    
+    if (isIOS) {
+      console.log('📱 iOS detected, using Storage REST API for request chat...')
+      
+      // Convert file to ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
+      
+      // Convert to base64
+      let binary = ''
+      const len = uint8Array.byteLength
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(uint8Array[i])
+      }
+      const base64 = btoa(binary)
+      
+      // Upload using Storage REST API
+      const { Http } = await import('@capacitor-community/http')
+      const fullPath = `${storagePath}${fileName}`
+      const bucket = 'pre-group.firebasestorage.app'
+      const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fullPath)}`
+      
+      const uploadResponse = await Http.request({
+        url: uploadUrl,
+        method: 'POST',
+        headers: {
+          'Content-Type': file.type
+        },
+        data: base64,
+        connectTimeout: 60000,
+        readTimeout: 60000
+      })
+      
+      if (uploadResponse.status >= 200 && uploadResponse.status < 300) {
+        imageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
+        console.log('📱 iOS: ✅ Image uploaded successfully')
+      } else {
+        throw new Error(`Upload failed with status ${uploadResponse.status}`)
+      }
+    } else {
+      // Use Web SDK for web and other platforms
+      console.log('🌐 Using Firebase Web SDK for request chat upload...')
+      const fileRef = storageRef(storage, storagePath + fileName)
+      const snapshot = await uploadBytes(fileRef, file)
+      imageUrl = await getDownloadURL(snapshot.ref)
+    }
     
     // Send message with image using firestoreService
     const messageData = {

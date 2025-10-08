@@ -507,7 +507,30 @@ const handleProfilePictureChange = async (event) => {
   profilePicUploading.value = true;
 
   try {
-    const userId = auth.currentUser.uid;
+    // Get current user (iOS-compatible)
+    const { Capacitor } = await import('@capacitor/core')
+    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    
+    let userId
+    
+    if (isIOS) {
+      console.log('📱 iOS: Getting current user from Capacitor Auth...')
+      const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
+      const result = await FirebaseAuthentication.getCurrentUser()
+      
+      if (!result || !result.user) {
+        throw new Error('No authenticated user found')
+      }
+      
+      userId = result.user.uid
+      console.log('📱 iOS: Got user:', userId)
+    } else {
+      if (!auth.currentUser) {
+        throw new Error('No authenticated user found')
+      }
+      userId = auth.currentUser.uid
+    }
+    
     const uploadedDocuments = await fileUploadService.uploadUserDocuments(
       userId,
       null, // frontId
@@ -515,10 +538,12 @@ const handleProfilePictureChange = async (event) => {
       file  // profilePicture
     );
 
-    // Update user profile in Firebase Auth
-    await updateProfile(auth.currentUser, {
-      photoURL: uploadedDocuments.profilePicture
-    });
+    // Update user profile in Firebase Auth (only for web, skip for iOS as Capacitor handles it differently)
+    if (!isIOS) {
+      await updateProfile(auth.currentUser, {
+        photoURL: uploadedDocuments.profilePicture
+      });
+    }
 
     // Update user document in Firestore
     const userDocRef = doc(db, 'users', userId);
@@ -532,8 +557,13 @@ const handleProfilePictureChange = async (event) => {
 
     notificationStore.showSuccess('Profile picture updated successfully!');
   } catch (error) {
-    console.error('Error updating profile picture:', error);
-    notificationStore.showError('Failed to update profile picture. Please try again.');
+    console.error('Error updating profile picture:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      error: error
+    });
+    notificationStore.showError(`Failed to update profile picture: ${error.message || 'Unknown error'}`);
   } finally {
     profilePicUploading.value = false;
   }

@@ -332,11 +332,62 @@ export const onFineChange = (projectId, fineId, callback) => {
 // Upload fine evidence image
 export const uploadFineImage = async (projectId, fineId, imageFile) => {
   try {
-    const imageRef = ref(storage, `projects/${projectId}/fines/${fineId}/${Date.now()}_${imageFile.name}`);
-    const snapshot = await uploadBytes(imageRef, imageFile);
-    const downloadURL = await getDownloadURL(snapshot.ref);
+    const timestamp = Date.now();
+    const fileName = `${timestamp}_${imageFile.name}`;
+    const storagePath = `projects/${projectId}/fines/${fineId}/`;
     
-    return downloadURL;
+    // Check if iOS native platform
+    const { Capacitor } = await import('@capacitor/core')
+    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    
+    if (isIOS) {
+      console.log('📱 iOS detected, using Storage REST API for fine image...')
+      
+      // Convert file to ArrayBuffer
+      const arrayBuffer = await imageFile.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
+      
+      // Convert to base64
+      let binary = ''
+      const len = uint8Array.byteLength
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(uint8Array[i])
+      }
+      const base64 = btoa(binary)
+      
+      // Upload using Storage REST API
+      const { Http } = await import('@capacitor-community/http')
+      const fullPath = `${storagePath}${fileName}`
+      const bucket = 'pre-group.firebasestorage.app'
+      const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fullPath)}`
+      
+      const uploadResponse = await Http.request({
+        url: uploadUrl,
+        method: 'POST',
+        headers: {
+          'Content-Type': imageFile.type
+        },
+        data: base64,
+        connectTimeout: 60000,
+        readTimeout: 60000
+      })
+      
+      if (uploadResponse.status >= 200 && uploadResponse.status < 300) {
+        const downloadURL = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
+        console.log('📱 iOS: ✅ Fine image uploaded successfully')
+        return downloadURL
+      } else {
+        throw new Error(`Upload failed with status ${uploadResponse.status}`)
+      }
+    } else {
+      // Use Web SDK for web and other platforms
+      console.log('🌐 Using Firebase Web SDK for fine image upload...')
+      const imageRef = ref(storage, storagePath + fileName);
+      const snapshot = await uploadBytes(imageRef, imageFile);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      return downloadURL;
+    }
   } catch (error) {
     console.error('Error uploading fine image:', error);
     throw error;

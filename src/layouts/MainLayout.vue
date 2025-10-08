@@ -534,8 +534,14 @@ watch(
       // Reset violation notifications when switching projects
       resetViolationNotifications()
       
-      // Check for violations IMMEDIATELY (highest priority)
-      checkForViolations() // No delay - load violations first when switching projects
+      // Check for violations with a small delay to ensure everything is loaded
+      setTimeout(async () => {
+        try {
+          await checkForViolations()
+        } catch (error) {
+          console.error('❌ Error checking violations after project change:', error)
+        }
+      }, 800) // Small delay to ensure project data is loaded
       
       // Emit a custom event that child components can listen to
       window.dispatchEvent(new CustomEvent('projectChanged', {
@@ -551,11 +557,24 @@ watch(
   { deep: true }
 )
 
-// Watch for route changes to detect chat pages
+// Watch for route changes to detect chat pages and check violations
 watch(
   () => route.path,
-  () => {
+  (newPath) => {
     checkIfChatPage()
+    
+    // Check for violations when navigating to main app pages (not on every page to avoid spam)
+    const mainPages = ['/home', '/profile']
+    if (mainPages.includes(newPath) && projectStore.hasSelectedProject) {
+      console.log('📍 Navigated to main page, checking violations...')
+      setTimeout(async () => {
+        try {
+          await checkForViolations()
+        } catch (error) {
+          console.error('❌ Error checking violations on navigation:', error)
+        }
+      }, 500)
+    }
   },
   { immediate: true }
 )
