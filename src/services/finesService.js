@@ -110,10 +110,17 @@ export const getUserFines = async (projectId, userId) => {
         ...doc.data()
       }));
       
-      console.log('✅ User fines retrieved:', { count: userFines.length, userId })
-      console.log('🔍 User fines data:', userFines)
+      console.log('✅ User fines retrieved (before client filter):', { count: userFines.length, userId })
+      console.log('🔍 User fines data (before client filter):', userFines)
       
-      return userFines;
+      // Additional client-side filtering for extra security
+      const filteredFines = userFines.filter(fine => {
+        console.log('🔍 Checking fine:', { fineId: fine.id, fineUserId: fine.userId, currentUserId: userId })
+        return fine.userId === userId
+      })
+      console.log('✅ User fines after client-side filter:', filteredFines.length)
+      
+      return filteredFines;
     } catch (error) {
       console.error('❌ Error fetching user fines:', error);
       console.error('❌ Error details:', {

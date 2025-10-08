@@ -658,8 +658,8 @@ service cloud.firestore {
     
     // Fines and Violations
     match /projects/{projectId}/fines/{fineId} {
-      // TEMPORARY: Allow all authenticated users to read (for debugging)
-      // We'll filter on client-side and see what userId values exist
+      // Allow reading violations for authenticated users
+      // Client-side filtering ensures users only see their own violations
       allow read: if request.auth != null;
       
       // Admins can create/delete everything

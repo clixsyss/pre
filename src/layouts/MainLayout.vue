@@ -573,8 +573,16 @@ const handleSuspensionMessage = (event) => {
 }
 
 // Listen for project store ready event to check violations
-const handleProjectStoreReady = () => {
-  checkForViolations() // No delay - load violations immediately when project is ready
+const handleProjectStoreReady = async () => {
+  console.log('📦 Project store ready - checking for violations...')
+  // Use setTimeout to avoid blocking UI
+  setTimeout(async () => {
+    try {
+      await checkForViolations()
+    } catch (error) {
+      console.error('❌ Error in handleProjectStoreReady:', error)
+    }
+  }, 500) // Small delay to ensure UI loads first
 }
 
 // Load user projects when component mounts
@@ -584,9 +592,16 @@ onMounted(async () => {
   
   window.addEventListener('projectStoreReady', handleProjectStoreReady)
   
-  // Check for violations IMMEDIATELY if project is already loaded (highest priority)
+  // Check for violations with a delay to avoid blocking UI
   if (projectStore.hasSelectedProject) {
-    checkForViolations() // No delay - load violations first
+    setTimeout(async () => {
+      try {
+        await checkForViolations()
+      } catch (error) {
+        console.error('❌ Error in checkForViolations during mount:', error)
+        // Don't block the UI if violation check fails
+      }
+    }, 1000) // 1 second delay to ensure UI loads first
   }
   
   // Check user suspension status

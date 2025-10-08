@@ -209,21 +209,15 @@ const loadViolations = async () => {
     loading.value = true
     console.log('ViolationsPage: Loading violations from Firestore...')
     
+    // getUserFines already filters by userId (server-side query + client-side filter)
     const userViolations = await getUserFines(projectStore.selectedProject.id, currentUserId.value)
     console.log('ViolationsPage: Loaded violations:', userViolations.length)
     console.log('ViolationsPage: Violations data:', userViolations)
     
-    // Additional client-side filtering for extra security
-    const filteredViolations = userViolations.filter(v => {
-      console.log('ViolationsPage: Checking violation:', { violationId: v.id, violationUserId: v.userId, currentUserId: currentUserId.value })
-      return v.userId === currentUserId.value
-    })
-    console.log('ViolationsPage: After client-side filter:', filteredViolations.length)
+    violations.value = userViolations
     
-    violations.value = filteredViolations
-    
-    // Calculate stats from filtered violations
-    const stats = filteredViolations.reduce((acc, violation) => {
+    // Calculate stats
+    const stats = userViolations.reduce((acc, violation) => {
       acc.total++
       acc[violation.status] = (acc[violation.status] || 0) + 1
       return acc
