@@ -1,6 +1,5 @@
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { storage } from '../boot/firebase'
-import performanceService from './performanceService'
 import { Capacitor } from '@capacitor/core'
 
 class FileUploadService {
@@ -12,15 +11,8 @@ class FileUploadService {
    * @returns {Promise<string>} - The download URL
    */
   async uploadFile(file, path, fileName) {
-    return performanceService.timeOperation('uploadFile', async () => {
-      try {
-        console.log('🚀 Uploading file:', { path, fileName, fileSize: file?.size })
-        console.log('🔍 Firebase Storage check:', {
-          storage: !!storage,
-          storageApp: storage?.app,
-          storageBucket: storage?.bucket,
-          isNative: typeof window === 'undefined' || window.Capacitor
-        })
+    try {
+      console.log('🚀 Uploading file:', { path, fileName, fileSize: file?.size })
         
         // Validate file
         if (!file) {
@@ -39,106 +31,67 @@ class FileUploadService {
           throw new Error('File size must be less than 10MB')
         }
 
-        // Check if we're on iOS
-        const isIOS = Capacitor.getPlatform() === 'ios'
-        const isNative = Capacitor.isNativePlatform()
+        const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
         
-        if (isIOS && isNative) {
-          console.log('📱 iOS detected, using Capacitor Filesystem + Storage...')
+        if (isIOS) {
+          console.log('📱 iOS detected, using Storage REST API...')
           
-          // Step 1: Save file to temp location using Capacitor Filesystem
-          const { Filesystem, Directory } = await import('@capacitor/filesystem')
+          // Convert file to ArrayBuffer
+          const arrayBuffer = await file.arrayBuffer()
+          const uint8Array = new Uint8Array(arrayBuffer)
           
-          // Convert blob to base64
-          const reader = new FileReader()
-          const base64Data = await new Promise((resolve) => {
-            reader.onloadend = () => {
-              const base64 = reader.result.split(',')[1]
-              resolve(base64)
-            }
-            reader.readAsDataURL(file)
-          })
+          // Convert to base64 for upload
+          let binary = ''
+          const len = uint8Array.byteLength
+          for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(uint8Array[i])
+          }
+          const base64 = btoa(binary)
           
           console.log('📱 iOS: File converted to base64')
           
-          // Write to temp file
-          const tempFileName = `temp_${Date.now()}_${fileName}`
-          const writeResult = await Filesystem.writeFile({
-            path: tempFileName,
-            data: base64Data,
-            directory: Directory.Cache
-          })
-          
-          console.log('📱 iOS: Temp file created:', writeResult.uri)
-          
-          // Step 2: Upload using Capacitor Firebase Storage with URI
-          const { FirebaseStorage } = await import('@capacitor-firebase/storage')
-          
+          // Get auth token
+          const { Http } = await import('@capacitor-community/http')
           const fullPath = `${path}${fileName}`
-          console.log('📱 iOS: Uploading via Capacitor plugin:', fullPath)
+          const bucket = 'pre-group.firebasestorage.app'
           
-          // Upload with progress tracking
-          console.log('📱 iOS: Starting upload...')
-          await FirebaseStorage.uploadFile({
-            path: fullPath,
-            uri: writeResult.uri
+          // Upload using Storage REST API
+          console.log('📱 iOS: Uploading via REST API to:', fullPath)
+          const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fullPath)}`
+          
+          const uploadResponse = await Http.request({
+            url: uploadUrl,
+            method: 'POST',
+            headers: {
+              'Content-Type': file.type
+            },
+            data: base64,
+            connectTimeout: 60000,
+            readTimeout: 60000
           })
           
-          console.log('📱 iOS: Upload initiated, waiting for completion...')
+          console.log('📱 iOS: Upload response:', uploadResponse.status)
           
-          // Wait longer for file to be fully uploaded and indexed
-          await new Promise(resolve => setTimeout(resolve, 3000))
-          
-          console.log('📱 iOS: Getting download URL with retry...')
-          
-          // Retry getting download URL (sometimes takes time to index)
-          let urlResult
-          let retries = 3
-          for (let i = 0; i < retries; i++) {
-            try {
-              urlResult = await FirebaseStorage.getDownloadUrl({
-                path: fullPath
-              })
-              console.log('📱 iOS: Download URL obtained:', urlResult.downloadUrl)
-              break
-            } catch (e) {
-              console.warn(`📱 iOS: URL attempt ${i + 1} failed, retrying...`)
-              if (i === retries - 1) throw e
-              await new Promise(resolve => setTimeout(resolve, 2000))
-            }
+          if (uploadResponse.status >= 200 && uploadResponse.status < 300) {
+            console.log('📱 iOS: ✅ File uploaded successfully')
+            
+            // Get download URL
+            const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
+            console.log('📱 iOS: Download URL:', downloadUrl)
+            
+            return downloadUrl
+          } else {
+            throw new Error(`Upload failed with status ${uploadResponse.status}`)
           }
-          
-          // Clean up temp file
-          try {
-            await Filesystem.deleteFile({
-              path: tempFileName,
-              directory: Directory.Cache
-            })
-            console.log('📱 iOS: Temp file cleaned up')
-          } catch (e) {
-            console.warn('📱 iOS: Failed to clean up temp file:', e)
-          }
-          
-          return urlResult.downloadUrl
         } else {
           // Use Web SDK for web and other platforms
           console.log('🌐 Using Firebase Web SDK for upload...')
           
-          // Create storage reference
           const fullPath = `${path}${fileName}`
-          console.log('🔍 Creating storage reference:', { fullPath, path, fileName })
-          
           const fileRef = storageRef(storage, fullPath)
-          console.log('🔍 Storage reference created:', { fileRef: !!fileRef, refPath: fileRef?.fullPath })
-
-          // Upload file
-          console.log('🔍 Starting uploadBytes...')
-          const snapshot = await uploadBytes(fileRef, file)
-          console.log('🔍 Upload completed, getting download URL...')
           
-          // Get download URL
+          const snapshot = await uploadBytes(fileRef, file)
           const downloadURL = await getDownloadURL(snapshot.ref)
-          console.log('🔍 Download URL obtained:', downloadURL)
           
           return downloadURL
         }
@@ -149,14 +102,14 @@ class FileUploadService {
         console.error('❌ Error message:', error?.message)
         console.error('❌ Error code:', error?.code)
         console.error('❌ Error stack:', error?.stack)
-        console.error('❌ Full error object:', JSON.stringify(error, null, 2))
+        console.error('❌ Full error object:', JSON.stringify({
+          code: error?.code,
+          errorMessage: error?.message
+        }))
         console.error('❌ Error keys:', Object.keys(error || {}))
         
-        // Temporarily bypass errorHandlingService to see raw error
-        // errorHandlingService.handleFirestoreError(error, 'uploadFile')
         throw error
-      }
-    })
+    }
   }
 
   /**

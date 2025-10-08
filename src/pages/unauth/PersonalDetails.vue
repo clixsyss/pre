@@ -521,9 +521,8 @@ const handleSubmit = async () => {
     
     console.log('[PersonalDetails] Firestore save initiated in background')
     
-    // Clear stored password for security
-    console.log('[PersonalDetails] Clearing stored password')
-    registrationStore.setUserDetails({ password: '' })
+    // DON'T clear password/token yet - needed for final save in Register.vue
+    // Will be cleared after complete registration
       
     console.log('[PersonalDetails] Showing success notification')
     notificationStore.showSuccess('Details saved! Continue to property selection.')

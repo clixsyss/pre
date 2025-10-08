@@ -115,7 +115,7 @@
           </div>
         </div>
 
-        <div class="registration-notice">
+        <!-- <div class="registration-notice">
           <div class="notice-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
@@ -131,12 +131,12 @@
             process.
             This helps us maintain security and provide personalized service for PRE Group members.
           </p>
-        </div>
+        </div> -->
       </div>
 
       <!-- Property Step -->
       <div v-if="currentStep === 'property'" class="step-panel">
-        <div class="icon-section">
+        <!-- <div class="icon-section">
           <div class="icon-wrapper">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
@@ -146,7 +146,7 @@
                 stroke-linejoin="round" />
             </svg>
           </div>
-        </div>
+        </div> -->
 
         <!-- Project Selection Form -->
         <form @submit.prevent="handlePropertySubmit" class="form">
@@ -757,89 +757,32 @@ const handlePropertySubmit = async () => {
       const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
       
       if (isIOS) {
-        console.log('[Register] Using Firestore REST API for iOS...')
+        console.log('[Register] Using Web SDK without serverTimestamp for iOS...')
         console.log('[Register] FINAL DATA:', JSON.stringify(completeUserData, null, 2))
         
         try {
-          const { Http } = await import('@capacitor-community/http')
+          // iOS: Use plain strings instead of serverTimestamp() which hangs
+          console.log('[Register] Saving with 10s timeout (no serverTimestamp)...')
+          const savePromise = setDoc(doc(db, 'users', registrationStore.tempUserId), completeUserData, { merge: true })
           
-          // Convert data to Firestore REST API format
-          const convertToFirestoreFormat = (obj) => {
-            const result = { fields: {} }
-            for (const [key, value] of Object.entries(obj)) {
-              if (value === null) {
-                result.fields[key] = { nullValue: null }
-              } else if (typeof value === 'string') {
-                result.fields[key] = { stringValue: value }
-              } else if (typeof value === 'number') {
-                result.fields[key] = { doubleValue: value }
-              } else if (typeof value === 'boolean') {
-                result.fields[key] = { booleanValue: value }
-              } else if (Array.isArray(value)) {
-                result.fields[key] = {
-                  arrayValue: {
-                    values: value.map(item => {
-                      if (typeof item === 'object') {
-                        return { mapValue: convertToFirestoreFormat(item) }
-                      }
-                      return { stringValue: String(item) }
-                    })
-                  }
-                }
-              } else if (typeof value === 'object') {
-                result.fields[key] = { mapValue: convertToFirestoreFormat(value) }
-              }
-            }
-            return result
-          }
-          
-          const firestoreData = convertToFirestoreFormat(completeUserData)
-          
-          const projectId = 'pre-group'
-          const collection = 'users'
-          const documentId = registrationStore.tempUserId
-          
-          // Get auth token from REST auth
-          const firebaseRestAuth = (await import('../../services/firebaseRestAuth')).default
-          const authResult = await firebaseRestAuth.signIn(
-            registrationStore.personalData.email,
-            registrationStore.userDetails.password || 'temp'
-          )
-          
-          const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${documentId}?updateMask.fieldPaths=*`
-          
-          console.log('[Register] Saving to Firestore REST API...')
-          const response = await Http.request({
-            url,
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${authResult.idToken}`
-            },
-            data: firestoreData,
-            connectTimeout: 15000,
-            readTimeout: 15000
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Firestore save timeout')), 10000)
           })
           
-          if (response.status >= 200 && response.status < 300) {
-            console.log('[Register] ✅ Complete data saved via REST API')
-          } else {
-            throw new Error(`HTTP ${response.status}`)
-          }
+          await Promise.race([savePromise, timeoutPromise])
+          console.log('[Register] ✅ Complete data saved (Web SDK)')
         } catch (e) {
-          console.error('[Register] REST API save failed:', e)
-          // Fall back to Web SDK
-          console.log('[Register] Falling back to Web SDK...')
-          try {
-            await setDoc(doc(db, 'users', registrationStore.tempUserId), {
-              ...completeUserData,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp()
-            }, { merge: true })
-            console.log('[Register] ✅ Saved via Web SDK fallback')
-          } catch (fallbackError) {
-            console.error('[Register] Web SDK fallback also failed:', fallbackError)
-          }
+          console.error('[Register] Web SDK save failed or timed out:', e)
+          console.log('[Register] Error message:', e?.message)
+          console.log('[Register] Error code:', e?.code)
+          
+          // Try fire-and-forget - navigate anyway since PersonalDetails already saved the important data
+          console.log('[Register] PersonalDetails already saved documents, proceeding anyway...')
+          setDoc(doc(db, 'users', registrationStore.tempUserId), completeUserData, { merge: true }).then(() => {
+            console.log('[Register] ✅ Background save completed')
+          }).catch((bgError) => {
+            console.error('[Register] Background save also failed:', bgError)
+          })
         }
       } else {
         await setDoc(doc(db, 'users', registrationStore.tempUserId), {
@@ -849,6 +792,10 @@ const handlePropertySubmit = async () => {
         }, { merge: true })
         console.log('[Register] ✅ Complete data saved (Web SDK)')
       }
+      
+      // Clear password for security after successful save
+      console.log('[Register] Clearing stored password for security')
+      registrationStore.setUserDetails({ password: '', authToken: '', refreshToken: '' })
     }
 
     console.log('[Register] Showing success notification')
