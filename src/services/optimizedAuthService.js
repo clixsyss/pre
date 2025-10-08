@@ -114,8 +114,18 @@ class OptimizedAuthService {
    */
   async signOut() {
     try {
-      // Use Web SDK for all platforms
-      await firebaseSignOut(this.auth)
+      // Use Capacitor plugin for iOS, Web SDK for others
+      const { Capacitor } = await import('@capacitor/core')
+      const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+      
+      if (isIOS) {
+        console.log('🚀 OptimizedAuthService: Signing out via Capacitor plugin...')
+        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
+        await FirebaseAuthentication.signOut()
+        console.log('🚀 OptimizedAuthService: Capacitor sign out complete')
+      } else {
+        await firebaseSignOut(this.auth)
+      }
       
       // Clear cached user
       this.currentUser = null
