@@ -42,6 +42,25 @@ class OptimizedAuthService {
     }
 
     try {
+      // Check Capacitor plugin for iOS first
+      const { Capacitor } = await import('@capacitor/core')
+      const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+      
+      if (isIOS) {
+        try {
+          const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
+          const result = await FirebaseAuthentication.getCurrentUser()
+          
+          if (result && result.user) {
+            console.log('🚀 OptimizedAuthService: Current user from Capacitor plugin:', result.user.uid)
+            this.currentUser = result.user
+            return this.currentUser
+          }
+        } catch (capError) {
+          console.warn('Capacitor getCurrentUser failed, trying Web SDK:', capError?.message)
+        }
+      }
+      
       // Use Web SDK for all platforms (simpler and more reliable)
       this.currentUser = this.auth.currentUser
       console.log('🚀 OptimizedAuthService: Current user from Web SDK:', this.currentUser ? 'authenticated' : 'not authenticated')

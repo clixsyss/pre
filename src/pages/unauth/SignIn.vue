@@ -111,7 +111,6 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { Capacitor } from '@capacitor/core'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
 import { useNotificationStore } from '../../stores/notifications'
@@ -198,22 +197,22 @@ const handleSignIn = async () => {
   try {
     console.log('[SignIn] Starting sign in...')
     
-    // Use REST API for iOS to avoid hanging
+    // Use Capacitor plugin for iOS, Web SDK for others
+    const { Capacitor } = await import('@capacitor/core')
     const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
     
     let userId
     if (isIOS) {
-      console.log('[SignIn] Using REST API for iOS...')
-      const firebaseRestAuth = (await import('../../services/firebaseRestAuth')).default
-      const authResult = await firebaseRestAuth.signIn(formData.email, formData.password)
-      userId = authResult.uid
-      console.log('[SignIn] ✅ REST auth successful:', userId)
+      console.log('[SignIn] Using Capacitor Auth plugin for iOS...')
+      const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
       
-      // Fire Web SDK sign in (non-blocking) for Capacitor plugin auth
-      console.log('[SignIn] Signing in to Web SDK (non-blocking)...')
-      optimizedAuthService.signInWithEmailAndPassword(formData.email, formData.password)
-        .then(cred => console.log('[SignIn] ✅ Web SDK signed in:', cred.user.uid))
-        .catch(err => console.warn('[SignIn] Web SDK sign in hung/failed (OK):', err?.code))
+      const result = await FirebaseAuthentication.signInWithEmailAndPassword({
+        email: formData.email,
+        password: formData.password
+      })
+      
+      userId = result.user.uid
+      console.log('[SignIn] ✅ Capacitor auth successful:', userId)
     } else {
       const userCredential = await optimizedAuthService.signInWithEmailAndPassword(formData.email, formData.password)
       userId = userCredential.user.uid
