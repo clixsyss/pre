@@ -1032,7 +1032,7 @@
             <button @click="handleLogin" class="connect-btn"
               :disabled="smartMirrorStore.isConnecting || !loginForm.email || !loginForm.password" type="submit">
               <span v-if="smartMirrorStore.isConnecting">Connecting...</span>
-              <span v-else>Connect Account</span>
+              <span v-else>Connect</span>
             </button>
           </div>
         </div>
@@ -1134,6 +1134,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
+import { smartMirrorService } from '../../services/smartMirrorService'
 import { useNotificationStore } from '../../stores/notifications'
 import { useProjectStore } from '../../stores/projectStore'
 import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
@@ -1345,6 +1346,10 @@ const loadComplaintStats = async () => {
 const handleLogout = async () => {
   try {
     logoutLoading.value = true
+    
+    // Clear Smart Mirror user context before signing out
+    console.log('[Logout] 🚪 Clearing Smart Mirror context before sign out')
+    smartMirrorService.clearPreUserId()
     
     await optimizedAuthService.signOut()
     

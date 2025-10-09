@@ -113,6 +113,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
+import { smartMirrorService } from '../../services/smartMirrorService'
 import { useNotificationStore } from '../../stores/notifications'
 import { useRegistrationStore } from '../../stores/registration'
 import { validateProfileCompletion, getNextProfileStep } from '../../utils/profileValidation'
@@ -218,6 +219,10 @@ const handleSignIn = async () => {
       userId = userCredential.user.uid
     }
     
+    // Sync PRE user with Smart Mirror service for user isolation
+    console.log('[SignIn] 🔐 Syncing PRE user with Smart Mirror service:', userId)
+    smartMirrorService.setPreUserId(userId)
+    
     // Check user approval status
     const status = await checkUserApprovalStatus(userId)
     console.log('🚀 Sign-in approval check result:', status)
@@ -257,6 +262,13 @@ const signInWithGoogle = async () => {
       // Sign-in was rejected
       notificationStore.showError(signInResult.reason)
       return
+    }
+    
+    // Sync PRE user with Smart Mirror service for user isolation
+    const googleUserId = signInResult.user?.uid
+    if (googleUserId) {
+      console.log('[SignIn] 🔐 Syncing Google user with Smart Mirror service:', googleUserId)
+      smartMirrorService.setPreUserId(googleUserId)
     }
     
     // User is eligible for Google sign-in

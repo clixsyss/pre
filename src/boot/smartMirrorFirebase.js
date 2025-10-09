@@ -42,11 +42,11 @@ const initializeSmartMirrorApp = () => {
     smartMirrorApp = initializeApp(smartMirrorFirebaseConfig, appName)
   }
 
-  // For iOS, use Web SDK Auth exclusively (don't rely on native config)
-  if (isNative && platform === 'ios') {
-    console.log('Smart Mirror Firebase Boot: iOS - Initializing Web SDK Auth with persistence')
+  // For native platforms (iOS/Android), use Web SDK Auth exclusively
+  if (isNative) {
+    console.log(`Smart Mirror Firebase Boot: ${platform} - Initializing Web SDK Auth with persistence`)
     try {
-      // Try to initialize auth with persistence for iOS
+      // Try to initialize auth with persistence for native platforms
       smartMirrorAuth = initializeAuth(smartMirrorApp, {
         persistence: indexedDBLocalPersistence
       })
@@ -83,11 +83,11 @@ smartMirrorAuth = auth
 smartMirrorDb = db
 
 export default defineBoot(async ({ app }) => {
-  // For iOS, wait briefly for services to stabilize
-  if (isNative && platform === 'ios') {
-    console.log('Smart Mirror Firebase Boot: iOS detected - stabilizing services...')
+  // For native platforms (iOS/Android), wait briefly for services to stabilize
+  if (isNative) {
+    console.log(`Smart Mirror Firebase Boot: ${platform} detected - stabilizing services...`)
     await new Promise(resolve => setTimeout(resolve, 300))
-    console.log('Smart Mirror Firebase Boot: iOS services stable ✅')
+    console.log(`Smart Mirror Firebase Boot: ${platform} services stable ✅`)
   }
   
   // Make Smart Mirror Firebase services available globally

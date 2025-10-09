@@ -18,6 +18,63 @@ class SmartMirrorService {
     // Per-project connections
     this.projectConnections = new Map() // Store connections per project
     this.onDevicesUpdate = null // Callback for device updates
+    
+    // PRE user context (for isolating Smart Mirror connections per PRE user)
+    this.preUserId = null
+  }
+
+  // Set the current PRE user ID (call this when PRE user logs in)
+  setPreUserId(userId) {
+    console.log('🔐 Smart Mirror Service: Setting PRE user context:', userId)
+    
+    // If switching to a different PRE user, clear all Smart Mirror connections
+    if (this.preUserId && this.preUserId !== userId) {
+      console.log('🔄 Smart Mirror Service: Different PRE user detected, clearing Smart Mirror connections')
+      this.logout() // Logout from Smart Mirror
+    }
+    
+    this.preUserId = userId
+    
+    // Clean up old non-namespaced data (migration)
+    this.cleanupLegacyStorage()
+    
+    // Load connections for this PRE user
+    if (userId) {
+      this.restoreProjectConnections()
+    }
+  }
+
+  // Clean up old non-namespaced localStorage data
+  cleanupLegacyStorage() {
+    try {
+      const legacyKey = 'smartMirrorProjectConnections'
+      if (localStorage.getItem(legacyKey)) {
+        console.log('🧹 Smart Mirror Service: Removing legacy non-namespaced data')
+        localStorage.removeItem(legacyKey)
+      }
+    } catch (error) {
+      console.error('Error cleaning up legacy storage:', error)
+    }
+  }
+
+  // Clear PRE user context (call this when PRE user logs out)
+  clearPreUserId() {
+    console.log('🚪 Smart Mirror Service: Clearing PRE user context')
+    const oldUserId = this.preUserId
+    this.preUserId = null
+    
+    // Logout from Smart Mirror when PRE user logs out
+    this.logout()
+    
+    console.log(`✅ Smart Mirror Service: Cleared context for PRE user: ${oldUserId}`)
+  }
+
+  // Get localStorage key namespaced by PRE user
+  getStorageKey() {
+    if (this.preUserId) {
+      return `smartMirrorProjectConnections_${this.preUserId}`
+    }
+    return 'smartMirrorProjectConnections' // Fallback for backwards compatibility
   }
 
   // Authentication methods
@@ -125,8 +182,8 @@ class SmartMirrorService {
         this.projectConnections.clear()
         this.cleanup()
         
-        // Clear localStorage
-        localStorage.removeItem('smartMirrorProjectConnections')
+        // Clear localStorage (use namespaced key)
+        localStorage.removeItem(this.getStorageKey())
       }
       
       return { success: true }
@@ -317,8 +374,15 @@ class SmartMirrorService {
   // Restore project connections from localStorage
   async restoreProjectConnections() {
     try {
-      const storedConnections = localStorage.getItem('smartMirrorProjectConnections')
-      console.log('Restoring project connections from localStorage:', storedConnections)
+      // Only restore if we have a PRE user ID (for isolation)
+      if (!this.preUserId) {
+        console.log('⚠️ Smart Mirror Service: Cannot restore connections - no PRE user ID set')
+        return
+      }
+      
+      const storageKey = this.getStorageKey()
+      const storedConnections = localStorage.getItem(storageKey)
+      console.log(`Restoring project connections from localStorage (key: ${storageKey}):`, storedConnections)
       
       if (storedConnections) {
         const connections = JSON.parse(storedConnections)
@@ -352,6 +416,12 @@ class SmartMirrorService {
   // Save project connections to localStorage
   saveProjectConnections() {
     try {
+      // Only save if we have a PRE user ID (for isolation)
+      if (!this.preUserId) {
+        console.log('⚠️ Smart Mirror Service: Cannot save connections - no PRE user ID set')
+        return
+      }
+      
       const connectionsToSave = {}
       
       for (const [projectId, connection] of this.projectConnections.entries()) {
@@ -369,7 +439,9 @@ class SmartMirrorService {
         }
       }
       
-      localStorage.setItem('smartMirrorProjectConnections', JSON.stringify(connectionsToSave))
+      const storageKey = this.getStorageKey()
+      console.log(`💾 Saving project connections to localStorage (key: ${storageKey}, PRE user: ${this.preUserId})`)
+      localStorage.setItem(storageKey, JSON.stringify(connectionsToSave))
     } catch (error) {
       console.error('Error saving project connections:', error)
     }

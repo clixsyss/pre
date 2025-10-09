@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "871778209250",
+    "project_id": "pre-group",
+    "storage_bucket": "pre-group.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:871778209250:android:7c8e9f1a2b3c4d5e6f7dbb",
+        "android_client_info": {
+          "package_name": "com.pregroup.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "871778209250-8igmg7pcc265huei5boibvitvb7bsf13.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9kD9dw5DzEAys-kss-aSBqRGEuaT9A-0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "871778209250-8igmg7pcc265huei5boibvitvb7bsf13.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
+
