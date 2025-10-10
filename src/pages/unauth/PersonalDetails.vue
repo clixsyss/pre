@@ -461,10 +461,11 @@ const handleSubmit = async () => {
     
     // Fire Firestore save (non-blocking - don't wait)
     const { Capacitor } = await import('@capacitor/core')
-    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    const isNative = Capacitor.isNativePlatform()
+    const platform = Capacitor.getPlatform()
     
-    if (isIOS) {
-      console.log('[PersonalDetails] Saving via Capacitor (background)...')
+    if (isNative && (platform === 'ios' || platform === 'android')) {
+      console.log(`[PersonalDetails] Saving via Capacitor (background, ${platform})...`)
       import('@capacitor-firebase/firestore').then(({ FirebaseFirestore }) => {
         FirebaseFirestore.setDocument({
           reference: `users/${userId}`,
@@ -491,13 +492,13 @@ const handleSubmit = async () => {
           },
           merge: true
         }).then(() => {
-          console.log('[PersonalDetails] ✅ Background save complete')
+          console.log(`[PersonalDetails] ✅ Background save complete (${platform})`)
         }).catch(e => {
           console.warn('[PersonalDetails] Background save failed (OK):', e?.message)
         })
       })
     } else {
-      // Web SDK for non-iOS
+      // Web SDK for web platform
       setDoc(doc(db, 'users', userId), {
         firstName: formData.firstName,
         lastName: formData.lastName,

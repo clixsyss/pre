@@ -389,7 +389,7 @@ const handleFileSelect = (event) => {
 };
 
 
-const addFiles = (files) => {
+const addFiles = async (files) => {
   try {
     console.log('📁 Processing files:', files.length);
     
@@ -398,25 +398,29 @@ const addFiles = (files) => {
       return;
     }
     
-    const validFiles = files.filter(file => {
+    const { Capacitor } = await import('@capacitor/core')
+    const isNative = Capacitor.isNativePlatform();
+    const maxSize = isNative ? 50 * 1024 * 1024 : 10 * 1024 * 1024; // 50MB for native, 10MB for web
+    const platform = Capacitor.getPlatform();
+    
+    const validFiles = []
+    for (const file of files) {
       try {
         // Basic file validation
         if (!file || !file.name) {
           console.warn('Invalid file object');
-          return false;
+          continue;
         }
         
-        // iOS-specific: Larger file size limit and more lenient validation
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const maxSize = isIOS ? 50 * 1024 * 1024 : 10 * 1024 * 1024; // 50MB for iOS, 10MB for others
+        // Native platforms: Larger file size limit and more lenient validation
         const allowedTypes = [
           'image/jpeg', 
           'image/jpg', 
           'image/png', 
           'image/gif', 
           'image/webp',
-          'image/heic', // iOS HEIC format
-          'image/heif', // iOS HEIF format
+          'image/heic', // Native iOS/Android HEIC format
+          'image/heif', // Native iOS/Android HEIF format
           'application/pdf', 
           'text/plain', 
           'application/msword', 
@@ -428,33 +432,32 @@ const addFiles = (files) => {
           console.warn(`File ${file.name} is too large: ${file.size} bytes`);
           const maxSizeMB = Math.round(maxSize / 1024 / 1024);
           alert(`File ${file.name} is too large. Maximum size is ${maxSizeMB}MB.`);
-          return false;
+          continue;
         }
         
-        // Check file type (be more lenient for iOS)
+        // Check file type (be more lenient for native platforms)
         const fileType = file.type || '';
         const fileName = file.name.toLowerCase();
         const isImage = fileType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i.test(fileName);
         const isDocument = allowedTypes.includes(fileType) || /\.(pdf|doc|docx|txt)$/i.test(fileName);
         
-        // iOS-specific: More lenient file type checking
-        if (isIOS && !fileType && fileName) {
-          console.log(`📱 iOS: File type not detected for ${file.name}, using filename extension`);
+        // Native platforms: More lenient file type checking
+        if (isNative && !fileType && fileName) {
+          console.log(`📱 ${platform}: File type not detected for ${file.name}, using filename extension`);
         }
         
         if (!isImage && !isDocument) {
           console.warn(`File type not supported: ${fileType} for file ${file.name}`);
           alert(`File type not supported for ${file.name}. Please use images, PDF, or document files.`);
-          return false;
+          continue;
         }
         
         console.log(`✅ File ${file.name} is valid`);
-        return true;
+        validFiles.push(file);
       } catch (fileError) {
         console.error(`Error validating file ${file.name}:`, fileError);
-        return false;
       }
-    });
+    }
     
     if (validFiles.length > 0) {
       selectedFiles.value = [...selectedFiles.value, ...validFiles];

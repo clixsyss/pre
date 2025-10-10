@@ -150,22 +150,25 @@ const checkUserApprovalStatus = async (userId) => {
   try {
     console.log('🔍 Checking approval status for user:', userId)
     
-    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    const { Capacitor } = await import('@capacitor/core')
+    const isNative = Capacitor.isNativePlatform()
+    const platform = Capacitor.getPlatform()
     let userData
     
-    if (isIOS) {
-      console.log('🔍 Using Capacitor Firestore for iOS...')
+    if (isNative && (platform === 'ios' || platform === 'android')) {
+      console.log(`🔍 Using Capacitor Firestore for ${platform}...`)
       const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
       const result = await FirebaseFirestore.getDocument({
         reference: `users/${userId}`
       })
       userData = result.snapshot?.data
-      console.log('📋 User document data (iOS):', userData)
+      console.log(`📋 User document data (${platform}):`, userData)
     } else {
+      console.log('🔍 Using Web SDK Firestore...')
       const userDoc = await firestoreService.getDoc(`users/${userId}`)
       if (userDoc.exists()) {
         userData = userDoc.data()
-        console.log('📋 User document data:', userData)
+        console.log('📋 User document data (web):', userData)
       }
     }
     
@@ -198,13 +201,14 @@ const handleSignIn = async () => {
   try {
     console.log('[SignIn] Starting sign in...')
     
-    // Use Capacitor plugin for iOS, Web SDK for others
+    // Use Capacitor plugin for native (iOS/Android), Web SDK for web
     const { Capacitor } = await import('@capacitor/core')
-    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    const isNative = Capacitor.isNativePlatform()
+    const platform = Capacitor.getPlatform()
     
     let userId
-    if (isIOS) {
-      console.log('[SignIn] Using Capacitor Auth plugin for iOS...')
+    if (isNative && (platform === 'ios' || platform === 'android')) {
+      console.log(`[SignIn] Using Capacitor Auth plugin for ${platform}...`)
       const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
       
       const result = await FirebaseAuthentication.signInWithEmailAndPassword({
@@ -213,10 +217,12 @@ const handleSignIn = async () => {
       })
       
       userId = result.user.uid
-      console.log('[SignIn] ✅ Capacitor auth successful:', userId)
+      console.log(`[SignIn] ✅ Capacitor auth successful for ${platform}:`, userId)
     } else {
+      console.log('[SignIn] Using Web SDK for web platform...')
       const userCredential = await optimizedAuthService.signInWithEmailAndPassword(formData.email, formData.password)
       userId = userCredential.user.uid
+      console.log('[SignIn] ✅ Web SDK auth successful:', userId)
     }
     
     // Sync PRE user with Smart Mirror service for user isolation

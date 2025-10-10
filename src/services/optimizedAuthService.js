@@ -191,17 +191,46 @@ class OptimizedAuthService {
 
   /**
    * Sign in with Google
+   * Supports both web (popup) and native (Capacitor) platforms
    */
   async signInWithGoogle() {
     try {
-      // Use Web SDK for all platforms
-      const { signInWithPopup, GoogleAuthProvider } = await import('firebase/auth')
-      const provider = new GoogleAuthProvider()
-      const result = await signInWithPopup(this.auth, provider)
-      this.currentUser = result.user
-      return {
-        user: result.user,
-        credential: result.credential
+      const { Capacitor } = await import('@capacitor/core')
+      const isNative = Capacitor.isNativePlatform()
+      const platform = Capacitor.getPlatform()
+      
+      if (isNative && (platform === 'android' || platform === 'ios')) {
+        // Use Capacitor Firebase Authentication plugin for native
+        console.log(`[OptimizedAuth] Using Capacitor Google Sign-In for ${platform}`)
+        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
+        
+        const result = await FirebaseAuthentication.signInWithGoogle()
+        
+        // Get the user from Firebase Auth
+        const user = this.auth.currentUser
+        
+        if (!user) {
+          // If for some reason currentUser is not set, wait a bit and try again
+          await new Promise(resolve => setTimeout(resolve, 500))
+        }
+        
+        this.currentUser = this.auth.currentUser
+        
+        return {
+          user: this.currentUser,
+          credential: result.credential || null
+        }
+      } else {
+        // Use Web SDK popup for web/PWA
+        console.log('[OptimizedAuth] Using Web SDK popup for web platform')
+        const { signInWithPopup, GoogleAuthProvider } = await import('firebase/auth')
+        const provider = new GoogleAuthProvider()
+        const result = await signInWithPopup(this.auth, provider)
+        this.currentUser = result.user
+        return {
+          user: result.user,
+          credential: result.credential
+        }
       }
     } catch (error) {
       console.error('Google sign in error:', error)

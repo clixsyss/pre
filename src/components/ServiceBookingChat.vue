@@ -274,12 +274,13 @@ const handleImageUpload = async (file) => {
     return;
   }
 
-  // Check if we're on iOS native platform and use Capacitor Camera API
-  const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform();
+  // Check if we're on native platform (iOS/Android) and use Capacitor Camera API
+  const isNative = Capacitor.isNativePlatform(); 
+  const platform = Capacitor.getPlatform();
   
-  if (isIOS && !file) {
+  if (isNative && (platform === 'ios' || platform === 'android') && !file) {
     // Only use Capacitor Camera API if no file is provided (direct camera call)
-    console.log('📱 iOS detected, using Capacitor Camera API...');
+    console.log(`📱 ${platform} detected, using Capacitor Camera API...`);
     return await handleImageUploadWithCapacitor();
   } else {
     // Use the provided file (from file input or web)
@@ -327,7 +328,7 @@ const compressImage = (blob, quality = 0.8) => {
 // Capacitor-based image upload for iOS
 const handleImageUploadWithCapacitor = async () => {
   try {
-    console.log('📱 Starting Capacitor image picker...');
+    console.log(`📱 Starting Capacitor image picker...`);
     
     // Take/select photo using Capacitor Camera
     const photo = await Camera.getPhoto({
@@ -337,23 +338,23 @@ const handleImageUploadWithCapacitor = async () => {
       source: CameraSource.Prompt // Let user choose camera or photo library
     });
     
-    console.log('📱 Image selected:', photo);
+    console.log(`📱 Image selected:`, photo);
     
     if (!photo.webPath) {
       throw new Error('No image webPath found');
     }
     
     // Fetch the image file as a Blob (crucial for iOS)
-    console.log('📱 Fetching image as blob from:', photo.webPath);
+    console.log(`📱 Fetching image as blob from:`, photo.webPath);
     const response = await fetch(photo.webPath);
     let blob = await response.blob();
-    console.log('📱 Original blob:', { size: blob.size, type: blob.type });
+    console.log(`📱 Original blob:`, { size: blob.size, type: blob.type });
     
     // Compress image if it's too large (> 1MB)
     if (blob.size > 1024 * 1024) {
-      console.log('📱 Compressing large image...');
+      console.log(`📱 Compressing large image...`);
       blob = await compressImage(blob, 0.7); // 70% quality
-      console.log('📱 Compressed blob:', { size: blob.size, type: blob.type });
+      console.log(`📱 Compressed blob:`, { size: blob.size, type: blob.type });
     }
     
     // Create temporary message
@@ -374,27 +375,27 @@ const handleImageUploadWithCapacitor = async () => {
       booking.value.messages = [];
     }
     booking.value.messages.push(tempMessage);
-    console.log('📱 Added temporary upload message to local state');
+    console.log(`📱 Added temporary upload message to local state`);
 
     // Ensure user is authenticated before uploading
-    console.log('📱 Ensuring user authentication before upload...');
+    console.log(`📱 Ensuring user authentication before upload...`);
     const { getAuth, signInAnonymously } = await import('firebase/auth');
     const auth = getAuth();
     
     // Check if user is authenticated
     let currentUser = auth.currentUser;
-    console.log('📱 Current auth state:', { 
+    console.log(`📱 Current auth state:`, { 
       hasUser: !!currentUser, 
       userId: currentUser?.uid,
       isAnonymous: currentUser?.isAnonymous 
     });
     
     if (!currentUser) {
-      console.log('📱 No authenticated user, signing in anonymously...');
+      console.log(`📱 No authenticated user, signing in anonymously...`);
       try {
         const userCredential = await signInAnonymously(auth);
         currentUser = userCredential.user;
-        console.log('📱 Anonymous sign-in successful:', { 
+        console.log(`📱 Anonymous sign-in successful:`, { 
           uid: currentUser.uid,
           isAnonymous: currentUser.isAnonymous 
         });
@@ -407,7 +408,7 @@ const handleImageUploadWithCapacitor = async () => {
         throw new Error(`Authentication failed: ${authError.message}`);
       }
     } else {
-      console.log('📱 User already authenticated:', { 
+      console.log(`📱 User already authenticated:`, { 
         uid: currentUser.uid,
         isAnonymous: currentUser.isAnonymous 
       });
@@ -417,7 +418,7 @@ const handleImageUploadWithCapacitor = async () => {
     const fileName = `image_${Date.now()}.jpg`;
     const fullPath = `projects/${projectStore.selectedProject.id}/serviceBookings/${bookingId}/images/${fileName}`;
     
-    console.log('📱 Starting REST API upload with Blob...', {
+    console.log(`📱 Starting REST API upload with Blob...`, {
       fullPath,
       blobSize: blob.size,
       blobType: blob.type,
@@ -438,14 +439,14 @@ const handleImageUploadWithCapacitor = async () => {
       }
       const base64 = btoa(binary)
       
-      console.log('📱 Converted blob to base64, size:', base64.length)
+      console.log(`📱 Converted blob to base64, size:`, base64.length)
       
       // Upload using Storage REST API via Capacitor HTTP
       const { Http } = await import('@capacitor-community/http')
       const bucket = 'pre-group.firebasestorage.app'
       const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fullPath)}`
       
-      console.log('📱 Uploading to:', uploadUrl)
+      console.log(`📱 Uploading to:`, uploadUrl)
       
       const uploadResponse = await Http.request({
         url: uploadUrl,
@@ -458,7 +459,7 @@ const handleImageUploadWithCapacitor = async () => {
         readTimeout: 60000
       })
       
-      console.log('📱 Upload response status:', uploadResponse.status)
+      console.log(`📱 Upload response status:`, uploadResponse.status)
       
       if (uploadResponse.status < 200 || uploadResponse.status >= 300) {
         throw new Error(`Upload failed with status ${uploadResponse.status}`)
@@ -467,13 +468,13 @@ const handleImageUploadWithCapacitor = async () => {
       // Get download URL
       const downloadURL = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
       
-      console.log('📱 Upload successful! URL:', downloadURL);
+      console.log(`📱 Upload successful! URL:`, downloadURL);
       
       // Remove the temporary upload message
       const tempIndex = booking.value.messages.findIndex(msg => msg.id === tempMessage.id);
       if (tempIndex !== -1) {
         booking.value.messages.splice(tempIndex, 1);
-        console.log('📱 Removed temporary upload message');
+        console.log(`📱 Removed temporary upload message`);
       }
       
       // Send the image message to the chat
@@ -530,7 +531,7 @@ const handleImageUploadWithCapacitor = async () => {
     
     // Check if it's an authentication error and try to refresh
     if (error.message.includes('Authentication') || error.message.includes('auth') || error.message.includes('timeout')) {
-      console.log('📱 Authentication error detected, attempting to refresh auth...');
+      console.log(`📱 Authentication error detected, attempting to refresh auth...`);
       try {
         // Try to refresh the authentication
         const { getAuth } = await import('firebase/auth');
@@ -538,9 +539,9 @@ const handleImageUploadWithCapacitor = async () => {
         const currentUser = auth.currentUser;
         
         if (currentUser) {
-          console.log('📱 Refreshing authentication token...');
+          console.log(`📱 Refreshing authentication token...`);
           await currentUser.getIdToken(true); // Force refresh
-          console.log('📱 Authentication refreshed, retrying upload...');
+          console.log(`📱 Authentication refreshed, retrying upload...`);
           
           // Retry the upload once
           return await handleImageUploadWithCapacitor();
@@ -608,7 +609,7 @@ const handleImageUploadWithFile = async (file) => {
     
     // Check if user is authenticated
     let currentUser = auth.currentUser;
-    console.log('🌐 Current auth state:', { 
+    console.log(`🌐 Current auth state:`, { 
       hasUser: !!currentUser, 
       userId: currentUser?.uid,
       isAnonymous: currentUser?.isAnonymous 
@@ -619,7 +620,7 @@ const handleImageUploadWithFile = async (file) => {
       try {
         const userCredential = await signInAnonymously(auth);
         currentUser = userCredential.user;
-        console.log('🌐 Anonymous sign-in successful:', { 
+        console.log(`🌐 Anonymous sign-in successful:`, { 
           uid: currentUser.uid,
           isAnonymous: currentUser.isAnonymous 
         });
@@ -632,7 +633,7 @@ const handleImageUploadWithFile = async (file) => {
         throw new Error(`Authentication failed: ${authError.message}`);
       }
     } else {
-      console.log('🌐 User already authenticated:', { 
+      console.log(`🌐 User already authenticated:`, { 
         uid: currentUser.uid,
         isAnonymous: currentUser.isAnonymous 
       });
@@ -653,11 +654,11 @@ const handleImageUploadWithFile = async (file) => {
     const fullPath = `projects/${projectStore.selectedProject.id}/serviceBookings/${bookingId}/images/${fileName}`;
     
     // Check if iOS and use REST API
-    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    const isNative = Capacitor.isNativePlatform(); const platform = Capacitor.getPlatform()
     let imageUrl
     
-    if (isIOS) {
-      console.log('📱 iOS detected, using Storage REST API for service booking chat...')
+    if (isNative && (platform === 'ios' || platform === 'android')) {
+      console.log(`📱 ${platform} detected, using Storage REST API for service booking chat...`)
       
       // Convert file to ArrayBuffer
       const arrayBuffer = await fileToUpload.arrayBuffer()
@@ -689,7 +690,7 @@ const handleImageUploadWithFile = async (file) => {
       
       if (uploadResponse.status >= 200 && uploadResponse.status < 300) {
         imageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
-        console.log('📱 iOS: ✅ Image uploaded successfully')
+        console.log(`📱 ${platform}: ✅ Image uploaded successfully`)
       } else {
         throw new Error(`Upload failed with status ${uploadResponse.status}`)
       }

@@ -420,10 +420,11 @@ const additionalPropertyForm = reactive({
 const fetchAvailableProjects = async () => {
   try {
     console.log('[Register] Fetching projects...')
-    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    const isNative = Capacitor.isNativePlatform()
+    const platform = Capacitor.getPlatform()
     
-    if (isIOS) {
-      console.log('[Register] Using Capacitor Firestore to fetch projects...')
+    if (isNative && (platform === 'ios' || platform === 'android')) {
+      console.log(`[Register] Using Capacitor Firestore to fetch projects (${platform})...`)
       const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
       
       const result = await FirebaseFirestore.getCollection({
@@ -434,15 +435,16 @@ const fetchAvailableProjects = async () => {
         id: snap.id,
         ...snap.data
       }))
-      console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects')
+      console.log(`[Register] ✅ Fetched ${availableProjects.value.length} projects (${platform})`)
     } else {
+      console.log('[Register] Using Web SDK Firestore to fetch projects...')
       const projectsRef = collection(db, 'projects')
       const snapshot = await getDocs(projectsRef)
       availableProjects.value = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }))
-      console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects')
+      console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects (web)')
     }
   } catch (error) {
     console.error('[Register] Error fetching projects:', error)
@@ -754,10 +756,11 @@ const handlePropertySubmit = async () => {
         lastLoginAt: now
       }
       
-      const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+      const isNative = Capacitor.isNativePlatform()
+      const platform = Capacitor.getPlatform()
       
-      if (isIOS) {
-        console.log('[Register] Using Capacitor Firestore plugin for iOS...')
+      if (isNative && (platform === 'ios' || platform === 'android')) {
+        console.log(`[Register] Using Capacitor Firestore plugin for ${platform}...`)
         console.log('[Register] FINAL DATA:', JSON.stringify(completeUserData, null, 2))
         
         try {
@@ -799,13 +802,14 @@ const handlePropertySubmit = async () => {
             merge: true
           })
           
-          console.log('[Register] ✅ Complete data saved via Capacitor Firestore')
+          console.log(`[Register] ✅ Complete data saved via Capacitor Firestore (${platform})`)
         } catch (e) {
           console.error('[Register] Capacitor Firestore save failed:', e)
           console.log('[Register] Error details:', JSON.stringify(e))
           throw new Error('Failed to save registration data: ' + (e.message || 'Unknown error'))
         }
       } else {
+        console.log('[Register] Using Web SDK Firestore...')
         await setDoc(doc(db, 'users', registrationStore.tempUserId), {
           ...completeUserData,
           createdAt: serverTimestamp(),

@@ -197,12 +197,12 @@ const handleImageUpload = async (file) => {
     
     // Check if iOS native platform
     const { Capacitor } = await import('@capacitor/core')
-    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    const isNative = Capacitor.isNativePlatform(); const platform = Capacitor.getPlatform()
     
     let imageUrl
     
-    if (isIOS) {
-      console.log('📱 iOS detected, using Storage REST API for request chat...')
+    if (isNative && (platform === 'ios' || platform === 'android')) {
+      console.log('📱 ${platform} detected, using Storage REST API for request chat...')
       
       // Convert file to ArrayBuffer
       const arrayBuffer = await file.arrayBuffer()
@@ -235,7 +235,7 @@ const handleImageUpload = async (file) => {
       
       if (uploadResponse.status >= 200 && uploadResponse.status < 300) {
         imageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
-        console.log('📱 iOS: ✅ Image uploaded successfully')
+        console.log(`📱 ${platform}: ✅ Image uploaded successfully`)
       } else {
         throw new Error(`Upload failed with status ${uploadResponse.status}`)
       }

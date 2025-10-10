@@ -1,12 +1,14 @@
 /**
  * Google Authentication Helper for PRE Group app
  * Handles Google sign-in with proper validation and cleanup
+ * Supports both web (popup) and native (Capacitor) platforms
  */
 
 import { signInWithPopup, signOut } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, googleProvider, db } from '../boot/firebase'
 import { canUseGoogleSignIn } from './userValidation'
+import { Capacitor } from '@capacitor/core'
 
 /**
  * Attempt Google sign-in with proper validation
@@ -14,9 +16,39 @@ import { canUseGoogleSignIn } from './userValidation'
  */
 export const attemptGoogleSignIn = async () => {
   try {
-    // Attempt Google sign-in
-    const result = await signInWithPopup(auth, googleProvider)
-    const user = result.user
+    const isNative = Capacitor.isNativePlatform()
+    const platform = Capacitor.getPlatform()
+    
+    let result
+    let user
+    
+    if (isNative && (platform === 'android' || platform === 'ios')) {
+      // Use Capacitor Firebase Authentication plugin for native
+      console.log(`[GoogleAuth] Using Capacitor plugin for ${platform}`)
+      const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
+      
+      await FirebaseAuthentication.signInWithGoogle()
+      
+      // Get the user from Firebase Auth
+      user = auth.currentUser
+      
+      if (!user) {
+        // If for some reason currentUser is not set, wait a bit and try again
+        await new Promise(resolve => setTimeout(resolve, 500))
+        user = auth.currentUser
+      }
+      
+      if (!user) {
+        throw new Error('Failed to get user after Google sign-in')
+      }
+      
+      console.log('[GoogleAuth] Native Google sign-in successful:', user.uid)
+    } else {
+      // Use Web SDK popup for web/PWA
+      console.log('[GoogleAuth] Using Web SDK popup for web platform')
+      result = await signInWithPopup(auth, googleProvider)
+      user = result.user
+    }
     
     // Immediately validate if this user can use Google sign-in
     const eligibilityCheck = await canUseGoogleSignIn(user.email)
@@ -35,7 +67,8 @@ export const attemptGoogleSignIn = async () => {
     return {
       success: true,
       userData: eligibilityCheck.userData,
-      firebaseUser: user
+      firebaseUser: user,
+      user: user // Add user property for compatibility
     }
     
   } catch (error) {

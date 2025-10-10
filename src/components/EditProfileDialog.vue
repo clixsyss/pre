@@ -509,12 +509,12 @@ const handleProfilePictureChange = async (event) => {
   try {
     // Get current user (iOS-compatible)
     const { Capacitor } = await import('@capacitor/core')
-    const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    const isNative = Capacitor.isNativePlatform(); const platform = Capacitor.getPlatform()
     
     let userId
     
-    if (isIOS) {
-      console.log('📱 iOS: Getting current user from Capacitor Auth...')
+    if (isNative && (platform === 'ios' || platform === 'android')) {
+      console.log(`📱 ${platform}: Getting current user from Capacitor Auth...`)
       const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
       const result = await FirebaseAuthentication.getCurrentUser()
       
@@ -523,7 +523,7 @@ const handleProfilePictureChange = async (event) => {
       }
       
       userId = result.user.uid
-      console.log('📱 iOS: Got user:', userId)
+      console.log(`📱 ${platform}: Got user:`, userId)
     } else {
       if (!auth.currentUser) {
         throw new Error('No authenticated user found')
@@ -539,7 +539,7 @@ const handleProfilePictureChange = async (event) => {
     );
 
     // Update user profile in Firebase Auth (only for web, skip for iOS as Capacitor handles it differently)
-    if (!isIOS) {
+    if (!isNative || (platform !== 'ios' && platform !== 'android')) {
       await updateProfile(auth.currentUser, {
         photoURL: uploadedDocuments.profilePicture
       });

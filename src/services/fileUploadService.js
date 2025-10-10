@@ -31,10 +31,11 @@ class FileUploadService {
           throw new Error('File size must be less than 10MB')
         }
 
-        const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+        const isNative = Capacitor.isNativePlatform()
+        const platform = Capacitor.getPlatform()
         
-        if (isIOS) {
-          console.log('📱 iOS detected, using Storage REST API...')
+        if (isNative && (platform === 'ios' || platform === 'android')) {
+          console.log(`📱 ${platform} detected, using Storage REST API...`)
           
           // Convert file to ArrayBuffer
           const arrayBuffer = await file.arrayBuffer()
@@ -48,7 +49,7 @@ class FileUploadService {
           }
           const base64 = btoa(binary)
           
-          console.log('📱 iOS: File converted to base64')
+          console.log(`📱 ${platform}: File converted to base64`)
           
           // Get auth token
           const { Http } = await import('@capacitor-community/http')
@@ -56,7 +57,7 @@ class FileUploadService {
           const bucket = 'pre-group.firebasestorage.app'
           
           // Upload using Storage REST API
-          console.log('📱 iOS: Uploading via REST API to:', fullPath)
+          console.log(`📱 ${platform}: Uploading via REST API to:`, fullPath)
           const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fullPath)}`
           
           const uploadResponse = await Http.request({
@@ -70,22 +71,22 @@ class FileUploadService {
             readTimeout: 60000
           })
           
-          console.log('📱 iOS: Upload response:', uploadResponse.status)
+          console.log(`📱 ${platform}: Upload response:`, uploadResponse.status)
           
           if (uploadResponse.status >= 200 && uploadResponse.status < 300) {
-            console.log('📱 iOS: ✅ File uploaded successfully')
+            console.log(`📱 ${platform}: ✅ File uploaded successfully`)
             
             // Get download URL
             const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
-            console.log('📱 iOS: Download URL:', downloadUrl)
+            console.log(`📱 ${platform}: Download URL:`, downloadUrl)
             
             return downloadUrl
           } else {
             throw new Error(`Upload failed with status ${uploadResponse.status}`)
           }
         } else {
-          // Use Web SDK for web and other platforms
-          console.log('🌐 Using Firebase Web SDK for upload...')
+          // Use Web SDK for web platform
+          console.log('🌐 Using Firebase Web SDK for upload (web)...')
           
           const fullPath = `${path}${fileName}`
           const fileRef = storageRef(storage, fullPath)

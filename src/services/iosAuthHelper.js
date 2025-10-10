@@ -1,6 +1,6 @@
 /**
- * iOS Authentication Helper
- * Provides iOS-specific authentication utilities to handle common issues
+ * Native Platform Authentication Helper
+ * Provides platform-specific authentication utilities for iOS and Android
  */
 
 import { Capacitor } from '@capacitor/core'
@@ -8,29 +8,32 @@ import { auth } from '../boot/firebase'
 
 class IOSAuthHelper {
   constructor() {
-    this.isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+    this.isNative = Capacitor.isNativePlatform()
+    this.platform = Capacitor.getPlatform()
+    // Keep isIOS for backward compatibility
+    this.isIOS = this.platform === 'ios' && this.isNative
   }
 
   /**
-   * Ensure user is properly authenticated on iOS
+   * Ensure user is properly authenticated on native platforms
    * @param {Object} userCredential - Firebase user credential
    * @param {string} email - User email
    * @param {string} password - User password
    * @returns {Promise<Object>} - Authenticated user
    */
   async ensureIOSAuthentication(userCredential, email, password) {
-    if (!this.isIOS) {
+    if (!this.isNative) {
       return auth.currentUser || userCredential.user
     }
 
-    console.log('iOS Auth Helper: Ensuring proper authentication on iOS')
+    console.log(`${this.platform} Auth Helper: Ensuring proper authentication on ${this.platform}`)
     
     // Check if current user is available
     if (!auth.currentUser) {
-      console.log('iOS Auth Helper: No current user, re-authenticating...')
+      console.log(`${this.platform} Auth Helper: No current user, re-authenticating...`)
       const { signInWithEmailAndPassword } = await import('firebase/auth')
       await signInWithEmailAndPassword(auth, email, password)
-      console.log('iOS Auth Helper: User re-authenticated successfully')
+      console.log(`${this.platform} Auth Helper: User re-authenticated successfully`)
     }
 
     // Wait for iOS auth state to stabilize
@@ -43,13 +46,13 @@ class IOSAuthHelper {
   }
 
   /**
-   * Wait for iOS authentication state to stabilize
+   * Wait for native platform authentication state to stabilize
    * @returns {Promise<void>}
    */
   async waitForIOSAuthStabilization() {
-    if (!this.isIOS) return
+    if (!this.isNative) return
 
-    console.log('iOS Auth Helper: Waiting for auth state to stabilize...')
+    console.log(`${this.platform} Auth Helper: Waiting for auth state to stabilize...`)
     
     // Longer wait for iOS
     await new Promise(resolve => setTimeout(resolve, 1500))
@@ -57,7 +60,7 @@ class IOSAuthHelper {
     // Additional wait if needed
     await new Promise(resolve => setTimeout(resolve, 500))
     
-    console.log('iOS Auth Helper: Auth state stabilized')
+    console.log(`${this.platform} Auth Helper: Auth state stabilized`)
   }
 
   /**
@@ -66,12 +69,12 @@ class IOSAuthHelper {
    * @returns {Promise<void>}
    */
   async refreshUserToken(user) {
-    if (!this.isIOS) return
+    if (!this.isNative) return
 
     try {
-      console.log('iOS Auth Helper: Refreshing user token...')
+      console.log(`${this.platform} Auth Helper: Refreshing user token...`)
       await user.getIdToken(true)
-      console.log('iOS Auth Helper: User token refreshed successfully')
+      console.log(`${this.platform} Auth Helper: User token refreshed successfully`)
     } catch (tokenError) {
       console.warn('iOS Auth Helper: Token refresh failed:', tokenError)
       // Don't throw - this is not critical for email verification
@@ -95,7 +98,7 @@ class IOSAuthHelper {
       try {
         console.log(`iOS Auth Helper: Sending email verification attempt ${retryCount + 1}/${maxRetries}`)
         await sendEmailVerification(user)
-        console.log('iOS Auth Helper: Email verification sent successfully')
+        console.log(`${this.platform} Auth Helper: Email verification sent successfully`)
         emailSent = true
       } catch (error) {
         retryCount++
@@ -136,11 +139,11 @@ class IOSAuthHelper {
   }
 
   /**
-   * Check if we're running on iOS native
+   * Check if running on native platform (iOS or Android)
    * @returns {boolean}
    */
   isIOSNative() {
-    return this.isIOS
+    return this.isNative
   }
 }
 
