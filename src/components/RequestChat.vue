@@ -21,11 +21,10 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import optimizedAuthService from '../services/optimizedAuthService';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../boot/firebase';
 import { useProjectStore } from '../stores/projectStore';
 import UnifiedChat from './UnifiedChat.vue';
 import firestoreService from '../services/firestoreService';
+import fileUploadService from '../services/fileUploadService';
 
 const props = defineProps({
   requestId: {
@@ -181,6 +180,8 @@ const handleSendMessage = async (messageText) => {
 
 const handleImageUpload = async (file) => {
   try {
+    console.log('🚀 RequestChat: Uploading image...', { fileName: file.name, size: file.size });
+    
     const user = await optimizedAuthService.getCurrentUser();
     if (!user) {
       throw new Error('User not authenticated');
@@ -190,62 +191,16 @@ const handleImageUpload = async (file) => {
       throw new Error('Missing projectId or requestId');
     }
 
-    // Upload image to Firebase Storage with iOS compatibility
+    // Generate filename and path
     const timestamp = Date.now();
-    const fileName = `message_${timestamp}_${file.name}`;
+    const fileExtension = file.name.split('.').pop();
+    const fileName = `message_${timestamp}.${fileExtension}`;
     const storagePath = `projects/${projectId.value}/request-submissions/${requestId.value}/messages/`;
     
-    // Check if iOS native platform
-    const { Capacitor } = await import('@capacitor/core')
-    const isNative = Capacitor.isNativePlatform(); const platform = Capacitor.getPlatform()
+    // Upload image using fileUploadService (which handles iOS automatically)
+    const imageUrl = await fileUploadService.uploadFile(file, storagePath, fileName);
     
-    let imageUrl
-    
-    if (isNative && (platform === 'ios' || platform === 'android')) {
-      console.log('📱 ${platform} detected, using Storage REST API for request chat...')
-      
-      // Convert file to ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer()
-      const uint8Array = new Uint8Array(arrayBuffer)
-      
-      // Convert to base64
-      let binary = ''
-      const len = uint8Array.byteLength
-      for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode(uint8Array[i])
-      }
-      const base64 = btoa(binary)
-      
-      // Upload using Storage REST API
-      const { Http } = await import('@capacitor-community/http')
-      const fullPath = `${storagePath}${fileName}`
-      const bucket = 'pre-group.firebasestorage.app'
-      const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fullPath)}`
-      
-      const uploadResponse = await Http.request({
-        url: uploadUrl,
-        method: 'POST',
-        headers: {
-          'Content-Type': file.type
-        },
-        data: base64,
-        connectTimeout: 60000,
-        readTimeout: 60000
-      })
-      
-      if (uploadResponse.status >= 200 && uploadResponse.status < 300) {
-        imageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
-        console.log(`📱 ${platform}: ✅ Image uploaded successfully`)
-      } else {
-        throw new Error(`Upload failed with status ${uploadResponse.status}`)
-      }
-    } else {
-      // Use Web SDK for web and other platforms
-      console.log('🌐 Using Firebase Web SDK for request chat upload...')
-      const fileRef = storageRef(storage, storagePath + fileName)
-      const snapshot = await uploadBytes(fileRef, file)
-      imageUrl = await getDownloadURL(snapshot.ref)
-    }
+    console.log('✅ RequestChat: Image uploaded successfully:', imageUrl);
     
     // Send message with image using firestoreService
     const messageData = {
@@ -259,8 +214,10 @@ const handleImageUpload = async (file) => {
 
     const messagesPath = `projects/${projectId.value}/requestSubmissions/${requestId.value}/messages`;
     await firestoreService.addDoc(messagesPath, messageData);
+    
+    console.log('✅ RequestChat: Image message sent successfully');
   } catch (error) {
-    console.error('Error uploading image:', error);
+    console.error('❌ RequestChat: Error uploading image:', error);
     throw error;
   }
 };

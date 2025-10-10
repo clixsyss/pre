@@ -23,6 +23,8 @@ import { useRouter, useRoute } from 'vue-router';
 import { useSupportStore } from '../stores/supportStore';
 import { useNotificationStore } from '../stores/notifications';
 import UnifiedChat from './UnifiedChat.vue';
+import fileUploadService from '../services/fileUploadService';
+import optimizedAuthService from '../services/optimizedAuthService';
 
 const router = useRouter();
 const route = useRoute();
@@ -81,17 +83,38 @@ const handleSendMessage = async (messageText) => {
 
 const handleImageUpload = async (file) => {
   try {
-    // Here you would upload the image to Firebase Storage
-    // For now, we'll just send a text message about the image
+    console.log('🚀 SupportChat: Uploading image...', { fileName: file.name, size: file.size });
+    
+    // Get authenticated user
+    const user = await optimizedAuthService.getCurrentUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Generate filename and path
+    const timestamp = Date.now();
+    const fileExtension = file.name.split('.').pop();
+    const fileName = `support_${timestamp}.${fileExtension}`;
+    const folderPath = `support/${supportChatId.value}/`;
+    
+    // Upload image using fileUploadService (which handles iOS automatically)
+    const imageUrl = await fileUploadService.uploadFile(file, folderPath, fileName);
+    
+    console.log('✅ SupportChat: Image uploaded successfully:', imageUrl);
+    
+    // Send message with image URL
     await supportStore.addMessage(supportChatId.value, {
-      text: `📷 Image: ${file.name}`,
-      type: 'text'
+      text: '',
+      type: 'image',
+      imageUrl: imageUrl
     });
 
     // Refresh the chat to get the updated messages since real-time listeners are disabled
     await supportStore.fetchSupportChat(supportChatId.value);
+    
+    console.log('✅ SupportChat: Image message sent successfully');
   } catch (error) {
-    console.error('Error uploading image:', error);
+    console.error('❌ SupportChat: Error uploading image:', error);
     notificationStore.addNotification({
       type: 'error',
       message: 'Failed to upload image. Please try again.'

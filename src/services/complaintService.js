@@ -252,12 +252,18 @@ class ComplaintService {
         console.log('🚀 Uploading complaint image:', { fileName: file.name, complaintId });
         
         const tempId = complaintId || 'temp';
-        const folderPath = `complaints/${tempId}`;
+        const timestamp = Date.now();
+        const fileExtension = file.name.split('.').pop();
+        const fileName = `complaint_${timestamp}.${fileExtension}`;
+        const folderPath = `complaints/${tempId}/`;
         
-        const result = await fileUploadService.uploadFile(file, folderPath);
+        const downloadUrl = await fileUploadService.uploadFile(file, folderPath, fileName);
         
-        console.log('✅ Complaint image uploaded successfully:', result);
-        return result;
+        console.log('✅ Complaint image uploaded successfully:', downloadUrl);
+        return {
+          url: downloadUrl,
+          fileName: fileName
+        };
       } catch (error) {
         console.error('❌ Error uploading complaint image:', error);
         errorHandlingService.handleFirestoreError(error, 'uploadComplaintImage');

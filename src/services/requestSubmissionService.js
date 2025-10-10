@@ -2,12 +2,8 @@ import {
   collection, 
   addDoc
 } from 'firebase/firestore';
-import { 
-  ref as storageRef, 
-  uploadBytes, 
-  getDownloadURL
-} from 'firebase/storage';
-import { db, storage } from '../boot/firebase';
+import { db } from '../boot/firebase';
+import fileUploadService from './fileUploadService';
 
 class RequestSubmissionService {
   /**
@@ -27,9 +23,6 @@ class RequestSubmissionService {
       // Check if Firebase is properly initialized
       if (!db) {
         throw new Error('Firebase Firestore not initialized');
-      }
-      if (!storage) {
-        throw new Error('Firebase Storage not initialized');
       }
 
       // Upload media files to Firebase Storage if any
@@ -199,313 +192,27 @@ class RequestSubmissionService {
         const fileExtension = file.name.split('.').pop();
         const fileName = `request_${timestamp}_${index}.${fileExtension}`;
         
-        // Create storage reference - matches the storage rules
-        const storagePath = `projects/${projectId}/requestSubmissions/${submissionId}/media/${fileName}`;
-        const fileRef = storageRef(storage, storagePath);
+        // Create storage path
+        const storagePath = `projects/${projectId}/requestSubmissions/${submissionId}/media/`;
         
-        // Compress image if it's too large
-        let fileToUpload = file;
-        let isCompressed = false;
+        // Upload using fileUploadService (which handles iOS automatically)
+        const downloadURL = await fileUploadService.uploadFile(file, storagePath, fileName);
         
-        // Debug mode: skip compression for testing
-        const DEBUG_SKIP_COMPRESSION = false;
-        
-        // iOS Debug: Create a simple test file for iOS
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        if (isIOS && file.type.startsWith('image/')) {
-          console.log(`📱 iOS Debug: Creating simple test file for iOS`);
-          const testContent = 'iOS test file';
-          const testBlob = new Blob([testContent], { type: 'text/plain' });
-          const testFile = new File([testBlob], 'ios-test.txt', { type: 'text/plain' });
-          console.log(`📱 iOS Debug: Test file created: ${testFile.name}, size: ${testFile.size} bytes`);
-          // Don't replace the original file, just log for debugging
-        }
-
-             // iOS-specific: Enhanced file handling for iOS
-             if (isIOS) {
-               console.log(`📱 iOS: Processing file upload for iOS`);
-               
-               // Validate file for iOS
-               if (!fileToUpload || fileToUpload.size === 0) {
-                 throw new Error('Invalid file: file is empty or undefined');
-               }
-               
-               // iOS-specific file validation
-               if (fileToUpload.size > 50 * 1024 * 1024) { // 50MB limit for iOS
-                 throw new Error('File too large for iOS upload (max 50MB)');
-               }
-               
-               console.log(`📱 iOS: File validated - ${fileToUpload.name}, size: ${(fileToUpload.size / 1024 / 1024).toFixed(2)} MB`);
-             }
-        
-        if (!DEBUG_SKIP_COMPRESSION && file.type.startsWith('image/') && file.size > 2 * 1024 * 1024) { // 2MB
-          try {
-            console.log(`📐 Compressing large image: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
-            fileToUpload = await this.compressImage(file);
-            isCompressed = true;
-            console.log(`✅ Image compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(2)} MB`);
-          } catch (compressionError) {
-            console.warn(`⚠️ Compression failed for ${file.name}, using original file:`, compressionError);
-            fileToUpload = file; // Fallback to original file
-            isCompressed = false;
-          }
-        }
-        
-        // Validate file before upload
-        if (!fileToUpload || fileToUpload.size === 0) {
-          throw new Error('Invalid file: file is empty or undefined');
-        }
-        
-        // Test: Create a simple text file to test upload
-        if (DEBUG_SKIP_COMPRESSION && file.type.startsWith('image/')) {
-          console.log(`🧪 DEBUG: Creating test file instead of image`);
-          const testContent = 'Test file for debugging upload';
-          const testBlob = new Blob([testContent], { type: 'text/plain' });
-          fileToUpload = new File([testBlob], 'test.txt', { type: 'text/plain' });
-          console.log(`🧪 DEBUG: Test file created: ${fileToUpload.name}, size: ${fileToUpload.size} bytes`);
-        }
-
-        // Test: Create a very small image file to test upload for large files (DISABLED)
-        // if (file.type.startsWith('image/') && file.size > 5 * 1024 * 1024) { // 5MB
-        //   console.log(`🧪 Creating small test image instead of large file`);
-        //   const canvas = document.createElement('canvas');
-        //   canvas.width = 10;
-        //   canvas.height = 10;
-        //   const ctx = canvas.getContext('2d');
-        //   ctx.fillStyle = '#FF0000';
-        //   ctx.fillRect(0, 0, 10, 10);
-        //   
-        //   // Make this synchronous by using a Promise
-        //   await new Promise((resolve) => {
-        //     canvas.toBlob((blob) => {
-        //       const smallFile = new File([blob], 'test-small.jpg', { type: 'image/jpeg' });
-        //       console.log(`🧪 Small test file created: ${smallFile.name}, size: ${smallFile.size} bytes`);
-        //       fileToUpload = smallFile;
-        //       resolve();
-        //     }, 'image/jpeg', 0.1);
-        //   });
-        // }
-        
-        console.log(`📤 Uploading file: ${fileToUpload.name}, size: ${(fileToUpload.size / 1024 / 1024).toFixed(2)} MB, type: ${fileToUpload.type}`);
-        console.log(`📤 File validation:`, {
-          isFile: fileToUpload instanceof File,
-          hasName: !!fileToUpload.name,
-          hasType: !!fileToUpload.type,
-          size: fileToUpload.size,
-          lastModified: fileToUpload.lastModified,
-          userAgent: navigator.userAgent,
-          isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
-          isSafari: /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)
-        });
-        
-             let snapshot;
-             let retryCount = 0;
-             const maxRetries = isIOS ? 3 : 2; // More retries for iOS
-             
-             while (retryCount <= maxRetries) {
-               try {
-                 console.log(`📤 Upload attempt ${retryCount + 1} for ${file.name}...`);
-                 
-                 // Check network connectivity
-                 if (!navigator.onLine) {
-                   throw new Error('No internet connection');
-                 }
-                 
-                 // iOS-specific debugging and preparation
-                 if (isIOS) {
-                   console.log(`📱 iOS Debug: Starting upload for ${file.name}`, {
-                     fileSize: fileToUpload.size,
-                     fileType: fileToUpload.type,
-                     isIOS: true,
-                     storagePath: storagePath,
-                     fileRef: fileRef ? 'exists' : 'null',
-                     userAgent: navigator.userAgent,
-                     isSafari: /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent),
-                     isWebKit: /WebKit/.test(navigator.userAgent)
-                   });
-                   
-                   // iOS-specific: Ensure file is properly formatted
-                   if (fileToUpload instanceof File) {
-                     console.log(`📱 iOS: File object is valid File instance`);
-                   } else {
-                     console.warn(`📱 iOS: File object is not File instance, type: ${typeof fileToUpload}`);
-                   }
-                 }
-                 
-                 // iOS-specific: Use Capacitor Firebase Storage for better compatibility
-                 if (isIOS) {
-                   console.log(`📱 iOS: Using Capacitor Firebase Storage for upload`);
-                   try {
-                     const { FirebaseStorage } = await import('@capacitor-firebase/storage');
-                     
-                     // Convert File to Blob for Capacitor
-                     const fileBlob = await fileToUpload.arrayBuffer();
-                     const base64Data = btoa(String.fromCharCode(...new Uint8Array(fileBlob)));
-                     
-                     console.log(`📱 iOS: File converted to base64, size: ${base64Data.length} characters`);
-                     
-                     const uploadTimeout = 120000; // 2 minutes for iOS
-                     const uploadPromise = FirebaseStorage.uploadFile({
-                       path: storagePath,
-                       data: base64Data,
-                       metadata: {
-                         contentType: fileToUpload.type,
-                         customMetadata: {
-                           originalName: fileToUpload.name,
-                           uploadedAt: new Date().toISOString()
-                         }
-                       }
-                     });
-                     
-                     const timeoutPromise = new Promise((_, reject) => 
-                       setTimeout(() => reject(new Error('Upload timeout')), uploadTimeout)
-                     );
-                     
-                     console.log(`📤 Starting iOS upload race with ${uploadTimeout/1000}s timeout...`);
-                     const result = await Promise.race([uploadPromise, timeoutPromise]);
-                     
-                     // Get download URL
-                     const downloadURL = await FirebaseStorage.getDownloadUrl({
-                       path: storagePath
-                     });
-                     
-                     console.log(`✅ iOS file ${file.name} uploaded successfully:`, result);
-                     console.log(`✅ iOS download URL:`, downloadURL.url);
-                     
-                     snapshot = {
-                       ref: { 
-                         fullPath: storagePath,
-                         downloadURL: downloadURL.url
-                       },
-                       metadata: result.metadata,
-                       downloadURL: downloadURL.url
-                     };
-                     
-                   } catch (capacitorError) {
-                     console.warn(`⚠️ iOS: Capacitor Firebase Storage failed, falling back to Web SDK:`, capacitorError.message);
-                     
-                     // Fallback to Web SDK
-                     const uploadTimeout = 120000; // 2 minutes
-                     const uploadPromise = uploadBytes(fileRef, fileToUpload);
-                     const timeoutPromise = new Promise((_, reject) => 
-                       setTimeout(() => reject(new Error('Upload timeout')), uploadTimeout)
-                     );
-                     
-                     console.log(`📤 Starting Web SDK fallback upload with ${uploadTimeout/1000}s timeout...`);
-                     snapshot = await Promise.race([uploadPromise, timeoutPromise]);
-                   }
-                 } else {
-                   // Web: Use Firebase Web SDK directly
-                   console.log(`🌐 Web: Using Firebase Web SDK for upload`);
-                   const uploadTimeout = 120000; // 2 minutes
-                   const uploadPromise = uploadBytes(fileRef, fileToUpload);
-                   const timeoutPromise = new Promise((_, reject) => 
-                     setTimeout(() => reject(new Error('Upload timeout')), uploadTimeout)
-                   );
-                   
-                   console.log(`📤 Starting Web upload race with ${uploadTimeout/1000}s timeout...`);
-                   snapshot = await Promise.race([uploadPromise, timeoutPromise]);
-                 }
-                 console.log(`✅ File ${file.name} uploaded successfully to path: ${storagePath}`);
-                 break; // Success, exit retry loop
-               } catch (uploadError) {
-                 retryCount++;
-                 console.warn(`⚠️ Upload attempt ${retryCount} failed for ${file.name}:`, uploadError.message);
-                 console.warn(`⚠️ Upload error details:`, {
-                   code: uploadError.code,
-                   message: uploadError.message,
-                   stack: uploadError.stack,
-                   isNetworkError: uploadError.message.includes('timeout') || uploadError.message.includes('network'),
-                   isPermissionError: uploadError.code === 'storage/unauthorized' || uploadError.code === 'storage/object-not-found',
-                   isIOS: isIOS,
-                   retryCount,
-                   maxRetries
-                 });
-                 
-                 if (retryCount > maxRetries) {
-                   // If compressed file failed and we haven't tried original yet, try original file
-                   if (isCompressed && fileToUpload !== file) {
-                     console.log(`🔄 Trying original file for ${file.name} after compressed file failed`);
-                     fileToUpload = file;
-                     isCompressed = false;
-                     retryCount = 0; // Reset retry count for original file
-                     continue;
-                   }
-                   
-                   // iOS-specific: More lenient error handling
-                   if (isIOS) {
-                     console.warn(`📱 iOS: All retries failed for ${file.name}, but continuing with submission`);
-                     return {
-                       name: file.name,
-                       type: file.type,
-                       size: file.size,
-                       url: null,
-                       storagePath: null,
-                       uploadedAt: new Date(),
-                       error: `iOS upload failed: ${uploadError.message}`,
-                       isIOS: true
-                     };
-                   }
-                   
-                   // If it's a network or permission error, return a placeholder instead of failing
-                   if (uploadError.message.includes('timeout') || uploadError.message.includes('network') || 
-                       uploadError.code === 'storage/unauthorized' || uploadError.code === 'storage/object-not-found') {
-                     console.warn(`⚠️ Skipping file ${file.name} due to persistent error, continuing with submission`);
-                     return {
-                       name: file.name,
-                       type: file.type,
-                       size: file.size,
-                       url: null,
-                       storagePath: null,
-                       uploadedAt: new Date(),
-                       error: uploadError.message
-                     };
-                   }
-                   
-                   throw uploadError; // Re-throw if all retries failed
-                 }
-                 
-                 // iOS-specific: Longer wait times between retries
-                 const waitTime = isIOS ? (2000 * retryCount) : (1000 * retryCount);
-                 console.log(`⏳ Waiting ${waitTime/1000} seconds before retry...`);
-                 await new Promise(resolve => setTimeout(resolve, waitTime));
-               }
-        }
-        
-        // Get the download URL
-        let downloadURL;
-        if (isIOS && snapshot.ref && snapshot.ref.fullPath) {
-          // iOS: Use the download URL we already got from Capacitor Firebase Storage
-          downloadURL = snapshot.downloadURL || snapshot.ref.downloadURL;
-          console.log(`🔗 iOS Download URL obtained for ${file.name}:`, downloadURL);
-        } else {
-          // Web: Use Firebase Web SDK
-          downloadURL = await getDownloadURL(snapshot.ref);
-          console.log(`🔗 Web Download URL obtained for ${file.name}:`, downloadURL);
-        }
+        console.log(`✅ File ${file.name} uploaded successfully`);
         
         return {
           name: file.name,
           type: file.type,
           size: file.size,
           url: downloadURL,
-          storagePath: storagePath,
+          storagePath: storagePath + fileName,
           uploadedAt: new Date()
         };
         
       } catch (error) {
         console.error(`❌ RequestSubmissionService: Error uploading file ${file.name}:`, error);
-        console.error(`❌ Error details:`, {
-          message: error.message,
-          code: error.code,
-          stack: error.stack,
-          fileName: file.name,
-          fileSize: file.size,
-          fileType: file.type
-        });
         
-        // If it's a timeout or compression error, return a placeholder instead of failing
-        if (error.message.includes('timeout') || error.message.includes('compress') || error.message.includes('storage')) {
+        // Return a placeholder with error info instead of failing the entire submission
           console.warn(`⚠️ Skipping file ${file.name} due to error, continuing with submission`);
           return {
             name: file.name,
@@ -516,9 +223,6 @@ class RequestSubmissionService {
             uploadedAt: new Date(),
             error: error.message
           };
-        }
-        
-        throw new Error(`Failed to upload file ${file.name}: ${error.message}`);
       }
     });
 
