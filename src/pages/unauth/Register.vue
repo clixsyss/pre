@@ -380,7 +380,6 @@ import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../boot/firebase'
-import { Capacitor } from '@capacitor/core'
 import firebaseRestAuth from '../../services/firebaseRestAuth'
 
 // Component name for ESLint
@@ -420,32 +419,15 @@ const additionalPropertyForm = reactive({
 const fetchAvailableProjects = async () => {
   try {
     console.log('[Register] Fetching projects...')
-    const isNative = Capacitor.isNativePlatform()
-    const platform = Capacitor.getPlatform()
     
-    if (isNative && (platform === 'ios' || platform === 'android')) {
-      console.log(`[Register] Using Capacitor Firestore to fetch projects (${platform})...`)
-      const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
-      
-      const result = await FirebaseFirestore.getCollection({
-        reference: 'projects'
-      })
-      
-      availableProjects.value = result.snapshots.map(snap => ({
-        id: snap.id,
-        ...snap.data
-      }))
-      console.log(`[Register] ✅ Fetched ${availableProjects.value.length} projects (${platform})`)
-    } else {
-      console.log('[Register] Using Web SDK Firestore to fetch projects...')
-      const projectsRef = collection(db, 'projects')
-      const snapshot = await getDocs(projectsRef)
-      availableProjects.value = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
-      console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects (web)')
-    }
+    // Use Web SDK for all platforms - more reliable and consistent
+    const projectsRef = collection(db, 'projects')
+    const snapshot = await getDocs(projectsRef)
+    availableProjects.value = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+    console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects')
   } catch (error) {
     console.error('[Register] Error fetching projects:', error)
     notificationStore.showError('Failed to load projects. Please try again later.')
@@ -756,67 +738,14 @@ const handlePropertySubmit = async () => {
         lastLoginAt: now
       }
       
-      const isNative = Capacitor.isNativePlatform()
-      const platform = Capacitor.getPlatform()
-      
-      if (isNative && (platform === 'ios' || platform === 'android')) {
-        console.log(`[Register] Using Capacitor Firestore plugin for ${platform}...`)
-        console.log('[Register] FINAL DATA:', JSON.stringify(completeUserData, null, 2))
-        
-        try {
-          const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
-          
-          // Clean null values for Capacitor plugin compatibility
-          const cleanData = (obj) => {
-            const cleaned = {}
-            for (const [key, value] of Object.entries(obj)) {
-              if (value === null || value === undefined) {
-                // Skip null/undefined values
-                continue
-              } else if (typeof value === 'object' && !Array.isArray(value)) {
-                // Recursively clean nested objects
-                const cleanedNested = cleanData(value)
-                if (Object.keys(cleanedNested).length > 0) {
-                  cleaned[key] = cleanedNested
-                }
-              } else if (Array.isArray(value)) {
-                // Keep arrays, clean their items if they're objects
-                cleaned[key] = value.map(item => 
-                  typeof item === 'object' && !Array.isArray(item) ? cleanData(item) : item
-                )
-              } else {
-                cleaned[key] = value
-              }
-            }
-            return cleaned
-          } 
-          
-          
-          const cleanedData = cleanData(completeUserData)
-          console.log('[Register] Cleaned data (nulls removed):', JSON.stringify(cleanedData, null, 2))
-          
-          console.log('[Register] Saving via Capacitor Firestore plugin...')
-          await FirebaseFirestore.setDocument({
-            reference: `users/${registrationStore.tempUserId}`,
-            data: cleanedData,
-            merge: true
-          })
-          
-          console.log(`[Register] ✅ Complete data saved via Capacitor Firestore (${platform})`)
-        } catch (e) {
-          console.error('[Register] Capacitor Firestore save failed:', e)
-          console.log('[Register] Error details:', JSON.stringify(e))
-          throw new Error('Failed to save registration data: ' + (e.message || 'Unknown error'))
-        }
-      } else {
-        console.log('[Register] Using Web SDK Firestore...')
-        await setDoc(doc(db, 'users', registrationStore.tempUserId), {
-          ...completeUserData,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        }, { merge: true })
-        console.log('[Register] ✅ Complete data saved (Web SDK)')
-      }
+      // Use Web SDK for all platforms - more reliable
+      console.log('[Register] Using Web SDK Firestore to save user data...')
+      await setDoc(doc(db, 'users', registrationStore.tempUserId), {
+        ...completeUserData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true })
+      console.log('[Register] ✅ Complete data saved via Web SDK')
       
       // Clear password for security after successful save
       console.log('[Register] Clearing stored password for security')

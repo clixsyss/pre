@@ -16,15 +16,15 @@ import { Capacitor } from '@capacitor/core'
  */
 export const attemptGoogleSignIn = async () => {
   try {
-    const isNative = Capacitor.isNativePlatform()
     const platform = Capacitor.getPlatform()
+    const isIOS = platform === 'ios' && Capacitor.isNativePlatform()
     
     let result
     let user
     
-    if (isNative && (platform === 'android' || platform === 'ios')) {
-      // Use Capacitor Firebase Authentication plugin for native
-      console.log(`[GoogleAuth] Using Capacitor plugin for ${platform}`)
+    if (isIOS) {
+      // Use Capacitor Firebase Authentication plugin for iOS only
+      console.log('[GoogleAuth] Using Capacitor plugin for iOS')
       const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
       
       await FirebaseAuthentication.signInWithGoogle()
@@ -42,10 +42,10 @@ export const attemptGoogleSignIn = async () => {
         throw new Error('Failed to get user after Google sign-in')
       }
       
-      console.log('[GoogleAuth] Native Google sign-in successful:', user.uid)
+      console.log('[GoogleAuth] iOS Google sign-in successful:', user.uid)
     } else {
-      // Use Web SDK popup for web/PWA
-      console.log('[GoogleAuth] Using Web SDK popup for web platform')
+      // Use Web SDK popup for Android and web (more reliable)
+      console.log(`[GoogleAuth] Using Web SDK popup for ${platform}`)
       result = await signInWithPopup(auth, googleProvider)
       user = result.user
     }

@@ -192,16 +192,17 @@ class OptimizedAuthService {
   /**
    * Sign in with Google
    * Supports both web (popup) and native (Capacitor) platforms
+   * Note: Only iOS uses Capacitor plugin, Android uses Web SDK for reliability
    */
   async signInWithGoogle() {
     try {
       const { Capacitor } = await import('@capacitor/core')
-      const isNative = Capacitor.isNativePlatform()
       const platform = Capacitor.getPlatform()
+      const isIOS = platform === 'ios' && Capacitor.isNativePlatform()
       
-      if (isNative && (platform === 'android' || platform === 'ios')) {
-        // Use Capacitor Firebase Authentication plugin for native
-        console.log(`[OptimizedAuth] Using Capacitor Google Sign-In for ${platform}`)
+      if (isIOS) {
+        // Use Capacitor Firebase Authentication plugin for iOS only
+        console.log('[OptimizedAuth] Using Capacitor Google Sign-In for iOS')
         const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
         
         const result = await FirebaseAuthentication.signInWithGoogle()
@@ -221,8 +222,8 @@ class OptimizedAuthService {
           credential: result.credential || null
         }
       } else {
-        // Use Web SDK popup for web/PWA
-        console.log('[OptimizedAuth] Using Web SDK popup for web platform')
+        // Use Web SDK popup for Android and web (more reliable)
+        console.log(`[OptimizedAuth] Using Web SDK for ${platform}`)
         const { signInWithPopup, GoogleAuthProvider } = await import('firebase/auth')
         const provider = new GoogleAuthProvider()
         const result = await signInWithPopup(this.auth, provider)

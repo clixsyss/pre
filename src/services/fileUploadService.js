@@ -4,47 +4,6 @@ import { Capacitor } from '@capacitor/core'
 
 class FileUploadService {
   /**
-   * Compress an image file to reduce size for iOS uploads
-   * @param {File|Blob} file - The image file to compress
-   * @param {number} quality - Compression quality (0.0 - 1.0)
-   * @returns {Promise<Blob>} - Compressed image blob
-   */
-  async compressImage(file, quality = 0.7) {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      const img = new Image()
-      
-      img.onload = () => {
-        // Calculate new dimensions (max 1200px width for iOS)
-        const maxWidth = 1200
-        const maxHeight = 1200
-        let { width, height } = img
-        
-        if (width > maxWidth || height > maxHeight) {
-          if (width > height) {
-            height = (height * maxWidth) / width
-            width = maxWidth
-          } else {
-            width = (width * maxHeight) / height
-            height = maxHeight
-          }
-        }
-        
-        canvas.width = width
-        canvas.height = height
-        
-        // Draw and compress
-        ctx.drawImage(img, 0, 0, width, height)
-        canvas.toBlob(resolve, 'image/jpeg', quality)
-      }
-      
-      img.onerror = () => reject(new Error('Failed to load image for compression'))
-      img.src = URL.createObjectURL(file)
-    })
-  }
-
-  /**
    * Upload a file to Firebase Storage
    * @param {File} file - The file to upload
    * @param {string} path - The storage path (e.g., 'users/userId/documents/')
@@ -75,23 +34,11 @@ class FileUploadService {
         const isNative = Capacitor.isNativePlatform()
         const platform = Capacitor.getPlatform()
         
-        // Prepare file for upload
-        let fileToUpload = file
-        
-        // Compress images > 1MB to prevent timeout (especially critical for iOS)
-        if (file.size > 1024 * 1024) {
-          const platformLabel = isNative ? platform : 'web'
-          console.log(`📱 ${platformLabel}: Compressing large image (${(file.size / 1024 / 1024).toFixed(2)} MB)...`)
-          const compressedBlob = await this.compressImage(file, 0.7)
-          fileToUpload = new File([compressedBlob], fileName, { type: 'image/jpeg' })
-          console.log(`📱 ${platformLabel}: Compressed to ${(fileToUpload.size / 1024 / 1024).toFixed(2)} MB`)
-        }
-        
         if (isNative && (platform === 'ios' || platform === 'android')) {
           console.log(`📱 ${platform} detected, using Storage REST API...`)
           
           // Convert file to ArrayBuffer
-          const arrayBuffer = await fileToUpload.arrayBuffer()
+          const arrayBuffer = await file.arrayBuffer()
           const uint8Array = new Uint8Array(arrayBuffer)
           
           // Convert to base64 for upload
@@ -117,7 +64,7 @@ class FileUploadService {
             url: uploadUrl,
             method: 'POST',
             headers: {
-              'Content-Type': fileToUpload.type
+              'Content-Type': file.type
             },
             data: base64,
             connectTimeout: 60000,
@@ -129,10 +76,31 @@ class FileUploadService {
           if (uploadResponse.status >= 200 && uploadResponse.status < 300) {
             console.log(`📱 ${platform}: ✅ File uploaded successfully`)
             
-            // Get download URL
-            const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
-            console.log(`📱 ${platform}: Download URL:`, downloadUrl)
+            // Parse response to get download token if available
+            let downloadUrl
+            try {
+              const responseData = typeof uploadResponse.data === 'string' 
+                ? JSON.parse(uploadResponse.data) 
+                : uploadResponse.data
+              
+              console.log(`📱 ${platform}: Upload response data:`, responseData)
+              
+              // If Firebase returns a download token, use it
+              if (responseData.downloadTokens) {
+                downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media&token=${responseData.downloadTokens}`
+                console.log(`📱 ${platform}: Using tokenized download URL`)
+              } else {
+                // Fallback to public URL (works with open storage rules)
+                downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
+                console.log(`📱 ${platform}: Using public download URL (no token)`)
+              }
+            } catch (error) {
+              // If parsing fails, use public URL
+              downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
+              console.log(`📱 ${platform}: Using public download URL (parse failed):`, error.message)
+            }
             
+            console.log(`📱 ${platform}: Download URL:`, downloadUrl)
             return downloadUrl
           } else {
             throw new Error(`Upload failed with status ${uploadResponse.status}`)
@@ -144,7 +112,7 @@ class FileUploadService {
           const fullPath = `${path}${fileName}`
           const fileRef = storageRef(storage, fullPath)
           
-          const snapshot = await uploadBytes(fileRef, fileToUpload)
+          const snapshot = await uploadBytes(fileRef, file)
           const downloadURL = await getDownloadURL(snapshot.ref)
           
           return downloadURL

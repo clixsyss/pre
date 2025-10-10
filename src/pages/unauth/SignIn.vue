@@ -188,14 +188,14 @@ const handleSignIn = async () => {
   try {
     console.log('[SignIn] Starting sign in...')
     
-    // Use Capacitor plugin for native (iOS/Android), Web SDK for web
+    // Use Capacitor plugin for iOS only, Web SDK for Android and web
     const { Capacitor } = await import('@capacitor/core')
-    const isNative = Capacitor.isNativePlatform()
     const platform = Capacitor.getPlatform()
+    const isIOS = platform === 'ios' && Capacitor.isNativePlatform()
     
     let userId
-    if (isNative && (platform === 'ios' || platform === 'android')) {
-      console.log(`[SignIn] Using Capacitor Auth plugin for ${platform}...`)
+    if (isIOS) {
+      console.log('[SignIn] Using Capacitor Auth plugin for iOS...')
       const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
       
       const result = await FirebaseAuthentication.signInWithEmailAndPassword({
@@ -204,12 +204,12 @@ const handleSignIn = async () => {
       })
       
       userId = result.user.uid
-      console.log(`[SignIn] ✅ Capacitor auth successful for ${platform}:`, userId)
+      console.log('[SignIn] ✅ Capacitor auth successful for iOS:', userId)
     } else {
-      console.log('[SignIn] Using Web SDK for web platform...')
+      console.log(`[SignIn] Using Web SDK for ${platform}...`)
       const userCredential = await optimizedAuthService.signInWithEmailAndPassword(formData.email, formData.password)
       userId = userCredential.user.uid
-      console.log('[SignIn] ✅ Web SDK auth successful:', userId)
+      console.log(`[SignIn] ✅ Web SDK auth successful for ${platform}:`, userId)
     }
     
     // Sync PRE user with Smart Mirror service for user isolation

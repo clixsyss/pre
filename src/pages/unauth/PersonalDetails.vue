@@ -460,65 +460,27 @@ const handleSubmit = async () => {
     })
     
     // Fire Firestore save (non-blocking - don't wait)
-    const { Capacitor } = await import('@capacitor/core')
-    const isNative = Capacitor.isNativePlatform()
-    const platform = Capacitor.getPlatform()
-    
-    if (isNative && (platform === 'ios' || platform === 'android')) {
-      console.log(`[PersonalDetails] Saving via Capacitor (background, ${platform})...`)
-      import('@capacitor-firebase/firestore').then(({ FirebaseFirestore }) => {
-        FirebaseFirestore.setDocument({
-          reference: `users/${userId}`,
-          data: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            mobile: formData.mobile,
-            dateOfBirth: formData.dateOfBirth,
-            gender: formData.gender,
-            nationalId: formData.nationalId,
-            email: formData.email,
-            fullName: `${formData.firstName} ${formData.lastName}`,
-            documents: {
-              frontIdUrl: uploadedDocuments.frontId,
-              backIdUrl: uploadedDocuments.backId,
-              profilePictureUrl: uploadedDocuments.profilePicture || null
-            },
-            registrationStep: 'personal_complete',
-            registrationStatus: 'in_progress',
-            isProfileComplete: true,
-            approvalStatus: 'pending',
-            emailVerified: false,
-            isSuspended: false
-          },
-          merge: true
-        }).then(() => {
-          console.log(`[PersonalDetails] ✅ Background save complete (${platform})`)
-        }).catch(e => {
-          console.warn('[PersonalDetails] Background save failed (OK):', e?.message)
-        })
-      })
-    } else {
-      // Web SDK for web platform
-      setDoc(doc(db, 'users', userId), {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        mobile: formData.mobile,
-        dateOfBirth: formData.dateOfBirth,
-        gender: formData.gender,
-        nationalId: formData.nationalId,
-        email: formData.email,
-        fullName: `${formData.firstName} ${formData.lastName}`,
-        documents: {
-          frontIdUrl: uploadedDocuments.frontId,
-          backIdUrl: uploadedDocuments.backId,
-          profilePictureUrl: uploadedDocuments.profilePicture || null
-        },
-        registrationStep: 'personal_complete',
-        registrationStatus: 'in_progress',
-        isProfileComplete: true,
-        updatedAt: serverTimestamp()
-      }, { merge: true }).catch(e => console.warn('Background save failed:', e))
-    }
+    // Use Web SDK for all platforms - more reliable
+    console.log('[PersonalDetails] Saving via Web SDK (background)...')
+    setDoc(doc(db, 'users', userId), {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      mobile: formData.mobile,
+      dateOfBirth: formData.dateOfBirth,
+      gender: formData.gender,
+      nationalId: formData.nationalId,
+      email: formData.email,
+      fullName: `${formData.firstName} ${formData.lastName}`,
+      documents: {
+        frontIdUrl: uploadedDocuments.frontId,
+        backIdUrl: uploadedDocuments.backId,
+        profilePictureUrl: uploadedDocuments.profilePicture || null
+      },
+      registrationStep: 'personal_complete',
+      registrationStatus: 'in_progress',
+      isProfileComplete: true,
+      updatedAt: serverTimestamp()
+    }, { merge: true }).catch(e => console.warn('Background save failed:', e))
     
     console.log('[PersonalDetails] Firestore save initiated in background')
     

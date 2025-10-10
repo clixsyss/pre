@@ -22,15 +22,29 @@ class FirestoreService {
     this.activeListeners = new Map() // Track active listeners to prevent duplicates
   }
 
+  /**
+   * Check if we should use Capacitor Firestore
+   * Only use for iOS, not Android (Android uses Web SDK)
+   */
+  async isIOSNative() {
+    if (!this.isNative) return false
+    const { Capacitor } = await import('@capacitor/core')
+    return Capacitor.getPlatform() === 'ios'
+  }
+
   async initialize() {
     console.log('🔧 FirestoreService.initialize called:', { isNative: this.isNative, initialized: this.initialized })
-    if (this.isNative && !this.initialized) {
+    
+    // Only initialize Capacitor for iOS
+    const isIOS = await this.isIOSNative()
+    
+    if (isIOS && !this.initialized) {
       try {
-        console.log('📦 Importing Capacitor Firebase Firestore...')
+        console.log('📦 Importing Capacitor Firebase Firestore for iOS...')
         const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
         this.capacitorFirestore = FirebaseFirestore
         this.initialized = true
-        console.log('✅ FirestoreService: Capacitor Firebase Firestore initialized successfully')
+        console.log('✅ FirestoreService: Capacitor Firebase Firestore initialized for iOS')
 
         // Ensure authentication context is properly set
         await this.ensureAuthContext()
@@ -40,7 +54,8 @@ class FirestoreService {
         throw error
       }
     } else {
-      console.log('⏭️ FirestoreService: Skipping initialization - not native or already initialized')
+      console.log('⏭️ FirestoreService: Using Web SDK (not iOS or already initialized)')
+      this.initialized = true
     }
   }
 
@@ -126,7 +141,9 @@ class FirestoreService {
         }
       }
 
-      if (this.isNative) {
+      const isIOS = await this.isIOSNative()
+      
+      if (isIOS) {
         await this.initialize()
         const result = await this.capacitorFirestore.getDocument({
           reference: path
@@ -167,7 +184,9 @@ class FirestoreService {
   // Set a document
   async setDoc(path, data, options = {}) {
     try {
-      if (this.isNative) {
+      const isIOS = await this.isIOSNative()
+      
+      if (isIOS) {
         await this.initialize()
 
         // Serialize data for Capacitor (convert Date objects to ISO strings)
@@ -206,7 +225,9 @@ class FirestoreService {
   // Update a document
   async updateDoc(path, data) {
     try {
-      if (this.isNative) {
+      const isIOS = await this.isIOSNative()
+      
+      if (isIOS) {
         await this.initialize()
 
         // Serialize data for Capacitor (convert Date objects to ISO strings)
@@ -229,7 +250,9 @@ class FirestoreService {
   // Delete a document
   async deleteDoc(path) {
     try {
-      if (this.isNative) {
+      const isIOS = await this.isIOSNative()
+      
+      if (isIOS) {
         await this.initialize()
         await this.capacitorFirestore.deleteDocument({
           reference: path
@@ -277,8 +300,10 @@ class FirestoreService {
     try {
       console.log('🔍 FirestoreService.addDoc called:', { collectionPath, dataKeys: Object.keys(data) });
 
-      if (this.isNative) {
-        console.log('🔍 Using native Capacitor Firebase for addDoc...');
+      const isIOS = await this.isIOSNative()
+      
+      if (isIOS) {
+        console.log('🔍 Using iOS Capacitor Firebase for addDoc...');
         await this.initialize()
 
         // Serialize data for Capacitor (convert Date objects to ISO strings)
@@ -721,12 +746,8 @@ class FirestoreService {
 
     // Server timestamp helper
     serverTimestamp() {
-      if (this.isNative) {
-        // For iOS, use Firebase Web SDK functions
-        return new Date().toISOString() // Fallback for native
-      } else {
-        return serverTimestamp()
-      }
+      // Always use Web SDK serverTimestamp - works on all platforms
+      return serverTimestamp()
     }
 
   // Listen to document or collection changes (for real-time updates)
