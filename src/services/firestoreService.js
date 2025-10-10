@@ -330,9 +330,13 @@ class FirestoreService {
         // Invalidate cache for this collection to ensure fresh reads
         cacheService.invalidatePattern(`collection:${collectionPath}`);
 
+        // Extract ID from the reference object (Capacitor returns it nested)
+        const docId = result.reference?.id || result.id;
+        console.log('✅ Extracted document ID:', docId);
+
         return {
-          id: result.id,
-          documentId: result.id // Add documentId for compatibility
+          id: docId,
+          documentId: docId // Add documentId for compatibility
         }
       } else {
         console.log('🔍 Using Web SDK for addDoc...');

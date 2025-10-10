@@ -25,13 +25,83 @@ class RequestSubmissionService {
         throw new Error('Firebase Firestore not initialized');
       }
 
-      // Upload media files to Firebase Storage if any
+      // First, create the document to get the actual submission ID
+      const submissionDoc = {
+        ...submissionData,
+        mediaFiles: [], // Will be updated after file uploads
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      console.log('📝 RequestSubmissionService: Creating document first to get submission ID...');
+      
+      let docRef;
+      try {
+        // iOS-specific: Use firestoreService for better compatibility
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        if (isIOS) {
+          console.log('📱 iOS: Using firestoreService for document creation');
+          const { default: firestoreService } = await import('./firestoreService');
+          await firestoreService.initialize();
+          
+          docRef = await firestoreService.addDoc(
+            `projects/${submissionData.projectId}/requestSubmissions`, 
+            submissionDoc
+          );
+          console.log('📱 iOS: Document created with ID:', docRef.id);
+        } else {
+          console.log('🌐 Web: Using Web SDK for document creation');
+          docRef = await addDoc(
+            collection(db, `projects/${submissionData.projectId}/requestSubmissions`), 
+            submissionDoc
+          );
+          console.log('🌐 Web: Document created with ID:', docRef.id);
+        }
+      } catch (firestoreError) {
+        console.error('❌ RequestSubmissionService: Error creating document:', firestoreError);
+        throw firestoreError;
+      }
+
+      const submissionId = docRef.id;
+      console.log('✅ RequestSubmissionService: Document created successfully with ID:', submissionId);
+
+      // Now upload media files using the actual submission ID
       let uploadedFiles = [];
       if (files && files.length > 0) {
         try {
-          console.log('📤 RequestSubmissionService: Attempting to upload files...');
-          uploadedFiles = await this.uploadMediaFiles(submissionData.projectId, submissionData.userId, files);
+          console.log('📤 RequestSubmissionService: Uploading files with actual submission ID...');
+          uploadedFiles = await this.uploadMediaFiles(submissionData.projectId, submissionId, files);
           console.log('✅ RequestSubmissionService: Files uploaded successfully');
+          
+          // Update the document with the uploaded files
+          console.log('📝 RequestSubmissionService: Updating document with uploaded files...');
+          
+          // Use the same iOS-compatible approach for updating
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+          if (isIOS) {
+            console.log('📱 iOS: Using firestoreService for document update');
+            const { default: firestoreService } = await import('./firestoreService');
+            await firestoreService.initialize();
+            
+            await firestoreService.updateDoc(
+              `projects/${submissionData.projectId}/requestSubmissions/${submissionId}`,
+              {
+                mediaFiles: uploadedFiles,
+                updatedAt: new Date().toISOString()
+              }
+            );
+            console.log('📱 iOS: Document updated with media files via firestoreService');
+          } else {
+            console.log('🌐 Web: Using Web SDK for document update');
+            const { doc, updateDoc } = await import('firebase/firestore');
+            const submissionRef = doc(db, `projects/${submissionData.projectId}/requestSubmissions/${submissionId}`);
+            await updateDoc(submissionRef, {
+              mediaFiles: uploadedFiles,
+              updatedAt: new Date().toISOString()
+            });
+            console.log('🌐 Web: Document updated with media files via Web SDK');
+          }
+          console.log('✅ RequestSubmissionService: Document updated with media files');
         } catch (uploadError) {
           console.warn('⚠️ RequestSubmissionService: File upload failed, continuing without files:', uploadError.message);
           // Continue with submission without files
@@ -39,117 +109,12 @@ class RequestSubmissionService {
         }
       }
 
-      // Prepare the submission document
-      const submissionDoc = {
-        ...submissionData,
-        mediaFiles: uploadedFiles,
-        createdAt: new Date().toISOString(), // Use ISO string instead of serverTimestamp for iOS compatibility
-        updatedAt: new Date().toISOString()  // Use ISO string instead of serverTimestamp for iOS compatibility
-      };
-
-      console.log('📝 RequestSubmissionService: Prepared submission document', {
-        hasCategoryId: !!submissionDoc.categoryId,
-        hasUserId: !!submissionDoc.userId,
-        hasFormData: !!submissionDoc.formData,
-        formDataKeys: Object.keys(submissionDoc.formData || {}),
-        hasFieldMetadata: !!submissionDoc.fieldMetadata,
-        fieldMetadataLength: submissionDoc.fieldMetadata?.length || 0,
-        mediaFilesCount: submissionDoc.mediaFiles?.length || 0,
-        hasCreatedAt: !!submissionDoc.createdAt,
-        hasUpdatedAt: !!submissionDoc.updatedAt
-      });
-
-      // Add the submission to Firestore
-      console.log('📝 RequestSubmissionService: Adding document to Firestore', {
-        collectionPath: `projects/${submissionData.projectId}/requestSubmissions`,
-        submissionData: {
-          categoryId: submissionData.categoryId,
-          userId: submissionData.userId,
-          userName: submissionData.userName,
-          formDataKeys: Object.keys(submissionData.formData || {}),
-          hasFieldMetadata: !!submissionData.fieldMetadata,
-          fieldMetadataLength: submissionData.fieldMetadata?.length || 0,
-          mediaFilesCount: submissionData.mediaFiles?.length || 0
-        }
-      });
-
-      let docRef;
-      try {
-        console.log('📝 RequestSubmissionService: Attempting to add document to Firestore...');
-        
-        // iOS-specific: Use firestoreService for better compatibility
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        if (isIOS) {
-          console.log('📱 iOS: Using firestoreService for better iOS compatibility');
-          console.log('📱 iOS: Submission data before firestoreService:', {
-            projectId: submissionData.projectId,
-            categoryId: submissionData.categoryId,
-            userId: submissionData.userId,
-            formDataKeys: Object.keys(submissionData.formData || {}),
-            hasFieldMetadata: !!submissionData.fieldMetadata,
-            mediaFilesCount: submissionData.mediaFiles?.length || 0
-          });
-          
-          try {
-            const { default: firestoreService } = await import('./firestoreService');
-            console.log('📱 iOS: firestoreService imported successfully');
-            
-            await firestoreService.initialize();
-            console.log('📱 iOS: firestoreService initialized successfully');
-            
-            console.log('📱 iOS: Calling firestoreService.addDoc...');
-            docRef = await firestoreService.addDoc(
-              `projects/${submissionData.projectId}/requestSubmissions`, 
-              submissionDoc
-            );
-            console.log('📱 iOS: firestoreService.addDoc completed successfully:', docRef);
-          } catch (firestoreServiceError) {
-            console.warn('⚠️ iOS: firestoreService failed, falling back to Web SDK:', firestoreServiceError.message);
-            console.log('📱 iOS: Falling back to Web SDK for submission');
-            docRef = await addDoc(
-              collection(db, `projects/${submissionData.projectId}/requestSubmissions`), 
-              submissionDoc
-            );
-            console.log('📱 iOS: Web SDK fallback completed successfully:', docRef);
-          }
-        } else {
-          console.log('🌐 Web: Using Web SDK for submission');
-          docRef = await addDoc(
-            collection(db, `projects/${submissionData.projectId}/requestSubmissions`), 
-            submissionDoc
-          );
-        }
-        
-        console.log('✅ RequestSubmissionService: Document added successfully, ID:', docRef.id);
-      } catch (firestoreError) {
-        console.error('❌ RequestSubmissionService: Firestore addDoc error:', firestoreError);
-        console.error('❌ Firestore error details:', {
-          message: firestoreError.message,
-          code: firestoreError.code,
-          stack: firestoreError.stack
-        });
-        
-        // iOS-specific: Provide more helpful error messages
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        if (isIOS) {
-          if (firestoreError.message?.includes('permission')) {
-            throw new Error('Permission denied. Please make sure you are logged in and have the correct permissions.');
-          } else if (firestoreError.message?.includes('network')) {
-            throw new Error('Network error. Please check your internet connection and try again.');
-          } else if (firestoreError.message?.includes('timeout')) {
-            throw new Error('Request timed out. Please try again.');
-          }
-        }
-        
-        throw firestoreError;
-      }
-
       console.log('✅ RequestSubmissionService: Request submitted successfully', {
-        submissionId: docRef.id,
+        submissionId: submissionId,
         categoryId: submissionData.categoryId
       });
 
-      return docRef.id;
+      return submissionId;
 
     } catch (error) {
       console.error('❌ RequestSubmissionService: Error submitting request:', error);
@@ -173,15 +138,13 @@ class RequestSubmissionService {
   /**
    * Upload media files to Firebase Storage
    * @param {string} projectId - The project ID
-   * @param {string} userId - The user ID
+   * @param {string} submissionId - The actual submission ID (not temp)
    * @param {Array} files - Array of File objects
    * @returns {Promise<Array>} Array of uploaded file metadata
    */
-  async uploadMediaFiles(projectId, userId, files) {
+  async uploadMediaFiles(projectId, submissionId, files) {
     console.log('📤 RequestSubmissionService: Starting file uploads...', files.length);
-    
-    // Generate a unique submission ID for this upload session
-    const submissionId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log('📤 RequestSubmissionService: Using actual submission ID:', submissionId);
     
     const uploadPromises = files.map(async (file, index) => {
       try {
@@ -192,7 +155,7 @@ class RequestSubmissionService {
         const fileExtension = file.name.split('.').pop();
         const fileName = `request_${timestamp}_${index}.${fileExtension}`;
         
-        // Create storage path
+        // Create storage path using actual submission ID
         const storagePath = `projects/${projectId}/requestSubmissions/${submissionId}/media/`;
         
         // Upload using fileUploadService (which handles iOS automatically)
