@@ -1,11 +1,11 @@
 <template>
   <div class="violations-page">
-    <PageHeader title="Violations & Fines" subtitle="View and manage your violations" />
+    <PageHeader :title="$t('violationsAndFines')" :subtitle="$t('viewManageViolations')" />
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
-      <p>Loading violations...</p>
+      <p>{{ $t('loadingViolations') }}</p>
     </div>
 
     <!-- Content -->
@@ -16,19 +16,19 @@
           <div class="summary-stats">
             <div class="stat-item">
               <span class="stat-number">{{ violationStats.total }}</span>
-              <span class="stat-label">Total</span>
+              <span class="stat-label">{{ $t('total') }}</span>
             </div>
             <div class="stat-item">
               <span class="stat-number">{{ violationStats.issued }}</span>
-              <span class="stat-label">Issued</span>
+              <span class="stat-label">{{ $t('issued') }}</span>
             </div>
             <div class="stat-item">
               <span class="stat-number">{{ violationStats.paid }}</span>
-              <span class="stat-label">Paid</span>
+              <span class="stat-label">{{ $t('paid') }}</span>
             </div>
             <div class="stat-item">
               <span class="stat-number">{{ violationStats.disputed }}</span>
-              <span class="stat-label">Disputed</span>
+              <span class="stat-label">{{ $t('disputed') }}</span>
             </div>
           </div>
         </div>
@@ -37,7 +37,7 @@
       <!-- Violations List -->
       <div class="violations-section">
         <div class="section-header">
-          <h2>Your Violations</h2>
+          <h2>{{ $t('yourViolations') }}</h2>
           <div class="filter-tabs">
             <button 
               v-for="status in statusFilters" 

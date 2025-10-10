@@ -1,8 +1,8 @@
 <template>
   <div class="analytics-page">
     <div class="page-header">
-      <h1>Analytics</h1>
-      <p>PRE Group analytics and insights</p>
+      <h1>{{ $t('analyticsTitle') }}</h1>
+      <p>{{ $t('preGroupAnalytics') }}</p>
     </div>
 
     <div class="analytics-content">
@@ -15,8 +15,8 @@
             <path d="M6 20V16" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <h3>Analytics Coming Soon</h3>
-        <p>This section is under development. Check back later for analytics and insights.</p>
+        <h3>{{ $t('analyticsComingSoon') }}</h3>
+        <p>{{ $t('analyticsUnderDevelopment') }}</p>
       </div>
     </div>
   </div>

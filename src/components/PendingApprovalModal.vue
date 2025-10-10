@@ -3,7 +3,7 @@
     <div class="pending-modal-container">
       <!-- Header -->
       <div class="pending-modal-header">
-        <h2 class="pending-modal-title">What happens next?</h2>
+        <h2 class="pending-modal-title">{{ $t('whatHappensNext') }}</h2>
       </div>
 
       <!-- Body -->
@@ -15,9 +15,9 @@
               <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <h3 class="status-title">Account Pending Approval</h3>
+          <h3 class="status-title">{{ $t('accountPendingApproval') }}</h3>
           <p class="status-description">
-            Our admin team will review your registration details and approve your account within 24-48 hours.
+            {{ $t('adminReviewMessage') }}
           </p>
         </div>
 
@@ -29,13 +29,13 @@
                 <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <span class="step-label">Registration completed</span>
+            <span class="step-label">{{ $t('registrationCompleted') }}</span>
           </div>
           <div class="step active">
             <div class="step-icon">
               <div class="loading-dot"></div>
             </div>
-            <span class="step-label">Admin review in progress</span>
+            <span class="step-label">{{ $t('adminReviewInProgress') }}</span>
           </div>
           <div class="step">
             <div class="step-icon">
@@ -43,7 +43,7 @@
                 <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <span class="step-label">Account approved</span>
+            <span class="step-label">{{ $t('accountApproved') }}</span>
           </div>
         </div>
 
@@ -53,14 +53,14 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18.364 5.636L14.828 9.172M14.828 14.828L18.364 18.364M9.172 9.172L5.636 5.636M9.172 14.828L5.636 18.364M12 2.25C17.3848 2.25 21.75 6.61522 21.75 12C21.75 17.3848 17.3848 21.75 12 21.75C6.61522 21.75 2.25 17.3848 2.25 12C2.25 6.61522 6.61522 2.25 12 2.25Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Need Help?
+            {{ $t('needHelp') }}
           </h3>
           <div class="support-item">
             <svg class="support-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 8L7.89 12.26C8.22 12.52 8.78 12.52 9.11 12.26L21 8M5 19H19C20.1 19 21 18.1 21 17V7C21 5.9 20.1 5 19 5H5C3.9 5 3 5.9 3 7V17C3 18.1 3.9 19 5 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <span class="support-text">
-              Email: <a href="mailto:support@pre-group.com" class="support-link">support@pre-group.com</a>
+              {{ $t('email') }}: <a href="mailto:support@pre-group.com" class="support-link">{{ $t('supportEmail') }}</a>
             </span>
           </div>
           <div class="support-item">
@@ -68,7 +68,7 @@
               <path d="M3 5C3 3.89543 3.89543 3 5 3H8.27924C8.70967 3 9.09181 3.27543 9.22792 3.68377L10.7257 8.31623C10.8618 8.72457 11.2439 9 11.6744 9H16.7053C17.4218 9 17.9129 9.67412 17.6081 10.3162L16.1141 13.6838C15.8093 14.3259 16.3004 15 17.0169 15H21C22.1046 15 23 15.8954 23 17V19C23 20.1046 22.1046 21 21 21H5C3.89543 21 3 20.1046 3 19V5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <span class="support-text">
-              Phone: <a href="tel:+201234567890" class="support-link">+20 123 456 7890</a>
+              {{ $t('phone') }}: <a href="tel:+201234567890" class="support-link">{{ $t('supportPhone') }}</a>
             </span>
           </div>
           <div class="support-item">
@@ -77,7 +77,7 @@
               <path d="M15 11C15 12.6569 13.6569 14 12 14C10.3431 14 9 12.6569 9 11C9 9.34315 10.3431 8 12 8C13.6569 8 15 9.34315 15 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <span class="support-text">
-              Office: <span class="support-link">PRE Group HQ, New Cairo</span>
+              {{ $t('office') }}: <span class="support-link">{{ $t('officeLocation') }}</span>
             </span>
           </div>
         </div>
@@ -85,7 +85,7 @@
         <!-- Action Buttons -->
         <div class="action-buttons">
           <button @click="handleLogout" class="action-btn primary">
-            Sign Out
+            {{ $t('signOut') }}
           </button>
         </div>
       </div>
@@ -95,23 +95,25 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { signOut } from 'firebase/auth'
 import { auth } from '../boot/firebase'
 import { useNotificationStore } from 'src/stores/notifications'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
+const { t } = useI18n()
 
 // No emits needed for this component
 
 const handleLogout = async () => {
   try {
     await signOut(auth)
-    notificationStore.showSuccess('Signed out successfully')
+    notificationStore.showSuccess(t('signedOutSuccessfully'))
     router.push('/sign-in')
   } catch (error) {
     console.error('Logout error:', error)
-    notificationStore.showError('Failed to sign out. Please try again.')
+    notificationStore.showError(t('failedToSignOut'))
   }
 }
 </script>

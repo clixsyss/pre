@@ -1,6 +1,6 @@
 <template>
   <div class="support-page">
-    <PageHeader title="Support" subtitle="Get help with any questions or issues" />
+    <PageHeader :title="$t('support')" :subtitle="$t('getSupportHelp')" />
 
     <!-- Content -->
     <div class="content">
@@ -11,8 +11,8 @@
             <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <h2>How can we help you?</h2>
-        <p>Our support team is here to assist you with any questions or issues.</p>
+        <h2>{{ $t('howCanWeHelp') }}</h2>
+        <p>{{ $t('supportTeamMessage') }}</p>
       </div>
 
       <!-- Instant Start Chat Button -->
@@ -21,27 +21,27 @@
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          Start a New Chat
+          {{ $t('startNewChat') }}
         </button>
       </div>
 
       <!-- Recent Chats -->
       <div class="recent-chats-section">
-        <h3>Recent Support Chats</h3>
+        <h3>{{ $t('recentSupportChats') }}</h3>
         <div v-if="loadingChats" class="loading-state">
           <div class="spinner"></div>
-          <p>Loading recent chats...</p>
+          <p>{{ $t('loadingChats') }}</p>
         </div>
         <div v-else-if="errorChats" class="error-state">
-          <p>Error loading chats: {{ errorChats }}</p>
+          <p>{{ $t('errorLoadingChats') }}: {{ errorChats }}</p>
         </div>
         <div v-else-if="supportChats.length === 0" class="no-chats-state">
-          <p>No recent support chats. Start a new one!</p>
+          <p>{{ $t('noRecentChats') }}</p>
         </div>
         <div v-else class="chats-list">
           <div v-for="chat in supportChats" :key="chat.id" @click="viewChat(chat.id)" class="chat-card">
             <div class="chat-info">
-              <span class="chat-title">{{ chat.title || 'Support Chat' }}</span>
+              <span class="chat-title">{{ chat.title || $t('supportChat') }}</span>
               <span :class="['chat-status', chat.status]">{{ chat.status }}</span>
             </div>
             <span class="chat-date">{{ formatDate(chat.lastMessageAt) }}</span>

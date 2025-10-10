@@ -1,8 +1,8 @@
 <template>
   <div class="services-page">
     <div class="page-header">
-      <h1>Services</h1>
-      <p>PRE Group services and utilities</p>
+      <h1>{{ $t('toolsTitle') }}</h1>
+      <p>{{ $t('preGroupServices') }}</p>
     </div>
 
     <div class="services-content">
@@ -14,8 +14,8 @@
             <path d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <h3>Services Coming Soon</h3>
-        <p>This section is under development. Check back later for available services.</p>
+        <h3>{{ $t('servicesComingSoon') }}</h3>
+        <p>{{ $t('servicesUnderDevelopment') }}</p>
       </div>
     </div>
   </div>

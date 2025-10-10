@@ -2,8 +2,8 @@
   <div class="stores-shopping-page">
     <!-- Page Header -->
     <PageHeader 
-      title="Stores & Shopping" 
-      subtitle="Discover local stores and track your orders"
+      :title="$t('storesShoppingTitle')" 
+      :subtitle="$t('discoverStores')"
     />
 
     <!-- Cool Tab System -->
@@ -16,7 +16,7 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <span>Stores</span>
+          <span>{{ $t('stores') }}</span>
           <div class="tab-indicator"></div>
         </button>
         
@@ -27,7 +27,7 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <span>My Orders</span>
+          <span>{{ $t('myOrders') }}</span>
           <div class="tab-indicator"></div>
           <div v-if="ordersCount > 0" class="orders-badge">{{ ordersCount }}</div>
         </button>
@@ -47,17 +47,17 @@
           <input 
             v-model="searchTerm" 
             type="text" 
-            placeholder="Search stores or products..." 
+            :placeholder="$t('searchStoresProducts')" 
             class="search-input"
           />
         </div>
         
         <div class="filters">
           <select v-model="categoryFilter" class="filter-select">
-            <option value="all">All Categories</option>
-            <option value="food">Food & Beverage</option>
-            <option value="drinks">Drinks</option>
-            <option value="desserts">Desserts</option>
+            <option value="all">{{ $t('allCategories') }}</option>
+            <option value="food">{{ $t('foodBeverage') }}</option>
+            <option value="drinks">{{ $t('drinks') }}</option>
+            <option value="desserts">{{ $t('desserts') }}</option>
             <option value="snacks">Snacks</option>
             <option value="meals">Meals</option>
             <option value="other">Other</option>

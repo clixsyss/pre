@@ -23,6 +23,132 @@
 /* RTL Support */
 [dir="rtl"] {
   text-align: right;
+  direction: rtl;
+  
+  /* Flip margins and paddings */
+  .q-ml-auto {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+  
+  .q-mr-auto {
+    margin-right: 0 !important;
+    margin-left: auto !important;
+  }
+  
+  /* Flip float */
+  .float-left {
+    float: right !important;
+  }
+  
+  .float-right {
+    float: left !important;
+  }
+  
+  /* Flip text alignment */
+  .text-left {
+    text-align: right !important;
+  }
+  
+  .text-right {
+    text-align: left !important;
+  }
+  
+  /* Flip border radius for cards and buttons */
+  .q-card {
+    border-radius: 8px;
+  }
+  
+  /* Flip icons that indicate direction */
+  .q-icon.flip-rtl {
+    transform: scaleX(-1);
+  }
+  
+  /* Arrow icons */
+  svg {
+    &[data-direction="right"] {
+      transform: scaleX(-1);
+    }
+  }
+  
+  /* Drawer positioning */
+  .q-drawer--left {
+    left: auto;
+    right: 0;
+  }
+  
+  .q-drawer--right {
+    right: auto;
+    left: 0;
+  }
+  
+  /* Input fields */
+  input, textarea, select {
+    text-align: right;
+    direction: rtl;
+  }
+  
+  /* List items */
+  .q-item__section--side {
+    padding-right: 0;
+    padding-left: 16px;
+  }
+  
+  /* Tooltips */
+  .q-tooltip {
+    text-align: right;
+  }
+  
+  /* Flex direction */
+  .row {
+    flex-direction: row-reverse;
+  }
+  
+  /* Quasar specific RTL fixes */
+  .q-btn__content {
+    flex-direction: row-reverse;
+  }
+  
+  .q-field__control {
+    text-align: right;
+  }
+  
+  .q-field__append {
+    padding-right: 0;
+    padding-left: 12px;
+  }
+  
+  .q-field__prepend {
+    padding-left: 0;
+    padding-right: 12px;
+  }
+  
+  /* Custom classes for RTL */
+  .info-card, .action-card, .service-card, .booking-card {
+    .info-content, .action-content {
+      text-align: right;
+    }
+  }
+  
+  /* Accordion arrows */
+  .accordion-arrow {
+    transform: scaleX(-1);
+  }
+  
+  /* Navigation arrows */
+  .nav-arrow-left {
+    transform: scaleX(-1);
+  }
+  
+  .nav-arrow-right {
+    transform: scaleX(-1);
+  }
+}
+
+/* LTR explicit styles */
+[dir="ltr"] {
+  text-align: left;
+  direction: ltr;
 }
 
 /* Apply theme variables to body */

@@ -2,20 +2,20 @@
   <div class="request-category-details">
 
     <PageHeader
-      :title="category?.englishTitle || 'Request Category'"
-      :subtitle="category?.description || 'Submit your request'"
+      :title="category?.englishTitle || $t('requestCategory')"
+      :subtitle="category?.description || $t('submitYourRequest')"
     />
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
-      <p>Loading request form...</p>
+      <p>{{ $t('loadingRequestForm') }}</p>
     </div>
 
     <!-- Error State -->
     <div v-else-if="error" class="error-container">
       <p>{{ error }}</p>
-      <button @click="loadCategory" class="retry-btn">Retry</button>
+      <button @click="loadCategory" class="retry-btn">{{ $t('retry') }}</button>
     </div>
 
     <!-- Request Form -->
@@ -24,7 +24,7 @@
         
         <!-- Dynamic Form Fields -->
         <div class="form-fields">
-          <h3>Request Details</h3>
+          <h3>{{ $t('requestDetails') }}</h3>
           
           <div v-for="field in category.fields" :key="field.id" class="field-group">
             <label :for="field.id" class="field-label">

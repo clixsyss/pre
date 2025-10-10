@@ -8,30 +8,30 @@
             <path d="M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <h1>Program Registration</h1>
+        <h1>{{ $t('programRegistration') }}</h1>
       </div>
-      <p class="header-subtitle">Complete your registration for {{ program?.name }}</p>
+      <p class="header-subtitle">{{ $t('completeRegistrationFor') }} {{ program?.name }}</p>
     </div>
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
-      <p>Loading program details...</p>
+      <p>{{ $t('loadingProgramDetails') }}</p>
     </div>
 
     <!-- Error State -->
     <div v-else-if="error" class="error-state">
       <div class="error-icon">⚠️</div>
-      <h3>Something went wrong</h3>
+      <h3>{{ $t('somethingWentWrong') }}</h3>
       <p>{{ error }}</p>
-      <button @click="loadProgramDetails" class="retry-btn">Try Again</button>
+      <button @click="loadProgramDetails" class="retry-btn">{{ $t('tryAgain') }}</button>
     </div>
 
     <!-- Registration Form -->
     <div v-else-if="program && academy" class="registration-content">
       <!-- Program Summary -->
       <div class="program-summary">
-        <h2 class="section-title">Program Summary</h2>
+        <h2 class="section-title">{{ $t('programSummary') }}</h2>
         <div class="summary-card">
           <div class="summary-header">
             <h3>{{ program.name }}</h3>
@@ -39,27 +39,27 @@
           </div>
           <div class="summary-details">
             <div class="detail-row">
-              <span class="label">Category:</span>
-              <span class="value">{{ program.category || 'Sports' }}</span>
+              <span class="label">{{ $t('category') }}:</span>
+              <span class="value">{{ program.category || $t('sportsAcademy') }}</span>
             </div>
             <div class="detail-row" v-if="program.ageGroup">
-              <span class="label">Age Group:</span>
+              <span class="label">{{ $t('ageGroup') }}:</span>
               <span class="value">{{ program.ageGroup }}</span>
             </div>
             <div class="detail-row" v-if="program.duration && (program.pricingType === 'per-month' || program.pricingType === 'per-week' || program.pricingType === 'per-term')">
-              <span class="label">Duration:</span>
+              <span class="label">{{ $t('duration') }}:</span>
               <span class="value">{{ program.duration }} {{ getDurationUnit(program.pricingType) }}</span>
             </div>
             <div class="detail-row" v-if="program.maxCapacity">
-              <span class="label">Max Capacity:</span>
-              <span class="value">{{ program.maxCapacity }} students</span>
+              <span class="label">{{ $t('maxCapacity') }}:</span>
+              <span class="value">{{ program.maxCapacity }} {{ $t('students') }}</span>
             </div>
             <div class="detail-row" v-if="program.price">
-              <span class="label">Price:</span>
+              <span class="label">{{ $t('price') }}:</span>
               <span class="value">EGP {{ program.price }}{{ getPricingTypeLabel(program.pricingType) }}</span>
             </div>
             <div class="detail-row total">
-              <span class="label">Total Cost:</span>
+              <span class="label">{{ $t('totalCost') }}:</span>
               <span class="value">EGP {{ totalCost }}</span>
             </div>
           </div>
@@ -68,22 +68,22 @@
 
       <!-- Registration Form -->
       <div class="registration-form">
-        <h2 class="section-title">Registration Details</h2>
+        <h2 class="section-title">{{ $t('registrationDetails') }}</h2>
         <form @submit.prevent="submitRegistration">
           <div class="form-group">
-            <label for="studentName">Student Name *</label>
+            <label for="studentName">{{ $t('studentName') }} *</label>
             <input
               id="studentName"
               v-model="formData.studentName"
               type="text"
               required
-              placeholder="Enter student's full name"
+              :placeholder="$t('enterStudentName')"
               class="form-input"
             />
           </div>
 
           <div class="form-group">
-            <label for="studentAge">Student Age *</label>
+            <label for="studentAge">{{ $t('studentAge') }} *</label>
             <input
               id="studentAge"
               v-model="formData.studentAge"
@@ -91,52 +91,52 @@
               min="3"
               max="100"
               required
-              placeholder="Enter student's age"
+              :placeholder="$t('enterStudentAge')"
               class="form-input"
             />
           </div>
 
           <div class="form-group">
-            <label for="parentName">Parent/Guardian Name *</label>
+            <label for="parentName">{{ $t('parentGuardianName') }} *</label>
             <input
               id="parentName"
               v-model="formData.parentName"
               type="text"
               required
-              placeholder="Enter parent/guardian name"
+              :placeholder="$t('enterParentName')"
               class="form-input"
             />
           </div>
 
           <div class="form-group">
-            <label for="phone">Phone Number *</label>
+            <label for="phone">{{ $t('phoneNumber') }} *</label>
             <input
               id="phone"
               v-model="formData.phone"
               type="tel"
               required
-              placeholder="Enter phone number"
+              :placeholder="$t('enterPhoneNumber')"
               class="form-input"
             />
           </div>
 
           <div class="form-group">
-            <label for="email">Email Address</label>
+            <label for="email">{{ $t('emailAddress') }}</label>
             <input
               id="email"
               v-model="formData.email"
               type="email"
-              placeholder="Enter email address (optional)"
+              :placeholder="$t('enterEmailOptional')"
               class="form-input"
             />
           </div>
 
           <div class="form-group">
-            <label for="notes">Additional Notes</label>
+            <label for="notes">{{ $t('additionalNotes') }}</label>
             <textarea
               id="notes"
               v-model="formData.notes"
-              placeholder="Any special requirements or notes..."
+              :placeholder="$t('specialRequirements')"
               class="form-textarea"
               rows="3"
             ></textarea>
@@ -144,16 +144,16 @@
 
           <div class="form-actions">
             <button type="button" @click="$router.go(-1)" class="cancel-btn" :disabled="isSubmitting">
-              Cancel
+              {{ $t('cancel') }}
             </button>
             <button type="submit" class="submit-btn" :disabled="isSubmitting">
               <span v-if="isSubmitting">
                 <div class="button-loading">
                   <div class="spinner"></div>
-                  Processing...
+                  {{ $t('processing') }}
                 </div>
               </span>
-              <span v-else>Complete Registration</span>
+              <span v-else>{{ $t('completeRegistration') }}</span>
             </button>
           </div>
         </form>
@@ -162,15 +162,15 @@
       <!-- Success Message -->
       <div v-if="success" class="success-message">
         <div class="success-icon">✅</div>
-        <h3>Registration Successful!</h3>
-        <p>Your academy registration has been submitted successfully.</p>
+        <h3>{{ $t('registrationSuccessful') }}</h3>
+        <p>{{ $t('academyRegistrationSubmitted') }}</p>
         <div class="registration-details">
-          <p><strong>Registration ID:</strong> {{ registrationId }}</p>
-          <p><strong>Program:</strong> {{ program.name }}</p>
-          <p><strong>Academy:</strong> {{ academy.name }}</p>
-          <p><strong>Student:</strong> {{ formData.studentName }}</p>
+          <p><strong>{{ $t('registrationID') }}:</strong> {{ registrationId }}</p>
+          <p><strong>{{ $t('program') }}:</strong> {{ program.name }}</p>
+          <p><strong>{{ $t('academyTitle') }}:</strong> {{ academy.name }}</p>
+          <p><strong>{{ $t('student') }}:</strong> {{ formData.studentName }}</p>
         </div>
-        <p class="redirect-notice">You will be redirected to academy programs in a few seconds...</p>
+        <p class="redirect-notice">{{ $t('redirectNotice') }}</p>
       </div>
     </div>
   </div>

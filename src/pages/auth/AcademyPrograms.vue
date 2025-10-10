@@ -1,47 +1,47 @@
 <template>
   <div class="academy-programs-page">
     <PageHeader 
-      title="Academy Programs" 
-      :subtitle="projectName ? `Join academies in ${projectName}` : 'Choose your academy and program'"
+      :title="$t('academyProgramsTitle')" 
+      :subtitle="projectName ? `${$t('joinAcademiesIn')} ${projectName}` : $t('chooseAcademyProgram')"
     />
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
-      <p>Loading available programs...</p>
+      <p>{{ $t('loadingPrograms') }}</p>
     </div>
 
     <!-- Error State -->
     <div v-else-if="error" class="error-state">
       <div class="error-icon">⚠️</div>
       <p>{{ error }}</p>
-      <button @click="fetchAcademies" class="retry-btn">Try Again</button>
+      <button @click="fetchAcademies" class="retry-btn">{{ $t('tryAgain') }}</button>
     </div>
 
     <!-- No Project Selected -->
     <div v-else-if="!projectId" class="no-project-state">
       <div class="no-project-icon">🏗️</div>
-      <h3>No Project Selected</h3>
-      <p>Please select a project to view academy programs.</p>
+      <h3>{{ $t('noProjectSelected') }}</h3>
+      <p>{{ $t('selectProjectForAcademy') }}</p>
       <button @click="$router.push('/project-selection')" class="select-project-btn">
-        Select Project
+        {{ $t('switchProject') }}
       </button>
     </div>
 
     <!-- No Programs Available -->
     <div v-else-if="allPrograms.length === 0" class="no-programs-state">
       <div class="no-programs-icon">📚</div>
-      <h3>No Programs Available</h3>
-      <p>There are no academy programs available in this project yet.</p>
-      <p>Please contact the project administrator to set up academies and programs.</p>
+      <h3>{{ $t('noProgramsAvailable') }}</h3>
+      <p>{{ $t('noProgramsMessage') }}</p>
+      <p>{{ $t('contactAdminForPrograms') }}</p>
     </div>
 
     <!-- Programs Content -->
     <div v-else class="programs-content">
       <!-- Programs List -->
       <div class="programs-section">
-        <h2 class="section-title">Available Programs</h2>
-        <p class="section-subtitle">{{ allPrograms.length }} program{{ allPrograms.length !== 1 ? 's' : '' }} available</p>
+        <h2 class="section-title">{{ $t('availablePrograms') }}</h2>
+        <p class="section-subtitle">{{ allPrograms.length }} {{ allPrograms.length !== 1 ? $t('programsAvailable') : $t('programAvailable') }}</p>
         
         <div class="programs-list">
           <div 

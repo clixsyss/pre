@@ -2,8 +2,8 @@
   <div class="smart-devices-page">
     <!-- Page Header -->
     <PageHeader 
-      title="Smart Devices" 
-      :subtitle="isCurrentProjectConnected ? 'Connected' : 'Not Connected'"
+      :title="$t('smartDevicesTitle')" 
+      :subtitle="isCurrentProjectConnected ? $t('connected').toLowerCase() : $t('notConnected')"
     >
       <template #actions>
         <button class="refresh-button" @click="refreshDevices" :disabled="loading">
@@ -19,17 +19,17 @@
     <!-- Not Connected State -->
     <div v-if="!isCurrentProjectConnected" class="not-connected-state">
       <div class="not-connected-icon">🏠</div>
-      <h3>Smart Home Not Connected</h3>
-      <p>Please connect your Smart Home account for the current project in your profile to control devices.</p>
+      <h3>{{ $t('smartHomeNotConnected') }}</h3>
+      <p>{{ $t('connectSmartHomeMessage') }}</p>
       <button @click="$router.push('/profile')" class="connect-btn">
-        Go to Profile
+        {{ $t('goToProfile') }}
       </button>
     </div>
 
     <!-- Loading State -->
     <div v-else-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
-      <p>Loading devices...</p>
+      <p>{{ $t('loadingDevices') }}</p>
     </div>
 
     <!-- Devices Content -->
@@ -37,7 +37,7 @@
       <!-- Room Selector -->
       <div v-if="smartMirrorStore.rooms.length > 1" class="room-selector">
         <div class="room-selector-header">
-          <h3>Select Room</h3>
+          <h3>{{ $t('selectRoom') }}</h3>
           <span class="room-count">{{ smartMirrorStore.rooms.length }} rooms available</span>
         </div>
         <div class="room-tabs">

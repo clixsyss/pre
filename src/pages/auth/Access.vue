@@ -2,17 +2,17 @@
   <div class="access-page">
     <div class="gate-passes-section">
       <div class="section-header">
-        <h2>Gate Passes</h2>
+        <h2>{{ $t('gatePasses') }}</h2>
       </div>
       
       <div class="generate-pass-btn">
         <button class="generate-btn">
-          GENERATE PASS (0/10)
+          {{ $t('generatePass') }} (0/10)
         </button>
       </div>
       
       <div class="no-passes-message">
-        <h3>No Passes Found</h3>
+        <h3>{{ $t('noPassesFound') }}</h3>
       </div>
     </div>
   </div>

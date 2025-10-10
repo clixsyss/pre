@@ -1,6 +1,6 @@
 <template>
   <div class="shopping-cart-page">
-    <PageHeader title="Shopping Cart" subtitle="Review your items and place your order" />
+    <PageHeader :title="$t('shoppingCart')" :subtitle="$t('reviewItems')" />
 
     <!-- Cart Items -->
     <div v-if="cartStore.items.length === 0" class="empty-cart">
@@ -9,13 +9,13 @@
           <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <h2>Your cart is empty</h2>
-      <p>Add some products from our stores to get started</p>
+      <h2>{{ $t('emptyCart') }}</h2>
+      <p>{{ $t('addProductsMessage') }}</p>
       <button class="browse-stores-btn" @click="browseStores">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        Browse Stores
+        {{ $t('browseStores') }}
       </button>
     </div>
 
@@ -23,7 +23,7 @@
       <!-- Cart Items List -->
       <div class="cart-items">
         <div class="cart-items-header">
-          <h2>Cart Items ({{ totalItems }})</h2>
+          <h2>{{ $t('cartItems') }} ({{ totalItems }})</h2>
         </div>
         
         <div class="cart-items-list">
@@ -93,26 +93,26 @@
       <!-- Order Summary -->
       <div class="order-summary">
         <div class="summary-header">
-          <h2>Order Summary</h2>
+          <h2>{{ $t('orderSummary') }}</h2>
         </div>
         
         <div class="summary-content">
           <div class="summary-row">
-            <span>Subtotal</span>
+            <span>{{ $t('subtotal') }}</span>
             <span>EGP{{ subtotal.toFixed(2) }}</span>
           </div>
           
           <div class="summary-row">
-            <span>Delivery Fee</span>
+            <span>{{ $t('deliveryFee') }}</span>
             <span>EGP{{ deliveryFee.toFixed(2) }}</span>
           </div>
           
           <div v-if="cartStore.items.length > 0 && cartStore.items[0].storeDeliveryFee" class="summary-note">
-            <small>Store delivery fee</small>
+            <small>{{ $t('storeDeliveryFee') }}</small>
           </div>
           
           <div class="summary-row total">
-            <span>Total</span>
+            <span>{{ $t('total') }}</span>
             <span>EGP{{ total.toFixed(2) }}</span>
           </div>
         </div>
@@ -125,8 +125,8 @@
           <svg v-if="!placingOrder" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <span v-if="placingOrder">Placing Order...</span>
-          <span v-else>Place Order</span>
+          <span v-if="placingOrder">{{ $t('placingOrder') }}</span>
+          <span v-else>{{ $t('placeOrder') }}</span>
         </button>
       </div>
     </div>

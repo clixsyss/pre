@@ -1,5 +1,17 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { Quasar } from 'quasar'
+
+// Import Quasar language packs
+import langEn from 'quasar/lang/en-US'
+import langAr from 'quasar/lang/ar'
+
+// Store i18n instance globally so it can be accessed
+let i18nInstance = null
+
+export const setI18nInstance = (i18n) => {
+  i18nInstance = i18n
+}
 
 export const useSettingsStore = defineStore('settings', () => {
   // State - safely access localStorage
@@ -33,30 +45,45 @@ export const useSettingsStore = defineStore('settings', () => {
   ])
 
   // Actions
-  const setLanguage = (language) => {
+  const setLanguage = (language, skipReload = false) => {
+    // Prevent infinite reload - check if language is actually changing
+    if (currentLanguage.value === language && !skipReload) {
+      console.log('⏭️ Language already set to:', language)
+      return
+    }
+    
+    console.log('🌍 Changing language from', currentLanguage.value, 'to', language)
+    
     currentLanguage.value = language
     isRTL.value = language === 'ar-SA'
+    
+    // Save to localStorage
     if (typeof window !== 'undefined' && localStorage) {
       localStorage.setItem('app-language', language)
     }
     
-    // Update document direction
-    if (typeof document !== 'undefined') {
-      document.documentElement.setAttribute('dir', isRTL.value ? 'rtl' : 'ltr')
-      document.documentElement.setAttribute('lang', language)
+    // Update Vue I18n locale
+    if (i18nInstance) {
+      i18nInstance.global.locale.value = language
     }
     
-    // Update i18n locale - only if we're in a browser environment
-    if (typeof window !== 'undefined') {
-      try {
-        // Try to get the i18n instance from the global app
-        const app = window.__VUE_APP__ || window.app
-        if (app && app.config && app.config.globalProperties && app.config.globalProperties.$i18n) {
-          app.config.globalProperties.$i18n.locale = language
-        }
-      } catch (error) {
-        console.warn('Could not update i18n locale:', error)
-      }
+    // Update Quasar language pack
+    if (isRTL.value) {
+      Quasar.lang.set(langAr)
+    } else {
+      Quasar.lang.set(langEn)
+    }
+    
+    // Update document direction and language
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('dir', isRTL.value ? 'rtl' : 'ltr')
+      document.documentElement.setAttribute('lang', isRTL.value ? 'ar' : 'en')
+    }
+    
+    // Only reload if this was a user-initiated change (not during initialization)
+    if (!skipReload && typeof window !== 'undefined') {
+      console.log('🔄 Reloading page to apply RTL styles...')
+      window.location.reload()
     }
   }
 
@@ -78,8 +105,8 @@ export const useSettingsStore = defineStore('settings', () => {
     if (typeof window === 'undefined') return
     
     try {
-      // Apply saved settings on app start
-      setLanguage(currentLanguage.value)
+      // Apply saved settings on app start (skip reload during initialization)
+      setLanguage(currentLanguage.value, true) // true = skipReload
       setTheme(currentTheme.value)
     } catch (error) {
       console.warn('Error initializing settings:', error)

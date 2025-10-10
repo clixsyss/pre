@@ -1,8 +1,8 @@
 <template>
   <div class="my-bookings-page">
     <PageHeader 
-      title="My Bookings" 
-      :subtitle="projectName ? `Bookings in ${projectName}` : 'View and manage all your bookings'"
+      :title="$t('myBookings')" 
+      :subtitle="projectName ? `${$t('bookingsIn')} ${projectName}` : $t('viewManageBookings')"
     />
 
     <div class="bookings-content">
@@ -13,44 +13,44 @@
           :class="{ active: activeFilter === 'all' }"
           @click="setFilter('all')"
         >
-          All Bookings
+          {{ $t('allBookings') }}
         </button>
         <button 
           class="filter-tab"
           :class="{ active: activeFilter === 'court' }"
           @click="setFilter('court')"
         >
-          Court Bookings
+          {{ $t('courtBookings') }}
         </button>
         <button 
           class="filter-tab"
           :class="{ active: activeFilter === 'academy' }"
           @click="setFilter('academy')"
         >
-          Academy Programs
+          {{ $t('academyPrograms') }}
         </button>
         <button 
           class="filter-tab"
           :class="{ active: activeFilter === 'service' }"
           @click="setFilter('service')"
         >
-          Service Bookings
+          {{ $t('serviceBookings') }}
         </button>
       </div>
 
       <!-- Loading State -->
       <div v-if="loading" class="loading-state">
         <div class="loading-spinner"></div>
-        <p>Loading your bookings...</p>
+        <p>{{ $t('loadingBookings') }}</p>
       </div>
 
       <!-- No Project Selected -->
       <div v-else-if="!projectId" class="no-project-state">
         <div class="no-project-icon">🏗️</div>
-        <h3>No Project Selected</h3>
-        <p>Please select a project to view your bookings.</p>
+        <h3>{{ $t('noProjectSelected') }}</h3>
+        <p>{{ $t('selectProjectToContinue') }}</p>
         <button @click="$router.push('/project-selection')" class="select-project-btn">
-          Select Project
+          {{ $t('switchProject') }}
         </button>
       </div>
 
@@ -64,11 +64,11 @@
             <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#ccc" stroke-width="2"/>
           </svg>
         </div>
-        <h3>No Bookings Found</h3>
-        <p v-if="activeFilter === 'all'">You haven't made any bookings yet.</p>
-        <p v-else>No {{ activeFilter }} bookings found.</p>
+        <h3>{{ $t('noBookingsFound') }}</h3>
+        <p v-if="activeFilter === 'all'">{{ $t('noBookingsMessage') }}</p>
+        <p v-else>{{ $t('noBookingsFound') }}</p>
         <button class="book-now-btn" @click="navigateToServices">
-          Book Now
+          {{ $t('bookNow') }}
         </button>
       </div>
 

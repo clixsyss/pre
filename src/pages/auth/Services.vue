@@ -3,8 +3,8 @@
     <div class="hero-section">
       <div class="hero-content">
         <div class="hero-text">
-          <h1 class="hero-title">Services</h1>
-          <p class="hero-subtitle">Smart home devices and other services</p>
+          <h1 class="hero-title">{{ $t('servicesTitle') }}</h1>
+          <p class="hero-subtitle">{{ $t('servicesSubtitle') }}</p>
         </div>
       </div>
     </div>
@@ -28,13 +28,13 @@
         <!-- Loading State -->
         <div v-if="serviceCategoriesStore.isLoading" class="loading-container">
           <div class="loading-spinner"></div>
-          <p>Loading services...</p>
+          <p>{{ $t('loadingServices') }}</p>
         </div>
 
         <!-- Error State -->
         <div v-else-if="serviceCategoriesStore.getError" class="error-container">
           <p>{{ serviceCategoriesStore.getError }}</p>
-          <button @click="loadServiceCategories" class="retry-btn">Retry</button>
+          <button @click="loadServiceCategories" class="retry-btn">{{ $t('retry') }}</button>
         </div>
 
         <!-- Services Grid -->
@@ -82,8 +82,8 @@
               </svg>
             </div>
             <div class="service-content">
-              <h3 class="service-name">Smart Devices</h3>
-              <p class="service-description">Control your smart home devices and automation</p>
+              <h3 class="service-name">{{ $t('smartDevicesTitle') }}</h3>
+              <p class="service-description">{{ $t('smartDevicesDesc') }}</p>
             </div>
             <div class="service-arrow">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -105,8 +105,8 @@
               </svg>
             </div>
             <div class="facility-content">
-              <h3 class="facility-name">Court Booking</h3>
-              <p class="facility-description">Book tennis, basketball, and other sports courts</p>
+              <h3 class="facility-name">{{ $t('courtBookingTitle') }}</h3>
+              <p class="facility-description">{{ $t('courtBookingDesc') }}</p>
             </div>
             <div class="facility-arrow">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -132,8 +132,8 @@
               </svg>
             </div>
             <div class="facility-content">
-              <h3 class="facility-name">Academy Programs</h3>
-              <p class="facility-description">Join sports academies and training programs</p>
+              <h3 class="facility-name">{{ $t('academyProgramsTitle') }}</h3>
+              <p class="facility-description">{{ $t('academyProgramsDesc') }}</p>
             </div>
             <div class="facility-arrow">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -158,8 +158,8 @@
               </svg>
             </div>
             <div class="facility-content">
-              <h3 class="facility-name">Shopping</h3>
-              <p class="facility-description">Browse and shop at our retail stores</p>
+              <h3 class="facility-name">{{ $t('shoppingTitle') }}</h3>
+              <p class="facility-description">{{ $t('shoppingDesc') }}</p>
             </div>
             <div class="facility-arrow">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

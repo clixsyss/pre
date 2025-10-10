@@ -3,7 +3,7 @@
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
-      <p>Loading profile...</p>
+      <p>{{ $t('loadingProfile') }}</p>
     </div>
 
     <!-- Profile Content -->
@@ -51,8 +51,8 @@
           </svg>
             </div>
             <div class="section-text">
-              <h3>Personal Information</h3>
-              <p>Your personal details and contact information</p>
+              <h3>{{ $t('personalInformation') }}</h3>
+              <p>{{ $t('personalDetails') }}</p>
             </div>
           </div>
           <div class="accordion-arrow">
@@ -75,8 +75,8 @@
                 </svg>
           </div>
               <div class="info-content">
-                <label>Full Name</label>
-                <span>{{ getFullName(userProfile.firstName, userProfile.lastName) || 'Not provided' }}</span>
+                <label>{{ $t('fullName') }}</label>
+                <span>{{ getFullName(userProfile.firstName, userProfile.lastName) || $t('notProvided') }}</span>
           </div>
             </div>
             <div class="info-card">
@@ -88,8 +88,8 @@
                 </svg>
               </div>
               <div class="info-content">
-                <label>Email</label>
-                <span>{{ userProfile.email || 'Not provided' }}</span>
+                <label>{{ $t('email') }}</label>
+                <span>{{ userProfile.email || $t('notProvided') }}</span>
               </div>
             </div>
             <div class="info-card">
@@ -101,8 +101,8 @@
                 </svg>
               </div>
               <div class="info-content">
-            <label>Mobile</label>
-            <span>{{ userProfile.mobile || 'Not provided' }}</span>
+            <label>{{ $t('phoneNumber') }}</label>
+            <span>{{ userProfile.mobile || $t('notProvided') }}</span>
           </div>
             </div>
             <div class="info-card">
@@ -115,8 +115,8 @@
                 </svg>
               </div>
               <div class="info-content">
-            <label>Date of Birth</label>
-            <span>{{ formatDate(userProfile.dateOfBirth) || 'Not provided' }}</span>
+                <label>{{ $t('dateOfBirth') }}</label>
+                <span>{{ formatDate(userProfile.dateOfBirth) || $t('notProvided') }}</span>
           </div>
             </div>
             <div class="info-card">
@@ -132,8 +132,8 @@
                 </svg>
               </div>
               <div class="info-content">
-            <label>Gender</label>
-            <span>{{ formatGender(userProfile.gender) || 'Not provided' }}</span>
+                <label>{{ $t('gender') }}</label>
+                <span>{{ formatGender(userProfile.gender) || $t('notProvided') }}</span>
           </div>
             </div>
             <div class="info-card">
@@ -146,8 +146,8 @@
                 </svg>
               </div>
               <div class="info-content">
-            <label>National ID</label>
-            <span>{{ userProfile.nationalId || 'Not provided' }}</span>
+                <label>{{ $t('nationalId') }}</label>
+                <span>{{ userProfile.nationalId || $t('notProvided') }}</span>
               </div>
             </div>
           </div>
@@ -167,8 +167,8 @@
             </svg>
             </div>
             <div class="section-text">
-              <h3>Violations & Fines</h3>
-              <p>View your violation history and fines</p>
+              <h3>{{ $t('finesAndViolations') }}</h3>
+              <p>{{ $t('viewMyViolations') }}</p>
             </div>
           </div>
           <div class="accordion-arrow">
@@ -211,8 +211,8 @@
                   </div>
                 </div>
                 <div class="violations-btn-text">
-                  <h4>View All Violations</h4>
-                  <p>See detailed information and chat with admin</p>
+                  <h4>{{ $t('viewMyViolations') }}</h4>
+                  <p>{{ $t('seeDetails') }}</p>
                 </div>
               </div>
               <div class="violations-btn-arrow">
@@ -230,8 +230,8 @@
                     stroke-linejoin="round" />
                 </svg>
               </div>
-              <h4>No Violations</h4>
-              <p>You have a clean record with no violations or fines.</p>
+              <h4>{{ $t('noViolations') }}</h4>
+              <p>{{ $t('cleanRecord') }}</p>
             </div>
           </div>
         </div>
@@ -250,8 +250,8 @@
               </svg>
             </div>
             <div class="section-text">
-              <h3>Complaints</h3>
-              <p>Submit and track your complaints</p>
+              <h3>{{ $t('complaints') }}</h3>
+              <p>{{ $t('trackComplaints') }}</p>
             </div>
           </div>
           <div class="accordion-arrow">
@@ -294,8 +294,8 @@
                   </div>
                 </div>
                 <div class="complaints-btn-text">
-                  <h4>View All Complaints</h4>
-                  <p>Submit new complaints and track existing ones</p>
+                  <h4>{{ $t('viewAllComplaints') }}</h4>
+                  <p>{{ $t('submitNewComplaints') }}</p>
                 </div>
               </div>
               <div class="complaints-btn-arrow">
@@ -313,8 +313,8 @@
                     stroke-linejoin="round" />
                 </svg>
               </div>
-              <h4>No Complaints</h4>
-              <p>You haven't submitted any complaints. We're here to help if you need support!</p>
+              <h4>{{ $t('noComplaints') }}</h4>
+              <p>{{ $t('noComplaintsMessage') }}</p>
             </div>
           </div>
         </div>
@@ -332,8 +332,8 @@
               </svg>
             </div>
             <div class="section-text">
-              <h3>Support</h3>
-              <p>Get help with any questions or issues</p>
+              <h3>{{ $t('support') }}</h3>
+              <p>{{ $t('getSupportHelp') }}</p>
             </div>
           </div>
           <div class="accordion-arrow">

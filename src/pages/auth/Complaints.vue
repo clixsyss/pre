@@ -4,8 +4,8 @@
     <div class="hero-section">
       <div class="hero-content">
         <div class="hero-text">
-          <h1 class="hero-title">Complaints & Support</h1>
-          <p class="hero-subtitle">Get help with any issues or concerns</p>
+          <h1 class="hero-title">{{ $t('complaintsSupport') }}</h1>
+          <p class="hero-subtitle">{{ $t('getHelpIssues') }}</p>
           <button @click="showNewComplaintModal = true" class="new-complaint-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -13,7 +13,7 @@
               <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
             </svg>
-            New Complaint
+            {{ $t('newComplaint') }}
           </button>
         </div>
       </div>
@@ -21,7 +21,7 @@
 
     <!-- Quick Complaint Options -->
     <div class="quick-complaints-section">
-      <h2 class="section-title">Quick Complaints</h2>
+      <h2 class="section-title">{{ $t('quickComplaints') }}</h2>
       <div class="quick-options-scroll">
         <button v-for="category in complaintStore.complaintCategories" :key="category.id"
           @click="startQuickComplaint(category)" class="quick-option-card">

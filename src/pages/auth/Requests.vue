@@ -3,8 +3,8 @@
     <div class="hero-section">
       <div class="hero-content">
         <div class="hero-text">
-          <h1 class="hero-title">Requests</h1>
-          <p class="hero-subtitle">Submit requests for various services and assistance</p>
+          <h1 class="hero-title">{{ $t('requestsTitle') }}</h1>
+          <p class="hero-subtitle">{{ $t('submitRequestsDesc') }}</p>
         </div>
       </div>
     </div>
@@ -28,13 +28,13 @@
         <!-- Loading State -->
         <div v-if="requestCategoriesStore.isLoading" class="loading-container">
           <div class="loading-spinner"></div>
-          <p>Loading requests...</p>
+          <p>{{ $t('loadingRequests') }}</p>
         </div>
 
         <!-- Error State -->
         <div v-else-if="requestCategoriesStore.getError" class="error-container">
           <p>{{ requestCategoriesStore.getError }}</p>
-          <button @click="loadRequestCategories" class="retry-btn">Retry</button>
+          <button @click="loadRequestCategories" class="retry-btn">{{ $t('retry') }}</button>
         </div>
 
         <!-- Requests Grid -->

@@ -2,7 +2,7 @@
   <div class="store-details-page">
     <!-- Hero Section -->
    
-    <PageHeader title="Store Details" subtitle="Discover amazing products" />
+    <PageHeader :title="$t('storeDetails')" :subtitle="$t('discoverProducts')" />
 
     <!-- Store Info Section -->
     <div class="store-info-section">
@@ -24,13 +24,13 @@
               class="store-status-badge"
               :class="store.status"
             >
-              {{ store.status === 'inactive' ? 'CLOSED' : 'MAINTENANCE' }}
+              {{ store.status === 'inactive' ? $t('closed') : $t('maintenance') }}
             </div>
           </div>
           <div class="store-meta">
             <span class="location">{{ store?.location }}</span>
-            <span class="delivery">{{ store?.averageDeliveryTime }} delivery</span>
-            <span v-if="store?.deliveryFee" class="delivery-fee">EGP{{ store.deliveryFee }} delivery fee</span>
+            <span class="delivery">{{ store?.averageDeliveryTime }} {{ $t('delivery').toLowerCase() }}</span>
+            <span v-if="store?.deliveryFee" class="delivery-fee">EGP{{ store.deliveryFee }} {{ $t('deliveryFeeLabel') }}</span>
           </div>
           
           <!-- Store Rating -->

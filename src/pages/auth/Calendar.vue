@@ -1,8 +1,8 @@
 <template>
   <div class="calendar-page">
     <PageHeader 
-      title="Calendar" 
-      subtitle="View all your events and bookings"
+      :title="$t('calendar')" 
+      :subtitle="$t('viewEvents')"
     />
 
     <div class="calendar-content">

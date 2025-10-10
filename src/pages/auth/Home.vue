@@ -4,8 +4,8 @@
     <div class="hero-section">
       <div class="hero-content">
         <div class="hero-text">
-          <h1 class="hero-title">Welcome back!</h1>
-          <p class="hero-subtitle">Here's what's happening in your community</p>
+          <h1 class="hero-title">{{ $t('welcomeBack') }}</h1>
+          <p class="hero-subtitle">{{ $t('communityHappening') }}</p>
         </div>
         <!-- <button @click="showProjectSwitcher = true" class="project-switcher-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -21,7 +21,7 @@
 
     <!-- Quick Actions -->
     <div class="quick-actions-section">
-      <h2 class="section-title">Quick Actions</h2>
+      <h2 class="section-title">{{ $t('quickActions') }}</h2>
       <div class="actions-scroll">
 
         <button class="action-card" @click="navigateToGate">
@@ -73,7 +73,7 @@
             </svg>
           </div>
           <div class="action-content">
-            <h3>Gate Access</h3>
+            <h3>{{ $t('gateAccess') }}</h3>
           </div>
         </button>
 
@@ -89,7 +89,7 @@
             </svg>
           </div>
           <div class="action-content">
-            <h3>Services</h3>
+            <h3>{{ $t('services') }}</h3>
           </div>
         </button>
 
@@ -104,7 +104,7 @@
             </svg>
           </div>
           <div class="action-content">
-            <h3>Bookings</h3>
+            <h3>{{ $t('bookingsShortcut') }}</h3>
           </div>
         </button>
 
@@ -120,7 +120,7 @@
             </svg>
           </div>
           <div class="action-content">
-            <h3>Smart Devices</h3>
+            <h3>{{ $t('smartDevices') }}</h3>
           </div>
         </button>
 
@@ -134,7 +134,7 @@
             </svg>
           </div>
           <div class="action-content">
-            <h3>Calendar</h3>
+            <h3>{{ $t('calendar') }}</h3>
           </div>
         </button>
 
@@ -147,7 +147,7 @@
             </svg>
           </div>
           <div class="action-content">
-            <h3>My Orders</h3>
+            <h3>{{ $t('myOrders') }}</h3>
           </div>
         </button>
 

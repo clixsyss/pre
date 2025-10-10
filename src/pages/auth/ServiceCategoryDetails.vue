@@ -2,25 +2,25 @@
   <div class="service-category-details">
     <!-- Page Header -->
     <PageHeader 
-      :title="category?.englishTitle || 'Loading...'" 
+      :title="category?.englishTitle || $t('loadingLabel')" 
       />
       <!-- :subtitle="category?.arabicTitle || ''"  -->
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
-      <p>Loading services...</p>
+      <p>{{ $t('loadingServices') }}</p>
     </div>
 
     <!-- Error State -->
     <div v-else-if="error" class="error-container">
       <p>{{ error }}</p>
-      <button @click="loadServices" class="retry-btn">Retry</button>
+      <button @click="loadServices" class="retry-btn">{{ $t('retry') }}</button>
     </div>
 
     <!-- Services List -->
     <div v-else-if="services.length > 0" class="services-list">
-      <h3 class="section-title">Available Services</h3>
+      <h3 class="section-title">{{ $t('availableServices') }}</h3>
       <div 
         v-for="service in services" 
         :key="service.id" 

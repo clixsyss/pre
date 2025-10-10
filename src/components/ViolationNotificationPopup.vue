@@ -23,18 +23,18 @@
         <!-- Text Content -->
         <div class="notification-text">
           <h3 class="notification-title">
-            <span class="title-highlight">Violation Notice</span>
-            <span class="title-subtitle">Action Required</span>
+            <span class="title-highlight">{{ $t('violationNotice') }}</span>
+            <span class="title-subtitle">{{ $t('actionRequired') }}</span>
           </h3>
           <p class="notification-message">
-            You have <strong>{{ violationCount }}</strong> outstanding violation{{ violationCount > 1 ? 's' : '' }} that require{{ violationCount === 1 ? 's' : '' }} your immediate attention.
+            {{ $t('outstandingViolation') }} <strong>{{ violationCount }}</strong> {{ violationCount > 1 ? $t('outstandingViolationsPlural') : $t('outstandingViolations') }} {{ violationCount === 1 ? $t('requiresAttention') : $t('requireAttention') }}.
           </p>
           <div class="notification-details">
             <div class="detail-item">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <span>Please review and take appropriate action</span>
+              <span>{{ $t('pleaseReviewAction') }}</span>
             </div>
           </div>
         </div>
@@ -45,13 +45,13 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Review Violations
+            {{ $t('reviewViolations') }}
           </button>
           <button @click="closeNotification" class="action-btn secondary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Close
+            {{ $t('close') }}
           </button>
         </div>
       </div>

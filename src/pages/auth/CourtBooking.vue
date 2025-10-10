@@ -1,43 +1,43 @@
 <template>
   <div class="court-booking-page">
     <PageHeader 
-      title="Court Booking" 
-      :subtitle="projectName ? `Book courts in ${projectName}` : 'Choose your sport, court, date, and time'"
+      :title="$t('courtBookingTitle')" 
+      :subtitle="projectName ? `${$t('bookCourtsIn')} ${projectName}` : $t('chooseSportCourtDateTime')"
     />
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
-      <p>Loading available sports and courts...</p>
+      <p>{{ $t('loadingAvailableCourts') }}</p>
     </div>
 
     <!-- Error State -->
     <div v-else-if="error" class="error-state">
       <div class="error-icon">⚠️</div>
       <p>{{ error }}</p>
-      <button @click="retryFetch" class="retry-btn">Try Again</button>
+      <button @click="retryFetch" class="retry-btn">{{ $t('tryAgain') }}</button>
     </div>
 
     <!-- No Project Selected -->
     <div v-else-if="!projectId" class="no-project-state">
       <div class="no-project-icon">🏗️</div>
-      <h3>No Project Selected</h3>
-      <p>Please select a project to book courts.</p>
+      <h3>{{ $t('noProjectSelected') }}</h3>
+      <p>{{ $t('selectProjectToBookCourts') }}</p>
       <button @click="$router.push('/project-selection')" class="select-project-btn">
-        Select Project
+        {{ $t('switchProject') }}
       </button>
     </div>
 
     <!-- No Sports Available -->
     <div v-else-if="sportsOptions.length === 0" class="no-sports-state">
       <div class="no-sports-icon">🏟️</div>
-      <h3>No Sports Available</h3>
-      <p>There are no sports with courts available in this project yet.</p>
-      <p>Please contact the project administrator to set up sports and courts.</p>
+      <h3>{{ $t('noSportsAvailable') }}</h3>
+      <p>{{ $t('noSportsMessage') }}</p>
+      <p>{{ $t('contactAdminForCourts') }}</p>
       
       <!-- Debug button for development -->
       <button @click="debugSportsData" class="debug-btn" v-if="projectId">
-        Debug Sports Data
+        {{ $t('debugSportsData') }}
       </button>
     </div>
 
@@ -45,8 +45,8 @@
     <div v-else class="booking-content">
       <!-- Sport Selection -->
       <div class="booking-section">
-        <h2 class="section-title">Select Sport</h2>
-        <p class="section-subtitle">Choose from sports that have available courts</p>
+        <h2 class="section-title">{{ $t('selectSport') }}</h2>
+        <p class="section-subtitle">{{ $t('chooseSportDesc') }}</p>
         <div class="sport-options">
           <div 
             v-for="sport in sportsOptions" 

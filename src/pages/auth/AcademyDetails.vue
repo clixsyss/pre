@@ -10,8 +10,8 @@
           </svg>
         </div>
         <div class="header-text">
-          <h1>{{ academy?.name || 'Academy Details' }}</h1>
-          <p>{{ academy?.type || 'Sports Academy' }}</p>
+          <h1>{{ academy?.name || $t('academyDetails') }}</h1>
+          <p>{{ academy?.type || $t('sportsAcademy') }}</p>
         </div>
       </div>
     </div>
@@ -19,7 +19,7 @@
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
-      <p>Loading academy details...</p>
+      <p>{{ $t('loadingAcademyDetails') }}</p>
     </div>
 
     <!-- Error State -->
@@ -29,9 +29,9 @@
           <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <h3>Something went wrong</h3>
+      <h3>{{ $t('somethingWentWrong') }}</h3>
       <p>{{ error }}</p>
-      <button @click="fetchAcademyDetails" class="retry-button">Try Again</button>
+      <button @click="fetchAcademyDetails" class="retry-button">{{ $t('tryAgain') }}</button>
     </div>
 
     <!-- Content -->

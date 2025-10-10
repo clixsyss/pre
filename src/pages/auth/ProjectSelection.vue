@@ -10,8 +10,8 @@
     <div class="content">
       <!-- Welcome Section -->
       <div class="welcome-section">
-        <h1>Welcome Back, {{ userDisplayName }}!</h1>
-        <p>Select your project to continue</p>
+        <h1>{{ $t('welcomeBackUser') }}, {{ userDisplayName }}!</h1>
+        <p>{{ $t('selectProjectContinue') }}</p>
       </div>
       <!-- Loading State -->
       <div v-if="projectStore.loading" class="loading-container">
@@ -19,8 +19,8 @@
           <div class="loading-spinner">
             <div class="spinner-ring"></div>
           </div>
-          <h3>Loading Projects</h3>
-          <p>Please wait while we fetch your projects...</p>
+          <h3>{{ $t('loadingProjects') }}</h3>
+          <p>{{ $t('fetchingProjects') }}</p>
         </div>
       </div>
 
@@ -34,14 +34,14 @@
               <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </div>
-          <h3>Oops! Something went wrong</h3>
+          <h3>{{ $t('somethingWentWrong') }}</h3>
           <p>{{ projectStore.error }}</p>
           <button @click="retryLoading" class="retry-button">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 12A9 9 0 0 1 12 3A9 9 0 0 1 21 12A9 9 0 0 1 12 21A9 9 0 0 1 3 12Z" stroke="currentColor" stroke-width="2"/>
               <path d="M12 3V12L16 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Try Again
+            {{ $t('tryAgain') }}
           </button>
         </div>
       </div>

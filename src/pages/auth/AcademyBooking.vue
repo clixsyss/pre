@@ -8,15 +8,15 @@
             <path d="M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <h1>Academy Programs</h1>
+        <h1>{{ $t('academyProgramsTitle') }}</h1>
       </div>
-      <p class="header-subtitle">Join sports academies and training programs</p>
+      <p class="header-subtitle">{{ $t('academyProgramsDesc') }}</p>
     </div>
 
     <div class="academy-content">
       <!-- Academy Selection -->
       <div class="academy-section">
-        <h2 class="section-title">Select Academy</h2>
+        <h2 class="section-title">{{ $t('selectAcademy') }}</h2>
         <div class="academy-options">
           <div 
             v-for="academy in academyOptions" 

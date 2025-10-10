@@ -2,8 +2,8 @@
   <div class="news-page">
     <!-- Page Header -->
     <PageHeader 
-      title="All News" 
-      subtitle="Stay updated with the latest community news"
+      :title="$t('allNews')" 
+      :subtitle="$t('stayUpdated')"
     />
     
     <!-- News Feed -->

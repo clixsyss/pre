@@ -9,7 +9,7 @@
           </svg>
         </div>
         <h2 class="suspension-title">{{ message.title }}</h2>
-        <p class="suspension-subtitle">Your account access has been restricted</p>
+        <p class="suspension-subtitle">{{ $t('accountAccessRestricted') }}</p>
       </div>
 
       <div class="suspension-content">
@@ -20,13 +20,13 @@
         <div v-if="message.type === 'temporary' && message.endDate" class="suspension-details">
           <div class="detail-card">
             <div class="detail-content">
-              <span class="detail-label">Suspension Type</span>
-              <span class="detail-value">Temporary</span>
+              <span class="detail-label">{{ $t('suspensionType') }}</span>
+              <span class="detail-value">{{ $t('temporary') }}</span>
             </div>
           </div>
           <div class="detail-card">
             <div class="detail-content">
-              <span class="detail-label">Ends On</span>
+              <span class="detail-label">{{ $t('endsOn') }}</span>
               <span class="detail-value">{{ formatEndDate(message.endDate) }}</span>
             </div>
           </div>
@@ -37,15 +37,15 @@
                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p class="info-text">You can still access your profile and gate functionality</p>
+            <p class="info-text">{{ $t('canAccessProfileGate') }}</p>
           </div>
         </div>
 
         <div v-else-if="message.type === 'permanent'" class="suspension-details">
           <div class="detail-card">
             <div class="detail-content">
-              <span class="detail-label">Suspension Type</span>
-              <span class="detail-value">Permanent</span>
+              <span class="detail-label">{{ $t('suspensionType') }}</span>
+              <span class="detail-value">{{ $t('permanent') }}</span>
             </div>
           </div>
           <div class="detail-card">
@@ -55,7 +55,7 @@
                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p class="info-text">You can still access your profile and gate functionality</p>
+            <p class="info-text">{{ $t('canAccessProfileGate') }}</p>
           </div>
         </div>
       </div>
@@ -66,13 +66,13 @@
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            Contact Support
+            {{ $t('contactSupport') }}
           </button>
           <button @click="handleDismiss" class="dismiss-button">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
-            I Understand
+            {{ $t('iUnderstand') }}
           </button>
         </div>
       </div>
