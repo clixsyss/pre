@@ -192,8 +192,6 @@ import { useRegistrationStore } from '../../stores/registration'
 import { validateProfileCompletion, getNextProfileStep } from '../../utils/profileValidation'
 import { attemptGoogleSignIn } from '../../utils/googleAuthHelper'
 import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
-import { collection, query, where, getDocs } from 'firebase/firestore'
-import { db } from '../../boot/firebase'
 
 // Component name for ESLint
 defineOptions({
@@ -232,71 +230,68 @@ const togglePassword = () => {
 }
 
 // Check if user needs migration (exists in Firestore with oldId but not in Firebase Auth)
+// Uses firestoreService for direct access (more reliable on iOS)
 const checkForMigration = async (email) => {
   try {
     console.log('🔍 Checking for migration need for email:', email)
+    console.log('📞 Using direct Firestore check via firestoreService')
     
-    // Ensure Firestore service is initialized
-    if (!db) {
-      console.error('❌ Firestore db not available')
+    const normalizedEmail = email.toLowerCase().trim()
+    
+    // Use firestoreService to get user by email
+    // This works better on iOS than Cloud Functions or direct Web SDK queries
+    console.log('🔍 Querying Firestore for user...')
+    const startTime = Date.now()
+    
+    // Try to get user document - we'll check multiple potential document IDs
+    // since we don't know the exact document ID
+    try {
+      // Option 1: Try getting all users and filtering (if collection is small)
+      console.log('🔍 Attempting to fetch users collection...')
+      const result = await firestoreService.getDocs('users', {
+        filters: [{ field: 'email', operator: '==', value: normalizedEmail }],
+        timeoutMs: 8000
+      })
+      
+      const duration = Date.now() - startTime
+      console.log(`✅ Firestore query completed in ${duration}ms, found ${result.size} user(s)`)
+      
+      if (result && !result.empty && result.docs.length > 0) {
+        const userDoc = result.docs[0]
+        const userData = userDoc.data()
+        
+        console.log('📋 Found user:', userDoc.id)
+        console.log('📋 User has oldId:', !!userData.oldId)
+        console.log('📋 User migrated status:', userData.migrated)
+        
+        // Check if user has oldId and is NOT migrated
+        if (userData.oldId && userData.migrated !== true) {
+          console.log('✅ User needs migration!')
+          return { needsMigration: true, userId: userDoc.id, userData }
+        } else if (userData.oldId && userData.migrated === true) {
+          console.log('ℹ️ User has oldId but already migrated')
+          return { needsMigration: false }
+        } else {
+          console.log('ℹ️ User has no oldId, no migration needed')
+          return { needsMigration: false }
+        }
+      }
+      
+      console.log('❌ No user found with that email')
+      return { needsMigration: false }
+      
+    } catch (firestoreError) {
+      console.error('❌ Firestore query error:', firestoreError)
+      console.error('❌ Error details:', {
+        message: firestoreError?.message,
+        code: firestoreError?.code
+      })
+      
+      // Return false on error to avoid blocking sign in
       return { needsMigration: false }
     }
-    
-    console.log('🔍 Firestore db available, creating query...')
-    
-    // Add timeout protection for Firestore query
-    const queryPromise = (async () => {
-      try {
-        console.log('🔍 Creating collection reference...')
-        const usersRef = collection(db, 'users')
-        console.log('🔍 Creating query...')
-        const q = query(usersRef, where('email', '==', email.toLowerCase().trim()))
-        console.log('🔍 Executing getDocs...')
-        const result = await getDocs(q)
-        console.log('🔍 getDocs completed, docs count:', result.size)
-        return result
-      } catch (queryError) {
-        console.error('❌ Query execution error:', queryError)
-        console.error('❌ Query error details:', {
-          message: queryError.message,
-          code: queryError.code,
-          name: queryError.name
-        })
-        throw queryError
-      }
-    })()
-    
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Firestore query timeout after 8 seconds')), 8000)
-    )
-    
-    console.log('🔍 Racing query vs timeout...')
-    const querySnapshot = await Promise.race([queryPromise, timeoutPromise])
-    console.log('✅ Firestore query completed successfully')
-    
-    if (!querySnapshot.empty) {
-      const userDoc = querySnapshot.docs[0]
-      const userData = userDoc.data()
-      
-      console.log('📋 Found user in Firestore:', userDoc.id)
-      console.log('📋 User data:', { hasOldId: !!userData.oldId, migrated: userData.migrated })
-      
-      // Check if user has oldId and is not migrated
-      if (userData.oldId && !userData.migrated) {
-        console.log('✅ User needs migration')
-        return { needsMigration: true, userId: userDoc.id, userData }
-      }
-    }
-    
-    console.log('❌ No migration needed - user not found or no oldId')
-    return { needsMigration: false }
   } catch (error) {
-    console.error('❌ Error checking for migration:', error)
-    console.error('❌ Error type:', typeof error)
-    console.error('❌ Error message:', error?.message || 'No message')
-    console.error('❌ Error code:', error?.code || 'No code')
-    console.error('❌ Error stack:', error?.stack || 'No stack')
-    // Return false on error to avoid blocking sign in
+    console.error('❌ Error in checkForMigration:', error)
     return { needsMigration: false }
   }
 }
