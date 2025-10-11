@@ -42,6 +42,7 @@ export function useNetworkStatus() {
       position: 'top',
       timeout: 0, // Don't auto-dismiss
       icon: 'wifi_off',
+      classes: 'notif-with-safe-area',
       actions: [
         {
           label: 'Dismiss',
@@ -61,7 +62,8 @@ export function useNetworkStatus() {
       caption: 'Your connection is slow. Some features may not work properly',
       position: 'top',
       timeout: 5000,
-      icon: 'signal_wifi_statusbar_connected_no_internet_4'
+      icon: 'signal_wifi_statusbar_connected_no_internet_4',
+      classes: 'notif-with-safe-area'
     })
   }
 
@@ -72,7 +74,8 @@ export function useNetworkStatus() {
       caption: 'Your internet connection has been restored',
       position: 'top',
       timeout: 3000,
-      icon: 'wifi'
+      icon: 'wifi',
+      classes: 'notif-with-safe-area'
     })
   }
 

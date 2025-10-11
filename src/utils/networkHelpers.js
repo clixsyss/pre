@@ -67,7 +67,8 @@ export async function retryWithBackoff(fn, options = {}) {
       message: 'Network Error',
       caption: 'Unable to complete request. Please check your connection.',
       position: 'top',
-      timeout: 3000
+      timeout: 3000,
+      classes: 'notif-with-safe-area'
     })
   }
   
@@ -94,7 +95,8 @@ export async function executeIfOnline(fn, options = {}) {
         caption: 'This action requires an internet connection',
         position: 'top',
         timeout: 3000,
-        icon: 'wifi_off'
+        icon: 'wifi_off',
+        classes: 'notif-with-safe-area'
       })
     }
     return null
@@ -126,7 +128,8 @@ export function handleNetworkError(error, context = 'performing this action') {
       caption: `Unable to complete ${context}. Please check your internet connection and try again.`,
       position: 'top',
       timeout: 4000,
-      icon: 'wifi_off'
+      icon: 'wifi_off',
+      classes: 'notif-with-safe-area'
     })
   } else {
     Notify.create({
@@ -134,7 +137,8 @@ export function handleNetworkError(error, context = 'performing this action') {
       message: 'Error',
       caption: error.message || `An error occurred while ${context}`,
       position: 'top',
-      timeout: 3000
+      timeout: 3000,
+      classes: 'notif-with-safe-area'
     })
   }
 }
