@@ -1,5 +1,5 @@
 <template>
-  <div class="signin-page">
+  <div class="signin-page" @click="handlePageClick">
     <!-- Header -->
     <div class="header">
       <button @click="goBack" class="back-btn">
@@ -36,7 +36,7 @@
         <h2 class="welcome-title">Welcome Back!</h2>
       </div>
 
-      <form @submit.prevent="handleSignIn" class="signin-form">
+      <form @submit.prevent="handleSignIn" class="signin-form" @click.stop>
         <div class="form-group">
           <label for="email" class="form-label">Email</label>
           <input
@@ -182,6 +182,8 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { Keyboard } from '@capacitor/keyboard'
+import { Capacitor } from '@capacitor/core'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
 import { smartMirrorService } from '../../services/smartMirrorService'
@@ -210,6 +212,17 @@ const formData = reactive({
 
 const goBack = () => {
   router.go(-1)
+}
+
+const handlePageClick = async () => {
+  // Dismiss keyboard when clicking outside form (iOS/Android)
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await Keyboard.hide()
+    } catch {
+      // Keyboard API might not be available, ignore error
+    }
+  }
 }
 
 const togglePassword = () => {
@@ -261,10 +274,22 @@ const handleSignIn = async () => {
 
     // Use Web SDK for authentication (works on all platforms reliably)
     console.log('[SignIn] Using Web SDK for authentication...')
-    const userCredential = await optimizedAuthService.signInWithEmailAndPassword(
+    
+    // Add timeout to prevent infinite hang
+    const authPromise = optimizedAuthService.signInWithEmailAndPassword(
       formData.email,
       formData.password,
     )
+    
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => {
+        console.error('[SignIn] ❌ Authentication timeout after 15 seconds')
+        reject(new Error('Authentication timeout. Please check your internet connection and try again.'))
+      }, 15000)
+    )
+    
+    console.log('[SignIn] Waiting for authentication (15s timeout)...')
+    const userCredential = await Promise.race([authPromise, timeoutPromise])
     const userId = userCredential.user.uid
     console.log('[SignIn] ✅ Authentication successful:', userId)
 
@@ -297,8 +322,35 @@ const handleSignIn = async () => {
     // User is approved, proceed to home
     router.push('/home')
   } catch (error) {
-    console.error('Sign in error:', error)
-    notificationStore.showError('Sign in failed: ' + error.message)
+    console.error('[SignIn] ❌ Sign in error:', error)
+    console.error('[SignIn] Error details:', {
+      message: error.message,
+      code: error.code,
+      name: error.name
+    })
+    
+    // Provide user-friendly error messages
+    let errorMessage = 'Sign in failed. Please try again.'
+    
+    if (error.message.includes('timeout')) {
+      errorMessage = 'Connection timeout. Please check your internet connection and try again.'
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = 'Invalid email address.'
+    } else if (error.code === 'auth/user-disabled') {
+      errorMessage = 'This account has been disabled.'
+    } else if (error.code === 'auth/user-not-found') {
+      errorMessage = 'No account found with this email.'
+    } else if (error.code === 'auth/wrong-password') {
+      errorMessage = 'Incorrect password.'
+    } else if (error.code === 'auth/network-request-failed') {
+      errorMessage = 'Network error. Please check your internet connection.'
+    } else if (error.code === 'auth/too-many-requests') {
+      errorMessage = 'Too many failed attempts. Please try again later.'
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
+    notificationStore.showError(errorMessage)
   } finally {
     loading.value = false
   }

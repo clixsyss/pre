@@ -78,15 +78,55 @@ class OptimizedAuthService {
    */
   async signInWithEmailAndPassword(email, password) {
     try {
-      // Use Web SDK for all platforms
-      const result = await signInWithEmailAndPassword(this.auth, email, password)
-      this.currentUser = result.user
-      return {
-        user: result.user,
-        credential: result.credential
+      console.log('🔐 OptimizedAuthService: Starting sign in...')
+      
+      // Check if iOS native platform
+      const { Capacitor } = await import('@capacitor/core')
+      const platform = Capacitor.getPlatform()
+      const isIOS = platform === 'ios' && Capacitor.isNativePlatform()
+      
+      if (isIOS) {
+        // Use Capacitor Firebase Authentication plugin for iOS
+        console.log('📱 iOS: Using Capacitor plugin for email/password sign in')
+        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
+        
+        const result = await FirebaseAuthentication.signInWithEmailAndPassword({
+          email,
+          password
+        })
+        
+        console.log('📱 iOS: Capacitor sign in successful:', result.user?.uid)
+        
+        // Wait for auth state to sync
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Get user from Web SDK (for consistency)
+        this.currentUser = this.auth.currentUser || result.user
+        
+        console.log('📱 iOS: Final user:', this.currentUser?.uid)
+        
+        return {
+          user: this.currentUser,
+          credential: result.credential
+        }
+      } else {
+        // Use Web SDK for Android and web
+        console.log('🌐 Using Web SDK for sign in')
+        const result = await signInWithEmailAndPassword(this.auth, email, password)
+        this.currentUser = result.user
+        console.log('🌐 Web SDK sign in successful:', result.user.uid)
+        return {
+          user: result.user,
+          credential: result.credential
+        }
       }
     } catch (error) {
-      console.error('Sign in error:', error)
+      console.error('❌ Sign in error:', error)
+      console.error('❌ Error details:', {
+        code: error.code,
+        message: error.message,
+        name: error.name
+      })
       throw error
     }
   }
