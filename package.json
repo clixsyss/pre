@@ -27,6 +27,7 @@
     "@capacitor/filesystem": "^7.1.4",
     "@capacitor/ios": "^7.4.3",
     "@capacitor/keyboard": "^7.0.3",
+    "@capacitor/network": "^7.0.2",
     "@capacitor/splash-screen": "^7.0.3",
     "@quasar/extras": "^1.16.4",
     "axios": "^1.2.1",

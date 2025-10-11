@@ -2,6 +2,9 @@
   <div>
     <SplashScreen />
     
+    <!-- Network Status Banner - Shows when offline or slow connection -->
+    <NetworkStatusBanner />
+    
     <!-- Show MainLayout only for authenticated pages -->
     <MainLayout v-if="isAuthenticatedPage && !isRouterLoading">
       <router-view />
@@ -19,11 +22,13 @@
 <script setup>
 console.log('🚀🚀🚀 JavaScript is executing! App.vue script setup started!')
 
-import { computed, ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import SplashScreen from './components/SplashScreen.vue'
 import NotificationPopup from './components/NotificationPopup.vue'
+import NetworkStatusBanner from './components/NetworkStatusBanner.vue'
 import MainLayout from './layouts/MainLayout.vue'
+import { useNetworkStatus } from './composables/useNetworkStatus'
 
 // Component name for ESLint
 defineOptions({
@@ -32,6 +37,9 @@ defineOptions({
 
 const route = useRoute()
 const isRouterLoading = ref(true)
+
+// Initialize network monitoring
+const { initNetworkMonitoring, stopNetworkMonitoring } = useNetworkStatus()
 
 // Global error handler - enhanced
 window.addEventListener('error', (event) => {
@@ -63,6 +71,11 @@ try {
 onMounted(async () => {
   try {
     console.log('🚀 App.vue: Starting app initialization...')
+    
+    // Initialize network monitoring first
+    console.log('🌐 App.vue: Initializing network monitoring...')
+    await initNetworkMonitoring()
+    console.log('✅ Network monitoring initialized')
     
     // Wait for Vue to be fully ready
     await nextTick()
@@ -134,6 +147,12 @@ onMounted(async () => {
       window.dispatchEvent(new CustomEvent('appReady'))
     }, 1000)
   }
+})
+
+// Cleanup network monitoring on unmount
+onUnmounted(async () => {
+  console.log('🛑 App.vue: Cleaning up...')
+  await stopNetworkMonitoring()
 })
 
 // Define which routes should show the main layout (authenticated pages)
