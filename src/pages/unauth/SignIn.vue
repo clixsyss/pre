@@ -264,17 +264,18 @@ const checkForMigration = async (email) => {
         console.log('📋 User has oldId:', !!userData.oldId)
         console.log('📋 User migrated status:', userData.migrated)
         
-        // Check if user has oldId and is NOT migrated
-        if (userData.oldId && userData.migrated !== true) {
-          console.log('✅ User needs migration!')
-          return { needsMigration: true, userId: userDoc.id, userData }
-        } else if (userData.oldId && userData.migrated === true) {
-          console.log('ℹ️ User has oldId but already migrated')
-          return { needsMigration: false }
-        } else {
-          console.log('ℹ️ User has no oldId, no migration needed')
-          return { needsMigration: false }
-        }
+              // Check if user has oldId and is NOT migrated
+              if (userData.oldId && userData.migrated !== true) {
+                console.log('✅ User needs migration!')
+                console.log('📋 Storing user ID for migration:', userDoc.id)
+                return { needsMigration: true, userId: userDoc.id, userData }
+              } else if (userData.oldId && userData.migrated === true) {
+                console.log('ℹ️ User has oldId but already migrated')
+                return { needsMigration: false }
+              } else {
+                console.log('ℹ️ User has no oldId, no migration needed')
+                return { needsMigration: false }
+              }
       }
       
       console.log('❌ No user found with that email')
@@ -404,9 +405,14 @@ const handleSignIn = async () => {
       
       if (migrationCheck.needsMigration) {
         console.log('[SignIn] ✅ User needs migration, redirecting to migration page')
-        // Store email in registration store for migration page
+        // Store email AND user ID in registration store for migration page
         const registrationStore = useRegistrationStore()
-        registrationStore.setPersonalData({ email: formData.email })
+        registrationStore.setPersonalData({ 
+          email: formData.email,
+          firestoreUserId: migrationCheck.userId 
+        })
+        
+        console.log('[SignIn] 📋 Stored user ID for migration:', migrationCheck.userId)
         
         notificationStore.showInfo('Please set a new password to complete your account migration.')
         router.push('/migrate-account')
@@ -853,6 +859,7 @@ const goToSignUp = () => {
 
   .welcome-title {
     font-size: 1.6rem;
+    margin: 0;
   }
 
   .form-input {

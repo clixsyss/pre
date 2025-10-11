@@ -453,12 +453,21 @@ class FirestoreService {
           )
         }
 
-        // For fines and complaints collections, use Web SDK directly on iOS to avoid auth issues
-        if (collectionPath.includes('/fines') || collectionPath.includes('/complaints')) {
+        // For fines, complaints, and users collections, use Web SDK directly on iOS to avoid auth issues
+        // Also use Web SDK when filters are present to avoid client-side filtering of large collections
+        const shouldUseWebSDK = collectionPath.includes('/fines') || 
+                                 collectionPath.includes('/complaints') ||
+                                 collectionPath === 'users' ||
+                                 (queryOptions?.filters && queryOptions.filters.length > 0)
+        
+        if (shouldUseWebSDK) {
+          const collectionType = collectionPath.includes('/fines') ? 'fines' : 
+                                  collectionPath.includes('/complaints') ? 'complaints' :
+                                  collectionPath === 'users' ? 'users' : 'filtered collection'
           console.log(
             '🔄 FirestoreService: Using Web SDK directly for',
-            collectionPath.includes('/fines') ? 'fines' : 'complaints',
-            'collection (iOS compatibility)',
+            collectionType,
+            'collection (iOS compatibility & server-side filtering)',
           )
 
           try {
@@ -547,7 +556,7 @@ class FirestoreService {
 
             console.log(
               '✅ FirestoreService: Web SDK query successful for',
-              collectionPath.includes('/fines') ? 'fines' : 'complaints',
+              collectionType,
               ':',
               { empty: collectionData.empty, size: collectionData.size },
             )
@@ -559,7 +568,7 @@ class FirestoreService {
           } catch (webSDKError) {
             console.warn(
               '⚠️ FirestoreService: Web SDK query failed for',
-              collectionPath.includes('/fines') ? 'fines' : 'complaints',
+              collectionType,
               ':',
               webSDKError.message,
             )
@@ -567,7 +576,7 @@ class FirestoreService {
             // If Web SDK fails, try Capacitor Firebase as fallback
             console.log(
               '🔄 FirestoreService: Falling back to Capacitor Firebase for',
-              collectionPath.includes('/fines') ? 'fines' : 'complaints',
+              collectionType,
             )
 
             try {
@@ -621,7 +630,7 @@ class FirestoreService {
             } catch (capacitorError) {
               console.error(
                 '❌ FirestoreService: Both Web SDK and Capacitor Firebase failed for',
-                collectionPath.includes('/fines') ? 'fines' : 'complaints',
+                collectionType,
                 ':',
                 capacitorError.message,
               )

@@ -3,20 +3,9 @@
     <!-- Header -->
     <div class="header">
       <button @click="goBack" class="back-btn">
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M19 12H5M12 19L5 12L12 5"
-            stroke="white"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 12H5M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
         </svg>
       </button>
       <h1 class="page-title">Account Migration</h1>
@@ -26,107 +15,37 @@
     <!-- Content -->
     <div class="content">
       <div class="welcome-section">
-        <h2 class="welcome-title">Welcome Back!</h2>
         <p class="welcome-subtitle">Please set a new password to secure your account</p>
-      </div>
-
-      <!-- Migration Notice -->
-      <div class="migration-notice">
-        <div class="notice-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-              stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            <path d="M12 8V12" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            <path d="M12 16H12.01" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </div>
-        <p class="notice-text">
-          We're upgrading our security system. Please create a new password to continue using your account.
-        </p>
       </div>
 
       <form @submit.prevent="handleMigration" class="migrate-form" @click.stop>
         <div class="form-group">
           <label for="email" class="form-label">Email</label>
-          <input
-            id="email"
-            v-model="formData.email"
-            type="email"
-            class="form-input"
-            placeholder="Your email address"
-            disabled
-          />
+          <input id="email" v-model="formData.email" type="email" class="form-input" placeholder="Your email address"
+            disabled />
         </div>
 
         <div class="form-group">
           <label for="password" class="form-label">New Password</label>
           <div class="password-input-wrapper">
-            <input
-              id="password"
-              v-model="formData.password"
-              :type="showPassword ? 'text' : 'password'"
-              class="form-input"
-              placeholder="Enter new password"
-              required
-              minlength="6"
-              autofocus
-            />
+            <input id="password" v-model="formData.password" :type="showPassword ? 'text' : 'password'"
+              class="form-input" placeholder="Enter new password" required minlength="6" autofocus />
             <button type="button" @click="togglePassword" class="password-toggle">
-              <svg
-                v-if="showPassword"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="3"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
+              <svg v-if="showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
-              <svg
-                v-else
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M2 12C2 12 6 4 12 4C18 4 22 12 22 12C22 12 18 20 12 20C6 20 2 12 2 12Z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
+              <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 12C2 12 6 4 12 4C18 4 22 12 22 12C22 12 18 20 12 20C6 20 2 12 2 12Z" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 <path
                   d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M2 2L22 22"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M2 2L22 22" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
             </button>
           </div>
@@ -138,70 +57,25 @@
         <div class="form-group">
           <label for="confirmPassword" class="form-label">Confirm New Password</label>
           <div class="password-input-wrapper">
-            <input
-              id="confirmPassword"
-              v-model="formData.confirmPassword"
-              :type="showConfirmPassword ? 'text' : 'password'"
-              class="form-input"
-              placeholder="Confirm new password"
-              required
-              minlength="6"
-            />
+            <input id="confirmPassword" v-model="formData.confirmPassword"
+              :type="showConfirmPassword ? 'text' : 'password'" class="form-input" placeholder="Confirm new password"
+              required minlength="6" />
             <button type="button" @click="toggleConfirmPassword" class="password-toggle">
-              <svg
-                v-if="showConfirmPassword"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="3"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
+              <svg v-if="showConfirmPassword" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
-              <svg
-                v-else
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M2 12C2 12 6 4 12 4C18 4 22 12 22 12C22 12 18 20 12 20C6 20 2 12 2 12Z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
+              <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 12C2 12 6 4 12 4C18 4 22 12 22 12C22 12 18 20 12 20C6 20 2 12 2 12Z" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 <path
                   d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M2 2L22 22"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M2 2L22 22" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
             </button>
           </div>
@@ -230,6 +104,22 @@
           <span v-else>Complete Migration</span>
         </button>
       </form>
+
+      <!-- Migration Notice -->
+      <div class="migration-notice">
+        <div class="notice-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+              stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M12 8V12" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M12 16H12.01" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <p class="notice-text">
+          We're upgrading our security system. Please create a new password to continue using your account.
+        </p>
+      </div>
 
       <div class="help-section">
         <p class="help-text">Need help? <a href="#" class="help-link">Contact Support</a></p>
@@ -330,12 +220,27 @@ const handleMigration = async () => {
   try {
     console.log('[MigrateAccount] Starting migration for:', formData.email)
 
-    // Call Cloud Function to migrate user
-    const migrateOldUser = httpsCallable(functions, 'migrateOldUser')
-    const result = await migrateOldUser({
+    // Call Cloud Function to migrate user with timeout
+    const migrateOldUser = httpsCallable(functions, 'migrateOldUser', {
+      timeout: 30000, // 30 seconds timeout
+    })
+
+    console.log('[MigrateAccount] Calling Cloud Function with 30s timeout...')
+
+    // Create timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Migration request timed out after 30 seconds. Please check your network connection and try again.'))
+      }, 30000)
+    })
+
+    // Race between function call and timeout
+    const functionCall = migrateOldUser({
       email: formData.email,
       password: formData.password,
     })
+
+    const result = await Promise.race([functionCall, timeoutPromise])
 
     console.log('[MigrateAccount] ✅ Migration successful:', result.data)
 
@@ -351,6 +256,37 @@ const handleMigration = async () => {
     }, 1000)
   } catch (error) {
     console.error('[MigrateAccount] ❌ Migration error:', error)
+    console.error('[MigrateAccount] Error details:', {
+      code: error.code,
+      message: error.message,
+      name: error.name
+    })
+
+    // Check if should trigger fallback
+    const shouldUseFallback = error.message?.includes('timeout') ||
+      error.message?.includes('timed out') ||
+      error.code === 'functions/unavailable' ||
+      error.code === 'functions/deadline-exceeded'
+
+    console.log('[MigrateAccount] Should use fallback?', shouldUseFallback)
+    console.log('[MigrateAccount] Error message includes timeout?', error.message?.includes('timeout'))
+    console.log('[MigrateAccount] Error message includes timed out?', error.message?.includes('timed out'))
+    console.log('[MigrateAccount] Error code:', error.code)
+
+    // If Cloud Function fails (likely due to network issues on iOS), try direct migration
+    if (shouldUseFallback) {
+      console.warn('[MigrateAccount] ⚠️ Cloud Function failed, trying direct migration...')
+
+      try {
+        await handleDirectMigration()
+        return
+      } catch (directError) {
+        console.error('[MigrateAccount] ❌ Direct migration also failed:', directError)
+        notificationStore.showError('Migration failed. Please check your network connection and try again.')
+        loading.value = false
+        return
+      }
+    }
 
     let errorMessage = 'Migration failed. Please try again.'
 
@@ -371,6 +307,105 @@ const handleMigration = async () => {
     notificationStore.showError(errorMessage)
   } finally {
     loading.value = false
+  }
+}
+
+// Direct migration fallback for iOS when Cloud Functions fail
+const handleDirectMigration = async () => {
+  console.log('[MigrateAccount] 🔄 Starting direct migration (fallback)...')
+
+  try {
+    // Import Firebase Auth and firestoreService
+    const { createUserWithEmailAndPassword } = await import('firebase/auth')
+    const { auth } = await import('../../boot/firebase')
+    const { default: firestoreService } = await import('../../services/firestoreService')
+
+    console.log('[MigrateAccount] Creating Firebase Auth user with 20s timeout...')
+
+    // Create timeout for auth user creation
+    const authTimeout = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Auth user creation timed out')), 20000)
+    })
+
+    let userCredential
+    let authUid
+    
+    try {
+      // Try to create Firebase Auth user with timeout
+      userCredential = await Promise.race([
+        createUserWithEmailAndPassword(auth, formData.email, formData.password),
+        authTimeout
+      ])
+      authUid = userCredential.user.uid
+      console.log('[MigrateAccount] ✅ Auth user created:', authUid)
+    } catch (authError) {
+      console.log('[MigrateAccount] Auth creation error:', authError.code, authError.message)
+      
+      // Check if user already exists
+      if (authError.code === 'auth/email-already-in-use' || authError.message?.includes('already')) {
+        console.log('[MigrateAccount] ℹ️ User already exists in Auth, signing in to get UID...')
+        
+        // Import signInWithEmailAndPassword
+        const { signInWithEmailAndPassword } = await import('firebase/auth')
+        
+        // Sign in to get the UID
+        const signInTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Sign in timed out')), 15000)
+        })
+        
+        const signInResult = await Promise.race([
+          signInWithEmailAndPassword(auth, formData.email, formData.password),
+          signInTimeout
+        ])
+        
+        authUid = signInResult.user.uid
+        console.log('[MigrateAccount] ✅ Got existing user UID:', authUid)
+      } else {
+        // Rethrow if it's a different error
+        throw authError
+      }
+    }
+
+    // Find and update Firestore user document using firestoreService
+    console.log('[MigrateAccount] Finding user document in Firestore...')
+
+    // Use firestoreService to get user by email (more reliable on iOS)
+    const result = await firestoreService.getDocs('users', {
+      filters: [{ field: 'email', operator: '==', value: formData.email.toLowerCase().trim() }],
+      timeoutMs: 10000
+    })
+
+    if (!result || result.empty || result.docs.length === 0) {
+      throw new Error('User document not found in Firestore')
+    }
+
+    const userDocId = result.docs[0].id
+    console.log('[MigrateAccount] Found user document:', userDocId)
+
+    // Update the user document using firestoreService
+    console.log('[MigrateAccount] Updating user document...')
+    await firestoreService.updateDoc(`users/${userDocId}`, {
+      migrated: true,
+      authUid: authUid,
+      updatedAt: new Date().toISOString()
+    })
+
+    console.log('[MigrateAccount] ✅ Direct migration successful!')
+
+    // Clear stored email
+    registrationStore.setPersonalData({ email: '' })
+
+    // Show success message
+    notificationStore.showSuccess('Account migrated successfully! Please sign in with your new password.')
+
+    // Redirect to sign in
+    setTimeout(() => {
+      router.push('/signin')
+    }, 1000)
+
+  } catch (error) {
+    console.error('[MigrateAccount] ❌ Direct migration error:', error)
+    throw error
   }
 }
 </script>
@@ -606,4 +641,3 @@ const handleMigration = async () => {
   }
 }
 </style>
-
