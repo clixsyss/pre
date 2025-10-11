@@ -9,6 +9,7 @@ import SignIn from '../pages/unauth/SignIn.vue'
 import Register from '../pages/unauth/Register.vue'
 import VerifyEmail from '../pages/unauth/VerifyEmail.vue'
 import PersonalDetails from '../pages/unauth/PersonalDetails.vue'
+import MigrateAccount from '../pages/unauth/MigrateAccount.vue'
 import Home from '../pages/auth/Home.vue'
 import Profile from '../pages/auth/ProfilePage.vue'
 import ProjectSelection from '../pages/auth/ProjectSelection.vue'
@@ -53,6 +54,12 @@ const routes = [
     path: '/register/personal-details',
     name: 'PersonalDetails',
     component: PersonalDetails,
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/migrate-account',
+    name: 'MigrateAccount',
+    component: MigrateAccount,
     meta: { requiresAuth: false }
   },
 

@@ -192,6 +192,8 @@ import { useRegistrationStore } from '../../stores/registration'
 import { validateProfileCompletion, getNextProfileStep } from '../../utils/profileValidation'
 import { attemptGoogleSignIn } from '../../utils/googleAuthHelper'
 import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
+import { collection, query, where, getDocs } from 'firebase/firestore'
+import { db } from '../../boot/firebase'
 
 // Component name for ESLint
 defineOptions({
@@ -227,6 +229,76 @@ const handlePageClick = async () => {
 
 const togglePassword = () => {
   showPassword.value = !showPassword.value
+}
+
+// Check if user needs migration (exists in Firestore with oldId but not in Firebase Auth)
+const checkForMigration = async (email) => {
+  try {
+    console.log('🔍 Checking for migration need for email:', email)
+    
+    // Ensure Firestore service is initialized
+    if (!db) {
+      console.error('❌ Firestore db not available')
+      return { needsMigration: false }
+    }
+    
+    console.log('🔍 Firestore db available, creating query...')
+    
+    // Add timeout protection for Firestore query
+    const queryPromise = (async () => {
+      try {
+        console.log('🔍 Creating collection reference...')
+        const usersRef = collection(db, 'users')
+        console.log('🔍 Creating query...')
+        const q = query(usersRef, where('email', '==', email.toLowerCase().trim()))
+        console.log('🔍 Executing getDocs...')
+        const result = await getDocs(q)
+        console.log('🔍 getDocs completed, docs count:', result.size)
+        return result
+      } catch (queryError) {
+        console.error('❌ Query execution error:', queryError)
+        console.error('❌ Query error details:', {
+          message: queryError.message,
+          code: queryError.code,
+          name: queryError.name
+        })
+        throw queryError
+      }
+    })()
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Firestore query timeout after 8 seconds')), 8000)
+    )
+    
+    console.log('🔍 Racing query vs timeout...')
+    const querySnapshot = await Promise.race([queryPromise, timeoutPromise])
+    console.log('✅ Firestore query completed successfully')
+    
+    if (!querySnapshot.empty) {
+      const userDoc = querySnapshot.docs[0]
+      const userData = userDoc.data()
+      
+      console.log('📋 Found user in Firestore:', userDoc.id)
+      console.log('📋 User data:', { hasOldId: !!userData.oldId, migrated: userData.migrated })
+      
+      // Check if user has oldId and is not migrated
+      if (userData.oldId && !userData.migrated) {
+        console.log('✅ User needs migration')
+        return { needsMigration: true, userId: userDoc.id, userData }
+      }
+    }
+    
+    console.log('❌ No migration needed - user not found or no oldId')
+    return { needsMigration: false }
+  } catch (error) {
+    console.error('❌ Error checking for migration:', error)
+    console.error('❌ Error type:', typeof error)
+    console.error('❌ Error message:', error?.message || 'No message')
+    console.error('❌ Error code:', error?.code || 'No code')
+    console.error('❌ Error stack:', error?.stack || 'No stack')
+    // Return false on error to avoid blocking sign in
+    return { needsMigration: false }
+  }
 }
 
 // Check user approval status
@@ -329,6 +401,27 @@ const handleSignIn = async () => {
       name: error.name
     })
     
+    // Check if user needs migration (exists in Firestore but not in Firebase Auth)
+    // Note: iOS Capacitor plugin may return 'auth/invalid-credential' instead of 'auth/user-not-found'
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+      console.log('[SignIn] 🔍 Auth error detected, checking for migration...', error.code)
+      const migrationCheck = await checkForMigration(formData.email)
+      
+      if (migrationCheck.needsMigration) {
+        console.log('[SignIn] ✅ User needs migration, redirecting to migration page')
+        // Store email in registration store for migration page
+        const registrationStore = useRegistrationStore()
+        registrationStore.setPersonalData({ email: formData.email })
+        
+        notificationStore.showInfo('Please set a new password to complete your account migration.')
+        router.push('/migrate-account')
+        return
+      }
+      
+      // If migration check fails, continue to show appropriate error
+      console.log('[SignIn] ℹ️ User does not need migration, showing error')
+    }
+    
     // Provide user-friendly error messages
     let errorMessage = 'Sign in failed. Please try again.'
     
@@ -340,6 +433,8 @@ const handleSignIn = async () => {
       errorMessage = 'This account has been disabled.'
     } else if (error.code === 'auth/user-not-found') {
       errorMessage = 'No account found with this email.'
+    } else if (error.code === 'auth/invalid-credential') {
+      errorMessage = 'Invalid email or password. Please check your credentials and try again.'
     } else if (error.code === 'auth/wrong-password') {
       errorMessage = 'Incorrect password.'
     } else if (error.code === 'auth/network-request-failed') {

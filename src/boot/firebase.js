@@ -3,6 +3,7 @@ import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, onAuthStateChanged } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
+import { getFunctions } from 'firebase/functions'
 import { Capacitor } from '@capacitor/core'
 import { smartMirrorService } from '../services/smartMirrorService'
 
@@ -31,7 +32,7 @@ const app = initializeApp(firebaseConfig)
 console.log('Firebase Boot: Firebase app initialized successfully ✅')
 
 // Initialize Firebase services based on platform
-let auth, db, storage, googleProvider
+let auth, db, storage, functions, googleProvider
 
 // Initialize Google Auth Provider
 googleProvider = new GoogleAuthProvider()
@@ -48,6 +49,7 @@ if (isNative) {
   auth = getAuth(app)
   db = getFirestore(app)
   storage = getStorage(app)
+  functions = getFunctions(app)
   
   console.log('Firebase Boot: Web SDK instances created for native platform compatibility')
 } else {
@@ -57,6 +59,7 @@ if (isNative) {
   auth = getAuth(app)
   db = getFirestore(app)
   storage = getStorage(app)
+  functions = getFunctions(app)
 }
 
 // Set up authentication persistence
@@ -146,6 +149,7 @@ export default defineBoot(async ({ app }) => {
   app.config.globalProperties.$auth = auth
   app.config.globalProperties.$db = db
   app.config.globalProperties.$storage = storage
+  app.config.globalProperties.$functions = functions
   app.config.globalProperties.$googleProvider = googleProvider
   app.config.globalProperties.$isNative = isNative
   app.config.globalProperties.$platform = platform
@@ -154,4 +158,4 @@ export default defineBoot(async ({ app }) => {
 })
 
 // Export Firebase services for use in components
-export { app, auth, db, storage, googleProvider, isNative, platform }
+export { app, auth, db, storage, functions, googleProvider, isNative, platform }

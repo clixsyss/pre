@@ -18,9 +18,29 @@ class OptimizedAuthService {
   }
 
   async initialize() {
-    // Skip Capacitor Firebase - use Web SDK exclusively
-    console.log('OptimizedAuthService: Using Web SDK for all platforms')
-    this.initialized = true
+    if (this.initialized) {
+      console.log('OptimizedAuthService: Already initialized, skipping')
+      return
+    }
+    
+    try {
+      // Skip Capacitor Firebase - use Web SDK exclusively
+      console.log('OptimizedAuthService: Using Web SDK for all platforms')
+      
+      // Wait a bit for Firebase to be fully ready on iOS
+      const { Capacitor } = await import('@capacitor/core')
+      if (Capacitor.getPlatform() === 'ios') {
+        console.log('OptimizedAuthService: iOS detected, waiting for Firebase to stabilize...')
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+      
+      this.initialized = true
+      console.log('OptimizedAuthService: Initialization complete')
+    } catch (error) {
+      console.error('OptimizedAuthService: Initialization error:', error)
+      // Don't throw - allow app to continue even if there's an error
+      this.initialized = true
+    }
   }
 
   /**
@@ -48,8 +68,21 @@ class OptimizedAuthService {
       
       if (isIOS) {
         try {
+          // Wait for Firebase to be ready on iOS
+          if (!this.initialized) {
+            console.log('🚀 OptimizedAuthService: Waiting for initialization before getting current user...')
+            await this.initialize()
+          }
+          
           const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
-          const result = await FirebaseAuthentication.getCurrentUser()
+          
+          // Wrap in timeout to prevent hanging
+          const getUserPromise = FirebaseAuthentication.getCurrentUser()
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('getCurrentUser timeout')), 3000)
+          )
+          
+          const result = await Promise.race([getUserPromise, timeoutPromise])
           
           if (result && result.user) {
             console.log('🚀 OptimizedAuthService: Current user from Capacitor plugin:', result.user.uid)
@@ -80,6 +113,12 @@ class OptimizedAuthService {
     try {
       console.log('🔐 OptimizedAuthService: Starting sign in...')
       
+      // Ensure service is initialized
+      if (!this.initialized) {
+        console.log('🔐 OptimizedAuthService: Initializing before sign in...')
+        await this.initialize()
+      }
+      
       // Check if iOS native platform
       const { Capacitor } = await import('@capacitor/core')
       const platform = Capacitor.getPlatform()
@@ -88,37 +127,50 @@ class OptimizedAuthService {
       if (isIOS) {
         // Use Capacitor Firebase Authentication plugin for iOS
         console.log('📱 iOS: Using Capacitor plugin for email/password sign in')
-        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
         
-        const result = await FirebaseAuthentication.signInWithEmailAndPassword({
-          email,
-          password
-        })
-        
-        console.log('📱 iOS: Capacitor sign in successful:', result.user?.uid)
-        
-        // Wait for auth state to sync
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // Get user from Web SDK (for consistency)
-        this.currentUser = this.auth.currentUser || result.user
-        
-        console.log('📱 iOS: Final user:', this.currentUser?.uid)
-        
-        return {
-          user: this.currentUser,
-          credential: result.credential
+        try {
+          const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
+          
+          // Add timeout protection
+          const signInPromise = FirebaseAuthentication.signInWithEmailAndPassword({
+            email,
+            password
+          })
+          
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Sign in timeout after 15 seconds')), 15000)
+          )
+          
+          const result = await Promise.race([signInPromise, timeoutPromise])
+          
+          console.log('📱 iOS: Capacitor sign in successful:', result.user?.uid)
+          
+          // Wait for auth state to sync
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
+          // Get user from Web SDK (for consistency)
+          this.currentUser = this.auth.currentUser || result.user
+          
+          console.log('📱 iOS: Final user:', this.currentUser?.uid)
+          
+          return {
+            user: this.currentUser,
+            credential: result.credential
+          }
+        } catch (iosError) {
+          console.warn('📱 iOS: Capacitor sign in failed, falling back to Web SDK:', iosError.message)
+          // Fall through to Web SDK
         }
-      } else {
-        // Use Web SDK for Android and web
-        console.log('🌐 Using Web SDK for sign in')
-        const result = await signInWithEmailAndPassword(this.auth, email, password)
-        this.currentUser = result.user
-        console.log('🌐 Web SDK sign in successful:', result.user.uid)
-        return {
-          user: result.user,
-          credential: result.credential
-        }
+      }
+      
+      // Use Web SDK for Android, web, or iOS fallback
+      console.log('🌐 Using Web SDK for sign in')
+      const result = await signInWithEmailAndPassword(this.auth, email, password)
+      this.currentUser = result.user
+      console.log('🌐 Web SDK sign in successful:', result.user.uid)
+      return {
+        user: result.user,
+        credential: result.credential
       }
     } catch (error) {
       console.error('❌ Sign in error:', error)

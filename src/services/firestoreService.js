@@ -33,34 +33,48 @@ class FirestoreService {
   }
 
   async initialize() {
+    if (this.initialized) {
+      console.log('🔧 FirestoreService: Already initialized, skipping')
+      return
+    }
+    
     console.log('🔧 FirestoreService.initialize called:', {
       isNative: this.isNative,
       initialized: this.initialized,
     })
 
-    // Only initialize Capacitor for iOS
-    const isIOS = await this.isIOSNative()
+    try {
+      // Only initialize Capacitor for iOS
+      const isIOS = await this.isIOSNative()
 
-    if (isIOS && !this.initialized) {
-      try {
-        console.log('📦 Importing Capacitor Firebase Firestore for iOS...')
-        const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
-        this.capacitorFirestore = FirebaseFirestore
+      if (isIOS) {
+        try {
+          console.log('📦 Importing Capacitor Firebase Firestore for iOS...')
+          const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
+          this.capacitorFirestore = FirebaseFirestore
+          
+          console.log('✅ FirestoreService: Capacitor Firebase Firestore initialized for iOS')
+
+          // Ensure authentication context is properly set
+          await this.ensureAuthContext()
+          
+          this.initialized = true
+        } catch (error) {
+          console.error(
+            '❌ FirestoreService: Failed to initialize Capacitor Firebase Firestore:',
+            error,
+          )
+          // Don't throw - fall back to Web SDK
+          console.log('⏭️ FirestoreService: Falling back to Web SDK due to iOS init error')
+          this.initialized = true
+        }
+      } else {
+        console.log('⏭️ FirestoreService: Using Web SDK (not iOS or already initialized)')
         this.initialized = true
-        console.log('✅ FirestoreService: Capacitor Firebase Firestore initialized for iOS')
-
-        // Ensure authentication context is properly set
-        await this.ensureAuthContext()
-      } catch (error) {
-        console.error(
-          '❌ FirestoreService: Failed to initialize Capacitor Firebase Firestore:',
-          error,
-        )
-        errorHandlingService.handleFirestoreError(error, 'FirestoreService.initialize')
-        throw error
       }
-    } else {
-      console.log('⏭️ FirestoreService: Using Web SDK (not iOS or already initialized)')
+    } catch (error) {
+      console.error('❌ FirestoreService: Initialization error:', error)
+      // Don't throw - mark as initialized to allow Web SDK usage
       this.initialized = true
     }
   }
