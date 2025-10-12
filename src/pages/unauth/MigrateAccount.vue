@@ -220,12 +220,21 @@ const handleMigration = async () => {
   try {
     console.log('[MigrateAccount] Starting migration for:', formData.email)
 
-    // Call Cloud Function to migrate user with timeout
+    // On iOS, Cloud Functions consistently fail - skip them and use direct migration
+    const isIOS = Capacitor.getPlatform() === 'ios'
+    
+    if (isIOS) {
+      console.log('[MigrateAccount] 📱 iOS detected - using direct migration (Cloud Functions not reliable on iOS)')
+      await handleDirectMigration()
+      return
+    }
+
+    // On other platforms, try Cloud Function first
+    console.log('[MigrateAccount] Calling Cloud Function with 30s timeout...')
+    
     const migrateOldUser = httpsCallable(functions, 'migrateOldUser', {
       timeout: 30000, // 30 seconds timeout
     })
-
-    console.log('[MigrateAccount] Calling Cloud Function with 30s timeout...')
 
     // Create timeout promise
     const timeoutPromise = new Promise((_, reject) => {
@@ -269,11 +278,8 @@ const handleMigration = async () => {
       error.code === 'functions/deadline-exceeded'
 
     console.log('[MigrateAccount] Should use fallback?', shouldUseFallback)
-    console.log('[MigrateAccount] Error message includes timeout?', error.message?.includes('timeout'))
-    console.log('[MigrateAccount] Error message includes timed out?', error.message?.includes('timed out'))
-    console.log('[MigrateAccount] Error code:', error.code)
 
-    // If Cloud Function fails (likely due to network issues on iOS), try direct migration
+    // If Cloud Function fails, try direct migration
     if (shouldUseFallback) {
       console.warn('[MigrateAccount] ⚠️ Cloud Function failed, trying direct migration...')
 
