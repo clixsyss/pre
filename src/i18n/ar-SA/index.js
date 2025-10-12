@@ -17,7 +17,7 @@ export default {
   next: 'تالي',
   previous: 'سابق',
   close: 'إغلاق',
-  
+
   // Settings
   settings: 'الإعدادات',
   language: 'اللغة',
@@ -32,7 +32,7 @@ export default {
   aboutUs: 'عنّا',
   contactUs: 'اتصل بنا',
   logout: 'تسجيل خروج',
-  
+
   // Profile
   personalInformation: 'معلوماتي',
   personalDetails: 'بياناتي الشخصية',
@@ -78,7 +78,7 @@ export default {
   viewAllComplaints: 'عرض جميع الشكاوى',
   submitNewComplaints: 'قدم شكاوى جديدة وتابع الحالية',
   getSupportHelp: 'احصل على مساعدة في أي أسئلة أو مشاكل',
-  
+
   // Bookings
   bookingsIn: 'حجوزات في',
   viewManageBookings: 'شاهد وأدر جميع حجوزاتك',
@@ -91,13 +91,13 @@ export default {
   noBookingsFound: 'لا يوجد حجوزات',
   noBookingsMessage: 'لم تقم بأي حجوزات بعد',
   cancelledBookings: 'ملغاة',
-  
+
   // Calendar
   viewEvents: 'شاهد جميع فعالياتك وحجوزاتك',
   month: 'شهر',
   week: 'أسبوع',
   day: 'يوم',
-  
+
   // Shopping Cart
   reviewItems: 'راجع منتجاتك وأتمم طلبك',
   continueShopping: 'تابع التسوق',
@@ -107,7 +107,7 @@ export default {
   deliveryFee: 'رسوم التوصيل',
   placingOrder: 'جاري تأكيد الطلب...',
   storeDeliveryFee: 'رسوم توصيل المتجر',
-  
+
   // Services Page
   servicesTitle: 'الخدمات',
   servicesSubtitle: 'الأجهزة الذكية وخدمات أخرى',
@@ -125,7 +125,7 @@ export default {
   storesShoppingDesc: 'تصفح منتجات متاجر المجتمع',
   shoppingTitle: 'التسوق',
   shoppingDesc: 'تصفح وتسوق من متاجرنا',
-  
+
   // Stores & Shopping
   discoverStores: 'اكتشف المتاجر المحلية وتابع طلباتك',
   searchStoresProducts: 'ابحث عن متاجر أو منتجات...',
@@ -133,12 +133,12 @@ export default {
   foodBeverage: 'طعام ومشروبات',
   drinks: 'مشروبات',
   desserts: 'حلويات',
-  
+
   // Requests
   requestsTitle: 'الطلبات',
   submitRequestsDesc: 'قدم طلبات للخدمات والمساعدة',
   loadingRequests: 'جاري تحميل الطلبات...',
-  
+
   // Academy Programs
   joinAcademiesIn: 'انضم للأكاديميات في',
   chooseAcademyProgram: 'اختر الأكاديمية والبرنامج',
@@ -150,7 +150,7 @@ export default {
   availablePrograms: 'البرامج المتاحة',
   programsAvailable: 'برنامج متاح',
   programAvailable: 'برنامج متاح',
-  
+
   // Support
   howCanWeHelp: 'كيف يمكننا مساعدتك؟',
   supportTeamMessage: 'فريقنا هنا لمساعدتك في أي أسئلة أو مشاكل',
@@ -159,22 +159,22 @@ export default {
   loadingChats: 'جاري تحميل المحادثات...',
   errorLoadingChats: 'خطأ في تحميل المحادثات',
   noRecentChats: 'لا يوجد محادثات دعم حديثة. ابدأ واحدة جديدة!',
-  
+
   // Analytics
   analyticsTitle: 'الإحصائيات',
   preGroupAnalytics: 'إحصائيات ورؤى PRE Group',
   analyticsComingSoon: 'الإحصائيات قريباً',
   analyticsUnderDevelopment: 'هذا القسم قيد التطوير. تحقق لاحقاً للحصول على الإحصائيات والرؤى',
-  
+
   // Access (Gate Passes)
   gatePasses: 'تصاريح الدخول',
   generatePass: 'إنشاء تصريح',
   noPassesFound: 'لا يوجد تصاريح',
-  
+
   // News
   allNews: 'جميع الأخبار',
   stayUpdated: 'تابع آخر أخبار المجتمع',
-  
+
   // Project Selection
   welcomeBackUser: 'مرحباً بعودتك',
   selectProjectContinue: 'اختر مشروعك للمتابعة',
@@ -182,26 +182,26 @@ export default {
   fetchingProjects: 'يرجى الانتظار بينما نحصل على مشاريعك...',
   somethingWentWrong: 'عذراً! حدث خطأ ما',
   noProjectsAvailable: 'لا يوجد مشاريع متاحة',
-  
+
   // Service Category Details
   loadingLabel: 'جاري التحميل...',
   noServices: 'لا يوجد خدمات متاحة',
-  
+
   // Request Category Details
   requestCategory: 'فئة الطلب',
   submitYourRequest: 'قدم طلبك',
   loadingRequestForm: 'جاري تحميل نموذج الطلب...',
   required: 'مطلوب',
   enterField: 'أدخل',
-  
+
   // Academy Booking
   selectAcademy: 'اختر الأكاديمية',
-  
+
   // Academy Details
   academyDetails: 'تفاصيل الأكاديمية',
   sportsAcademy: 'أكاديمية رياضية',
   loadingAcademyDetails: 'جاري تحميل تفاصيل الأكاديمية...',
-  
+
   // Academy Registration
   programRegistration: 'تسجيل في البرنامج',
   completeRegistrationFor: 'أكمل تسجيلك في',
@@ -242,17 +242,17 @@ export default {
   pleaseLogin: 'يرجى تسجيل الدخول للتسجيل في برامج الأكاديمية',
   failedToSubmitRegistration: 'فشل تقديم التسجيل. يرجى المحاولة مرة أخرى',
   missingInfoSelectProject: 'معلومات مطلوبة مفقودة. يرجى اختيار مشروع أولاً',
-  
+
   // Tools
   toolsTitle: 'الخدمات',
   preGroupServices: 'خدمات ومرافق PRE Group',
   servicesComingSoon: 'الخدمات قريباً',
   servicesUnderDevelopment: 'هذا القسم قيد التطوير. تحقق لاحقاً للخدمات المتاحة',
-  
+
   // Error Pages
   pageNotFound: 'عذراً. لا يوجد شيء هنا...',
   goHome: 'العودة للرئيسية',
-  
+
   // Components - SuspensionMessage
   accountAccessRestricted: 'تم تقييد الوصول إلى حسابك',
   suspensionType: 'نوع التعليق',
@@ -263,7 +263,7 @@ export default {
   contactSupport: 'تواصل مع الدعم',
   iUnderstand: 'فهمت',
   accountSuspended: 'تم تعليق الحساب',
-  
+
   // Components - ViolationNotificationPopup
   violationNotice: 'إشعار مخالفة',
   actionRequired: 'يتطلب إجراءً',
@@ -274,7 +274,7 @@ export default {
   requireAttention: 'تتطلب اهتمامك الفوري',
   reviewViolations: 'مراجعة المخالفات',
   pleaseReviewAction: 'يرجى المراجعة واتخاذ الإجراء المناسب',
-  
+
   // Components - PendingApprovalModal
   whatHappensNext: 'ماذا يحدث بعد ذلك؟',
   accountPendingApproval: 'الحساب في انتظار الموافقة',
@@ -289,7 +289,7 @@ export default {
   signOut: 'تسجيل الخروج',
   signedOutSuccessfully: 'تم تسجيل الخروج بنجاح',
   failedToSignOut: 'فشل تسجيل الخروج. يرجى المحاولة مرة أخرى',
-  
+
   // Court Booking
   bookCourtsIn: 'حجز ملاعب في',
   chooseSportCourtDateTime: 'اختر رياضتك والملعب والوقت',
@@ -301,7 +301,7 @@ export default {
   debugSportsData: 'فحص بيانات الرياضات',
   selectSport: 'اختر الرياضة',
   chooseSportDesc: 'اختر من الرياضات المتاحة',
-  
+
   // Violations
   violationsAndFines: 'المخالفات والغرامات',
   viewManageViolations: 'شاهد وأدر مخالفاتك',
@@ -310,28 +310,60 @@ export default {
   paid: 'مدفوعة',
   disputed: 'متنازع عليها',
   yourViolations: 'مخالفاتك',
-  
+
   // Complaints
   complaintsSupport: 'الشكاوى والدعم',
   getHelpIssues: 'احصل على مساعدة في أي مشكلة',
   newComplaint: 'شكوى جديدة',
   quickComplaints: 'شكاوى سريعة',
-  
+
   // Smart Devices
   notConnected: 'غير متصل',
   smartHomeNotConnected: 'المنزل الذكي غير متصل',
-  connectSmartHomeMessage: 'يرجى ربط حساب منزلك الذكي للمشروع الحالي في ملفك الشخصي للتحكم في الأجهزة',
+  connectSmartHomeMessage:
+    'يرجى ربط حساب منزلك الذكي للمشروع الحالي في ملفك الشخصي للتحكم في الأجهزة',
   goToProfile: 'اذهب للملف الشخصي',
   loadingDevices: 'جاري تحميل الأجهزة...',
   selectRoom: 'اختر الغرفة',
-  
+
+  // Gate Control (BLE)
+  gateControl: 'التحكم بالبوابة',
+  gateControlDesc: 'اتصل بجهاز البوابة عبر البلوتوث وتحكم في الوصول',
+  gateAccessDesc: 'تحكم في بوابتك وإدارة تصاريح الدخول',
+  bleControl: 'التحكم بالبلوتوث',
+  connect: 'الاتصال بالبوابة',
+  disconnect: 'قطع الاتصال',
+  openGate: 'فتح البوابة',
+  connecting: 'جاري الاتصال...',
+  bleNotSupported: 'البلوتوث غير مدعوم',
+  bleNotSupportedDesc:
+    'جهازك أو متصفحك لا يدعم البلوتوث منخفض الطاقة. يرجى استخدام جهاز متوافق أو تفعيل البلوتوث.',
+  howToUse: 'كيفية الاستخدام',
+  instruction1: 'تأكد من تفعيل البلوتوث على جهازك',
+  instruction2: 'اضغط على "الاتصال بالبوابة" للبحث عن الأجهزة القريبة',
+  instruction3: 'اختر جهاز البوابة من القائمة',
+  instruction4: 'بمجرد الاتصال، اضغط على "فتح البوابة" لإرسال أمر الفتح',
+  instruction5: 'انتظر التأكيد على فتح البوابة',
+
+  // Gate Passes
+  generateNewPass: 'إنشاء تصريح جديد',
+  guestName: 'اسم الضيف',
+  purpose: 'الغرض من الزيارة',
+  validUntil: 'صالح حتى',
+  generate: 'إنشاء',
+  createFirstPass: 'أنشئ أول تصريح ضيف للبدء',
+  quickOpen: 'فتح سريع للبوابة',
+  newConnection: 'جهاز جديد',
+  forget: 'نسيان',
+  lastDevice: 'آخر جهاز',
+
   // Store Details
   storeDetails: 'تفاصيل المتجر',
   discoverProducts: 'اكتشف منتجات رائعة',
   closed: 'مغلق',
   maintenance: 'صيانة',
   deliveryFeeLabel: 'رسوم التوصيل',
-  
+
   // Navigation
   home: 'الرئيسية',
   services: 'الخدمات',
@@ -344,7 +376,7 @@ export default {
   calendar: 'التقويم',
   support: 'المساعدة',
   news: 'الأخبار',
-  
+
   // Actions
   save: 'حفظ',
   cancel: 'إلغاء',
@@ -363,7 +395,7 @@ export default {
   bookNow: 'احجز الآن',
   reserve: 'احجز',
   apply: 'تطبيق',
-  
+
   // Home Page
   welcomeBack: 'أهلاً بعودتك!',
   communityHappening: 'آخر الأنشطة في مجتمعك',
@@ -375,7 +407,7 @@ export default {
   latestNews: 'آخر الأخبار',
   upcomingEvents: 'الفعاليات',
   recentActivity: 'آخر النشاطات',
-  
+
   // Services
   allServices: 'كل الخدمات',
   serviceCategories: 'أقسام الخدمات',
@@ -391,7 +423,7 @@ export default {
   available: 'متاح',
   unavailable: 'غير متاح',
   booked: 'محجوز',
-  
+
   // Bookings
   myBookings: 'حجوزاتي',
   upcomingBookings: 'الحجوزات القادمة',
@@ -406,7 +438,7 @@ export default {
   completed: 'مكتمل',
   cancelBooking: 'إلغاء الحجز',
   rescheduleBooking: 'تغيير موعد الحجز',
-  
+
   // Shopping
   stores: 'المتاجر',
   products: 'المنتجات',
@@ -427,14 +459,14 @@ export default {
   orderPlacedLabel: 'تم الطلب',
   orderHistory: 'طلباتي السابقة',
   trackOrder: 'تتبع الطلب',
-  
+
   // Court Booking
   courtBooking: 'حجز الملاعب',
   selectCourt: 'اختر ملعب',
   courtType: 'نوع الملعب',
   courtNumber: 'رقم الملعب',
   bookCourt: 'احجز الملعب',
-  
+
   // Academy
   academy: 'الأكاديمية',
   academyPrograms: 'برامج الأكاديمية',
@@ -446,7 +478,7 @@ export default {
   beginner: 'مبتدئ',
   intermediate: 'متوسط',
   advanced: 'متقدم',
-  
+
   // Complaints & Violations
   violations: 'المخالفات',
   submitComplaint: 'قدم شكوى',
@@ -457,14 +489,14 @@ export default {
   description: 'الوصف',
   subject: 'الموضوع',
   attachments: 'المرفقات',
-  
+
   // Support
   supportChat: 'محادثة المساعدة',
   helpCenter: 'مركز المساعدة',
   faq: 'أسئلة شائعة',
   sendMessage: 'أرسل رسالة',
   typeMessage: 'اكتب رسالة...',
-  
+
   // Smart Devices
   devices: 'الأجهزة',
   smartDoor: 'الباب الذكي',
@@ -475,7 +507,7 @@ export default {
   online: 'متصل',
   offline: 'غير متصل',
   controlDevice: 'تحكم بالجهاز',
-  
+
   // Authentication
   signIn: 'دخول',
   signUp: 'إنشاء حساب',
@@ -487,33 +519,33 @@ export default {
   verifyEmail: 'تأكيد البريد',
   emailVerification: 'تأكيد البريد',
   resendVerification: 'إعادة الإرسال',
-  
+
   // Onboarding
   getStarted: 'ابدأ',
   skip: 'تخطي',
   continue: 'متابعة',
   welcome: 'أهلاً',
-  
+
   // Requests/Facilities
   facilityRequests: 'طلبات المرافق',
   requestCategories: 'أنواع الطلبات',
   submitRequest: 'قدم طلب',
   requestDetails: 'تفاصيل الطلب',
   requestStatus: 'حالة الطلب',
-  
+
   // Calendar
   today: 'اليوم',
   tomorrow: 'غداً',
   thisWeek: 'هذا الأسبوع',
   thisMonth: 'هذا الشهر',
   selectDate: 'اختر تاريخ',
-  
+
   // Notifications
   notifications: 'الإشعارات',
   markAsRead: 'تعليم كمقروء',
   markAllAsRead: 'تعليم الكل كمقروء',
   clearAll: 'مسح الكل',
-  
+
   // Date & Time
   date: 'التاريخ',
   time: 'الوقت',
@@ -521,13 +553,13 @@ export default {
   endDate: 'تاريخ النهاية',
   startTime: 'وقت البداية',
   endTime: 'وقت النهاية',
-  
+
   // Status
   active: 'نشط',
   inactive: 'غير نشط',
   suspended: 'موقوف',
   inProgress: 'قيد التنفيذ',
-  
+
   // Messages
   noBookings: 'لا توجد حجوزات',
   noOrders: 'لا توجد طلبات',
@@ -537,7 +569,7 @@ export default {
   successfullyBooked: 'تم الحجز',
   bookingCancelled: 'تم الإلغاء',
   orderPlaced: 'تم الطلب',
-  
+
   // Validation
   requiredField: 'مطلوب',
   invalidEmail: 'بريد إلكتروني غير صحيح',

@@ -17,7 +17,7 @@ export default {
   next: 'Next',
   previous: 'Previous',
   close: 'Close',
-  
+
   // Settings
   settings: 'Settings',
   language: 'Language',
@@ -32,7 +32,7 @@ export default {
   aboutUs: 'About Us',
   contactUs: 'Contact Us',
   logout: 'Logout',
-  
+
   // Profile
   personalInformation: 'Personal Information',
   personalDetails: 'Your personal details and contact information',
@@ -74,11 +74,12 @@ export default {
   complaints: 'Complaints',
   trackComplaints: 'Submit and track your complaints',
   noComplaints: 'No Complaints',
-  noComplaintsMessage: "You haven't submitted any complaints. We're here to help if you need support!",
+  noComplaintsMessage:
+    "You haven't submitted any complaints. We're here to help if you need support!",
   viewAllComplaints: 'View All Complaints',
   submitNewComplaints: 'Submit new complaints and track existing ones',
   getSupportHelp: 'Get help with any questions or issues',
-  
+
   // Bookings
   bookingsIn: 'Bookings in',
   viewManageBookings: 'View and manage all your bookings',
@@ -91,13 +92,13 @@ export default {
   noBookingsFound: 'No Bookings Found',
   noBookingsMessage: "You haven't made any bookings yet",
   cancelledBookings: 'Cancelled',
-  
+
   // Calendar
   viewEvents: 'View all your events and bookings',
   month: 'Month',
   week: 'Week',
   day: 'Day',
-  
+
   // Shopping Cart
   reviewItems: 'Review your items and place your order',
   continueShopping: 'Continue Shopping',
@@ -107,7 +108,7 @@ export default {
   deliveryFee: 'Delivery Fee',
   placingOrder: 'Placing Order...',
   storeDeliveryFee: 'Store delivery fee',
-  
+
   // Services Page
   servicesTitle: 'Services',
   servicesSubtitle: 'Smart home devices and other services',
@@ -125,7 +126,7 @@ export default {
   storesShoppingDesc: 'Browse products from community stores',
   shoppingTitle: 'Shopping',
   shoppingDesc: 'Browse and shop at our retail stores',
-  
+
   // Stores & Shopping
   discoverStores: 'Discover local stores and track your orders',
   searchStoresProducts: 'Search stores or products...',
@@ -133,12 +134,12 @@ export default {
   foodBeverage: 'Food & Beverage',
   drinks: 'Drinks',
   desserts: 'Desserts',
-  
+
   // Requests
   requestsTitle: 'Requests',
   submitRequestsDesc: 'Submit requests for various services and assistance',
   loadingRequests: 'Loading requests...',
-  
+
   // Academy Programs
   joinAcademiesIn: 'Join academies in',
   chooseAcademyProgram: 'Choose your academy and program',
@@ -146,11 +147,12 @@ export default {
   selectProjectForAcademy: 'Please select a project to view academy programs',
   noProgramsAvailable: 'No Programs Available',
   noProgramsMessage: 'There are no academy programs available in this project yet',
-  contactAdminForPrograms: 'Please contact the project administrator to set up academies and programs',
+  contactAdminForPrograms:
+    'Please contact the project administrator to set up academies and programs',
   availablePrograms: 'Available Programs',
   programsAvailable: 'programs available',
   programAvailable: 'program available',
-  
+
   // Support
   howCanWeHelp: 'How can we help you?',
   supportTeamMessage: 'Our support team is here to assist you with any questions or issues',
@@ -159,22 +161,23 @@ export default {
   loadingChats: 'Loading recent chats...',
   errorLoadingChats: 'Error loading chats',
   noRecentChats: 'No recent support chats. Start a new one!',
-  
+
   // Analytics
   analyticsTitle: 'Analytics',
   preGroupAnalytics: 'PRE Group analytics and insights',
   analyticsComingSoon: 'Analytics Coming Soon',
-  analyticsUnderDevelopment: 'This section is under development. Check back later for analytics and insights',
-  
+  analyticsUnderDevelopment:
+    'This section is under development. Check back later for analytics and insights',
+
   // Access (Gate Passes)
   gatePasses: 'Gate Passes',
   generatePass: 'GENERATE PASS',
   noPassesFound: 'No Passes Found',
-  
+
   // News
   allNews: 'All News',
   stayUpdated: 'Stay updated with the latest community news',
-  
+
   // Project Selection
   welcomeBackUser: 'Welcome Back',
   selectProjectContinue: 'Select your project to continue',
@@ -182,26 +185,26 @@ export default {
   fetchingProjects: 'Please wait while we fetch your projects...',
   somethingWentWrong: 'Oops! Something went wrong',
   noProjectsAvailable: 'No Projects Available',
-  
+
   // Service Category Details
   loadingLabel: 'Loading...',
   noServices: 'No Services Available',
-  
+
   // Request Category Details
   requestCategory: 'Request Category',
   submitYourRequest: 'Submit your request',
   loadingRequestForm: 'Loading request form...',
   required: 'Required',
   enterField: 'Enter',
-  
+
   // Academy Booking
   selectAcademy: 'Select Academy',
-  
+
   // Academy Details
   academyDetails: 'Academy Details',
   sportsAcademy: 'Sports Academy',
   loadingAcademyDetails: 'Loading academy details...',
-  
+
   // Academy Registration
   programRegistration: 'Program Registration',
   completeRegistrationFor: 'Complete your registration for',
@@ -242,17 +245,18 @@ export default {
   pleaseLogin: 'Please log in to register for academy programs',
   failedToSubmitRegistration: 'Failed to submit registration. Please try again',
   missingInfoSelectProject: 'Missing required information. Please select a project first',
-  
+
   // Tools
   toolsTitle: 'Services',
   preGroupServices: 'PRE Group services and utilities',
   servicesComingSoon: 'Services Coming Soon',
-  servicesUnderDevelopment: 'This section is under development. Check back later for available services',
-  
+  servicesUnderDevelopment:
+    'This section is under development. Check back later for available services',
+
   // Error Pages
   pageNotFound: 'Oops. Nothing here...',
   goHome: 'Go Home',
-  
+
   // Components - SuspensionMessage
   accountAccessRestricted: 'Your account access has been restricted',
   suspensionType: 'Suspension Type',
@@ -263,7 +267,7 @@ export default {
   contactSupport: 'Contact Support',
   iUnderstand: 'I Understand',
   accountSuspended: 'Account Suspended',
-  
+
   // Components - ViolationNotificationPopup
   violationNotice: 'Violation Notice',
   actionRequired: 'Action Required',
@@ -274,11 +278,12 @@ export default {
   requireAttention: 'that require your immediate attention',
   reviewViolations: 'Review Violations',
   pleaseReviewAction: 'Please review and take appropriate action',
-  
+
   // Components - PendingApprovalModal
   whatHappensNext: 'What happens next?',
   accountPendingApproval: 'Account Pending Approval',
-  adminReviewMessage: 'Our admin team will review your registration details and approve your account within 24-48 hours',
+  adminReviewMessage:
+    'Our admin team will review your registration details and approve your account within 24-48 hours',
   registrationCompleted: 'Registration completed',
   adminReviewInProgress: 'Admin review in progress',
   accountApproved: 'Account approved',
@@ -289,7 +294,7 @@ export default {
   signOut: 'Sign Out',
   signedOutSuccessfully: 'Signed out successfully',
   failedToSignOut: 'Failed to sign out. Please try again',
-  
+
   // Court Booking
   bookCourtsIn: 'Book courts in',
   chooseSportCourtDateTime: 'Choose your sport, court, and time',
@@ -301,7 +306,7 @@ export default {
   debugSportsData: 'Debug Sports Data',
   selectSport: 'Select Sport',
   chooseSportDesc: 'Choose from sports that have available courts',
-  
+
   // Violations
   violationsAndFines: 'Violations & Fines',
   viewManageViolations: 'View and manage your violations',
@@ -310,28 +315,60 @@ export default {
   paid: 'Paid',
   disputed: 'Disputed',
   yourViolations: 'Your Violations',
-  
+
   // Complaints
   complaintsSupport: 'Complaints & Support',
   getHelpIssues: 'Get help with any issues or concerns',
   newComplaint: 'New Complaint',
   quickComplaints: 'Quick Complaints',
-  
+
   // Smart Devices
   notConnected: 'Not Connected',
   smartHomeNotConnected: 'Smart Home Not Connected',
-  connectSmartHomeMessage: 'Please connect your Smart Home account for the current project in your profile to control devices',
+  connectSmartHomeMessage:
+    'Please connect your Smart Home account for the current project in your profile to control devices',
   goToProfile: 'Go to Profile',
   loadingDevices: 'Loading devices...',
   selectRoom: 'Select Room',
-  
+
+  // Gate Control (BLE)
+  gateControl: 'Gate Control',
+  gateControlDesc: 'Connect to your BLE gate device and control access',
+  gateAccessDesc: 'Control your gate and manage access passes',
+  bleControl: 'BLE Control',
+  connect: 'Connect to Gate',
+  disconnect: 'Disconnect',
+  openGate: 'Open Gate',
+  connecting: 'Connecting...',
+  bleNotSupported: 'Bluetooth Not Supported',
+  bleNotSupportedDesc:
+    'Your device or browser does not support Bluetooth Low Energy. Please use a compatible device or enable Bluetooth.',
+  howToUse: 'How to Use',
+  instruction1: 'Make sure Bluetooth is enabled on your device',
+  instruction2: 'Tap "Connect to Gate" to scan for nearby BLE devices',
+  instruction3: 'Select your gate device from the list',
+  instruction4: 'Once connected, tap "Open Gate" to send the unlock command',
+  instruction5: 'Wait for confirmation that the gate has opened',
+
+  // Gate Passes
+  generateNewPass: 'Generate New Pass',
+  guestName: 'Guest Name',
+  purpose: 'Purpose of Visit',
+  validUntil: 'Valid Until',
+  generate: 'Generate',
+  createFirstPass: 'Create your first guest pass to get started',
+  quickOpen: 'Quick Open Gate',
+  newConnection: 'New Device',
+  forget: 'Forget',
+  lastDevice: 'Last device',
+
   // Store Details
   storeDetails: 'Store Details',
   discoverProducts: 'Discover amazing products',
   closed: 'CLOSED',
   maintenance: 'MAINTENANCE',
   deliveryFeeLabel: 'delivery fee',
-  
+
   // Navigation
   home: 'Home',
   services: 'Services',
@@ -344,7 +381,7 @@ export default {
   calendar: 'Calendar',
   support: 'Support',
   news: 'News',
-  
+
   // Actions
   save: 'Save',
   cancel: 'Cancel',
@@ -363,7 +400,7 @@ export default {
   bookNow: 'Book Now',
   reserve: 'Reserve',
   apply: 'Apply',
-  
+
   // Home Page
   welcomeBack: 'Welcome back!',
   communityHappening: "Here's what's happening in your community",
@@ -375,7 +412,7 @@ export default {
   latestNews: 'Latest News',
   upcomingEvents: 'Upcoming Events',
   recentActivity: 'Recent Activity',
-  
+
   // Services
   allServices: 'All Services',
   serviceCategories: 'Service Categories',
@@ -391,7 +428,7 @@ export default {
   available: 'Available',
   unavailable: 'Unavailable',
   booked: 'Booked',
-  
+
   // Bookings
   myBookings: 'My Bookings',
   upcomingBookings: 'Upcoming Bookings',
@@ -406,7 +443,7 @@ export default {
   completed: 'Completed',
   cancelBooking: 'Cancel Booking',
   rescheduleBooking: 'Reschedule Booking',
-  
+
   // Shopping
   stores: 'Stores',
   products: 'Products',
@@ -427,14 +464,14 @@ export default {
   orderPlacedLabel: 'Order Placed',
   orderHistory: 'Order History',
   trackOrder: 'Track Order',
-  
+
   // Court Booking
   courtBooking: 'Court Booking',
   selectCourt: 'Select Court',
   courtType: 'Court Type',
   courtNumber: 'Court Number',
   bookCourt: 'Book Court',
-  
+
   // Academy
   academy: 'Academy',
   academyPrograms: 'Academy Programs',
@@ -446,7 +483,7 @@ export default {
   beginner: 'Beginner',
   intermediate: 'Intermediate',
   advanced: 'Advanced',
-  
+
   // Complaints & Violations
   violations: 'Violations',
   submitComplaint: 'Submit Complaint',
@@ -457,14 +494,14 @@ export default {
   description: 'Description',
   subject: 'Subject',
   attachments: 'Attachments',
-  
+
   // Support
   supportChat: 'Support Chat',
   helpCenter: 'Help Center',
   faq: 'FAQ',
   sendMessage: 'Send Message',
   typeMessage: 'Type a message...',
-  
+
   // Smart Devices
   devices: 'Devices',
   smartDoor: 'Smart Door',
@@ -475,7 +512,7 @@ export default {
   online: 'Online',
   offline: 'Offline',
   controlDevice: 'Control Device',
-  
+
   // Authentication
   signIn: 'Sign In',
   signUp: 'Sign Up',
@@ -487,33 +524,33 @@ export default {
   verifyEmail: 'Verify Email',
   emailVerification: 'Email Verification',
   resendVerification: 'Resend Verification',
-  
+
   // Onboarding
   getStarted: 'Get Started',
   skip: 'Skip',
   continue: 'Continue',
   welcome: 'Welcome',
-  
+
   // Requests/Facilities
   facilityRequests: 'Facility Requests',
   requestCategories: 'Request Categories',
   submitRequest: 'Submit Request',
   requestDetails: 'Request Details',
   requestStatus: 'Request Status',
-  
+
   // Calendar
   today: 'Today',
   tomorrow: 'Tomorrow',
   thisWeek: 'This Week',
   thisMonth: 'This Month',
   selectDate: 'Select Date',
-  
+
   // Notifications
   notifications: 'Notifications',
   markAsRead: 'Mark as Read',
   markAllAsRead: 'Mark All as Read',
   clearAll: 'Clear All',
-  
+
   // Date & Time
   date: 'Date',
   time: 'Time',
@@ -521,13 +558,13 @@ export default {
   endDate: 'End Date',
   startTime: 'Start Time',
   endTime: 'End Time',
-  
+
   // Status
   active: 'Active',
   inactive: 'Inactive',
   suspended: 'Suspended',
   inProgress: 'In Progress',
-  
+
   // Messages
   noBookings: 'No bookings found',
   noOrders: 'No orders found',
@@ -537,7 +574,7 @@ export default {
   successfullyBooked: 'Successfully booked',
   bookingCancelled: 'Booking cancelled',
   orderPlaced: 'Order placed successfully',
-  
+
   // Validation
   requiredField: 'This field is required',
   invalidEmail: 'Invalid email address',

@@ -22,7 +22,7 @@ const routes = [
     path: '/',
     name: 'Root',
     component: () => import('../pages/auth/Home.vue'), // Default component, will be redirected by guard
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
 
   // Unauthorized user routes
@@ -30,234 +30,239 @@ const routes = [
     path: '/onboarding',
     name: 'Onboarding',
     component: Onboarding,
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
   {
     path: '/signin',
     name: 'SignIn',
     component: SignIn,
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
   {
     path: '/register',
     name: 'Register',
     component: Register,
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
   {
     path: '/register/verify-email',
     name: 'VerifyEmail',
     component: VerifyEmail,
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
   {
     path: '/register/personal-details',
     name: 'PersonalDetails',
     component: PersonalDetails,
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
   {
     path: '/migrate-account',
     name: 'MigrateAccount',
     component: MigrateAccount,
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
-
 
   // Authorized user routes
   {
     path: '/project-selection',
     name: 'ProjectSelection',
     component: ProjectSelection,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/home',
     name: 'Home',
     component: Home,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/access',
     name: 'Access',
     component: () => import('../pages/auth/Access.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/services',
     name: 'Services',
     component: () => import('../pages/auth/Services.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/service-category/:id',
     name: 'ServiceCategoryDetails',
     component: () => import('../pages/auth/ServiceCategoryDetails.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/facilities',
     name: 'Facilities',
     component: () => import('../pages/auth/Requests.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/request-category/:id',
     name: 'RequestCategoryDetails',
     component: () => import('../pages/auth/RequestCategoryDetails.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/stores-shopping',
     name: 'StoresShopping',
     component: () => import('../pages/auth/StoresShopping.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/store/:storeId',
     name: 'StoreDetails',
     component: () => import('../pages/auth/StoreDetails.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/shopping-cart',
     name: 'ShoppingCart',
     component: () => import('../pages/auth/ShoppingCart.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/court-booking',
     name: 'CourtBooking',
     component: () => import('../pages/auth/CourtBooking.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/academy-booking',
     name: 'AcademyBooking',
     component: () => import('../pages/auth/AcademyBooking.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/academy-programs',
     name: 'AcademyPrograms',
     component: () => import('../pages/auth/AcademyPrograms.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/academy-details/:id',
     name: 'AcademyDetails',
     component: () => import('../pages/auth/AcademyDetails.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/academy-registration/:academyId/:programId',
     name: 'AcademyRegistration',
     component: () => import('../pages/auth/AcademyRegistration.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/my-bookings',
     name: 'MyBookings',
     component: () => import('../pages/auth/MyBookings.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/calendar',
     name: 'Calendar',
     component: () => import('../pages/auth/Calendar.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
 
   {
     path: '/analytics',
     name: 'Analytics',
     component: () => import('../pages/auth/Analytics.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/profile',
     name: 'Profile',
     component: Profile,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/news',
     name: 'News',
     component: () => import('../pages/auth/News.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/complaints',
     name: 'Complaints',
     component: () => import('../pages/auth/Complaints.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/complaints/:id',
     name: 'ComplaintChat',
     component: () => import('../components/ComplaintChat.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/violations',
     name: 'Violations',
     component: () => import('../pages/auth/ViolationsPage.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/violation-chat/:id',
     name: 'ViolationChat',
     component: () => import('../components/ViolationChat.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/service-booking-chat/:id',
     name: 'ServiceBookingChat',
     component: () => import('../components/ServiceBookingChat.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/smart-devices',
     name: 'SmartDevices',
     component: () => import('../pages/auth/SmartDevices.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/gate-control',
+    name: 'GateControl',
+    component: () => import('../pages/auth/GateControlPage.vue'),
+    meta: { requiresAuth: true },
   },
   {
     path: '/support',
     name: 'AuthSupport',
     component: AuthSupport,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/support-chat',
     name: 'SupportChat',
     component: SupportChatPage,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/support-chat/:id',
     name: 'SupportChatById',
     component: SupportChatPage,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/request-chat/:id',
     name: 'RequestChat',
     component: () => import('../components/RequestChat.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
 
   {
     path: '/request-category/:id',
     name: 'RequestCategoryDetails',
     component: () => import('../pages/auth/RequestCategoryDetails.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   // Catch all route - redirect to onboarding
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/onboarding'
-  }
+    redirect: '/onboarding',
+  },
 ]
 
 const router = createRouter({
@@ -266,7 +271,7 @@ const router = createRouter({
   scrollBehavior() {
     // Always scroll to top when navigating between pages
     return { top: 0 }
-  }
+  },
 })
 
 // Extract auth state processing logic
@@ -299,18 +304,19 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
     try {
       const [userDocResult, suspensionResult] = await Promise.allSettled([
         firestoreService.getDoc(`users/${user.uid}`),
-        canUserAccessRoute(user.uid, to.path)
+        canUserAccessRoute(user.uid, to.path),
       ])
-      
+
       // Check profile completion
       if (userDocResult.status === 'fulfilled' && userDocResult.value.exists()) {
         const userData = userDocResult.value.data()
         const isProfileComplete = userData.isProfileComplete
-        
+
         if (!isProfileComplete) {
           // Check if user actually has required fields but profile is marked incomplete
-          const hasRequiredFields = userData.firstName && userData.lastName && userData.mobile && userData.email
-          
+          const hasRequiredFields =
+            userData.firstName && userData.lastName && userData.mobile && userData.email
+
           if (hasRequiredFields) {
             console.log('Profile has required fields but marked incomplete, fixing...')
             // Import and use markProfileComplete
@@ -329,33 +335,35 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
           }
         }
       }
-      
+
       // Check suspension status
       if (suspensionResult.status === 'fulfilled' && !suspensionResult.value) {
         console.log('User is suspended and cannot access this route:', to.path)
-        
+
         // Check suspension details to show proper message
         try {
           const suspensionStatus = await checkUserSuspension(user.uid)
           if (suspensionStatus.isSuspended) {
             // Emit event to show suspension message
-            window.dispatchEvent(new CustomEvent('showSuspensionMessage', {
-              detail: {
-                suspensionDetails: suspensionStatus.suspensionDetails,
-                attemptedRoute: to.path
-              }
-            }))
+            window.dispatchEvent(
+              new CustomEvent('showSuspensionMessage', {
+                detail: {
+                  suspensionDetails: suspensionStatus.suspensionDetails,
+                  attemptedRoute: to.path,
+                },
+              }),
+            )
           }
         } catch (error) {
           console.error('Error checking suspension details:', error)
         }
-        
+
         // Redirect to home page for suspended users
         next('/home')
         resolve()
         return
       }
-      
+
       // All checks passed - allow access
       next()
       resolve()
@@ -382,11 +390,14 @@ router.beforeEach(async (to, from, next) => {
     console.log('Navigation guard: Handling root route')
     try {
       // Wait a bit for auth state to be established
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       const currentUser = await optimizedAuthService.getCurrentUser()
-      console.log('Navigation guard: Current user check result:', currentUser ? 'authenticated' : 'not authenticated')
-      
+      console.log(
+        'Navigation guard: Current user check result:',
+        currentUser ? 'authenticated' : 'not authenticated',
+      )
+
       if (currentUser) {
         console.log('Navigation guard: User authenticated, redirecting to /home')
         next('/home')
@@ -427,26 +438,29 @@ router.beforeEach(async (to, from, next) => {
     const checkAuth = async () => {
       try {
         // Wait a bit for auth state to be established
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
         const currentUser = await optimizedAuthService.getCurrentUser()
-        
+
         if (resolved) return
-        
-        console.log('Current user from authService:', currentUser ? 'authenticated' : 'not authenticated')
-        
+
+        console.log(
+          'Current user from authService:',
+          currentUser ? 'authenticated' : 'not authenticated',
+        )
+
         clearTimeout(timeout)
         resolved = true
-        
+
         // Process the auth state
         processAuthState(currentUser, to, from, next, resolve, requiresAuth)
       } catch (error) {
         if (resolved) return
-        
+
         console.error('Error getting current user:', error)
         clearTimeout(timeout)
         resolved = true
-        
+
         // On error, allow navigation to prevent blocking
         next()
         resolve()
@@ -458,4 +472,3 @@ router.beforeEach(async (to, from, next) => {
 })
 
 export default router
-
