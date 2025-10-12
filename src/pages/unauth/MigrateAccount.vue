@@ -315,80 +315,163 @@ const handleDirectMigration = async () => {
   console.log('[MigrateAccount] 🔄 Starting direct migration (fallback)...')
 
   try {
-    // Import Firebase Auth and firestoreService
-    const { createUserWithEmailAndPassword } = await import('firebase/auth')
-    const { auth } = await import('../../boot/firebase')
+    // Import firestoreService
     const { default: firestoreService } = await import('../../services/firestoreService')
 
-    console.log('[MigrateAccount] Creating Firebase Auth user with 20s timeout...')
-
-    // Create timeout for auth user creation
-    const authTimeout = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Auth user creation timed out')), 20000)
-    })
-
-    let userCredential
     let authUid
     
-    try {
-      // Try to create Firebase Auth user with timeout
-      userCredential = await Promise.race([
-        createUserWithEmailAndPassword(auth, formData.email, formData.password),
-        authTimeout
-      ])
-      authUid = userCredential.user.uid
-      console.log('[MigrateAccount] ✅ Auth user created:', authUid)
-    } catch (authError) {
-      console.log('[MigrateAccount] Auth creation error:', authError.code, authError.message)
+    // Check if running on iOS
+    const isIOS = Capacitor.getPlatform() === 'ios'
+    console.log('[MigrateAccount] Platform:', Capacitor.getPlatform(), 'Using Capacitor:', isIOS)
+
+    if (isIOS) {
+      console.log('[MigrateAccount] 📱 Using Capacitor Firebase Auth for iOS...')
       
-      // Check if user already exists
-      if (authError.code === 'auth/email-already-in-use' || authError.message?.includes('already')) {
-        console.log('[MigrateAccount] ℹ️ User already exists in Auth, signing in to get UID...')
-        
-        // Import signInWithEmailAndPassword
-        const { signInWithEmailAndPassword } = await import('firebase/auth')
-        
-        // Sign in to get the UID
-        const signInTimeout = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Sign in timed out')), 15000)
+      // Import Capacitor Firebase Authentication
+      const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
+      
+      try {
+        // Try to create user with Capacitor plugin
+        console.log('[MigrateAccount] Creating user with Capacitor plugin...')
+        const result = await FirebaseAuthentication.createUserWithEmailAndPassword({
+          email: formData.email,
+          password: formData.password,
         })
+        authUid = result.user.uid
+        console.log('[MigrateAccount] ✅ Auth user created (Capacitor):', authUid)
+      } catch (authError) {
+        console.log('[MigrateAccount] Capacitor auth error:', authError)
         
-        const signInResult = await Promise.race([
-          signInWithEmailAndPassword(auth, formData.email, formData.password),
-          signInTimeout
+        // Check if user already exists
+        if (authError.message?.includes('already') || authError.message?.includes('exists')) {
+          console.log('[MigrateAccount] ℹ️ User already exists, signing in with Capacitor...')
+          
+          const signInResult = await FirebaseAuthentication.signInWithEmailAndPassword({
+            email: formData.email,
+            password: formData.password,
+          })
+          
+          authUid = signInResult.user.uid
+          console.log('[MigrateAccount] ✅ Got existing user UID (Capacitor):', authUid)
+        } else {
+          throw authError
+        }
+      }
+    } else {
+      console.log('[MigrateAccount] 🌐 Using Web SDK for authentication...')
+      
+      // Import Firebase Auth Web SDK
+      const { createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import('firebase/auth')
+      const { auth } = await import('../../boot/firebase')
+
+      console.log('[MigrateAccount] Creating Firebase Auth user with 20s timeout...')
+
+      // Create timeout for auth user creation
+      const authTimeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Auth user creation timed out')), 20000)
+      })
+
+      let userCredential
+      
+      try {
+        // Try to create Firebase Auth user with timeout
+        userCredential = await Promise.race([
+          createUserWithEmailAndPassword(auth, formData.email, formData.password),
+          authTimeout
         ])
+        authUid = userCredential.user.uid
+        console.log('[MigrateAccount] ✅ Auth user created (Web SDK):', authUid)
+      } catch (authError) {
+        console.log('[MigrateAccount] Auth creation error:', authError.code, authError.message)
         
-        authUid = signInResult.user.uid
-        console.log('[MigrateAccount] ✅ Got existing user UID:', authUid)
-      } else {
-        // Rethrow if it's a different error
-        throw authError
+        // Check if user already exists
+        if (authError.code === 'auth/email-already-in-use' || authError.message?.includes('already')) {
+          console.log('[MigrateAccount] ℹ️ User already exists in Auth, signing in to get UID...')
+          
+          // Sign in to get the UID
+          const signInTimeout = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Sign in timed out')), 15000)
+          })
+          
+          const signInResult = await Promise.race([
+            signInWithEmailAndPassword(auth, formData.email, formData.password),
+            signInTimeout
+          ])
+          
+          authUid = signInResult.user.uid
+          console.log('[MigrateAccount] ✅ Got existing user UID (Web SDK):', authUid)
+        } else {
+          // Rethrow if it's a different error
+          throw authError
+        }
       }
     }
 
-    // Find and update Firestore user document using firestoreService
-    console.log('[MigrateAccount] Finding user document in Firestore...')
+    // Find old user document in Firestore
+    console.log('[MigrateAccount] Finding old user document in Firestore...')
+
+    // Create timeout for Firestore getDocs
+    const getDocsTimeout = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Firestore getDocs timed out')), 15000)
+    })
 
     // Use firestoreService to get user by email (more reliable on iOS)
-    const result = await firestoreService.getDocs('users', {
-      filters: [{ field: 'email', operator: '==', value: formData.email.toLowerCase().trim() }],
-      timeoutMs: 10000
-    })
+    const result = await Promise.race([
+      firestoreService.getDocs('users', {
+        filters: [{ field: 'email', operator: '==', value: formData.email.toLowerCase().trim() }],
+      }),
+      getDocsTimeout
+    ])
 
     if (!result || result.empty || result.docs.length === 0) {
       throw new Error('User document not found in Firestore')
     }
 
-    const userDocId = result.docs[0].id
-    console.log('[MigrateAccount] Found user document:', userDocId)
+    const oldUserDocId = result.docs[0].id
+    // Get data - handle both function and object formats
+    const oldUserData = typeof result.docs[0].data === 'function' ? result.docs[0].data() : result.docs[0].data
+    console.log('[MigrateAccount] Found old user document:', oldUserDocId)
 
-    // Update the user document using firestoreService
-    console.log('[MigrateAccount] Updating user document...')
-    await firestoreService.updateDoc(`users/${userDocId}`, {
+    // Create new user document at users/<authUid> with data from old document
+    console.log('[MigrateAccount] Creating new user document at users/' + authUid)
+    
+    // Prepare new user data (copy from old, update metadata)
+    const newUserData = {
+      ...oldUserData,
       migrated: true,
+      oldDocumentId: oldUserDocId, // Reference to old document
       authUid: authUid,
       updatedAt: new Date().toISOString()
+    }
+    
+    // Remove oldId from the new document (it's now in oldDocumentId)
+    delete newUserData.oldId
+    
+    // Create timeout for Firestore setDoc
+    const setDocTimeout = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Firestore setDoc timed out')), 10000)
     })
+    
+    // Create the new document
+    await Promise.race([
+      firestoreService.setDoc(`users/${authUid}`, newUserData),
+      setDocTimeout
+    ])
+    
+    console.log('[MigrateAccount] ✅ New user document created at users/' + authUid)
+    
+    // Delete old document to avoid duplicates
+    console.log('[MigrateAccount] Deleting old document to avoid duplicates...')
+    const deleteOldTimeout = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Firestore delete old doc timed out')), 10000)
+    })
+    
+    await Promise.race([
+      firestoreService.deleteDoc(`users/${oldUserDocId}`),
+      deleteOldTimeout
+    ])
+    
+    console.log('[MigrateAccount] ✅ Old document deleted:', oldUserDocId)
 
     console.log('[MigrateAccount] ✅ Direct migration successful!')
 

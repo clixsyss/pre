@@ -587,41 +587,88 @@ class FirestoreService {
                 collectionPath,
               )
 
+              // Capacitor Firebase doesn't support complex queries, so we get all and filter client-side
               const result = await FirebaseFirestore.getCollection({
                 reference: collectionPath,
-                compositeFilter: queryOptions?.filters
-                  ? {
-                      filters: queryOptions.filters.map((filter) => ({
-                        fieldPath: filter.field,
-                        op: filter.operator,
-                        value: { stringValue: filter.value },
-                      })),
-                    }
-                  : undefined,
-                orderBy: queryOptions?.orderBy
-                  ? [
-                      {
-                        fieldPath: queryOptions.orderBy.field,
-                        direction: queryOptions.orderBy.direction,
-                      },
-                    ]
-                  : undefined,
-                limit: queryOptions?.limit || 100,
               })
 
-              console.log('✅ FirestoreService: Capacitor Firebase fallback successful:', {
-                empty: result.snapshots.length === 0,
-                size: result.snapshots.length,
-              })
+              console.log('✅ FirestoreService: Capacitor Firebase fallback retrieved:', result.snapshots.length, 'documents')
+
+              let filteredDocs = result.snapshots || []
+
+              // Apply client-side filtering if queryOptions has filters
+              if (queryOptions?.filters && Array.isArray(queryOptions.filters)) {
+                console.log('🔍 Applying client-side filters:', queryOptions.filters)
+                filteredDocs = filteredDocs.filter((doc) => {
+                  return queryOptions.filters.every((filter) => {
+                    const docData = doc.data || doc
+                    const fieldValue = this.getNestedValue(docData, filter.field)
+                    
+                    // Fail if field is undefined/null
+                    if (fieldValue === undefined || fieldValue === null) {
+                      return false
+                    }
+
+                    switch (filter.operator) {
+                      case '==':
+                        return fieldValue === filter.value
+                      case '!=':
+                        return fieldValue !== filter.value
+                      case '>':
+                        return fieldValue > filter.value
+                      case '>=':
+                        return fieldValue >= filter.value
+                      case '<':
+                        return fieldValue < filter.value
+                      case '<=':
+                        return fieldValue <= filter.value
+                      case 'in':
+                        return Array.isArray(filter.value) && filter.value.includes(fieldValue)
+                      case 'not-in':
+                        return Array.isArray(filter.value) && !filter.value.includes(fieldValue)
+                      case 'array-contains':
+                        return Array.isArray(fieldValue) && fieldValue.includes(filter.value)
+                      case 'array-contains-any':
+                        return Array.isArray(fieldValue) && filter.value.some((v) => fieldValue.includes(v))
+                      default:
+                        return true
+                    }
+                  })
+                })
+                console.log('✅ After filtering:', filteredDocs.length, 'documents match')
+              }
+
+              // Apply client-side ordering if queryOptions has orderBy
+              if (queryOptions?.orderBy && Array.isArray(queryOptions.orderBy)) {
+                filteredDocs.sort((a, b) => {
+                  for (const order of queryOptions.orderBy) {
+                    const aValue = this.getNestedValue(a.data, order.field)
+                    const bValue = this.getNestedValue(b.data, order.field)
+                    if (aValue < bValue) return order.direction === 'asc' ? -1 : 1
+                    if (aValue > bValue) return order.direction === 'asc' ? 1 : -1
+                  }
+                  return 0
+                })
+              }
+
+              // Apply limit if specified
+              if (queryOptions?.limit) {
+                filteredDocs = filteredDocs.slice(0, queryOptions.limit)
+              }
 
               const collectionData = {
-                docs: result.snapshots.map((doc) => ({
+                docs: filteredDocs.map((doc) => ({
                   id: doc.id,
-                  data: () => doc.data,
+                  data: () => doc.data || {},
                 })),
-                empty: result.snapshots.length === 0,
-                size: result.snapshots.length,
+                empty: filteredDocs.length === 0,
+                size: filteredDocs.length,
               }
+
+              console.log('✅ FirestoreService: Capacitor Firebase fallback successful:', {
+                empty: collectionData.empty,
+                size: collectionData.size,
+              })
 
               // Cache the fallback result
               cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
