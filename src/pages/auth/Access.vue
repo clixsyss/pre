@@ -1106,9 +1106,6 @@ onMounted(async () => {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .access-page {
-    padding: 16px;
-  }
 
   .tab-btn {
     padding: 10px 12px;
