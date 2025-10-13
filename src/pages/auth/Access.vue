@@ -1,34 +1,31 @@
 <template>
   <div class="access-page">
-    <!-- Page Header -->
-    <div class="page-header">
-      <h1>{{ $t('gateAccess') || 'Gate Access' }}</h1>
-      <p>{{ $t('gateAccessDesc') || 'Control your gate and manage access passes' }}</p>
-    </div>
+
+    <PageHeader :title="$t('gateAccess') || 'Gate Access'"
+      :subtitle="$t('gateAccessDesc') || 'Control your gate and manage access passes'" />
 
     <!-- Tab Navigation -->
-    <q-tabs
-      v-model="activeTab"
-      class="access-tabs"
-      active-color="primary"
-      indicator-color="primary"
-      align="justify"
-    >
-      <q-tab name="ble" :label="$t('bleControl') || 'BLE Control'" icon="bluetooth" />
-      <q-tab name="passes" :label="$t('gatePasses') || 'Gate Passes'" icon="qr_code" />
-    </q-tabs>
+    <div class="tabs-container">
+      <div class="tabs-nav">
+        <button class="tab-btn" :class="{ active: activeTab === 'ble' }" @click="activeTab = 'ble'">
+          <q-icon name="bluetooth" class="tab-icon" />
+          <span class="tab-label">{{ $t('bleControl') || 'BLE Control' }}</span>
+        </button>
+        <button class="tab-btn" :class="{ active: activeTab === 'passes' }" @click="activeTab = 'passes'">
+          <q-icon name="qr_code" class="tab-icon" />
+          <span class="tab-label">{{ $t('gatePasses') || 'Gate Passes' }}</span>
+        </button>
+      </div>
+    </div>
 
-    <!-- BLE Control Tab -->
-    <q-tab-panels v-model="activeTab" animated class="tab-panels">
+    <!-- Tab Content -->
+    <div class="tab-content">
       <!-- BLE Gate Control Panel -->
-      <q-tab-panel name="ble" class="ble-panel">
+      <div v-if="activeTab === 'ble'" class="ble-content">
         <div class="ble-control-section">
           <!-- Bluetooth Icon -->
           <div class="bluetooth-icon-container">
-            <div
-              class="bluetooth-icon"
-              :class="{ connected: isConnected, connecting: isConnecting }"
-            >
+            <div class="bluetooth-icon" :class="{ connected: isConnected, connecting: isConnecting }">
               <q-icon name="bluetooth" size="48px" />
               <div v-if="isConnecting" class="pulse-ring"></div>
             </div>
@@ -79,49 +76,24 @@
           <!-- Action Buttons -->
           <div class="button-group">
             <!-- Quick Open Button (Auto-connect and Open) -->
-            <q-btn
-              v-if="!isConnected && lastConnectedDevice"
-              unelevated
-              rounded
-              color="positive"
-              size="lg"
-              class="action-button quick-action"
-              :loading="autoConnecting || isOpening"
-              :disable="autoConnecting || isOpening || (bleChecked && !isBLESupported)"
-              @click="quickOpenGate"
-            >
+            <q-btn v-if="!isConnected && lastConnectedDevice" unelevated rounded color="positive" size="lg"
+              class="action-button quick-action" :loading="autoConnecting || isOpening"
+              :disable="autoConnecting || isOpening || (bleChecked && !isBLESupported)" @click="quickOpenGate">
               <q-icon name="flash_on" size="28px" left />
               {{ $t('quickOpen') || 'Quick Open Gate' }}
             </q-btn>
 
             <!-- Connect Button (First time or manual connection) -->
-            <q-btn
-              v-if="!isConnected && !lastConnectedDevice"
-              unelevated
-              rounded
-              color="primary"
-              size="lg"
-              class="action-button"
-              :loading="isConnecting"
-              :disable="isConnecting || (bleChecked && !isBLESupported)"
-              @click="handleConnect"
-            >
+            <q-btn v-if="!isConnected && !lastConnectedDevice" unelevated rounded color="primary" size="lg"
+              class="action-button" :loading="isConnecting" :disable="isConnecting || (bleChecked && !isBLESupported)"
+              @click="handleConnect">
               <q-icon name="bluetooth_searching" size="24px" left />
               {{ $t('connect') || 'Connect to Gate' }}
             </q-btn>
 
             <!-- Open Gate Button (When already connected) -->
-            <q-btn
-              v-if="isConnected"
-              unelevated
-              rounded
-              color="positive"
-              size="lg"
-              class="action-button"
-              :loading="isOpening"
-              :disable="isOpening"
-              @click="handleOpenGate"
-            >
+            <q-btn v-if="isConnected" unelevated rounded color="positive" size="lg" class="action-button"
+              :loading="isOpening" :disable="isOpening" @click="handleOpenGate">
               <q-icon name="door_open" size="28px" left />
               {{ $t('openGate') || 'Open Gate' }}
             </q-btn>
@@ -129,45 +101,22 @@
             <!-- Secondary Actions Row -->
             <div v-if="isConnected || lastConnectedDevice" class="secondary-actions">
               <!-- Disconnect Button -->
-              <q-btn
-                v-if="isConnected"
-                flat
-                rounded
-                color="negative"
-                size="sm"
-                class="secondary-button"
-                @click="handleDisconnect"
-              >
+              <q-btn v-if="isConnected" flat rounded color="negative" size="sm" class="secondary-button"
+                @click="handleDisconnect">
                 <q-icon name="bluetooth_disabled" size="18px" left />
                 {{ $t('disconnect') || 'Disconnect' }}
               </q-btn>
 
               <!-- New Connection Button -->
-              <q-btn
-                v-if="lastConnectedDevice && !isConnected"
-                flat
-                rounded
-                color="primary"
-                size="sm"
-                class="secondary-button"
-                :loading="isConnecting"
-                :disable="isConnecting"
-                @click="handleConnect"
-              >
+              <q-btn v-if="lastConnectedDevice && !isConnected" flat rounded color="primary" size="sm"
+                class="secondary-button" :loading="isConnecting" :disable="isConnecting" @click="handleConnect">
                 <q-icon name="bluetooth_searching" size="18px" left />
                 {{ $t('newConnection') || 'New Device' }}
               </q-btn>
 
               <!-- Forget Device Button -->
-              <q-btn
-                v-if="lastConnectedDevice && !isConnected"
-                flat
-                rounded
-                color="grey"
-                size="sm"
-                class="secondary-button"
-                @click="forgetDevice"
-              >
+              <q-btn v-if="lastConnectedDevice && !isConnected" flat rounded color="grey" size="sm"
+                class="secondary-button" @click="forgetDevice">
                 <q-icon name="delete_outline" size="18px" left />
                 {{ $t('forget') || 'Forget' }}
               </q-btn>
@@ -176,29 +125,19 @@
 
           <!-- Status Message -->
           <div v-if="statusMessage" class="status-message" :class="statusMessageType">
-            <q-icon
-              :name="statusMessageType === 'success' ? 'check_circle' : 'error'"
-              size="20px"
-            />
+            <q-icon :name="statusMessageType === 'success' ? 'check_circle' : 'error'" size="20px" />
             <span>{{ statusMessage }}</span>
           </div>
         </div>
-      </q-tab-panel>
+      </div>
 
       <!-- Gate Passes Panel -->
-      <q-tab-panel name="passes" class="passes-panel">
+      <div v-if="activeTab === 'passes'" class="passes-content">
         <div class="passes-section">
           <!-- Generate Pass Button -->
           <div class="generate-section">
-            <q-btn
-              unelevated
-              rounded
-              color="primary"
-              size="lg"
-              class="generate-btn"
-              :disable="passes.length >= 10"
-              @click="showGenerateDialog = true"
-            >
+            <q-btn unelevated rounded color="primary" size="lg" class="generate-btn" :disable="passes.length >= 10"
+              @click="showGenerateDialog = true">
               <q-icon name="add_circle" size="24px" left />
               {{ $t('generatePass') || 'Generate Pass' }} ({{ passes.length }}/10)
             </q-btn>
@@ -211,10 +150,7 @@
                 <div class="pass-info">
                   <div class="pass-header">
                     <h3>{{ pass.guestName }}</h3>
-                    <q-badge
-                      :color="pass.status === 'active' ? 'positive' : 'negative'"
-                      :label="pass.status"
-                    />
+                    <q-badge :color="pass.status === 'active' ? 'positive' : 'negative'" :label="pass.status" />
                   </div>
                   <div class="pass-details">
                     <div class="detail-row">
@@ -249,8 +185,8 @@
             <p>{{ $t('createFirstPass') || 'Create your first guest pass to get started' }}</p>
           </div>
         </div>
-      </q-tab-panel>
-    </q-tab-panels>
+      </div>
+    </div>
 
     <!-- Generate Pass Dialog -->
     <q-dialog v-model="showGenerateDialog">
@@ -260,55 +196,25 @@
         </q-card-section>
 
         <q-card-section class="q-pt-none">
-          <q-input
-            v-model="newPass.guestName"
-            :label="$t('guestName') || 'Guest Name'"
-            outlined
-            class="q-mb-md"
-          />
-          <q-input
-            v-model="newPass.purpose"
-            :label="$t('purpose') || 'Purpose of Visit'"
-            outlined
-            class="q-mb-md"
-          />
-          <q-input
-            v-model="newPass.validUntil"
-            :label="$t('validUntil') || 'Valid Until'"
-            outlined
-            type="datetime-local"
-            class="q-mb-md"
-          />
+          <q-input v-model="newPass.guestName" :label="$t('guestName') || 'Guest Name'" outlined class="q-mb-md" />
+          <q-input v-model="newPass.purpose" :label="$t('purpose') || 'Purpose of Visit'" outlined class="q-mb-md" />
+          <q-input v-model="newPass.validUntil" :label="$t('validUntil') || 'Valid Until'" outlined
+            type="datetime-local" class="q-mb-md" />
         </q-card-section>
 
         <q-card-actions align="right">
           <q-btn flat :label="$t('cancel') || 'Cancel'" color="primary" v-close-popup />
-          <q-btn
-            unelevated
-            :label="$t('generate') || 'Generate'"
-            color="primary"
-            @click="generatePass"
-            :disable="!newPass.guestName || !newPass.validUntil"
-          />
+          <q-btn unelevated :label="$t('generate') || 'Generate'" color="primary" @click="generatePass"
+            :disable="!newPass.guestName || !newPass.validUntil" />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <!-- Floating Quick Action Button (Shows on all tabs when device is saved) -->
-    <q-page-sticky
-      v-if="lastConnectedDevice && !isConnected && activeTab === 'ble'"
-      position="bottom-right"
-      :offset="[18, 18]"
-    >
-      <q-btn
-        fab
-        icon="flash_on"
-        color="positive"
-        :loading="autoConnecting || isOpening"
-        :disable="autoConnecting || isOpening"
-        @click="quickOpenGate"
-        class="fab-button"
-      >
+    <q-page-sticky v-if="lastConnectedDevice && !isConnected && activeTab === 'ble'" position="bottom-right"
+      :offset="[18, 18]">
+      <q-btn fab icon="flash_on" color="positive" :loading="autoConnecting || isOpening"
+        :disable="autoConnecting || isOpening" @click="quickOpenGate" class="fab-button">
         <q-tooltip anchor="top middle" self="bottom middle" :offset="[0, 8]">
           {{ $t('quickOpen') || 'Quick Open Gate' }}
         </q-tooltip>
@@ -320,9 +226,11 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
 import { Capacitor } from '@capacitor/core'
+import { Share } from '@capacitor/share'
 import { useBluetooth } from '../../composables/useBluetooth'
 import QRCode from 'qrcode'
 import { Notify } from 'quasar'
+import PageHeader from '../../components/PageHeader.vue'
 
 // Component name for ESLint
 defineOptions({
@@ -634,7 +542,6 @@ const sharePass = async (pass) => {
       const dataUrl = canvas.toDataURL('image/png')
 
       try {
-        const { Share } = await import('@capacitor/share')
         await Share.share({
           title: `Gate Pass for ${pass.guestName}`,
           text: `Gate Pass Code: ${pass.code}\nValid until: ${formatDate(pass.validUntil)}`,
@@ -763,44 +670,78 @@ onMounted(async () => {
   width: 100%;
   max-width: 1000px;
   margin: 0 auto;
-  padding: 20px;
   box-sizing: border-box;
 }
 
-/* Page Header */
-.page-header {
-  text-align: center;
+/* Tabs Navigation */
+.tabs-container {
   margin-bottom: 24px;
 }
 
-.page-header h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #333;
-  margin: 0 0 8px 0;
-}
-
-.page-header p {
-  color: #666;
-  font-size: 1rem;
-  margin: 0;
-}
-
-/* Tabs */
-.access-tabs {
+.tabs-nav {
+  display: flex;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin-bottom: 20px;
+  padding: 4px;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.tab-panels {
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: none;
   background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: #666;
+}
+
+.tab-btn.active {
+  background: #AF1E23;
+  color: white;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
+}
+
+.tab-icon {
+  font-size: 16px;
+}
+
+.tab-label {
+  font-size: 14px;
+}
+
+/* Tab Content */
+.tab-content {
+  min-height: 300px;
+}
+
+.ble-content,
+.passes-content {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* BLE Control Panel */
-.ble-panel {
-  padding: 20px;
+.ble-content {
+  padding: 0;
 }
 
 .ble-control-section {
@@ -842,10 +783,12 @@ onMounted(async () => {
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }
@@ -869,6 +812,7 @@ onMounted(async () => {
     height: 100px;
     opacity: 1;
   }
+
   100% {
     width: 150px;
     height: 150px;
@@ -1030,8 +974,8 @@ onMounted(async () => {
 }
 
 /* Passes Panel */
-.passes-panel {
-  padding: 20px;
+.passes-content {
+  padding: 0;
 }
 
 .passes-section {
@@ -1145,10 +1089,12 @@ onMounted(async () => {
 }
 
 @keyframes pulse-fab {
+
   0%,
   100% {
     box-shadow: 0 8px 24px rgba(76, 175, 80, 0.5);
   }
+
   50% {
     box-shadow: 0 12px 32px rgba(76, 175, 80, 0.7);
   }
@@ -1164,8 +1110,16 @@ onMounted(async () => {
     padding: 16px;
   }
 
-  .page-header h1 {
-    font-size: 1.75rem;
+  .tab-btn {
+    padding: 10px 12px;
+  }
+
+  .tab-icon {
+    font-size: 14px;
+  }
+
+  .tab-label {
+    font-size: 13px;
   }
 
   .ble-control-section {
@@ -1183,6 +1137,21 @@ onMounted(async () => {
 
   .generate-dialog {
     min-width: 90vw;
+  }
+}
+
+@media (max-width: 480px) {
+  .tab-btn {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .tab-icon {
+    font-size: 16px;
+  }
+
+  .tab-label {
+    display: none;
   }
 }
 </style>
