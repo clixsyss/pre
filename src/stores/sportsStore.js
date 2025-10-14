@@ -5,6 +5,7 @@ import firestoreService from "../services/firestoreService";
 export const useSportsStore = defineStore("sportsStore", () => {
     const sportsOptions = ref([]);
     const courtsBySport = ref({});
+    const sportNameToIdMap = ref({}); // Maps sport names to sport IDs
     const loading = ref(false);
     const error = ref(null);
 
@@ -14,6 +15,7 @@ export const useSportsStore = defineStore("sportsStore", () => {
             // Clear data when no project is selected
             sportsOptions.value = [];
             courtsBySport.value = {};
+            sportNameToIdMap.value = {};
             return;
         }
 
@@ -120,10 +122,19 @@ export const useSportsStore = defineStore("sportsStore", () => {
             // Update the store with sports that have courts
             sportsOptions.value = sportsData.map(sport => sport.name || sport.id);
             courtsBySport.value = courtsData;
+            
+            // Build sport name to ID mapping
+            const nameToIdMap = {};
+            sportsData.forEach(sport => {
+                const sportName = sport.name || sport.id;
+                nameToIdMap[sportName] = sport.id;
+            });
+            sportNameToIdMap.value = nameToIdMap;
 
             console.log(`Fetched ${sportsData.length} sports with courts for project ${projectId}`);
             console.log('Sports found:', sportsData);
             console.log('Courts by sport:', courtsData);
+            console.log('Sport name to ID map:', nameToIdMap);
         } catch (error) {
             console.error("Error fetching sports:", error);
             error.value = error.message;
@@ -181,19 +192,36 @@ export const useSportsStore = defineStore("sportsStore", () => {
     };
 
     const getCourtsForSport = (sportName) => {
-        // Find the sport ID that matches the sport name
-        const sportId = Object.keys(courtsBySport.value).find(sportId => {
-            // Check if this sport ID has a name that matches the requested sport name
-            const sportData = sportsOptions.value.find(sport => sport === sportName);
-            return sportData && courtsBySport.value[sportId];
-        });
+        console.log('🔍 getCourtsForSport called with sportName:', sportName);
+        console.log('Available courtsBySport keys (sport IDs):', Object.keys(courtsBySport.value));
+        console.log('Sport name to ID mapping:', sportNameToIdMap.value);
         
-        return sportId ? courtsBySport.value[sportId] || [] : [];
+        // Use the name-to-ID mapping to get the correct sport ID
+        const sportId = sportNameToIdMap.value[sportName];
+        
+        if (!sportId) {
+            console.warn('❌ No sport ID found for name:', sportName);
+            return [];
+        }
+        
+        console.log(`🔍 Mapped "${sportName}" to sport ID: "${sportId}"`);
+        
+        // Get courts using the sport ID
+        const courts = courtsBySport.value[sportId];
+        
+        if (courts && courts.length > 0) {
+            console.log(`✅ Found ${courts.length} court(s) for ${sportName}:`, courts);
+            return courts;
+        }
+        
+        console.warn(`❌ No courts found for sport ID: ${sportId}`);
+        return [];
     };
 
     const clearData = () => {
         sportsOptions.value = [];
         courtsBySport.value = {};
+        sportNameToIdMap.value = {};
         loading.value = false;
         error.value = null;
     };
@@ -207,6 +235,7 @@ export const useSportsStore = defineStore("sportsStore", () => {
         console.log('=== SPORTS STORE DEBUG ===');
         console.log('sportsOptions:', sportsOptions.value);
         console.log('courtsBySport:', courtsBySport.value);
+        console.log('sportNameToIdMap:', sportNameToIdMap.value);
         console.log('loading:', loading.value);
         console.log('error:', error.value);
     };
@@ -232,6 +261,7 @@ export const useSportsStore = defineStore("sportsStore", () => {
     return {
         sportsOptions,
         courtsBySport,
+        sportNameToIdMap,
         loading,
         error,
         fetchSports,

@@ -57,7 +57,7 @@
           >
             <div class="sport-info">
               <span class="sport-name">{{ sport }}</span>
-              <span class="court-count">{{ getCourtsForSport(sport).length }} court(s)</span>
+              <span class="court-count">{{ sportsStore.getCourtsForSport(sport).length }} court(s)</span>
             </div>
           </div>
         </div>
@@ -69,7 +69,7 @@
         <p class="section-subtitle">Available courts for {{ selectedSport }}</p>
         <div class="court-options">
           <div 
-            v-for="court in getCourtsForSport(selectedSport)" 
+            v-for="court in availableCourts" 
             :key="court.id"
             class="court-option"
             :class="{ active: selectedCourt?.id === court.id }"
@@ -239,12 +239,23 @@ const totalPrice = computed(() => {
   return bookingService.calculatePrice(selectedCourt.value.hourlyRate, selectedSlots.value);
 });
 
+// Computed property for available courts based on selected sport
+const availableCourts = computed(() => {
+  if (!selectedSport.value) return [];
+  const courts = sportsStore.getCourtsForSport(selectedSport.value);
+  console.log(`📋 Available courts for ${selectedSport.value}:`, courts);
+  return courts;
+});
+
 // Methods
 const selectSport = (sport) => {
+  console.log('🏀 Sport selected:', sport);
   selectedSport.value = sport;
   selectedCourt.value = null;
   selectedDay.value = null;
   selectedSlots.value = [];
+  // Force reactivity by triggering a re-fetch if needed
+  console.log('Available courts after sport selection:', availableCourts.value);
 };
 
 const selectCourt = (court) => {
@@ -295,10 +306,6 @@ const formatDate = (date) => {
 const formatSurface = (surface) => {
   if (!surface) return 'Unknown';
   return surface.charAt(0).toUpperCase() + surface.slice(1).replace(/([A-Z])/g, ' $1');
-};
-
-const getCourtsForSport = (sportName) => {
-  return sportsStore.getCourtsForSport(sportName);
 };
 
 const retryFetch = async () => {

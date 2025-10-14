@@ -80,6 +80,10 @@ export default {
   submitNewComplaints: 'Submit new complaints and track existing ones',
   getSupportHelp: 'Get help with any questions or issues',
 
+  familyMembers: 'Family Members',
+  member: 'Member',
+  members: 'Members',
+
   // Bookings
   bookingsIn: 'Bookings in',
   viewManageBookings: 'View and manage all your bookings',

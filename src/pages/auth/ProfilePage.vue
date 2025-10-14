@@ -154,6 +154,55 @@
         </div>
       </div>
 
+      <!-- Family Members Accordion -->
+      <div v-if="familyMembers.length > 0" class="accordion-section">
+        <button @click="toggleAccordion('family')" class="accordion-header"
+          :class="{ active: activeAccordion === 'family' }">
+          <div class="accordion-title">
+            <div class="section-icon family-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17 20H22V18C22 16.3431 20.6569 15 19 15C18.0444 15 17.1931 15.4468 16.6438 16.1429M17 20H7M17 20V18C17 17.3438 16.8736 16.717 16.6438 16.1429M7 20H2V18C2 16.3431 3.34315 15 5 15C5.95561 15 6.80686 15.4468 7.35625 16.1429M7 20V18C7 17.3438 7.12642 16.717 7.35625 16.1429M7.35625 16.1429C8.0935 14.301 9.89482 13 12 13C14.1052 13 15.9065 14.301 16.6438 16.1429M15 7C15 8.65685 13.6569 10 12 10C10.3431 10 9 8.65685 9 7C9 5.34315 10.3431 4 12 4C13.6569 4 15 5.34315 15 7ZM21 10C21 11.1046 20.1046 12 19 12C17.8954 12 17 11.1046 17 10C17 8.89543 17.8954 8 19 8C20.1046 8 21 8.89543 21 10ZM7 10C7 11.1046 6.10457 12 5 12C3.89543 12 3 11.1046 3 10C3 8.89543 3.89543 8 5 8C6.10457 8 7 8.89543 7 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div class="section-text">
+              <h3>{{ $t('familyMembers') }}</h3>
+              <p>{{ familyMembers.length }} {{ familyMembers.length === 1 ? $t('member') : $t('members') }}</p>
+            </div>
+          </div>
+          <div class="accordion-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </div>
+        </button>
+        <div class="accordion-content" :class="{ active: activeAccordion === 'family' }">
+          <div class="family-members-grid">
+            <div v-for="member in familyMembers" :key="member.id" class="family-member-card">
+              <div class="member-avatar">
+                <img v-if="member.documents?.profilePictureUrl" :src="member.documents.profilePictureUrl"
+                  alt="Member Picture" class="avatar-image-small" />
+                <div v-else class="avatar-initial-small">
+                  {{ getInitials(member.firstName, member.lastName) }}
+                </div>
+              </div>
+              <div class="member-info">
+                <h4 class="member-name">{{ getFullName(member.firstName, member.lastName) }}</h4>
+                <p class="member-role">{{ formatRole(member.role) }}</p>
+                <div class="member-meta">
+                  <span class="meta-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 8L10.8906 13.2604C11.5624 13.7083 12.4376 13.7083 13.1094 13.2604L21 8M5 19H19C20.1046 19 21 18.1046 21 17V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V17C3 18.1046 3.89543 19 5 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {{ member.email }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Violations & Fines Accordion -->
       <div class="accordion-section">
         <button @click="toggleAccordion('violations')" class="accordion-header"
@@ -1220,6 +1269,9 @@ const complaintStats = ref({
   closed: 0
 })
 
+// Family members state
+const familyMembers = ref([])
+
 
 // Computed properties
 const userProjects = computed(() => projectStore.userProjects)
@@ -1278,6 +1330,9 @@ const loadProfile = async () => {
       // Also load user projects and available projects
       await projectStore.fetchUserProjects(currentUser.uid)
       await fetchAvailableProjects()
+      
+      // Load family members
+      await loadFamilyMembers()
     } else {
       error.value = 'Profile not found'
       console.error('ProfilePage: Profile document does not exist')
@@ -1339,6 +1394,70 @@ const loadComplaintStats = async () => {
     complaintStats.value = stats
   } catch (error) {
     console.error('Error loading complaint stats:', error)
+  }
+}
+
+// Load family members
+const loadFamilyMembers = async () => {
+  const currentUser = await optimizedAuthService.getCurrentUser()
+  if (!currentUser || !projectStore.selectedProject || !userProfile.value) return
+
+  try {
+    console.log('👨‍👩‍👧‍👦 Loading family members for user:', currentUser.uid)
+    
+    // Get current user's unit from their projects
+    const currentUserProject = userProfile.value.projects?.find(
+      p => p.projectId === projectStore.selectedProject.id
+    )
+    const currentUserUnit = currentUserProject?.unit
+
+    if (!currentUserUnit) {
+      console.log('👨‍👩‍👧‍👦 No unit found for current user in this project')
+      familyMembers.value = []
+      return
+    }
+
+    // Check if user is a family member (has parentAccountId) or is a parent (others have their ID as parentAccountId)
+    const parentId = userProfile.value.parentAccountId || currentUser.uid
+
+    // Query all users in the database
+    const usersSnapshot = await firestoreService.getDocs('users')
+    const allUsers = usersSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+
+    // Filter family members:
+    // 1. Find users who have the same parentAccountId (siblings) OR users who have current user as parent
+    // 2. Filter by same unit in the same project
+    // 3. Exclude the current user
+    const members = allUsers.filter(user => {
+      // Don't include self
+      if (user.id === currentUser.uid) return false
+
+      // Check if this user is linked (same parent or is our child)
+      const isLinkedFamily = user.parentAccountId === parentId || user.parentAccountId === currentUser.uid
+
+      if (!isLinkedFamily) return false
+
+      // Check if user has access to the same project and same unit
+      const userProjectData = user.projects?.find(p => p.projectId === projectStore.selectedProject.id)
+      if (!userProjectData) return false
+
+      // Must be in the same unit
+      if (userProjectData.unit !== currentUserUnit) return false
+
+      // Get the role from the project data
+      user.role = userProjectData.role
+
+      return true
+    })
+
+    familyMembers.value = members
+    console.log('👨‍👩‍👧‍👦 Loaded family members:', members.length, members)
+  } catch (error) {
+    console.error('Error loading family members:', error)
+    familyMembers.value = []
   }
 }
 
@@ -1660,6 +1779,14 @@ const formatGender = (gender) => {
   }
   
   return genderMap[gender] || gender
+}
+
+const formatRole = (role) => {
+  if (!role || role === 'owner') return 'Owner'
+  if (role === 'family') return 'Family Member'
+  
+  // Default to Family Member for any other role in family context
+  return 'Family Member'
 }
 
 // Device management methods
@@ -4687,6 +4814,128 @@ input:checked+.toggle-slider:before {
   .option-check svg {
     width: 10px;
     height: 10px;
+  }
+}
+
+
+.family-members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 4px;
+}
+
+.family-member-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #fff 0%, #fef2f2 100%);
+  border: 2px solid #fecdd3;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.family-member-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(236, 72, 153, 0.15);
+  border-color: #fb7185;
+}
+
+.member-avatar {
+  flex-shrink: 0;
+}
+
+.avatar-image-small {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-initial-small {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.2);
+}
+
+.member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-role {
+  font-size: 13px;
+  font-weight: 500;
+  color: #ec4899;
+  margin: 0 0 8px 0;
+}
+
+.member-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.meta-item svg {
+  flex-shrink: 0;
+  stroke: #9ca3af;
+}
+
+@media (max-width: 768px) {
+  .family-members-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .family-member-card {
+    padding: 12px;
+  }
+  
+  .avatar-image-small,
+  .avatar-initial-small {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .avatar-initial-small {
+    font-size: 18px;
+  }
+  
+  .member-name {
+    font-size: 14px;
+  }
+  
+  .member-role {
+    font-size: 12px;
   }
 }
 </style>
