@@ -358,7 +358,6 @@ watch(currentProject, (newProject) => {
 .program-header {
   padding: 20px;
   cursor: pointer;
-  display: flex;
   justify-content: space-between;
   align-items: center;
   transition: background-color 0.2s ease;
