@@ -318,10 +318,11 @@ const getStatusClass = (status) => {
   justify-content: center;
 }
 
-.back-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .back-btn:hover {
   background: #e5e7eb;
   color: #374151;
-}
+} */
 
 .header-text {
   display: flex;
@@ -474,10 +475,11 @@ const getStatusClass = (status) => {
   transition: all 0.2s ease;
 }
 
-.evidence-image:hover {
+/* Mobile app - hover effects disabled */
+/* .evidence-image:hover {
   transform: scale(1.02);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
+} */
 
 .evidence-caption {
   margin: 0;
@@ -575,10 +577,11 @@ const getStatusClass = (status) => {
   position: relative;
 }
 
-.chat-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .chat-btn:hover {
   background: #991b1b;
   transform: translateY(-1px);
-}
+} */
 
 .chat-badge {
   position: absolute;
@@ -630,9 +633,10 @@ const getStatusClass = (status) => {
   transition: all 0.2s ease;
 }
 
-.image-close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .image-close-btn:hover {
   background: rgba(255, 255, 255, 0.2);
-}
+} */
 
 .full-evidence-image {
   max-width: 100%;

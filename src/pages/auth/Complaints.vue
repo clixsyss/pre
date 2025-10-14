@@ -508,11 +508,12 @@ onUnmounted(() => {
   margin-top: 10px;
 }
 
-.new-complaint-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .new-complaint-btn:hover {
   background: #fff5f2;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
+} */
 
 /* Quick Complaints Section */
 .quick-complaints-section {
@@ -558,12 +559,13 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.quick-option-card:hover {
+/* Mobile app - hover effects disabled */
+/* .quick-option-card:hover {
   background: #F6F6F6;
   border-color: #AF1E23;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
-}
+} */
 
 .quick-option-icon {
   width: 36px;
@@ -642,10 +644,11 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
 }
 
-.filter-tab:hover:not(.active) {
+/* Mobile app - hover effects disabled */
+/* .filter-tab:hover:not(.active) {
   background: #e5e7eb;
   border-color: #d1d5db;
-}
+} */
 
 /* Loading and Empty States */
 .loading-state,
@@ -710,11 +713,12 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
-.complaint-card:hover {
+/* Mobile app - hover effects disabled */
+/* .complaint-card:hover {
   border-color: #AF1E23;
   box-shadow: 0 8px 24px rgba(175, 30, 35, 0.15);
   transform: translateY(-2px);
-}
+} */
 
 .complaint-header {
   display: flex;
@@ -811,9 +815,10 @@ onUnmounted(() => {
   transition: color 0.2s ease;
 }
 
-.complaint-card:hover .complaint-arrow {
+/* Mobile app - hover effects disabled */
+/* .complaint-card:hover .complaint-arrow {
   color: #AF1E23;
-}
+} */
 
 /* Button Styles */
 .btn-primary {
@@ -829,11 +834,12 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
 }
 
-.btn-primary:hover {
+/* Mobile app - hover effects disabled */
+/* .btn-primary:hover {
   background: #8B1A1E;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
-}
+} */
 
 /* Modal Styles */
 .modal-overlay {
@@ -916,10 +922,11 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-.close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: #e2e8f0;
   color: #334155;
-}
+} */
 
 .complaint-form {
   padding: 1.5rem;
@@ -976,9 +983,10 @@ onUnmounted(() => {
   color: white;
 }
 
-.btn-primary:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .btn-primary:hover:not(:disabled) {
   background: #2563eb;
-}
+} */
 
 .btn-primary:disabled {
   background: #9ca3af;
@@ -1009,11 +1017,12 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.file-upload-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .file-upload-btn:hover {
   background: #f1f5f9;
   border-color: #AF1E23;
   color: #AF1E23;
-}
+} */
 
 .file-preview {
   margin-top: 12px;
@@ -1074,10 +1083,11 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.remove-file-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .remove-file-btn:hover {
   background: #e5e7eb;
   color: #374151;
-}
+} */
 
 .image-preview {
   margin-top: 12px;
@@ -1099,9 +1109,10 @@ onUnmounted(() => {
   border: 1px solid #d1d5db;
 }
 
-.btn-secondary:hover {
+/* Mobile app - hover effects disabled */
+/* .btn-secondary:hover {
   background: #e5e7eb;
-}
+} */
 
 /* Responsive Design */
 @media (min-width: 768px) {

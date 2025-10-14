@@ -745,12 +745,13 @@ onUnmounted(() => {
   backdrop-filter: blur(10px);
 }
 
-.gate-access-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .gate-access-btn:hover {
   background: rgba(175, 30, 35, 0.2);
   border-color: rgba(175, 30, 35, 0.5);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
-}
+} */
 
 .gate-access-btn.router-link-active {
   background: rgba(175, 30, 35, 0.3);
@@ -869,10 +870,11 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-.change-project-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .change-project-btn:hover {
   color: #F6F6F6;
   background: rgba(255, 255, 255, 0.1);
-}
+} */
 
 .qr-icon {
   width: 32px;
@@ -935,9 +937,10 @@ onUnmounted(() => {
   max-width: 80px;
 }
 
-.nav-item:hover {
+/* Mobile app - hover effects disabled */
+/* .nav-item:hover {
   color: #ccc;
-}
+} */
 
 .nav-item.active {
   color: #F6F6F6;
@@ -1064,10 +1067,11 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-.close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: #f3f4f6;
   color: #374151;
-}
+} */
 
 .modal-body {
   padding: 16px 24px;
@@ -1092,10 +1096,11 @@ onUnmounted(() => {
   background: #F6F6F6;
 }
 
-.project-option:hover {
+/* Mobile app - hover effects disabled */
+/* .project-option:hover {
   border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.1);
-}
+} */
 
 .project-option.current {
   border-color: #AF1E23;
@@ -1148,11 +1153,12 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
-.switch-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .switch-btn:hover:not(:disabled) {
   background: #AF1E23;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-}
+} */
 
 .switch-btn:disabled {
   opacity: 0.6;
@@ -1196,11 +1202,12 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-.secondary-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .secondary-btn:hover {
   border-color: #AF1E23;
   color: #AF1E23;
   background: #F6F6F6;
-}
+} */
 
 /* Responsive Design */
 @media (max-width: 768px) {

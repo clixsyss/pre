@@ -411,10 +411,11 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-.back-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .back-btn:hover {
   background: #e5e7eb;
   color: #374151;
-}
+} */
 
 .header-text h1 {
   margin: 0;
@@ -538,10 +539,11 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-.filter-tab:hover {
+/* Mobile app - hover effects disabled */
+/* .filter-tab:hover {
   background: #e5e7eb;
   color: #374151;
-}
+} */
 
 .filter-tab.active {
   background: #AF1E23;
@@ -609,10 +611,11 @@ onUnmounted(() => {
   position: relative;
 }
 
-.violation-card:hover {
+/* Mobile app - hover effects disabled */
+/* .violation-card:hover {
   border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.1);
-}
+} */
 
 .violation-header {
   display: flex;

@@ -573,12 +573,13 @@ onMounted(async () => {
   height: 32px;
 }
 
-.nav-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .nav-btn:hover {
   background: #f0f0f0;
   border-color: #d0d0d0;
   color: #333;
   transform: translateY(-1px);
-}
+} */
 
 .month-display {
   display: flex;
@@ -606,11 +607,12 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
-.today-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .today-btn:hover {
   background: #ff5722;
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
-}
+} */
 
 .view-options {
   display: flex;
@@ -637,16 +639,18 @@ onMounted(async () => {
   color: white;
 }
 
-.view-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .view-btn:hover {
   background: #f5f5f5;
   border-color: #ccc;
-}
+} */
 
-.view-btn.active:hover {
+/* Mobile app - hover effects disabled */
+/* .view-btn.active:hover {
   background: #AF1E23;
   border-color: #AF1E23;
   color: white;
-}
+} */
 
 .calendar-container {
   background: white;
@@ -704,10 +708,11 @@ onMounted(async () => {
   touch-action: manipulation;
 }
 
-.date-cell:hover {
+/* Mobile app - hover effects disabled */
+/* .date-cell:hover {
   background: #fafafa;
   border-color: #e0e0e0;
-}
+} */
 
 .date-cell.other-month {
   color: #ccc;
@@ -790,10 +795,11 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
-.clear-selection:hover {
+/* Mobile app - hover effects disabled */
+/* .clear-selection:hover {
   background: #f5f5f5;
   color: #333;
-}
+} */
 
 .events-list {
   display: flex;
@@ -813,11 +819,12 @@ onMounted(async () => {
   border: 1px solid #f0f0f0;
 }
 
-.event-card:hover {
+/* Mobile app - hover effects disabled */
+/* .event-card:hover {
   background: #f5f5f5;
   border-color: #e0e0e0;
   transform: translateY(-1px);
-}
+} */
 
 .event-icon {
   width: 32px;
@@ -934,11 +941,12 @@ onMounted(async () => {
   border: 1px solid #f0f0f0;
 }
 
-.upcoming-event-item:hover {
+/* Mobile app - hover effects disabled */
+/* .upcoming-event-item:hover {
   background: #f5f5f5;
   border-color: #e0e0e0;
   transform: translateY(-1px);
-}
+} */
 
 .event-date {
   text-align: center;
@@ -981,10 +989,11 @@ onMounted(async () => {
   transition: opacity 0.2s ease;
 }
 
-.upcoming-event-item:hover .event-arrow {
+/* Mobile app - hover effects disabled */
+/* .upcoming-event-item:hover .event-arrow {
   opacity: 1;
   color: #999;
-}
+} */
 
 .no-upcoming-events {
   text-align: center;

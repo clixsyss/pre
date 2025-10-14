@@ -616,11 +616,12 @@ onUnmounted(() => {
   box-shadow: 0 2px 4px rgba(175, 30, 35, 0.2);
 }
 
-.back-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .back-btn:hover {
   background: #8b161a;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(175, 30, 35, 0.3);
-}
+} */
 
 .header-info {
   flex: 1;
@@ -702,10 +703,11 @@ onUnmounted(() => {
   color: #6b7280;
 }
 
-.action-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .action-btn:hover {
   background: #e5e7eb;
   color: #374151;
-}
+} */
 
 /* Messages Container */
 .messages-container {
@@ -785,11 +787,12 @@ onUnmounted(() => {
   box-shadow: 0 2px 4px rgba(175, 30, 35, 0.2);
 }
 
-.btn-primary:hover {
+/* Mobile app - hover effects disabled */
+/* .btn-primary:hover {
   background: #8b161a;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(175, 30, 35, 0.3);
-}
+} */
 
 /* Messages List */
 .messages-list {
@@ -902,9 +905,10 @@ onUnmounted(() => {
   transition: transform 0.2s ease;
 }
 
-.message-image:hover img {
+/* Mobile app - hover effects disabled */
+/* .message-image:hover img {
   transform: scale(1.02);
-}
+} */
 
 .image-overlay {
   position: absolute;
@@ -921,9 +925,10 @@ onUnmounted(() => {
   border-radius: 12px;
 }
 
-.message-image:hover .image-overlay {
+/* Mobile app - hover effects disabled */
+/* .message-image:hover .image-overlay {
   opacity: 1;
-}
+} */
 
 .image-overlay svg {
   color: white;
@@ -1014,10 +1019,11 @@ onUnmounted(() => {
   height: 40px;
 }
 
-.attachment-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .attachment-btn:hover:not(:disabled) {
   background: #f3f4f6;
   color: #374151;
-}
+} */
 
 .attachment-btn:disabled {
   opacity: 0.5;
@@ -1079,11 +1085,12 @@ onUnmounted(() => {
   box-shadow: 0 2px 4px rgba(175, 30, 35, 0.2);
 }
 
-.send-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .send-btn:hover:not(:disabled) {
   background: #8b161a;
   transform: scale(1.05);
   box-shadow: 0 4px 8px rgba(175, 30, 35, 0.3);
-}
+} */
 
 .send-btn:disabled {
   background: #d1d5db;
@@ -1108,11 +1115,12 @@ onUnmounted(() => {
   margin-right: 0.5rem;
 }
 
-.admin-send-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .admin-send-btn:hover:not(:disabled) {
   background: #1565c0;
   transform: scale(1.05);
   box-shadow: 0 4px 8px rgba(25, 118, 210, 0.3);
-}
+} */
 
 .admin-send-btn:disabled {
   background: #d1d5db;
@@ -1168,20 +1176,22 @@ onUnmounted(() => {
   color: white;
 }
 
-.select-image-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .select-image-btn:hover {
   background: #8b161a;
   transform: translateY(-1px);
-}
+} */
 
 .cancel-btn {
   background: #f3f4f6;
   color: #6b7280;
 }
 
-.cancel-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .cancel-btn:hover {
   background: #e5e7eb;
   color: #374151;
-}
+} */
 
 /* Fullscreen Modal */
 .fullscreen-modal {
@@ -1231,10 +1241,11 @@ onUnmounted(() => {
   height: 48px;
 }
 
-.close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: scale(1.05);
-}
+} */
 
 .media-actions {
   display: flex;
@@ -1256,10 +1267,11 @@ onUnmounted(() => {
   height: 48px;
 }
 
-.media-actions .action-btn:hover {
+.media-actions /* Mobile app - hover effects disabled */
+/* .action-btn:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: scale(1.05);
-}
+} */
 
 .media-container {
   display: flex;

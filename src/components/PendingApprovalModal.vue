@@ -348,9 +348,10 @@ const handleLogout = async () => {
   font-weight: 600;
 }
 
-.support-link:hover {
+/* Mobile app - hover effects disabled */
+/* .support-link:hover {
   text-decoration: underline;
-}
+} */
 
 /* Action Buttons - matches app's button styling */
 .action-buttons {
@@ -377,9 +378,10 @@ const handleLogout = async () => {
   color: white;
 }
 
-.action-btn.primary:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .action-btn.primary:hover:not(:disabled) {
   background-color: #8B1A1F;
-}
+} */
 
 .action-btn.secondary {
   background-color: #f8f9fa;
@@ -387,10 +389,11 @@ const handleLogout = async () => {
   border: 2px solid #e1e5e9;
 }
 
-.action-btn.secondary:hover {
+/* Mobile app - hover effects disabled */
+/* .action-btn.secondary:hover {
   background-color: #e9ecef;
   border-color: #dee2e6;
-}
+} */
 
 .action-btn:disabled {
   background-color: #ccc;

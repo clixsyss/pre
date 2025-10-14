@@ -416,11 +416,12 @@ watch(() => props.isOpen, (isOpen) => {
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.download-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .download-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
+} */
 
 .download-btn:disabled {
   opacity: 0.6;
@@ -435,10 +436,11 @@ watch(() => props.isOpen, (isOpen) => {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: scale(1.05);
-}
+} */
 
 .pdf-content {
   flex: 1;
@@ -518,9 +520,10 @@ watch(() => props.isOpen, (isOpen) => {
   transition: background-color 0.3s ease;
 }
 
-.retry-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .retry-btn:hover {
   background: #991b1f;
-}
+} */
 
 .pdf-iframe-container {
   flex: 1;
@@ -584,11 +587,12 @@ watch(() => props.isOpen, (isOpen) => {
   transition: all 0.2s ease;
 }
 
-.control-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .control-btn:hover {
   background: #e5e7eb;
   color: #374151;
   border-color: #d1d5db;
-}
+} */
 
 /* Responsive Design */
 @media (max-width: 768px) {

@@ -562,6 +562,7 @@ const isDeviceLoading = (deviceId) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Mobile app - hover effects disabled */
 /* .view-all-btn:hover {
   background: #F6F6F6;
   transform: translateY(-1px);
@@ -623,6 +624,7 @@ const isDeviceLoading = (deviceId) => {
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
 
+/* Mobile app - hover effects disabled */
 /* .connect-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
@@ -651,6 +653,7 @@ const isDeviceLoading = (deviceId) => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .single-device-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
@@ -745,6 +748,7 @@ const isDeviceLoading = (deviceId) => {
   border-radius: 2px;
 }
 
+/* Mobile app - hover effects disabled */
 /* .device-list::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 } */
@@ -794,6 +798,7 @@ const isDeviceLoading = (deviceId) => {
   cursor: pointer;
 }
 
+/* Mobile app - hover effects disabled */
 /* .device-card:hover {
   border-color: #AF1E23;
   box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);

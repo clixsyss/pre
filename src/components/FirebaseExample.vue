@@ -208,9 +208,10 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+/* Mobile app - hover effects disabled */
+/* button:hover {
   background-color: #1565c0;
-}
+} */
 
 button:disabled {
   background-color: #ccc;

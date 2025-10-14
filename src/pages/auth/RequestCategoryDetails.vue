@@ -657,9 +657,10 @@ const submitRequest = async () => {
   transition: background-color 0.2s;
 }
 
-.back-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .back-btn:hover {
   background: rgba(255, 255, 255, 0.3);
-}
+} */
 
 .header-text h1 {
   font-size: 1.5rem;
@@ -740,9 +741,10 @@ const submitRequest = async () => {
   font-weight: 500;
 }
 
-.retry-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .retry-btn:hover {
   background: #8B1A1E;
-}
+} */
 
 /* Request Form */
 .request-form-container {
@@ -872,10 +874,11 @@ const submitRequest = async () => {
   position: relative;
 }
 
-.file-upload-area:hover {
+/* Mobile app - hover effects disabled */
+/* .file-upload-area:hover {
   border-color: #AF1E23;
   background-color: #fef7f7;
-}
+} */
 
 .file-input {
   display: none;
@@ -902,9 +905,10 @@ const submitRequest = async () => {
   transition: background-color 0.2s;
 }
 
-.upload-button:hover {
+/* Mobile app - hover effects disabled */
+/* .upload-button:hover {
   background: #8b1619;
-}
+} */
 
 .upload-options {
   position: absolute;
@@ -934,9 +938,10 @@ const submitRequest = async () => {
   transition: background-color 0.2s;
 }
 
-.upload-option:hover {
+/* Mobile app - hover effects disabled */
+/* .upload-option:hover {
   background: #f9fafb;
-}
+} */
 
 .upload-option:first-child {
   border-radius: 8px 8px 0 0;
@@ -988,18 +993,20 @@ const submitRequest = async () => {
   transition: all 0.3s ease;
 }
 
-.upload-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .upload-btn:hover {
   background-color: #dc2626;
   transform: translateY(-1px);
-}
+} */
 
 .camera-btn {
   background-color: #059669;
 }
 
-.camera-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .camera-btn:hover {
   background-color: #047857;
-}
+} */
 
 .upload-hint {
   font-size: 0.875rem;
@@ -1030,12 +1037,13 @@ const submitRequest = async () => {
   justify-content: center;
 }
 
-.unified-upload-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .unified-upload-btn:hover {
   background-color: #8b161a;
   border-color: #8b161a;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(175, 30, 35, 0.3);
-}
+} */
 
 .upload-progress {
   margin-top: 16px;
@@ -1097,7 +1105,8 @@ const submitRequest = async () => {
   transition: all 0.2s;
 }
 
-.skip-files-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .skip-files-btn:hover {
   background-color: #f9fafb;
   border-color: #9ca3af;
   color: #374151;
@@ -1152,9 +1161,10 @@ const submitRequest = async () => {
   transition: background-color 0.2s;
 }
 
-.remove-file-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .remove-file-btn:hover {
   background: #fef2f2;
-}
+} */
 
 /* Form Actions */
 .form-actions {
@@ -1180,9 +1190,10 @@ const submitRequest = async () => {
   gap: 8px;
 }
 
-.submit-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .submit-btn:hover:not(:disabled) {
   background: #8B1A1E;
-}
+} */
 
 .submit-btn:disabled {
   opacity: 0.6;

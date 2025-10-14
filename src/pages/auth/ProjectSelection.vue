@@ -451,6 +451,7 @@ onMounted(async () => {
   gap: 0.5rem;
 }
 
+/* Mobile app - hover effects disabled */
 /* .retry-button:hover {
   background: #8b161a;
   transform: translateY(-1px);
@@ -510,6 +511,7 @@ onMounted(async () => {
   gap: 0.5rem;
 }
 
+/* Mobile app - hover effects disabled */
 /* .support-button:hover {
   background: #8b161a;
   transform: translateY(-1px);
@@ -579,15 +581,15 @@ onMounted(async () => {
   transition: transform 0.3s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .project-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   border-color: #AF1E23;
-}
-
-.project-card:hover::before {
-  transform: scaleX(1);
 } */
+
+/* Mobile app - hover effects disabled */
+/* .project-card:hover::before { ... } */
 
 .project-card.selected {
   border-color: #AF1E23;
@@ -623,6 +625,7 @@ onMounted(async () => {
   transition: all 0.3s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .project-card:hover .project-icon {
   transform: scale(1.05);
   box-shadow: 0 6px 16px rgba(175, 30, 35, 0.4);
@@ -703,6 +706,7 @@ onMounted(async () => {
   transition: all 0.3s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .project-card:hover .project-action {
   color: #AF1E23;
   transform: translateX(4px);
@@ -772,6 +776,7 @@ onMounted(async () => {
   gap: 0.5rem;
 }
 
+/* Mobile app - hover effects disabled */
 /* .help-button:hover {
   background: #3b82f6;
   color: white;
@@ -802,13 +807,14 @@ onMounted(async () => {
   gap: 0.5rem;
 }
 
-.logout-button:hover {
+/* Mobile app - hover effects disabled */
+/* .logout-button:hover {
   background: #fee;
   color: #dc2626;
   border-color: #dc2626;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
-}
+} */
 
 /* Transitions */
 .project-card-enter-active,

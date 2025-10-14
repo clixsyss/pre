@@ -529,10 +529,11 @@ onMounted(async () => {
   gap: 8px;
 }
 
-.sport-option:hover {
+/* Mobile app - hover effects disabled */
+/* .sport-option:hover {
   border-color: #AF1E23;
   background: #fff5f2;
-}
+} */
 
 .sport-option.active {
   background: #fff5f2;
@@ -577,10 +578,11 @@ onMounted(async () => {
   gap: 16px;
 }
 
-.court-option:hover {
+/* Mobile app - hover effects disabled */
+/* .court-option:hover {
   border-color: #AF1E23;
   background: #fff5f2;
-}
+} */
 
 .court-option.active {
   background: #fff5f2;
@@ -692,10 +694,11 @@ onMounted(async () => {
   min-height: 100px;
 }
 
-.date-option:hover {
+/* Mobile app - hover effects disabled */
+/* .date-option:hover {
   border-color: #AF1E23;
   background: #fff5f2;
-}
+} */
 
 .date-option.active {
   background: #AF1E23;
@@ -711,10 +714,11 @@ onMounted(async () => {
   position: relative;
 }
 
-.date-option.disabled:hover {
+/* Mobile app - hover effects disabled */
+/* .date-option.disabled:hover {
   border-color: #d1d5db;
   background: #f3f4f6;
-}
+} */
 
 .date-option.disabled .date-day,
 .date-option.disabled .date-number,
@@ -776,10 +780,11 @@ onMounted(async () => {
   gap: 4px;
 }
 
-.time-slot:hover:not(.reserved) {
+/* Mobile app - hover effects disabled */
+/* .time-slot:hover:not(.reserved) {
   border-color: #AF1E23;
   background: #fff5f2;
-}
+} */
 
 .time-slot.active {
   background: #AF1E23;
@@ -896,10 +901,11 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
-.confirm-booking-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .confirm-booking-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
-}
+} */
 
 .confirm-booking-btn:disabled {
   background: #ccc;
@@ -944,9 +950,10 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
-.retry-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .retry-btn:hover {
   background: #AF1E23;
-}
+} */
 
 .no-sports-icon {
   font-size: 4rem;
@@ -995,10 +1002,11 @@ onMounted(async () => {
   margin-top: 16px;
 }
 
-.select-project-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .select-project-btn:hover {
   background: #AF1E23;
   transform: translateY(-2px);
-}
+} */
 
 .debug-btn {
   background: #007bff;
@@ -1013,10 +1021,11 @@ onMounted(async () => {
   margin-top: 16px;
 }
 
-.debug-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .debug-btn:hover {
   background: #0056b3;
   transform: translateY(-2px);
-}
+} */
 
 /* Responsive Design */
 @media (max-width: 768px) {

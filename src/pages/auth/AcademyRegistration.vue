@@ -413,10 +413,11 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.back-button:hover {
+/* Mobile app - hover effects disabled */
+/* .back-button:hover {
   background: #f5f5f5;
   color: #333;
-}
+} */
 
 .page-header h1 {
   font-size: 1.75rem;
@@ -597,10 +598,11 @@ onMounted(() => {
   border: 1px solid #e1e5e9;
 }
 
-.cancel-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .cancel-btn:hover {
   background: #e9ecef;
   color: #333;
-}
+} */
 
 .submit-btn {
   background: linear-gradient(135deg, #AF1E23 0%, #d32f2f 100%);
@@ -608,10 +610,11 @@ onMounted(() => {
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
 }
 
-.submit-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .submit-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(175, 30, 35, 0.4);
-}
+} */
 
 .submit-btn:disabled {
   background: #ccc;
@@ -691,9 +694,10 @@ onMounted(() => {
   transition: background-color 0.2s ease;
 }
 
-.retry-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .retry-btn:hover {
   background: #AF1E23;
-}
+} */
 
 /* Success Message */
 .success-message {

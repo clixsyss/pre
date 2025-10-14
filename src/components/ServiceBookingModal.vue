@@ -493,11 +493,12 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: #f3f4f6;
   color: #374151;
   transform: rotate(90deg);
-}
+} */
 
 /* Modal Body */
 .modal-body {
@@ -521,10 +522,11 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
-.overview-card:hover {
+/* Mobile app - hover effects disabled */
+/* .overview-card:hover {
   border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.1);
-}
+} */
 
 .card-header {
   display: flex;
@@ -680,10 +682,11 @@ onUnmounted(() => {
   position: relative;
 }
 
-.chat-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .chat-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(175, 30, 35, 0.4);
-}
+} */
 
 .chat-badge {
   position: absolute;
@@ -731,12 +734,13 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
-.secondary-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .secondary-btn:hover {
   border-color: #AF1E23;
   color: #AF1E23;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.1);
-}
+} */
 
 /* Responsive Design */
 @media (max-width: 768px) {

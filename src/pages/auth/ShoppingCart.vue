@@ -260,8 +260,8 @@
           <!-- Star Rating -->
           <div class="star-rating-container">
             <div class="stars-wrapper">
-              <button
-                v-for="star in 5"
+              <button 
+                v-for="star in 5" 
                 :key="star"
                 class="star-button"
                 :class="{ 
@@ -269,8 +269,6 @@
                   'hover': star <= (hoverRating || currentRating)
                 }"
                 @click="currentRating = star"
-                @mouseenter="hoverRating = star"
-                @mouseleave="hoverRating = 0"
               >
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
@@ -749,11 +747,12 @@ onMounted(() => {
   backdrop-filter: blur(10px);
 }
 
-.back-button:hover {
+/* Mobile app - hover effects disabled */
+/* .back-button:hover {
   background: rgba(255, 255, 255, 0.3);
   border-color: rgba(255, 255, 255, 0.5);
   transform: translateX(-2px);
-}
+} */
 
 .hero-text {
   flex-direction: column;
@@ -812,11 +811,12 @@ onMounted(() => {
   gap: 8px;
 }
 
-.browse-stores-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .browse-stores-btn:hover {
   background: #c6c6c6;
   color: #231F20;
   transform: translateY(-2px);
-}
+} */
 
 .cart-content {
   display: grid;
@@ -929,6 +929,7 @@ onMounted(() => {
   margin: 0 0 12px 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -962,11 +963,12 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.quantity-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .quantity-btn:hover:not(:disabled) {
   background: var(--q-secondary);
   color: white;
   border-color: var(--q-secondary);
-}
+} */
 
 .quantity-btn:disabled {
   opacity: 0.5;
@@ -1013,10 +1015,11 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.remove-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .remove-btn:hover {
   background: #ff3742;
   transform: scale(1.05);
-}
+} */
 
 .order-summary {
   background: white;
@@ -1094,10 +1097,11 @@ onMounted(() => {
   gap: 8px;
 }
 
-.place-order-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .place-order-btn:hover:not(:disabled) {
   background: #0056b3;
   transform: translateY(-2px);
-}
+} */
 
 .place-order-btn:disabled {
   opacity: 0.6;
@@ -1153,10 +1157,11 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: #f5f5f5;
   color: #666;
-}
+} */
 
 .modal-body {
   padding: 0;
@@ -1478,11 +1483,12 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.continue-shopping-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .continue-shopping-btn:hover {
   background: #c6c6c6;
   color: #231F20;
   transform: translateY(-2px);
-}
+} */
 
 /* Responsive Design */
 @media (max-width: 768px) {
@@ -1913,10 +1919,11 @@ onMounted(() => {
   position: relative;
 }
 
-.star-button:hover {
+/* Mobile app - hover effects disabled */
+/* .star-button:hover {
   transform: scale(1.1);
   background: rgba(251, 191, 36, 0.1);
-}
+} */
 
 .star-button.filled {
   color: #fbbf24;
@@ -2018,11 +2025,12 @@ onMounted(() => {
   gap: 8px;
 }
 
-.skip-button:hover {
+/* Mobile app - hover effects disabled */
+/* .skip-button:hover {
   border-color: #d1d5db;
   color: #374151;
   background: #f9fafb;
-}
+} */
 
 .submit-button {
   flex: 2;
@@ -2042,10 +2050,11 @@ onMounted(() => {
   box-shadow: 0 4px 12px rgba(243, 124, 78, 0.3);
 }
 
-.submit-button:hover:not(.disabled) {
+/* Mobile app - hover effects disabled */
+/* .submit-button:hover:not(.disabled) {
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(243, 124, 78, 0.4);
-}
+} */
 
 .submit-button.disabled {
   background: #d1d5db;
@@ -2054,10 +2063,11 @@ onMounted(() => {
   transform: none;
 }
 
-.submit-button.disabled:hover {
+/* Mobile app - hover effects disabled */
+/* .submit-button.disabled:hover {
   transform: none;
   box-shadow: none;
-}
+} */
 
 /* Mobile Responsiveness */
 @media (max-width: 640px) {

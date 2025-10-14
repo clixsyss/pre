@@ -628,11 +628,12 @@ onActivated(async () => {
   flex-shrink: 0;
 }
 
-.back-button:hover {
+/* Mobile app - hover effects disabled */
+/* .back-button:hover {
   background: #e9ecef;
   color: #333;
   border-color: #AF1E23;
-}
+} */
 
 .header-content {
   flex: 1;
@@ -684,10 +685,8 @@ onActivated(async () => {
   flex-shrink: 0;
 }
 
-.refresh-button:hover:not(:disabled) {
-  background: #AF1E23;
-  transform: translateY(-1px);
-}
+/* Mobile app - hover effects disabled */
+/* .refresh-button:hover:not(:disabled) { ... } */
 
 .refresh-button:disabled {
   opacity: 0.6;
@@ -732,10 +731,11 @@ onActivated(async () => {
   transition: all 0.2s ease;
 }
 
-.connect-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .connect-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
-}
+} */
 
 .loading-spinner {
   width: 40px;
@@ -813,11 +813,12 @@ onActivated(async () => {
   font-weight: 500;
 }
 
-.room-tab:hover {
+/* Mobile app - hover effects disabled */
+/* .room-tab:hover {
   background: #e9ecef;
   color: #333;
   border-color: #AF1E23;
-}
+} */
 
 .room-tab.active {
   background: #AF1E23;
@@ -917,11 +918,12 @@ onActivated(async () => {
   gap: 3px;
 }
 
-.action-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .action-btn:hover {
   background: #e9ecef;
   color: #333;
   border-color: #AF1E23;
-}
+} */
 
 .devices-grid {
   display: grid;
@@ -938,11 +940,12 @@ onActivated(async () => {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
-.device-card:hover {
+/* Mobile app - hover effects disabled */
+/* .device-card:hover {
   border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
   transform: translateY(-1px);
-}
+} */
 
 .device-header {
   display: flex;
@@ -1143,11 +1146,14 @@ onActivated(async () => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
+/*
 .brightness-slider::-webkit-slider-thumb:hover,
 .temperature-slider::-webkit-slider-thumb:hover {
   transform: scale(1.1);
   box-shadow: 0 3px 8px rgba(255, 107, 53, 0.4);
 }
+*/
 
 .brightness-slider::-moz-range-thumb,
 .temperature-slider::-moz-range-thumb {
@@ -1179,11 +1185,12 @@ onActivated(async () => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
-.mode-select:hover {
+/* Mobile app - hover effects disabled */
+/* .mode-select:hover {
   border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
   transform: translateY(-1px);
-}
+} */
 
 .mode-select:focus {
   outline: none;

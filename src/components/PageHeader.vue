@@ -86,11 +86,12 @@ export default {
   flex-shrink: 0;
 }
 
-.back-button:hover {
+/* Mobile app - hover effects disabled */
+/* .back-button:hover {
   background: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.3);
   transform: translateX(-2px);
-}
+} */
 
 .back-button:active {
   transform: translateX(-1px);

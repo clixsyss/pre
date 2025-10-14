@@ -814,6 +814,7 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+/* Mobile app - hover effects disabled */
 /* .view-all-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
@@ -839,6 +840,7 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+/* Mobile app - hover effects disabled */
 /* .back-btn:hover {
   background: #e5e7eb;
   color: #374151;
@@ -881,6 +883,7 @@ onUnmounted(() => {
   min-width: fit-content;
 }
 
+/* Mobile app - hover effects disabled */
 /* .filter-tab:hover {
   color: #374151;
   background: #e5e7eb;
@@ -1014,6 +1017,7 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
+/* Mobile app - hover effects disabled */
 /* .news-card:hover {
   background: white;
   border-color: #e0e0e0;
@@ -1248,7 +1252,8 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
 }
 /* 
-.read-more-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .read-more-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
@@ -1472,6 +1477,7 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+/* Mobile app - hover effects disabled */
 /* .dialog-close-btn:hover {
   background: #e2e8f0;
   color: #334155;
@@ -1607,6 +1613,7 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .external-link:hover {
   transform: translateY(-1px);
 } */
@@ -1655,6 +1662,7 @@ onUnmounted(() => {
   transition: transform 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .external-link:hover .link-arrow {
   transform: translate(2px, -2px);
 } */
@@ -1683,6 +1691,7 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
 
+/* Mobile app - hover effects disabled */
 /* .dialog-action-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
@@ -1752,6 +1761,7 @@ onUnmounted(() => {
   justify-content: center;
 }
 
+/* Mobile app - hover effects disabled */
 /* .close-btn:hover {
   background: #f3f4f6;
   color: #374151;
@@ -1880,6 +1890,7 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .close-modal-btn:hover {
   background: #e5e7eb;
   transform: translateY(-1px);

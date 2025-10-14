@@ -343,11 +343,12 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
 }
 
-.action-btn.primary:hover {
+/* Mobile app - hover effects disabled */
+/* .action-btn.primary:hover {
   background: #991b1f;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
-}
+} */
 
 .action-btn.secondary {
   background: #f3f4f6;
@@ -355,10 +356,11 @@ onMounted(() => {
   border: 1px solid #e5e7eb;
 }
 
-.action-btn.secondary:hover {
+/* Mobile app - hover effects disabled */
+/* .action-btn.secondary:hover {
   background: #e5e7eb;
   color: #374151;
-}
+} */
 
 .close-btn {
   position: absolute;
@@ -378,11 +380,12 @@ onMounted(() => {
   backdrop-filter: blur(10px);
 }
 
-.close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: rgba(255, 255, 255, 1);
   color: #374151;
   transform: scale(1.1);
-}
+} */
 
 /* Mobile Optimizations */
 @media (max-width: 480px) {
@@ -413,7 +416,7 @@ onMounted(() => {
   }
 }
 
-/* Dark mode support */
+/* Dark mode support - currently disabled for mobile app */
 /* @media (prefers-color-scheme: dark) {
   .notification-popup {
     background: linear-gradient(135deg, #1f2937 0%, #111827 100%);

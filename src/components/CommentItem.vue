@@ -243,10 +243,11 @@ export default {
   margin-left: 0;
 }
 
-.comment-item:hover {
+/* Mobile app - hover effects disabled */
+/* .comment-item:hover {
   border-color: #cbd5e1;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
+} */
 
 .comment-header {
   display: flex;
@@ -321,19 +322,21 @@ export default {
   transition: all 0.2s ease;
 }
 
-.action-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .action-btn:hover {
   background: #f1f5f9;
   color: #AF1E23;
-}
+} */
 
 .delete-btn {
   color: #dc2626;
 }
 
-.delete-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .delete-btn:hover {
   background: #fef2f2;
   color: #b91c1c;
-}
+} */
 
 .comment-content {
   margin-bottom: 8px;
@@ -367,10 +370,11 @@ export default {
   font-size: 12px;
 }
 
-.reaction-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .reaction-btn:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
-}
+} */
 
 .reaction-btn.active {
   background: #fef2f2;
@@ -407,10 +411,11 @@ export default {
   transition: all 0.2s ease;
 }
 
-.quick-reaction-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .quick-reaction-btn:hover {
   background: #e2e8f0;
   transform: scale(1.1);
-}
+} */
 
 .quick-reaction-btn.active {
   background: #fef2f2;

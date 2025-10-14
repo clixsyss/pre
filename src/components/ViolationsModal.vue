@@ -329,10 +329,11 @@ onMounted(() => {
   justify-content: center;
 }
 
-.close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: #f3f4f6;
   color: #374151;
-}
+} */
 
 .modal-body {
   max-height: calc(85vh - 100px);
@@ -413,10 +414,11 @@ onMounted(() => {
   position: relative;
 }
 
-.violation-card:hover {
+/* Mobile app - hover effects disabled */
+/* .violation-card:hover {
   border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.1);
-}
+} */
 
 .violation-header {
   display: flex;

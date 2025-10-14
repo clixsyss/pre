@@ -294,9 +294,10 @@ onMounted(() => {
   transition: background-color 0.2s ease;
 }
 
-.back-button:hover {
+/* Mobile app - hover effects disabled */
+/* .back-button:hover {
   background: #e9ecef;
-}
+} */
 
 .header-text h1 {
   font-size: 1.5rem;
@@ -362,9 +363,10 @@ onMounted(() => {
   transition: background-color 0.2s ease;
 }
 
-.retry-button:hover {
+/* Mobile app - hover effects disabled */
+/* .retry-button:hover {
   background: #AF1E23;
-}
+} */
 
 .content {
   padding: 20px;
@@ -580,11 +582,12 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.program-card-modern:hover {
+/* Mobile app - hover effects disabled */
+/* .program-card-modern:hover {
   border-color: #AF1E23;
   box-shadow: 0 6px 20px rgba(175, 30, 35, 0.15);
   transform: translateY(-2px);
-}
+} */
 
 .program-card-header {
   display: flex;
@@ -683,10 +686,11 @@ onMounted(() => {
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
 }
 
-.register-btn-modern:hover {
+/* Mobile app - hover effects disabled */
+/* .register-btn-modern:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(175, 30, 35, 0.4);
-}
+} */
 
 .register-btn-modern svg {
   flex-shrink: 0;

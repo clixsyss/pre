@@ -357,6 +357,7 @@ const goToDevices = () => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
+/* Mobile app - hover effects disabled */
 /* .project-connection-item:hover {
   border-color: #AF1E23;
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.15);
@@ -421,7 +422,8 @@ const goToDevices = () => {
   box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
 }
 /* 
-.control-devices-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .control-devices-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.6);
 } */
@@ -464,6 +466,7 @@ const goToDevices = () => {
   box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
 }
 
+/* Mobile app - hover effects disabled */
 /* .connect-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.6);
@@ -568,6 +571,7 @@ const goToDevices = () => {
   align-self: flex-start;
 }
 
+/* Mobile app - hover effects disabled */
 /* .connect-btn:hover:not(:disabled) {
   background: #AF1E23;
   transform: translateY(-2px);
@@ -627,6 +631,7 @@ const goToDevices = () => {
   transition: all 0.3s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .control-btn:hover {
   background: #218838;
   transform: translateY(-1px);
@@ -647,6 +652,7 @@ const goToDevices = () => {
   transition: all 0.3s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .disconnect-btn:hover {
   background: #dc3545;
   color: white;
@@ -773,6 +779,7 @@ const goToDevices = () => {
   justify-content: center;
 }
 
+/* Mobile app - hover effects disabled */
 /* .close-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.2);
   transform: scale(1.05);
@@ -933,6 +940,7 @@ const goToDevices = () => {
   min-width: 100px;
 }
 
+/* Mobile app - hover effects disabled */
 /* .cancel-btn:hover:not(:disabled) {
   background: #e5e7eb;
   border-color: #d1d5db;
@@ -964,6 +972,7 @@ const goToDevices = () => {
   box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
 }
 
+/* Mobile app - hover effects disabled */
 /* .connect-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.6);

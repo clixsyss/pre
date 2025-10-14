@@ -2233,9 +2233,10 @@ onMounted(() => {
   text-align: left;
 }
 
-.accordion-header:hover {
+/* Mobile app - hover effects disabled */
+/* .accordion-header:hover {
   background: #f9fafb;
-}
+} */
 
 .accordion-header.active {
   background: #f9fafb;
@@ -2355,11 +2356,12 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
 }
 
-.add-project-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .add-project-btn:hover {
   background: #991b1f;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
-}
+} */
 
 /* Info Grid */
 .info-grid {
@@ -2379,11 +2381,12 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.info-card:hover {
+/* Mobile app - hover effects disabled */
+/* .info-card:hover {
   border-color: #AF1E23;
   box-shadow: 0 2px 8px rgba(175, 30, 35, 0.1);
   transform: translateY(-1px);
-}
+} */
 
 .info-icon {
   width: 40px;
@@ -2448,10 +2451,11 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.settings-card:hover {
+/* Mobile app - hover effects disabled */
+/* .settings-card:hover {
   border-color: #AF1E23;
   box-shadow: 0 2px 8px rgba(175, 30, 35, 0.1);
-}
+} */
 
 .settings-icon {
   width: 48px;
@@ -2497,10 +2501,11 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.manage-devices-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .manage-devices-btn:hover {
   background: #991b1f;
   transform: translateY(-1px);
-}
+} */
 
 /* Guidelines Section */
 .guidelines-section {
@@ -2528,11 +2533,12 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
 }
 
-.guidelines-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .guidelines-btn:hover {
   background: #991b1f;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
-}
+} */
 
 /* Actions Section */
 .actions-section {
@@ -2566,11 +2572,12 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
 }
 
-.compact-btn.primary:hover {
+/* Mobile app - hover effects disabled */
+/* .compact-btn.primary:hover {
   background: #991b1f;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
-}
+} */
 
 .compact-btn.secondary {
   background: #f3f4f6;
@@ -2578,12 +2585,13 @@ onMounted(() => {
   border: 1px solid #e5e7eb;
 }
 
-.compact-btn.secondary:hover {
+/* Mobile app - hover effects disabled */
+/* .compact-btn.secondary:hover {
   background: #fef2f2;
   color: #ef4444;
   border-color: #fecaca;
   transform: translateY(-1px);
-}
+} */
 
 .action-buttons {
   display: grid;
@@ -2605,11 +2613,12 @@ onMounted(() => {
   width: 100%;
 }
 
-.action-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .action-btn:hover {
   border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.1);
   transform: translateY(-2px);
-}
+} */
 
 .action-btn.primary {
   border-color: #AF1E23;
@@ -2617,15 +2626,17 @@ onMounted(() => {
   color: white;
 }
 
-.action-btn.primary:hover {
+/* Mobile app - hover effects disabled */
+/* .action-btn.primary:hover {
   background: linear-gradient(135deg, #991b1f 0%, #991b1f 100%);
   box-shadow: 0 6px 16px rgba(175, 30, 35, 0.3);
-}
+} */
 
-.action-btn.secondary:hover {
+/* Mobile app - hover effects disabled */
+/* .action-btn.secondary:hover {
   border-color: #ef4444;
   background: #fef2f2;
-}
+} */
 
 .btn-icon {
   width: 48px;
@@ -2761,9 +2772,10 @@ onMounted(() => {
   transition: background-color 0.3s ease;
 }
 
-.retry-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .retry-btn:hover {
   background-color: #991b1f;
-}
+} */
 
 /* Modal Styles */
 .modal-overlay {
@@ -2828,18 +2840,18 @@ onMounted(() => {
   color: #666;
 }
 
-.cancel-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .cancel-btn:hover {
   background-color: #cbd3da;
-}
+} */
 
 .confirm-btn {
   background-color: #dc3545;
   color: white;
 }
 
-.confirm-btn:hover:not(:disabled) {
-  background-color: #c82333;
-}
+/* Mobile app - hover effects disabled */
+/* .confirm-btn:hover:not(:disabled) { ... } */
 
 .confirm-btn:disabled {
   background-color: #ccc;
@@ -2965,10 +2977,11 @@ onMounted(() => {
   transform: translateY(-1px);
 }
 
-.form-group select:hover {
+.form-group /* Mobile app - hover effects disabled */
+/* select:hover {
   border-color: #AF1E23;
   background-color: #fff5f2;
-}
+} */
 
 /* Custom dropdown options styling */
 .form-group select option {
@@ -2981,11 +2994,12 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.form-group select option:hover {
+.form-group select /* Mobile app - hover effects disabled */
+/* option:hover {
   background-color: #fff5f2;
   color: #AF1E23;
   transform: translateX(4px);
-}
+} */
 
 .form-group select option:checked {
   background: linear-gradient(135deg, #AF1E23, #AF1E23);
@@ -3111,10 +3125,11 @@ onMounted(() => {
   position: relative;
 }
 
-.unified-project-card:hover {
+/* Mobile app - hover effects disabled */
+/* .unified-project-card:hover {
   border-color: #d1d5db;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
+} */
 
 .unified-project-card.current {
   border-color: #AF1E23;
@@ -3232,11 +3247,12 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
 
-.manage-devices-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .manage-devices-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-}
+} */
 
 .smart-mirror-header {
   display: flex;
@@ -3331,10 +3347,11 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.control-devices-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .control-devices-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
-}
+} */
 
 .disconnect-btn {
   display: flex;
@@ -3351,10 +3368,8 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.disconnect-btn:hover:not(:disabled) {
-  background: #b91c1c;
-  transform: translateY(-1px);
-}
+/* Mobile app - hover effects disabled */
+/* .disconnect-btn:hover:not(:disabled) { ... } */
 
 .disconnect-btn:disabled {
   opacity: 0.6;
@@ -3415,10 +3430,11 @@ onMounted(() => {
   align-self: flex-start;
 }
 
-.connect-smart-mirror-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .connect-smart-mirror-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
-}
+} */
 
 /* Project Actions */
 .project-actions {
@@ -3443,11 +3459,12 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.switch-project-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .switch-project-btn:hover {
   background: #f3f4f6;
   border-color: #9ca3af;
   transform: translateY(-1px);
-}
+} */
 
 /* Modal Styles (reused from SmartMirrorConnection) */
 .modal-overlay {
@@ -3576,10 +3593,8 @@ onMounted(() => {
   justify-content: center;
 }
 
-.close-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
-}
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover:not(:disabled) { ... } */
 
 .close-btn:disabled {
   opacity: 0.5;
@@ -3764,12 +3779,8 @@ onMounted(() => {
   min-width: 100px;
 }
 
-.cancel-btn:hover:not(:disabled) {
-  background: #e5e7eb;
-  border-color: #d1d5db;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
+/* Mobile app - hover effects disabled */
+/* .cancel-btn:hover:not(:disabled) { ... } */
 
 .cancel-btn:disabled {
   cursor: not-allowed;
@@ -3795,10 +3806,8 @@ onMounted(() => {
   box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
 }
 
-.connect-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.6);
-}
+/* Mobile app - hover effects disabled */
+/* .connect-btn:hover:not(:disabled) { ... } */
 
 .connect-btn:disabled {
   opacity: 0.6;
@@ -4022,10 +4031,11 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.device-item:hover {
+/* Mobile app - hover effects disabled */
+/* .device-item:hover {
   border-color: #AF1E23;
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.1);
-}
+} */
 
 .device-info {
   flex: 1;
@@ -4155,11 +4165,12 @@ input:checked+.toggle-slider:before {
   transition: all 0.2s ease;
 }
 
-.device-management-modal .cancel-btn:hover {
+.device-management-modal /* Mobile app - hover effects disabled */
+/* .cancel-btn:hover {
   border-color: #d1d5db;
   background: #f9fafb;
   color: #374151;
-}
+} */
 
 .device-management-modal .save-btn {
   flex: 1;
@@ -4179,10 +4190,8 @@ input:checked+.toggle-slider:before {
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
 
-.device-management-modal .save-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
-}
+.device-management-modal /* Mobile app - hover effects disabled */
+/* .save-btn:hover:not(:disabled) { ... } */
 
 .device-management-modal .save-btn:disabled {
   opacity: 0.7;
@@ -4253,10 +4262,11 @@ input:checked+.toggle-slider:before {
   text-align: left;
 }
 
-.violations-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .violations-btn:hover {
   border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.1);
-}
+} */
 
 .violations-btn-content {
   display: flex;
@@ -4295,9 +4305,10 @@ input:checked+.toggle-slider:before {
   transition: transform 0.2s ease;
 }
 
-.violations-btn:hover .violations-btn-arrow {
+/* Mobile app - hover effects disabled */
+/* .violations-btn:hover .violations-btn-arrow {
   transform: translateX(4px);
-}
+} */
 
 .no-violations {
   display: flex;
@@ -4321,10 +4332,11 @@ input:checked+.toggle-slider:before {
   margin-bottom: 1rem;
 }
 
-.test-violation-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .test-violation-btn:hover {
   background: #8b161a;
   transform: translateY(-1px);
-}
+} */
 
 .no-violations-icon {
   width: 64px;
@@ -4459,9 +4471,10 @@ input:checked+.toggle-slider:before {
   transition: transform 0.2s ease;
 }
 
-.complaints-btn:hover .complaints-btn-arrow {
+/* Mobile app - hover effects disabled */
+/* .complaints-btn:hover .complaints-btn-arrow {
   transform: translateX(4px);
-}
+} */
 
 /* Support Icon Styles */
 .support-icon {
@@ -4601,10 +4614,11 @@ input:checked+.toggle-slider:before {
   transition: all 0.2s ease;
 }
 
-.settings-group:hover {
+/* Mobile app - hover effects disabled */
+/* .settings-group:hover {
   border-color: #d1d5db;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
+} */
 
 .settings-header {
   display: flex;
@@ -4658,10 +4672,11 @@ input:checked+.toggle-slider:before {
   position: relative;
 }
 
-.option-item:hover {
+/* Mobile app - hover effects disabled */
+/* .option-item:hover {
   border-color: #d1d5db;
   background: #f9fafb;
-}
+} */
 
 .option-item.active {
   border-color: #AF1E23;
@@ -4728,10 +4743,11 @@ input:checked+.toggle-slider:before {
   border-color: #374151;
 }
 
-.dark .settings-group:hover {
+.dark /* Mobile app - hover effects disabled */
+/* .settings-group:hover {
   border-color: #4b5563;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
+} */
 
 .dark .settings-title h4 {
   color: #f9fafb;
@@ -4746,10 +4762,11 @@ input:checked+.toggle-slider:before {
   border-color: #374151;
 }
 
-.dark .option-item:hover {
+.dark /* Mobile app - hover effects disabled */
+/* .option-item:hover {
   background: #1f2937;
   border-color: #4b5563;
-}
+} */
 
 .dark .option-item.active {
   background: #2d1b1b;
@@ -4836,11 +4853,12 @@ input:checked+.toggle-slider:before {
   transition: all 0.3s ease;
 }
 
-.family-member-card:hover {
+/* Mobile app - hover effects disabled */
+/* .family-member-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(175, 30, 35, 0.15);
   border-color: #AF1E23;
-}
+} */
 
 .member-avatar {
   flex-shrink: 0;

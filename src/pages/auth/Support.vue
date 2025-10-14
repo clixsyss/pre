@@ -163,11 +163,12 @@ onMounted(async () => {
   box-shadow: 0 4px 15px rgba(175, 30, 35, 0.3);
 }
 
-.start-chat-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .start-chat-btn:hover {
   background-color: #8a181c;
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(175, 30, 35, 0.4);
-}
+} */
 
 .start-chat-btn svg {
   width: 22px;
@@ -229,11 +230,12 @@ onMounted(async () => {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-.chat-card:hover {
+/* Mobile app - hover effects disabled */
+/* .chat-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   border-color: #AF1E23;
-}
+} */
 
 .chat-info {
   display: flex;

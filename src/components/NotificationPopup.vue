@@ -109,10 +109,11 @@ const getIconColor = (type) => {
   transition: all 0.3s ease;
 }
 
-.notification-popup:hover {
+/* Mobile app - hover effects disabled */
+/* .notification-popup:hover {
   transform: translateX(-5px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-}
+} */
 
 .notification-success {
   border-left-color: #21ba45;
@@ -159,10 +160,11 @@ const getIconColor = (type) => {
   flex-shrink: 0;
 }
 
-.notification-close:hover {
+/* Mobile app - hover effects disabled */
+/* .notification-close:hover {
   background-color: #f5f5f5;
   color: #666;
-}
+} */
 
 .notification-progress {
   height: 3px;

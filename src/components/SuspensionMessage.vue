@@ -254,10 +254,11 @@ export default {
   transition: all 0.2s ease;
 }
 
-.detail-card:hover {
+/* Mobile app - hover effects disabled */
+/* .detail-card:hover {
   background: #f3f4f6;
   border-color: #d1d5db;
-}
+} */
 
 .detail-icon {
   display: flex;
@@ -344,11 +345,12 @@ export default {
   letter-spacing: 0.025em;
 }
 
-.support-button:hover {
+/* Mobile app - hover effects disabled */
+/* .support-button:hover {
   background: linear-gradient(135deg, #15803d 0%, #166534 100%);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(22, 163, 74, 0.4);
-}
+} */
 
 .support-button:active {
   transform: translateY(0);
@@ -373,11 +375,12 @@ export default {
   letter-spacing: 0.025em;
 }
 
-.dismiss-button:hover {
+/* Mobile app - hover effects disabled */
+/* .dismiss-button:hover {
   background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
-}
+} */
 
 .dismiss-button:active {
   transform: translateY(0);

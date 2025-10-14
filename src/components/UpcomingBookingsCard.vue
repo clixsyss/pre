@@ -200,11 +200,12 @@ onMounted(async () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.upcoming-bookings-card:hover {
+/* Mobile app - hover effects disabled */
+/* .upcoming-bookings-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   border-color: #AF1E23;
-}
+} */
 
 .card-header h3 {
   font-size: 1.125rem;
@@ -257,9 +258,10 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
-.booking-item:hover {
+/* Mobile app - hover effects disabled */
+/* .booking-item:hover {
   background: #fff5f2;
-}
+} */
 
 .booking-info {
   flex: 1;

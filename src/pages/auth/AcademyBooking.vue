@@ -352,10 +352,11 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
-.back-button:hover {
+/* Mobile app - hover effects disabled */
+/* .back-button:hover {
   background: #f5f5f5;
   color: #333;
-}
+} */
 
 .page-header h1 {
   font-size: 1.75rem;
@@ -414,11 +415,12 @@ onMounted(async () => {
   align-items: center;
 }
 
-.academy-option:hover,
+/* Mobile app - hover effects disabled */
+/* .academy-option:hover,
 .program-option:hover {
   border-color: #AF1E23;
   background: #fff5f2;
-}
+} */
 
 .academy-option.active,
 .program-option.active {
@@ -476,10 +478,11 @@ onMounted(async () => {
   transition: opacity 0.3s ease;
 }
 
-.academy-option:hover .academy-arrow,
+/* Mobile app - hover effects disabled */
+/* .academy-option:hover .academy-arrow,
 .program-option:hover .program-arrow {
   opacity: 1;
-}
+} */
 
 /* Modern Program Hero Card */
 .program-hero-card {
@@ -541,10 +544,11 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
-.info-pill:hover {
+/* Mobile app - hover effects disabled */
+/* .info-pill:hover {
   background: #e2e8f0;
   transform: translateY(-1px);
-}
+} */
 
 .info-pill svg {
   flex-shrink: 0;
@@ -740,10 +744,11 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
-.confirm-enrollment-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .confirm-enrollment-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
-}
+} */
 
 /* Responsive Design */
 @media (max-width: 768px) {

@@ -345,10 +345,11 @@ watch(currentProject, (newProject) => {
   transition: all 0.3s ease;
 }
 
-.program-item:hover {
+/* Mobile app - hover effects disabled */
+/* .program-item:hover {
   border-color: #AF1E23;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
+} */
 
 .program-item.expanded {
   border-color: #AF1E23;
@@ -363,9 +364,10 @@ watch(currentProject, (newProject) => {
   transition: background-color 0.2s ease;
 }
 
-.program-header:hover {
+/* Mobile app - hover effects disabled */
+/* .program-header:hover {
   background: rgba(255, 107, 53, 0.05);
-}
+} */
 
 .program-basic-info {
   display: flex;
@@ -595,10 +597,11 @@ watch(currentProject, (newProject) => {
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
 }
 
-.register-button-compact:hover {
+/* Mobile app - hover effects disabled */
+/* .register-button-compact:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(175, 30, 35, 0.4);
-}
+} */
 
 .register-button-compact svg {
   flex-shrink: 0;
@@ -673,10 +676,11 @@ watch(currentProject, (newProject) => {
   transition: background-color 0.2s ease;
 }
 
-.retry-btn:hover,
+/* Mobile app - hover effects disabled */
+/* .retry-btn:hover,
 .select-project-btn:hover {
   background: #AF1E23;
-}
+} */
 
 /* Responsive Design */
 @media (max-width: 768px) {

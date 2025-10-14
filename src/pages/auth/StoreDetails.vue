@@ -478,11 +478,12 @@ onMounted(() => {
   backdrop-filter: blur(10px);
 }
 
-.back-button:hover {
+/* Mobile app - hover effects disabled */
+/* .back-button:hover {
   background: rgba(255, 255, 255, 0.3);
   border-color: rgba(255, 255, 255, 0.5);
   transform: translateX(-2px);
-}
+} */
 
 .hero-text {
   flex-direction: column;
@@ -543,10 +544,11 @@ onMounted(() => {
   transition: all 0.3s ease;
 }
 
-.store-image:hover img {
+/* Mobile app - hover effects disabled */
+/* .store-image:hover img {
   transform: scale(1.05);
   filter: brightness(1.05);
-}
+} */
 
 .store-placeholder {
   width: 100%;
@@ -676,11 +678,12 @@ onMounted(() => {
   position: relative;
 }
 
-.cart-button:hover {
+/* Mobile app - hover effects disabled */
+/* .cart-button:hover {
   background-color: #1a1a1a;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
+} */
 
 .cart-count {
   position: absolute;
@@ -807,11 +810,12 @@ onMounted(() => {
   height: 100%;
 }
 
-.product-card:hover {
+/* Mobile app - hover effects disabled */
+/* .product-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   border-color: #AF1E23;
-}
+} */
 
 .product-image-container {
   position: relative;
@@ -844,10 +848,11 @@ onMounted(() => {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.product-card:hover .product-img {
+/* Mobile app - hover effects disabled */
+/* .product-card:hover .product-img {
   transform: scale(1.08);
   filter: brightness(1.05);
-}
+} */
 
 .product-placeholder {
   width: 100%;
@@ -909,11 +914,12 @@ onMounted(() => {
   color: #6b7280;
 }
 
-.action-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .action-btn:hover {
   background: white;
   transform: scale(1.1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
+} */
 
 .action-btn.active {
   color: #ef4444;
@@ -1023,11 +1029,12 @@ onMounted(() => {
   position: relative;
 }
 
-.add-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .add-btn:hover {
   background-color: #1a1a1a;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
+} */
 
 .add-btn:disabled {
   background-color: #9ca3af;

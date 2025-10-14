@@ -371,6 +371,7 @@ const getRequestPreview = (request) => {
   box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
 }
 
+/* Mobile app - hover effects disabled */
 /* .tab-btn:hover:not(.active) {
   background: #f5f5f5;
   color: #333;
@@ -443,11 +444,12 @@ const getRequestPreview = (request) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.service-card:hover {
+/* Mobile app - hover effects disabled */
+/* .service-card:hover {
   transform: translateY(-2px);
   border-color: #AF1E23;
   box-shadow: 0 8px 24px rgba(175, 30, 35, 0.12);
-}
+} */
 
 .service-icon {
   color: #AF1E23;
@@ -486,10 +488,11 @@ const getRequestPreview = (request) => {
   transition: all 0.2s ease;
 }
 
-.service-card:hover .service-arrow {
+/* Mobile app - hover effects disabled */
+/* .service-card:hover .service-arrow {
   color: #AF1E23;
   transform: translateX(4px);
-}
+} */
 
 /* Service Image Styles */
 .service-image {
@@ -526,11 +529,12 @@ const getRequestPreview = (request) => {
   position: relative;
 }
 
-.request-item:hover {
+/* Mobile app - hover effects disabled */
+/* .request-item:hover {
   transform: translateY(-2px);
   border-color: #AF1E23;
   box-shadow: 0 8px 24px rgba(175, 30, 35, 0.12);
-}
+} */
 
 .request-item-header {
   display: flex;
@@ -624,10 +628,11 @@ const getRequestPreview = (request) => {
   transition: all 0.2s ease;
 }
 
-.chat-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .chat-btn:hover {
   background: #8B1A1E;
   transform: translateY(-1px);
-}
+} */
 
 /* Empty State */
 .empty-state {
@@ -667,10 +672,11 @@ const getRequestPreview = (request) => {
   margin-top: 16px;
 }
 
-.primary-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .primary-btn:hover {
   background: #8B1A1E;
   transform: translateY(-1px);
-}
+} */
 
 /* Chat Modal Styles */
 /* Removed chat-modal-overlay styles as chat opens in a page */

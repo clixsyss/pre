@@ -443,9 +443,10 @@ const confirmBooking = async () => {
   font-weight: 500;
 }
 
-.retry-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .retry-btn:hover {
   background: #8B1A1E;
-}
+} */
 
 /* Services List */
 .services-list {
@@ -477,12 +478,13 @@ const confirmBooking = async () => {
   border-bottom: none;
 }
 
-.service-item:hover {
+/* Mobile app - hover effects disabled */
+/* .service-item:hover {
   background: #f9fafb;
   margin: 0 -16px;
   padding: 16px;
   border-radius: 8px;
-}
+} */
 
 .service-info {
   flex: 1;
@@ -517,10 +519,11 @@ const confirmBooking = async () => {
   transition: all 0.2s ease;
 }
 
-.service-item:hover .service-arrow {
+/* Mobile app - hover effects disabled */
+/* .service-item:hover .service-arrow {
   color: #AF1E23;
   transform: translateX(4px);
-}
+} */
 
 /* No Services State */
 .no-services {
@@ -604,10 +607,11 @@ const confirmBooking = async () => {
   transition: all 0.2s ease;
 }
 
-.close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: #f3f4f6;
   color: #374151;
-}
+} */
 
 .dialog-content {
   padding: 20px;
@@ -667,10 +671,11 @@ const confirmBooking = async () => {
   background: white;
 }
 
-.day-option:hover:not(.unavailable) {
+/* Mobile app - hover effects disabled */
+/* .day-option:hover:not(.unavailable) {
   border-color: #AF1E23;
   background: #fef2f2;
-}
+} */
 
 .day-option.selected {
   border-color: #AF1E23;
@@ -748,10 +753,11 @@ const confirmBooking = async () => {
   background: white;
 }
 
-.time-slot:hover:not(.unavailable) {
+/* Mobile app - hover effects disabled */
+/* .time-slot:hover:not(.unavailable) {
   border-color: #AF1E23;
   background: #fef2f2;
-}
+} */
 
 .time-slot.selected {
   border-color: #AF1E23;
@@ -803,10 +809,11 @@ const confirmBooking = async () => {
   min-width: 150px;
 }
 
-.book-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .book-btn:hover:not(:disabled) {
   background: #8B1A1E;
   transform: translateY(-1px);
-}
+} */
 
 .book-btn:disabled {
   background: #d1d5db;

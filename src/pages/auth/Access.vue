@@ -1100,9 +1100,10 @@ onMounted(async () => {
   }
 }
 
-.fab-button:hover {
+/* Mobile app - hover effects disabled */
+/* .fab-button:hover {
   transform: scale(1.05);
-}
+} */
 
 /* Responsive Design */
 @media (max-width: 768px) {

@@ -656,9 +656,10 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: rgba(255, 255, 255, 0.3);
-}
+} */
 
 .dialog-content {
   flex: 1;
@@ -792,10 +793,11 @@ onMounted(() => {
   align-self: flex-start;
 }
 
-.password-reset-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .password-reset-btn:hover:not(:disabled) {
   background: #e2e8f0;
   color: #475569;
-}
+} */
 
 .password-reset-btn:disabled {
   opacity: 0.6;
@@ -835,19 +837,21 @@ onMounted(() => {
   border: 2px solid #e2e8f0;
 }
 
-.cancel-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .cancel-btn:hover:not(:disabled) {
   background: #e2e8f0;
   color: #475569;
-}
+} */
 
 .save-btn {
   background: #AF1E23;
   color: white;
 }
 
-.save-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .save-btn:hover:not(:disabled) {
   background: #8b1a1e;
-}
+} */
 
 .save-btn:disabled, .cancel-btn:disabled {
   opacity: 0.6;
@@ -942,9 +946,10 @@ onMounted(() => {
   transition: background-color 0.3s ease;
 }
 
-.upload-profile-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .upload-profile-btn:hover {
   background: #8b161a;
-}
+} */
 
 /* Documents Section */
 .documents-grid {
@@ -964,9 +969,10 @@ onMounted(() => {
   transition: border-color 0.3s ease;
 }
 
-.document-card:hover {
+/* Mobile app - hover effects disabled */
+/* .document-card:hover {
   border-color: #AF1E23;
-}
+} */
 
 .document-icon {
   width: 48px;
@@ -1015,11 +1021,12 @@ onMounted(() => {
   transition: all 0.3s ease;
 }
 
-.view-doc-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .view-doc-btn:hover {
   background: #AF1E23;
   color: white;
   border-color: #AF1E23;
-}
+} */
 
 /* Document Modal Styles */
 .modal-overlay {

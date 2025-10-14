@@ -54,10 +54,11 @@ const { notifications, removeNotification } = useNotification()
   transition: all 0.3s ease;
 }
 
-.notification:hover {
+/* Mobile app - hover effects disabled */
+/* .notification:hover {
   transform: translateX(-4px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
-}
+} */
 
 .notification-success {
   border-left-color: #10b981;
@@ -122,10 +123,11 @@ const { notifications, removeNotification } = useNotification()
   flex-shrink: 0;
 }
 
-.notification-close:hover {
+/* Mobile app - hover effects disabled */
+/* .notification-close:hover {
   color: #6b7280;
   background: #f3f4f6;
-}
+} */
 
 .notification-progress {
   position: absolute;

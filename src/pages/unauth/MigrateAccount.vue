@@ -711,9 +711,10 @@ const handleDirectMigration = async () => {
   font-weight: 600;
 }
 
-.help-link:hover {
+/* Mobile app - hover effects disabled */
+/* .help-link:hover {
   text-decoration: underline;
-}
+} */
 
 /* Responsive design */
 @media (max-width: 480px) {

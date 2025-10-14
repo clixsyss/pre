@@ -666,6 +666,7 @@ const getLastMessagePreview = (booking) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+/* Mobile app - hover effects disabled */
 /* .service-card:hover {
   transform: translateY(-2px);
   border-color: #AF1E23;
@@ -714,6 +715,7 @@ const getLastMessagePreview = (booking) => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .service-card:hover .service-arrow {
   color: #AF1E23;
   transform: translateX(4px);
@@ -838,6 +840,7 @@ const getLastMessagePreview = (booking) => {
   font-weight: 500;
 }
 
+/* Mobile app - hover effects disabled */
 /* .retry-btn:hover {
   background: #8B1A1E;
 } */
@@ -955,6 +958,7 @@ const getLastMessagePreview = (booking) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+/* Mobile app - hover effects disabled */
 /* .booking-card:hover {
   transform: translateY(-2px);
   border-color: #AF1E23;
@@ -1174,6 +1178,7 @@ const getLastMessagePreview = (booking) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+/* Mobile app - hover effects disabled */
 /* .facility-card:hover {
   transform: translateY(-2px);
   border-color: #AF1E23;
@@ -1217,6 +1222,7 @@ const getLastMessagePreview = (booking) => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .facility-card:hover .facility-arrow {
   color: #AF1E23;
   transform: translateX(4px);

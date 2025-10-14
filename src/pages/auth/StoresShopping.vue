@@ -1522,6 +1522,7 @@ watch(() => route.query.tab, (newTab) => {
   height: 100%;
 }
 
+/* Mobile app - hover effects disabled */
 /* .store-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -1535,6 +1536,7 @@ watch(() => route.query.tab, (newTab) => {
   cursor: not-allowed;
 }
 
+/* Mobile app - hover effects disabled */
 /* .store-card.inactive:hover {
   transform: none;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -1562,6 +1564,7 @@ watch(() => route.query.tab, (newTab) => {
   border-radius: 0;
 }
 
+/* Mobile app - hover effects disabled */
 /* .store-card:hover .store-image {
   transform: scale(1.08);
   filter: brightness(1.05);
@@ -1646,6 +1649,7 @@ watch(() => route.query.tab, (newTab) => {
   color: #6b7280;
 }
 
+/* Mobile app - hover effects disabled */
 /* .action-btn:hover {
   background: white;
   transform: scale(1.1);
@@ -1852,6 +1856,7 @@ watch(() => route.query.tab, (newTab) => {
   min-height: 56px;
 }
 
+/* Mobile app - hover effects disabled */
 /* .tab-btn:hover:not(.active) {
   background: rgba(255, 255, 255, 0.5);
   transform: translateY(-1px);
@@ -1920,6 +1925,7 @@ watch(() => route.query.tab, (newTab) => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .refresh-btn:hover:not(:disabled) {
   border-color: var(--q-secondary);
   color: var(--q-secondary);
@@ -2023,6 +2029,7 @@ watch(() => route.query.tab, (newTab) => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .start-shopping-btn:hover {
   background: #0056b3;
   transform: translateY(-1px);
@@ -2044,6 +2051,7 @@ watch(() => route.query.tab, (newTab) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+/* Mobile app - hover effects disabled */
 /* .order-card:hover {
   transform: translateY(-2px);
   border-color: var(--q-secondary);
@@ -2219,6 +2227,7 @@ watch(() => route.query.tab, (newTab) => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .view-details-btn:hover {
   border-color: var(--q-secondary);
   color: var(--q-secondary);
@@ -2313,6 +2322,7 @@ watch(() => route.query.tab, (newTab) => {
   justify-content: center;
 }
 
+/* Mobile app - hover effects disabled */
 /* .close-btn:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: scale(1.05);
@@ -2427,6 +2437,7 @@ watch(() => route.query.tab, (newTab) => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .summary-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
@@ -2551,6 +2562,7 @@ watch(() => route.query.tab, (newTab) => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .item-card:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
@@ -2769,11 +2781,12 @@ watch(() => route.query.tab, (newTab) => {
   transition: all 0.2s ease;
 }
 
-.cancel-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .cancel-btn:hover {
   background: #ef4444;
   color: white;
   transform: translateY(-1px);
-}
+} */
 
 .cancel-btn.processing-cancel {
   background: #f59e0b;
@@ -2781,7 +2794,8 @@ watch(() => route.query.tab, (newTab) => {
   color: white;
 }
 /* 
-.cancel-btn.processing-cancel:hover {
+/* Mobile app - hover effects disabled */
+/* .cancel-btn.processing-cancel:hover {
   background: #d97706;
   border-color: #d97706;
 } */
@@ -2924,6 +2938,7 @@ watch(() => route.query.tab, (newTab) => {
   transition: color 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .phone-link:hover {
   color: #d97706;
   text-decoration: underline;
@@ -2963,6 +2978,7 @@ watch(() => route.query.tab, (newTab) => {
   background: white;
 }
 
+/* Mobile app - hover effects disabled */
 /* .reason-option:hover {
   border-color: #AF1E23;
   background: #fef7f0;
@@ -3055,6 +3071,7 @@ watch(() => route.query.tab, (newTab) => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .cancel-action-btn:hover {
   background: #f9fafb;
   border-color: #9ca3af;
@@ -3075,6 +3092,7 @@ watch(() => route.query.tab, (newTab) => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .confirm-cancel-btn:hover:not(:disabled) {
   background: #dc2626;
   transform: translateY(-1px);
@@ -3102,6 +3120,7 @@ watch(() => route.query.tab, (newTab) => {
   transition: all 0.2s ease;
 }
 
+/* Mobile app - hover effects disabled */
 /* .call-store-btn:hover {
   background: #d97706;
   transform: translateY(-1px);

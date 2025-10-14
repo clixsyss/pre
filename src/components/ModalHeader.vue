@@ -92,10 +92,11 @@ defineEmits(['close'])
   justify-content: center;
 }
 
-.close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: #e2e8f0;
   color: #334155;
-}
+} */
 </style>
 
 

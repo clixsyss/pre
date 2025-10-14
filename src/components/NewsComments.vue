@@ -435,9 +435,10 @@ const loadNewsReactions = async () => {
   transition: transform 0.2s ease;
 }
 
-.reaction-emoji:hover {
+/* Mobile app - hover effects disabled */
+/* .reaction-emoji:hover {
   transform: scale(1.2);
-}
+} */
 
 .reaction-count {
   font-size: 13px;
@@ -470,10 +471,11 @@ const loadNewsReactions = async () => {
   justify-content: center;
 }
 
-.action-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .action-btn:hover {
   background-color: #f8fafc;
   color: #AF1E23;
-}
+} */
 
 .action-btn.active {
   color: #AF1E23;
@@ -484,9 +486,10 @@ const loadNewsReactions = async () => {
   transition: transform 0.2s ease;
 }
 
-.action-btn:hover svg {
+/* Mobile app - hover effects disabled */
+/* .action-btn:hover svg {
   transform: scale(1.1);
-}
+} */
 
 /* Comment Input - Compact */
 .comment-input-section {
@@ -546,10 +549,11 @@ const loadNewsReactions = async () => {
   opacity: 1;
 }
 
-.send-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .send-btn:hover:not(:disabled) {
   background: #991b1b;
   transform: scale(1.05);
-}
+} */
 
 .send-btn:disabled {
   cursor: not-allowed;
@@ -593,9 +597,10 @@ const loadNewsReactions = async () => {
   transition: background-color 0.2s ease;
 }
 
-.sort-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .sort-btn:hover {
   background-color: #f8fafc;
-}
+} */
 
 .sort-options {
   position: absolute;
@@ -623,10 +628,11 @@ const loadNewsReactions = async () => {
   transition: background-color 0.2s ease;
 }
 
-.sort-option:hover {
+/* Mobile app - hover effects disabled */
+/* .sort-option:hover {
   background-color: #f8fafc;
   color: #AF1E23;
-}
+} */
 
 .comments-list {
   padding: 6px 0;

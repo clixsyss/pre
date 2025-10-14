@@ -708,9 +708,10 @@ const fetchUserBookings = async () => {
   color: #666;
 }
 
-.filter-tab:hover {
+/* Mobile app - hover effects disabled */
+/* .filter-tab:hover {
   background: #f8f9fa;
-}
+} */
 
 .filter-tab.active {
   background: #AF1E23;
@@ -766,10 +767,11 @@ const fetchUserBookings = async () => {
   margin-top: 16px;
 }
 
-.select-project-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .select-project-btn:hover {
   background: #AF1E23;
   transform: translateY(-2px);
-}
+} */
 
 
 
@@ -806,10 +808,11 @@ const fetchUserBookings = async () => {
   transition: all 0.2s ease;
 }
 
-.book-now-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .book-now-btn:hover {
   background: #AF1E23;
   transform: translateY(-1px);
-}
+} */
 
 .bookings-list {
   display: flex;
@@ -826,11 +829,12 @@ const fetchUserBookings = async () => {
   border: 1px solid #f0f0f0;
 }
 
-.booking-card:hover {
+/* Mobile app - hover effects disabled */
+/* .booking-card:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   border-color: #e0e0e0;
-}
+} */
 
 .booking-card.confirmed {
   border-left: 3px solid #28a745;
@@ -1027,28 +1031,31 @@ const fetchUserBookings = async () => {
   border: 1px solid #e9ecef;
 }
 
-.view-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .view-btn:hover {
   background: #e9ecef;
   color: #333;
-}
+} */
 
 .cancel-btn {
   background: #dc3545;
   color: white;
 }
 
-.cancel-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .cancel-btn:hover {
   background: #c82333;
-}
+} */
 
 .complete-btn {
   background: #28a745;
   color: white;
 }
 
-.complete-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .complete-btn:hover {
   background: #218838;
-}
+} */
 
 /* Modal Styles */
 .modal-overlay {
@@ -1100,10 +1107,11 @@ const fetchUserBookings = async () => {
   transition: all 0.2s ease;
 }
 
-.close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: #f5f5f5;
   color: #333;
-}
+} */
 
 .modal-body {
   padding: 24px;
@@ -1166,9 +1174,10 @@ const fetchUserBookings = async () => {
   transition: all 0.2s ease;
 }
 
-.cancel-booking-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .cancel-booking-btn:hover {
   background: #c82333;
-}
+} */
 
 .complete-booking-btn {
   background: #28a745;
@@ -1181,9 +1190,10 @@ const fetchUserBookings = async () => {
   transition: all 0.2s ease;
 }
 
-.complete-booking-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .complete-booking-btn:hover {
   background: #218838;
-}
+} */
 
 .close-modal-btn {
   background: #6c757d;
@@ -1196,9 +1206,10 @@ const fetchUserBookings = async () => {
   transition: all 0.2s ease;
 }
 
-.close-modal-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-modal-btn:hover {
   background: #5a6268;
-}
+} */
 
 
 

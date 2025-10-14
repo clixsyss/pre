@@ -533,11 +533,12 @@ onUnmounted(() => {
   box-shadow: 0 2px 4px rgba(175, 30, 35, 0.2);
 }
 
-.back-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .back-btn:hover {
   background: #8b161a;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(175, 30, 35, 0.3);
-}
+} */
 
 .header-info {
   flex: 1;
@@ -616,10 +617,11 @@ onUnmounted(() => {
   color: #6b7280;
 }
 
-.action-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .action-btn:hover {
   background: #e5e7eb;
   color: #374151;
-}
+} */
 
 /* Messages Container */
 .messages-container {
@@ -768,9 +770,10 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
-.message-image:hover {
+/* Mobile app - hover effects disabled */
+/* .message-image:hover {
   transform: scale(1.02);
-}
+} */
 
 .message-image img {
   width: 100%;
@@ -795,9 +798,10 @@ onUnmounted(() => {
   border-radius: 12px;
 }
 
-.message-image:hover .image-overlay {
+/* Mobile app - hover effects disabled */
+/* .message-image:hover .image-overlay {
   opacity: 1;
-}
+} */
 
 .image-overlay svg {
   color: white;
@@ -894,20 +898,22 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.attachment-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .attachment-btn:hover {
   background: #e5e7eb;
   color: #374151;
-}
+} */
 
 .send-btn {
   background: #AF1E23;
   color: white;
 }
 
-.send-btn:hover:not(:disabled) {
+/* Mobile app - hover effects disabled */
+/* .send-btn:hover:not(:disabled) {
   background: #8b161a;
   transform: scale(1.05);
-}
+} */
 
 .send-btn:disabled {
   background: #d1d5db;
@@ -987,20 +993,22 @@ onUnmounted(() => {
   color: white;
 }
 
-.select-image-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .select-image-btn:hover {
   background: #8b161a;
   transform: translateY(-1px);
-}
+} */
 
 .cancel-btn {
   background: #f3f4f6;
   color: #6b7280;
 }
 
-.cancel-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .cancel-btn:hover {
   background: #e5e7eb;
   color: #374151;
-}
+} */
 
 /* Fullscreen Modal */
 .fullscreen-modal {
@@ -1055,9 +1063,10 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
-.fullscreen-header .close-btn:hover {
+.fullscreen-header /* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: rgba(255, 255, 255, 0.2);
-}
+} */
 
 .media-actions {
   display: flex;
@@ -1078,9 +1087,10 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
-.media-actions .action-btn:hover {
+.media-actions /* Mobile app - hover effects disabled */
+/* .action-btn:hover {
   background: rgba(255, 255, 255, 0.2);
-}
+} */
 
 .media-container {
   flex: 1;

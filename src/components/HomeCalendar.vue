@@ -229,11 +229,12 @@ onMounted(async () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.home-calendar-card:hover {
+/* Mobile app - hover effects disabled */
+/* .home-calendar-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   border-color: #AF1E23;
-}
+} */
 
 .card-header {
   display: flex;
@@ -255,9 +256,10 @@ onMounted(async () => {
   transition: opacity 0.2s ease;
 }
 
-.home-calendar-card:hover .header-arrow {
+/* Mobile app - hover effects disabled */
+/* .home-calendar-card:hover .header-arrow {
   opacity: 1;
-}
+} */
 
 .card-content {
   display: flex;
@@ -316,9 +318,10 @@ onMounted(async () => {
   padding: 4px;
 }
 
-.date-cell:hover {
+/* Mobile app - hover effects disabled */
+/* .date-cell:hover {
   background: #fff5f2;
-}
+} */
 
 .date-cell.other-month {
   color: #ccc;
@@ -376,9 +379,10 @@ onMounted(async () => {
   transition: color 0.2s ease;
 }
 
-.view-all-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .view-all-btn:hover {
   color: #AF1E23;
-}
+} */
 
 .events-list {
   display: flex;
@@ -397,9 +401,10 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
-.event-item:hover {
+/* Mobile app - hover effects disabled */
+/* .event-item:hover {
   background: #fff5f2;
-}
+} */
 
 .event-icon {
   color: #AF1E23;

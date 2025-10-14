@@ -351,10 +351,11 @@ watch(() => projectStore.selectedProject?.id, (newProjectId) => {
   justify-content: center;
 }
 
-.close-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .close-btn:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: scale(1.05);
-}
+} */
 
 .guidelines-content {
   flex: 1;
@@ -402,11 +403,12 @@ watch(() => projectStore.selectedProject?.id, (newProjectId) => {
   position: relative;
 }
 
-.pdf-guideline-card:hover {
+/* Mobile app - hover effects disabled */
+/* .pdf-guideline-card:hover {
   border-color: #AF1E23;
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.1);
   transform: translateY(-2px);
-}
+} */
 
 .pdf-guideline-card:active {
   transform: translateY(0);
@@ -447,10 +449,11 @@ watch(() => projectStore.selectedProject?.id, (newProjectId) => {
   transition: opacity 0.2s ease;
 }
 
-.pdf-guideline-card:hover .external-link-icon {
+/* Mobile app - hover effects disabled */
+/* .pdf-guideline-card:hover .external-link-icon {
   opacity: 1;
   color: #AF1E23;
-}
+} */
 
 .pdf-description {
   margin: 0 0 8px 0;
@@ -498,11 +501,12 @@ watch(() => projectStore.selectedProject?.id, (newProjectId) => {
   justify-content: center;
 }
 
-.download-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .download-btn:hover {
   background: #e5e7eb;
   color: #374151;
   border-color: #d1d5db;
-}
+} */
 
 /* Text Guidelines Section */
 .text-guidelines-section {
@@ -611,9 +615,10 @@ watch(() => projectStore.selectedProject?.id, (newProjectId) => {
   transition: background-color 0.3s ease;
 }
 
-.retry-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .retry-btn:hover {
   background: #991b1f;
-}
+} */
 
 /* Empty State */
 .empty-state {
