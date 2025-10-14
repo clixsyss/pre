@@ -108,15 +108,19 @@
         <p class="section-subtitle">Choose from the next 7 days</p>
         <div class="date-options">
           <div 
-            v-for="day in availableDays" 
-            :key="day.toISOString()"
+            v-for="dayObj in availableDays" 
+            :key="dayObj.date.toISOString()"
             class="date-option"
-            :class="{ active: selectedDay?.toDateString() === day.toDateString() }"
-            @click="selectDay(day)"
+            :class="{ 
+              active: selectedDay?.toDateString() === dayObj.date.toDateString(),
+              disabled: !dayObj.enabled
+            }"
+            @click="dayObj.enabled ? selectDay(dayObj.date) : null"
           >
-            <div class="date-day">{{ formatDate(day).split(' ')[0] }}</div>
-            <div class="date-number">{{ formatDate(day).split(' ')[1] }}</div>
-            <div class="date-month">{{ formatDate(day).split(' ')[2] }}</div>
+            <div class="date-day">{{ formatDate(dayObj.date).split(' ')[0] }}</div>
+            <div class="date-number">{{ formatDate(dayObj.date).split(' ')[1] }}</div>
+            <div class="date-month">{{ formatDate(dayObj.date).split(' ')[2] }}</div>
+            <div v-if="!dayObj.enabled" class="closed-badge">Closed</div>
           </div>
         </div>
       </div>
@@ -227,7 +231,28 @@ const timeSlotsData = ref([]);
 const projectId = computed(() => projectStore.selectedProject?.id);
 const projectName = computed(() => projectStore.selectedProject?.name);
 const sportsOptions = computed(() => sportsStore.sportsOptions);
-const availableDays = computed(() => bookingService.generateAvailableDays());
+
+const availableDays = computed(() => {
+  const allDays = bookingService.generateAvailableDays();
+  
+  // Always show all 7 days, but mark disabled ones
+  if (!selectedCourt.value || !selectedCourt.value.availability) {
+    // No court selected or no availability data - all days enabled
+    return allDays.map(day => ({ date: day, enabled: true }));
+  }
+  
+  // Map days with enabled status
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  return allDays.map(day => {
+    const dayOfWeek = dayNames[day.getDay()];
+    const daySchedule = selectedCourt.value.availability[dayOfWeek];
+    return {
+      date: day,
+      enabled: daySchedule ? daySchedule.enabled : true,
+      dayOfWeek: dayOfWeek
+    };
+  });
+});
 
 const availableTimeSlots = computed(() => {
   if (!selectedDay.value || !selectedCourt.value || !projectId.value) return [];
@@ -656,10 +681,12 @@ onMounted(async () => {
   background: #f8f9fa;
   border: 2px solid #e1e5e9;
   border-radius: 12px;
-  padding: 16px 12px;
+  padding: 16px 12px 24px 12px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
+  min-height: 100px;
 }
 
 .date-option:hover {
@@ -671,6 +698,40 @@ onMounted(async () => {
   background: #AF1E23;
   border-color: #AF1E23;
   color: white;
+}
+
+.date-option.disabled {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  opacity: 0.6;
+  cursor: not-allowed;
+  position: relative;
+}
+
+.date-option.disabled:hover {
+  border-color: #d1d5db;
+  background: #f3f4f6;
+}
+
+.date-option.disabled .date-day,
+.date-option.disabled .date-number,
+.date-option.disabled .date-month {
+  color: #9ca3af;
+}
+
+.closed-badge {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ef4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .date-day {

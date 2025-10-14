@@ -79,25 +79,90 @@ export class BookingService {
             try {
                 console.log('🔍 Getting available time slots:', { projectId, courtId, date })
                 
-                // First, try to get court-specific time slot configuration from database
-                let baseSlots;
+                // Get court data including availability schedule
+                let baseSlots = [];
+                let courtData = null;
+                
                 try {
                     const courtDoc = await firestoreService.getDoc(`projects/${projectId}/courts/${courtId}`);
-                    const courtData = courtDoc?.snapshot?.data || courtDoc?.data?.() || courtDoc;
+                    courtData = courtDoc?.snapshot?.data || courtDoc?.data?.() || courtDoc;
                     
-                    if (courtData && courtData.timeSlotConfig) {
-                        // Use court-specific time slot configuration from database
-                        const { startHour, endHour, intervalMinutes } = courtData.timeSlotConfig;
-                        console.log('🔍 Using court-specific time slot config from database:', courtData.timeSlotConfig);
-                        baseSlots = this.generateTimeSlots(startHour, endHour, intervalMinutes);
-                    } else {
-                        // Fallback to default hardcoded hours
-                        console.log('🔍 Using default hardcoded time slots (6 AM - 10 PM)');
+                    if (!courtData) {
+                        console.warn('⚠️ No court data found, using default time slots');
                         baseSlots = this.generateTimeSlots();
+                    } else {
+                        console.log('📋 Court data:', courtData);
+                        
+                        // Get the day of week for the selected date
+                        const selectedDate = new Date(date);
+                        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                        const dayOfWeek = dayNames[selectedDate.getDay()];
+                        
+                        console.log('📅 Selected date:', date, 'Day of week:', dayOfWeek);
+                        
+                        // Check if court has availability schedule
+                        if (courtData.availability && courtData.availability[dayOfWeek]) {
+                            const daySchedule = courtData.availability[dayOfWeek];
+                            console.log(`📅 ${dayOfWeek} schedule:`, daySchedule);
+                            
+                            // Check if court is open on this day
+                            if (!daySchedule.enabled) {
+                                console.log(`🚫 Court is closed on ${dayOfWeek}`);
+                                return []; // Return empty array - court closed on this day
+                            }
+                            
+                            // Use the day's start and end times
+                            const startTime = daySchedule.startTime || '08:00';
+                            const endTime = daySchedule.endTime || '22:00';
+                            
+                            // Convert HH:MM format to hours
+                            const startHour = parseInt(startTime.split(':')[0]);
+                            const startMinute = parseInt(startTime.split(':')[1]);
+                            const endHour = parseInt(endTime.split(':')[0]);
+                            const endMinute = parseInt(endTime.split(':')[1]);
+                            
+                            // Use booking interval from court data
+                            const intervalMinutes = courtData.bookingIntervalMinutes || 60;
+                            
+                            console.log(`⏰ Generating slots: ${startTime} to ${endTime}, ${intervalMinutes} min intervals`);
+                            
+                            // Generate time slots based on availability
+                            const slots = [];
+                            const currentTime = new Date();
+                            currentTime.setHours(startHour, startMinute, 0, 0);
+                            
+                            const endDateTime = new Date();
+                            endDateTime.setHours(endHour, endMinute, 0, 0);
+                            
+                            while (currentTime < endDateTime) {
+                                slots.push({
+                                    time: currentTime.toLocaleTimeString('en-US', { 
+                                        hour: '2-digit', 
+                                        minute: '2-digit',
+                                        hour12: true 
+                                    }),
+                                    isReserved: false,
+                                    startTime: new Date(currentTime)
+                                });
+                                currentTime.setMinutes(currentTime.getMinutes() + intervalMinutes);
+                            }
+                            
+                            baseSlots = slots;
+                            console.log(`✅ Generated ${slots.length} slots for ${dayOfWeek}`);
+                        } else if (courtData.timeSlotConfig) {
+                            // Legacy support: Use old timeSlotConfig if exists
+                            const { startHour, endHour, intervalMinutes } = courtData.timeSlotConfig;
+                            console.log('🔍 Using legacy timeSlotConfig:', courtData.timeSlotConfig);
+                            baseSlots = this.generateTimeSlots(startHour, endHour, intervalMinutes);
+                        } else {
+                            // No availability data - use default
+                            console.log('🔍 No availability schedule found, using defaults (8 AM - 10 PM, 1 hour)');
+                            baseSlots = this.generateTimeSlots(8, 22, 60);
+                        }
                     }
                 } catch (configError) {
                     console.warn('⚠️ Could not fetch court config, using default time slots:', configError);
-                    baseSlots = this.generateTimeSlots();
+                    baseSlots = this.generateTimeSlots(8, 22, 60);
                 }
                 
                 // Check which slots are already booked

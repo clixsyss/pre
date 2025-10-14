@@ -4838,8 +4838,8 @@ input:checked+.toggle-slider:before {
 
 .family-member-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(236, 72, 153, 0.15);
-  border-color: #fb7185;
+  box-shadow: 0 8px 24px rgba(175, 30, 35, 0.15);
+  border-color: #AF1E23;
 }
 
 .member-avatar {
@@ -4859,7 +4859,7 @@ input:checked+.toggle-slider:before {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -4867,7 +4867,7 @@ input:checked+.toggle-slider:before {
   font-size: 20px;
   font-weight: 700;
   border: 3px solid #fff;
-  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.2);
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
 }
 
 .member-info {
@@ -4888,7 +4888,7 @@ input:checked+.toggle-slider:before {
 .member-role {
   font-size: 13px;
   font-weight: 500;
-  color: #ec4899;
+  color: #AF1E23;
   margin: 0 0 8px 0;
 }
 
@@ -4908,7 +4908,7 @@ input:checked+.toggle-slider:before {
 
 .meta-item svg {
   flex-shrink: 0;
-  stroke: #9ca3af;
+  stroke: #AF1E23;
 }
 
 @media (max-width: 768px) {
