@@ -528,6 +528,16 @@ service cloud.firestore {
       allow list: if request.auth != null;
     }
     
+    // User FCM tokens - users can manage their own tokens
+    match /users/{userId}/tokens/{tokenId} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow listing user tokens
+    match /users/{userId}/tokens {
+      allow list: if request.auth != null && request.auth.uid == userId;
+    }
+    
     // Pending Admins collection - allow anyone to create (for registration)
     // Allow authenticated users to read (for status checking)
     // Only approved admins can update/delete (for approval process)

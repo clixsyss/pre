@@ -1,0 +1,278 @@
+{
+  "exampleNotifications": {
+    "immediate": {
+      "description": "Send immediately to all users",
+      "payload": {
+        "title_en": "Welcome to PRE Group!",
+        "title_ar": "مرحبا بكم في مجموعة PRE!",
+        "body_en": "Thank you for joining our community. Explore our facilities and book your first activity today!",
+        "body_ar": "شكرا لانضمامك إلى مجتمعنا. استكشف مرافقنا واحجز نشاطك الأول اليوم!",
+        "type": "announcement",
+        "sendNow": true,
+        "scheduledAt": null,
+        "audience": {
+          "all": true,
+          "uids": [],
+          "topic": null
+        },
+        "meta": {
+          "image": null,
+          "adminEmail": "admin@pregroup.com"
+        }
+      }
+    },
+    "scheduled": {
+      "description": "Schedule for future delivery (e.g., 1 hour from now)",
+      "payload": {
+        "title_en": "Special Promotion Today!",
+        "title_ar": "عرض خاص اليوم!",
+        "body_en": "Get 20% off on all court bookings until midnight. Book now!",
+        "body_ar": "احصل على خصم 20٪ على جميع حجوزات الملاعب حتى منتصف الليل. احجز الآن!",
+        "type": "promo",
+        "sendNow": false,
+        "scheduledAt": "TIMESTAMP_1_HOUR_FROM_NOW",
+        "audience": {
+          "all": true,
+          "uids": [],
+          "topic": null
+        },
+        "meta": {
+          "image": "https://example.com/promo-banner.jpg",
+          "adminEmail": "admin@pregroup.com"
+        }
+      }
+    },
+    "specificUsers": {
+      "description": "Target specific users by UID",
+      "payload": {
+        "title_en": "Your Booking is Confirmed",
+        "title_ar": "تم تأكيد حجزك",
+        "body_en": "Your tennis court booking for tomorrow at 3 PM is confirmed. See you there!",
+        "body_ar": "تم تأكيد حجز ملعب التنس الخاص بك غدا الساعة 3 مساء. نراكم هناك!",
+        "type": "booking",
+        "sendNow": true,
+        "scheduledAt": null,
+        "audience": {
+          "all": false,
+          "uids": ["USER_UID_1", "USER_UID_2"],
+          "topic": null
+        },
+        "meta": {
+          "image": null,
+          "adminEmail": "admin@pregroup.com"
+        }
+      }
+    },
+    "topicBased": {
+      "description": "Send to topic subscribers (e.g., 'sports' topic)",
+      "payload": {
+        "title_en": "New Sports Event This Weekend",
+        "title_ar": "حدث رياضي جديد هذا الأسبوع",
+        "body_en": "Join us for a friendly football tournament on Saturday. Registration closes Friday!",
+        "body_ar": "انضم إلينا في بطولة كرة قدم ودية يوم السبت. التسجيل ينتهي يوم الجمعة!",
+        "type": "news",
+        "sendNow": true,
+        "scheduledAt": null,
+        "audience": {
+          "all": false,
+          "uids": [],
+          "topic": "sports"
+        },
+        "meta": {
+          "image": "https://example.com/tournament-banner.jpg",
+          "adminEmail": "admin@pregroup.com"
+        }
+      }
+    },
+    "orderUpdate": {
+      "description": "Order status notification",
+      "payload": {
+        "title_en": "Your Order is Ready!",
+        "title_ar": "طلبك جاهز!",
+        "body_en": "Your order #12345 is ready for pickup at the PRE Group Cafe.",
+        "body_ar": "طلبك #12345 جاهز للاستلام في مقهى مجموعة PRE.",
+        "type": "order",
+        "sendNow": true,
+        "scheduledAt": null,
+        "audience": {
+          "all": false,
+          "uids": ["USER_UID"],
+          "topic": null
+        },
+        "meta": {
+          "image": null,
+          "adminEmail": "admin@pregroup.com",
+          "orderId": "12345"
+        }
+      }
+    },
+    "alert": {
+      "description": "Important alert notification",
+      "payload": {
+        "title_en": "Facility Closure Notice",
+        "title_ar": "إشعار إغلاق المنشأة",
+        "body_en": "The swimming pool will be closed for maintenance on Sunday, Oct 20th.",
+        "body_ar": "سيتم إغلاق حمام السباحة للصيانة يوم الأحد 20 أكتوبر.",
+        "type": "alert",
+        "sendNow": true,
+        "scheduledAt": null,
+        "audience": {
+          "all": true,
+          "uids": [],
+          "topic": null
+        },
+        "meta": {
+          "image": null,
+          "adminEmail": "admin@pregroup.com"
+        }
+      }
+    },
+    "newsArticle": {
+      "description": "News article notification with deep link",
+      "payload": {
+        "title_en": "PRE Group Wins Best Community Award",
+        "title_ar": "مجموعة PRE تفوز بجائزة أفضل مجتمع",
+        "body_en": "We're proud to announce that PRE Group has been awarded the Best Community of the Year!",
+        "body_ar": "يسعدنا أن نعلن أن مجموعة PRE قد حصلت على جائزة أفضل مجتمع لهذا العام!",
+        "type": "news",
+        "sendNow": true,
+        "scheduledAt": null,
+        "audience": {
+          "all": true,
+          "uids": [],
+          "topic": null
+        },
+        "meta": {
+          "image": "https://example.com/award-ceremony.jpg",
+          "adminEmail": "admin@pregroup.com",
+          "newsId": "news_12345"
+        }
+      }
+    }
+  },
+  "fcmPayloadExamples": {
+    "description": "Raw FCM payload examples (generated by Cloud Functions)",
+    "webNotification": {
+      "notification": {
+        "title": "Welcome to PRE Group!",
+        "body": "Thank you for joining our community."
+      },
+      "data": {
+        "notificationId": "notif_12345",
+        "type": "announcement",
+        "title_en": "Welcome to PRE Group!",
+        "title_ar": "مرحبا بكم في مجموعة PRE!",
+        "body_en": "Thank you for joining our community.",
+        "body_ar": "شكرا لانضمامك إلى مجتمعنا.",
+        "click_action": "/notifications"
+      }
+    },
+    "androidNotification": {
+      "notification": {
+        "title": "Welcome to PRE Group!",
+        "body": "Thank you for joining our community."
+      },
+      "data": {
+        "notificationId": "notif_12345",
+        "type": "announcement",
+        "title_en": "Welcome to PRE Group!",
+        "title_ar": "مرحبا بكم في مجموعة PRE!",
+        "body_en": "Thank you for joining our community.",
+        "body_ar": "شكرا لانضمامك إلى مجتمعنا.",
+        "click_action": "/notifications"
+      },
+      "android": {
+        "priority": "high",
+        "notification": {
+          "channelId": "default",
+          "sound": "default",
+          "priority": "high"
+        }
+      }
+    },
+    "iosNotification": {
+      "notification": {
+        "title": "Welcome to PRE Group!",
+        "body": "Thank you for joining our community."
+      },
+      "data": {
+        "notificationId": "notif_12345",
+        "type": "announcement",
+        "title_en": "Welcome to PRE Group!",
+        "title_ar": "مرحبا بكم في مجموعة PRE!",
+        "body_en": "Thank you for joining our community.",
+        "body_ar": "شكرا لانضمامك إلى مجتمعنا.",
+        "click_action": "/notifications"
+      },
+      "apns": {
+        "payload": {
+          "aps": {
+            "alert": {
+              "title": "Welcome to PRE Group!",
+              "body": "Thank you for joining our community."
+            },
+            "sound": "default",
+            "badge": 1
+          }
+        }
+      }
+    }
+  },
+  "testingInstructions": {
+    "description": "How to test these notifications",
+    "steps": [
+      "1. Login to admin dashboard at /notifications",
+      "2. Copy a payload example from above",
+      "3. Fill out the form with the values",
+      "4. For 'scheduledAt', use a future timestamp in ISO format: 2024-10-20T15:30:00Z",
+      "5. Click 'Create & Send Now' or 'Schedule Notification'",
+      "6. Check Firestore /notifications collection to see the document",
+      "7. Check Cloud Functions logs: firebase functions:log",
+      "8. Verify notification appears on your test device",
+      "9. Tap notification and verify it navigates to correct page"
+    ],
+    "firestoreTimestampNote": "When creating a notification via Firestore Console directly, use Firebase Timestamp objects for scheduledAt, not plain strings"
+  },
+  "notificationTypes": {
+    "announcement": {
+      "description": "General announcements and updates",
+      "defaultRoute": "/notifications",
+      "icon": "📢"
+    },
+    "promo": {
+      "description": "Promotions and special offers",
+      "defaultRoute": "/promotions",
+      "icon": "🎁"
+    },
+    "news": {
+      "description": "News articles and updates",
+      "defaultRoute": "/news",
+      "icon": "📰"
+    },
+    "booking": {
+      "description": "Booking confirmations and updates",
+      "defaultRoute": "/bookings",
+      "icon": "📅"
+    },
+    "order": {
+      "description": "Order status and updates",
+      "defaultRoute": "/orders",
+      "icon": "🛍️"
+    },
+    "alert": {
+      "description": "Important alerts and warnings",
+      "defaultRoute": "/notifications",
+      "icon": "⚠️"
+    }
+  },
+  "bestPractices": {
+    "title": "Keep under 50 characters",
+    "body": "Keep under 200 characters for best visibility",
+    "timing": "Send between 9 AM - 9 PM in user's timezone",
+    "frequency": "Max 3-5 notifications per week",
+    "images": "Use compressed images under 1MB",
+    "testing": "Always test on real devices before sending to all users",
+    "bilingual": "Always provide both English and Arabic content"
+  }
+}
+

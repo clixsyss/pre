@@ -268,3 +268,491 @@ exports.checkMigrationStatus = functions.https.onCall(async (data, context) => {
   }
 })
 
+// ============================================================================
+// PUSH NOTIFICATION FUNCTIONS
+// ============================================================================
+
+/**
+ * Send push notification immediately when a notification document is created
+ * Triggers on: onCreate of /notifications/{notificationId}
+ */
+exports.sendNotificationOnCreate = functions
+  .runWith({
+    timeoutSeconds: 540,
+    memory: '1GB'
+  })
+  .firestore
+  .document('notifications/{notificationId}')
+  .onCreate(async (snap, context) => {
+    try {
+      const notificationId = context.params.notificationId
+      const notification = snap.data()
+      
+      console.log('[sendNotificationOnCreate] Processing notification:', notificationId)
+      
+      // Only send if sendNow is true
+      if (!notification.sendNow) {
+        console.log('[sendNotificationOnCreate] Skipping - sendNow is false')
+        return null
+      }
+      
+      // Check if already sent
+      if (notification.status === 'sent') {
+        console.log('[sendNotificationOnCreate] Skipping - already sent')
+        return null
+      }
+      
+      // Send the notification
+      await sendNotification(notificationId, notification)
+      
+      return null
+    } catch (error) {
+      console.error('[sendNotificationOnCreate] Error:', error)
+      // Update notification status to failed
+      try {
+        await admin.firestore()
+          .collection('notifications')
+          .doc(context.params.notificationId)
+          .update({
+            status: 'failed',
+            error: error.message,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          })
+      } catch (updateError) {
+        console.error('[sendNotificationOnCreate] Error updating status:', updateError)
+      }
+      throw error
+    }
+  })
+
+/**
+ * Scheduled function to send pending notifications
+ * Runs every minute to check for scheduled notifications
+ */
+exports.sendScheduledNotifications = functions.pubsub
+  .schedule('every 1 minutes')
+  .onRun(async (context) => {
+    try {
+      console.log('[sendScheduledNotifications] Running scheduled check...')
+      
+      const now = admin.firestore.Timestamp.now()
+      const notificationsRef = admin.firestore().collection('notifications')
+      
+      // Query for pending notifications that should be sent now
+      const query = notificationsRef
+        .where('status', '==', 'pending')
+        .where('sendNow', '==', false)
+        .where('scheduledAt', '<=', now)
+        .limit(10) // Process max 10 at a time to avoid timeout
+      
+      const snapshot = await query.get()
+      
+      console.log('[sendScheduledNotifications] Found', snapshot.size, 'notifications to send')
+      
+      if (snapshot.empty) {
+        return null
+      }
+      
+      // Send each notification
+      const sendPromises = snapshot.docs.map(async (doc) => {
+        const notificationId = doc.id
+        const notification = doc.data()
+        
+        try {
+          await sendNotification(notificationId, notification)
+        } catch (error) {
+          console.error('[sendScheduledNotifications] Error sending:', notificationId, error)
+          // Update status to failed
+          await doc.ref.update({
+            status: 'failed',
+            error: error.message,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          })
+        }
+      })
+      
+      await Promise.all(sendPromises)
+      
+      console.log('[sendScheduledNotifications] Completed')
+      return null
+    } catch (error) {
+      console.error('[sendScheduledNotifications] Error:', error)
+      throw error
+    }
+  })
+
+/**
+ * Helper function to send a notification
+ * Handles token collection, message building, and sending
+ */
+async function sendNotification(notificationId, notification) {
+  console.log('[sendNotification] Sending notification:', notificationId)
+  
+  try {
+    // Validate notification data
+    if (!notification.title_en || !notification.body_en) {
+      throw new Error('Missing required English content')
+    }
+    
+    if (!notification.title_ar || !notification.body_ar) {
+      throw new Error('Missing required Arabic content')
+    }
+    
+    // Collect device tokens based on audience
+    const tokens = await collectTokens(notification.audience)
+    
+    if (tokens.length === 0) {
+      console.log('[sendNotification] No tokens found for notification:', notificationId)
+      
+      // Update status to sent (even though no tokens, to avoid retrying)
+      await admin.firestore()
+        .collection('notifications')
+        .doc(notificationId)
+        .update({
+          status: 'sent',
+          sentAt: admin.firestore.FieldValue.serverTimestamp(),
+          tokensCount: 0,
+          successCount: 0,
+          failureCount: 0
+        })
+      
+      return
+    }
+    
+    console.log('[sendNotification] Sending to', tokens.length, 'tokens')
+    
+    // Build FCM messages
+    const messages = buildMessages(notification, tokens)
+    
+    // Send in batches of 500 (FCM limit)
+    const batchSize = 500
+    let totalSuccess = 0
+    let totalFailure = 0
+    const invalidTokens = []
+    
+    for (let i = 0; i < messages.length; i += batchSize) {
+      const batch = messages.slice(i, i + batchSize)
+      
+      console.log('[sendNotification] Sending batch', Math.floor(i / batchSize) + 1, 'of', Math.ceil(messages.length / batchSize))
+      
+      try {
+        const response = await admin.messaging().sendEach(batch)
+        
+        console.log('[sendNotification] Batch results:', {
+          successCount: response.successCount,
+          failureCount: response.failureCount
+        })
+        
+        totalSuccess += response.successCount
+        totalFailure += response.failureCount
+        
+        // Collect invalid tokens
+        response.responses.forEach((resp, idx) => {
+          if (!resp.success) {
+            const error = resp.error
+            if (
+              error.code === 'messaging/invalid-registration-token' ||
+              error.code === 'messaging/registration-token-not-registered'
+            ) {
+              invalidTokens.push(batch[idx].token)
+            }
+          }
+        })
+      } catch (error) {
+        console.error('[sendNotification] Batch error:', error)
+        totalFailure += batch.length
+      }
+    }
+    
+    // Remove invalid tokens
+    if (invalidTokens.length > 0) {
+      console.log('[sendNotification] Removing', invalidTokens.length, 'invalid tokens')
+      await removeInvalidTokens(invalidTokens)
+    }
+    
+    // Update notification status
+    await admin.firestore()
+      .collection('notifications')
+      .doc(notificationId)
+      .update({
+        status: 'sent',
+        sentAt: admin.firestore.FieldValue.serverTimestamp(),
+        tokensCount: tokens.length,
+        successCount: totalSuccess,
+        failureCount: totalFailure,
+        invalidTokensRemoved: invalidTokens.length
+      })
+    
+    console.log('[sendNotification] Notification sent successfully:', {
+      notificationId,
+      tokens: tokens.length,
+      success: totalSuccess,
+      failure: totalFailure,
+      invalidRemoved: invalidTokens.length
+    })
+  } catch (error) {
+    console.error('[sendNotification] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Collect device tokens based on audience targeting
+ */
+async function collectTokens(audience) {
+  console.log('[collectTokens] Collecting tokens for audience:', audience)
+  
+  const tokens = []
+  
+  try {
+    if (audience.all) {
+      // Get all user tokens
+      console.log('[collectTokens] Getting tokens for all users')
+      const usersRef = admin.firestore().collection('users')
+      const usersSnapshot = await usersRef.get()
+      
+      console.log('[collectTokens] Found', usersSnapshot.size, 'users')
+      
+      // Collect tokens from all users
+      for (const userDoc of usersSnapshot.docs) {
+        const tokensRef = userDoc.ref.collection('tokens')
+        const tokensSnapshot = await tokensRef.get()
+        
+        tokensSnapshot.docs.forEach(tokenDoc => {
+          const tokenData = tokenDoc.data()
+          if (tokenData.token) {
+            tokens.push({
+              token: tokenData.token,
+              userId: userDoc.id,
+              platform: tokenData.platform
+            })
+          }
+        })
+      }
+    } else if (audience.uids && audience.uids.length > 0) {
+      // Get tokens for specific users
+      console.log('[collectTokens] Getting tokens for', audience.uids.length, 'specific users')
+      
+      for (const uid of audience.uids) {
+        const tokensRef = admin.firestore()
+          .collection('users')
+          .doc(uid)
+          .collection('tokens')
+        
+        const tokensSnapshot = await tokensRef.get()
+        
+        tokensSnapshot.docs.forEach(tokenDoc => {
+          const tokenData = tokenDoc.data()
+          if (tokenData.token) {
+            tokens.push({
+              token: tokenData.token,
+              userId: uid,
+              platform: tokenData.platform
+            })
+          }
+        })
+      }
+    } else if (audience.topic) {
+      // Topic-based sending
+      // Note: Topics must be managed separately via subscribeToTopic API
+      console.log('[collectTokens] Topic-based sending not yet implemented:', audience.topic)
+      // TODO: Implement topic-based token collection or use admin.messaging().sendToTopic()
+    }
+    
+    console.log('[collectTokens] Collected', tokens.length, 'tokens')
+    return tokens
+  } catch (error) {
+    console.error('[collectTokens] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Build FCM messages for each token
+ */
+function buildMessages(notification, tokens) {
+  console.log('[buildMessages] Building messages for', tokens.length, 'tokens')
+  
+  const messages = tokens.map(tokenData => {
+    // Build notification payload with default language (English)
+    const message = {
+      token: tokenData.token,
+      notification: {
+        title: notification.title_en,
+        body: notification.body_en
+      },
+      data: {
+        notificationId: notification.id || '',
+        type: notification.type || 'announcement',
+        title_en: notification.title_en,
+        body_en: notification.body_en,
+        title_ar: notification.title_ar,
+        body_ar: notification.body_ar
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'default',
+          sound: 'default',
+          priority: 'high'
+        }
+      },
+      apns: {
+        payload: {
+          aps: {
+            alert: {
+              title: notification.title_en,
+              body: notification.body_en
+            },
+            sound: 'default',
+            badge: 1
+          }
+        }
+      }
+    }
+    
+    // Add image if provided
+    if (notification.meta && notification.meta.image) {
+      message.notification.imageUrl = notification.meta.image
+      message.data.image = notification.meta.image
+    }
+    
+    // Add click action based on type
+    const clickActions = {
+      booking: '/bookings',
+      order: '/orders',
+      news: '/news',
+      announcement: '/notifications',
+      promo: '/promotions',
+      promotion: '/promotions'
+    }
+    
+    const clickAction = clickActions[notification.type] || '/notifications'
+    message.data.click_action = clickAction
+    
+    return message
+  })
+  
+  return messages
+}
+
+/**
+ * Remove invalid tokens from Firestore
+ */
+async function removeInvalidTokens(tokens) {
+  console.log('[removeInvalidTokens] Removing', tokens.length, 'invalid tokens')
+  
+  try {
+    // Query all users to find and remove invalid tokens
+    const usersRef = admin.firestore().collection('users')
+    const usersSnapshot = await usersRef.get()
+    
+    const deletePromises = []
+    
+    for (const userDoc of usersSnapshot.docs) {
+      const tokensRef = userDoc.ref.collection('tokens')
+      const tokensSnapshot = await tokensRef.get()
+      
+      tokensSnapshot.docs.forEach(tokenDoc => {
+        const tokenData = tokenDoc.data()
+        if (tokens.includes(tokenData.token)) {
+          console.log('[removeInvalidTokens] Deleting token:', tokenDoc.id, 'for user:', userDoc.id)
+          deletePromises.push(tokenDoc.ref.delete())
+        }
+      })
+    }
+    
+    await Promise.all(deletePromises)
+    console.log('[removeInvalidTokens] Removed', deletePromises.length, 'invalid tokens')
+  } catch (error) {
+    console.error('[removeInvalidTokens] Error:', error)
+    // Don't throw - this is cleanup, shouldn't fail the main operation
+  }
+}
+
+/**
+ * Callable function to subscribe a user to a topic
+ */
+exports.subscribeToTopic = functions.https.onCall(async (data, context) => {
+  try {
+    // Verify user is authenticated
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'User must be authenticated'
+      )
+    }
+    
+    const { token, topic } = data
+    
+    if (!token || !topic) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Token and topic are required'
+      )
+    }
+    
+    console.log('[subscribeToTopic] Subscribing token to topic:', topic)
+    
+    // Subscribe to topic
+    const response = await admin.messaging().subscribeToTopic([token], topic)
+    
+    console.log('[subscribeToTopic] Success:', response.successCount, 'Failure:', response.failureCount)
+    
+    return {
+      success: true,
+      successCount: response.successCount,
+      failureCount: response.failureCount
+    }
+  } catch (error) {
+    console.error('[subscribeToTopic] Error:', error)
+    throw new functions.https.HttpsError(
+      'internal',
+      'Failed to subscribe to topic: ' + error.message
+    )
+  }
+})
+
+/**
+ * Callable function to unsubscribe a user from a topic
+ */
+exports.unsubscribeFromTopic = functions.https.onCall(async (data, context) => {
+  try {
+    // Verify user is authenticated
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'User must be authenticated'
+      )
+    }
+    
+    const { token, topic } = data
+    
+    if (!token || !topic) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Token and topic are required'
+      )
+    }
+    
+    console.log('[unsubscribeFromTopic] Unsubscribing token from topic:', topic)
+    
+    // Unsubscribe from topic
+    const response = await admin.messaging().unsubscribeFromTopic([token], topic)
+    
+    console.log('[unsubscribeFromTopic] Success:', response.successCount, 'Failure:', response.failureCount)
+    
+    return {
+      success: true,
+      successCount: response.successCount,
+      failureCount: response.failureCount
+    }
+  } catch (error) {
+    console.error('[unsubscribeFromTopic] Error:', error)
+    throw new functions.https.HttpsError(
+      'internal',
+      'Failed to unsubscribe from topic: ' + error.message
+    )
+  }
+})
+
