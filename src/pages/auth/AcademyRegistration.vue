@@ -388,7 +388,6 @@ onMounted(() => {
 
 <style scoped>
 .academy-registration-page {
-  padding: 20px 0;
   max-width: 800px;
   margin: 0 auto;
 }

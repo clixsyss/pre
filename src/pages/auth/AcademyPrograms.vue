@@ -298,7 +298,6 @@ watch(currentProject, (newProject) => {
 
 <style scoped>
 .academy-programs-page {
-  padding: 20px 0;
   max-width: 800px;
   margin: 0 auto;
 }
