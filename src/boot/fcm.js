@@ -14,64 +14,99 @@ export default defineBoot(async ({ app, router }) => {
   // Make FCM service available globally
   app.config.globalProperties.$fcm = fcmService;
 
-  // Check if user is already authenticated (from persistence)
-  const currentUser = auth.currentUser;
-  if (currentUser) {
-    console.log('FCM Boot: User already authenticated, initializing FCM immediately...');
+  // Track if FCM has been initialized to prevent duplicate initialization
+  let fcmInitialized = false;
+
+  // Helper function to initialize FCM
+  const initializeFCM = async (source) => {
+    if (fcmInitialized) {
+      console.log(`FCM Boot: Already initialized, skipping (source: ${source})`);
+      return;
+    }
+
+    console.log(`FCM Boot: Initializing FCM (source: ${source})...`);
     
     try {
-      // Small delay to ensure everything is ready
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       // Initialize FCM
       const success = await fcmService.initialize();
       
       if (success) {
-        console.log('FCM Boot: FCM initialized successfully for existing user');
+        fcmInitialized = true;
+        console.log(`FCM Boot: FCM initialized successfully (source: ${source})`);
+        
+        // Update token last seen periodically (every 24 hours)
+        setInterval(() => {
+          fcmService.updateTokenLastSeen();
+        }, 24 * 60 * 60 * 1000);
       } else {
-        console.warn('FCM Boot: FCM initialization failed for existing user');
+        console.warn(`FCM Boot: FCM initialization failed (source: ${source})`);
       }
     } catch (error) {
-      console.error('FCM Boot: Error initializing FCM for existing user:', error);
+      console.error(`FCM Boot: Error initializing FCM (source: ${source}):`, error);
     }
+  };
+
+  // Check if user is already authenticated (works for web)
+  const currentUser = auth.currentUser;
+  if (currentUser) {
+    console.log('FCM Boot: User already authenticated (Web SDK), initializing FCM...');
+    // Delay to ensure everything is ready
+    setTimeout(() => {
+      initializeFCM('auth.currentUser');
+    }, 1000);
   }
 
-  // Initialize FCM when user logs in (for future auth state changes)
+  // Listen for auth state changes (works for all platforms)
   auth.onAuthStateChanged(async (user) => {
     if (user) {
-      console.log('FCM Boot: Auth state changed - user authenticated, initializing FCM...');
+      console.log('FCM Boot: Auth state changed - user authenticated');
       
-      try {
-        // Small delay to ensure everything is ready
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Initialize FCM
-        const success = await fcmService.initialize();
-        
-        if (success) {
-          console.log('FCM Boot: FCM initialized successfully');
-          
-          // Update token last seen periodically (every 24 hours)
-          setInterval(() => {
-            fcmService.updateTokenLastSeen();
-          }, 24 * 60 * 60 * 1000);
-        } else {
-          console.warn('FCM Boot: FCM initialization failed');
-        }
-      } catch (error) {
-        console.error('FCM Boot: Error initializing FCM:', error);
-      }
+      // Delay to ensure everything is ready (longer for iOS)
+      const delay = fcmService.platform === 'ios' ? 2000 : 500;
+      
+      setTimeout(() => {
+        initializeFCM('onAuthStateChanged');
+      }, delay);
     } else {
       console.log('FCM Boot: User logged out, unregistering FCM...');
+      fcmInitialized = false;
       
       try {
-        // Unregister FCM when user logs out
         await fcmService.unregister();
       } catch (error) {
         console.error('FCM Boot: Error unregistering FCM:', error);
       }
     }
   });
+
+  // iOS-specific: Check for authenticated user after a delay
+  // This handles cases where Capacitor Firebase Auth uses persistence
+  // and onAuthStateChanged doesn't fire on app launch
+  if (fcmService.platform === 'ios') {
+    console.log('FCM Boot: iOS detected - Setting up fallback user check...');
+    
+    setTimeout(async () => {
+      // Import Capacitor Firebase Authentication
+      try {
+        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+        const { user } = await FirebaseAuthentication.getCurrentUser();
+        
+        if (user && user.uid && !fcmInitialized) {
+          console.log('FCM Boot: iOS fallback - Found authenticated user, initializing FCM...');
+          console.log('FCM Boot: User ID:', user.uid);
+          
+          // Initialize FCM
+          initializeFCM('ios-fallback-check');
+        } else if (!user) {
+          console.log('FCM Boot: iOS fallback - No user authenticated');
+        } else if (fcmInitialized) {
+          console.log('FCM Boot: iOS fallback - FCM already initialized, skipping');
+        }
+      } catch (error) {
+        console.error('FCM Boot: iOS fallback check failed:', error);
+      }
+    }, 3000); // 3 seconds after boot
+  }
 
   // Listen for navigation messages from service worker
   if ('serviceWorker' in navigator) {
