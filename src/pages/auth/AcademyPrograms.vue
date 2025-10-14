@@ -1,9 +1,7 @@
 <template>
   <div class="academy-programs-page">
-    <PageHeader 
-      :title="$t('academyProgramsTitle')" 
-      :subtitle="projectName ? `${$t('joinAcademiesIn')} ${projectName}` : $t('chooseAcademyProgram')"
-    />
+    <PageHeader :title="$t('academyProgramsTitle')"
+      :subtitle="projectName ? `${$t('joinAcademiesIn')} ${projectName}` : $t('chooseAcademyProgram')" />
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
@@ -41,15 +39,13 @@
       <!-- Programs List -->
       <div class="programs-section">
         <h2 class="section-title">{{ $t('availablePrograms') }}</h2>
-        <p class="section-subtitle">{{ allPrograms.length }} {{ allPrograms.length !== 1 ? $t('programsAvailable') : $t('programAvailable') }}</p>
-        
+        <p class="section-subtitle">{{ allPrograms.length }} {{ allPrograms.length !== 1 ? $t('programsAvailable') :
+          $t('programAvailable') }}</p>
+
         <div class="programs-list">
-          <div 
-            v-for="programData in allPrograms" 
-            :key="`${programData.academyId}-${programData.program.id || programData.program.name}`" 
-            class="program-item"
-            :class="{ 'expanded': expandedProgram === `${programData.academyId}-${programData.program.id || programData.program.name}` }"
-          >
+          <div v-for="programData in allPrograms"
+            :key="`${programData.academyId}-${programData.program.id || programData.program.name}`" class="program-item"
+            :class="{ 'expanded': expandedProgram === `${programData.academyId}-${programData.program.id || programData.program.name}` }">
             <!-- Program Header (Always Visible) -->
             <div class="program-header" @click="toggleProgram(programData)">
               <div class="program-basic-info">
@@ -60,141 +56,118 @@
                 <span class="academy-name">{{ programData.academy.name }}</span>
                 <div class="expand-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
                   </svg>
                 </div>
               </div>
             </div>
 
-            <!-- Program Details (Expandable) -->
-            <div v-if="expandedProgram === `${programData.academyId}-${programData.program.id || programData.program.name}`" class="program-details">
-              <!-- Academy Info -->
-              <div class="academy-info">
-                <!-- Academy Image -->
-                <div class="academy-image-section" v-if="programData.academy.imageUrl">
-                  <img :src="programData.academy.imageUrl" :alt="programData.academy.name" class="academy-image" />
-                </div>
-                <div class="academy-image-placeholder" v-else>
-                  <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 16L8.586 11.414C9.367 10.633 10.633 10.633 11.414 11.414L16 16M14 14L15.586 12.414C16.367 11.633 17.633 11.633 18.414 12.414L20 14M14 8H14.01M6 20H18C19.105 20 20 19.105 20 18V6C20 4.895 19.105 4 18 4H6C4.895 4 4 4.895 4 6V18C4 19.105 4.895 20 6 20Z" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Program Details (Expandable) - SIMPLIFIED & MODERN -->
+            <div
+              v-if="expandedProgram === `${programData.academyId}-${programData.program.id || programData.program.name}`"
+              class="program-details">
+              <!-- Compact Info Grid -->
+              <div class="details-pills-grid">
+                <div v-if="programData.program.ageGroup" class="detail-pill">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2" />
+                    <path d="M6 21V19C6 17.3431 7.34315 16 9 16H15C16.6569 16 18 17.3431 18 19V21" stroke="currentColor"
+                      stroke-width="2" stroke-linecap="round" />
                   </svg>
+                  <span>{{ programData.program.ageGroup }}</span>
                 </div>
-                
-                <div class="academy-header">
-                  <h4>{{ programData.academy.name }}</h4>
-                  <span class="academy-type">{{ programData.academy.type || 'Sports Academy' }}</span>
-                  <div class="academy-rating" v-if="programData.academy.rating">
-                    <div class="stars">
-                      <span 
-                        v-for="i in 5" 
-                        :key="i" 
-                        :class="['star', i <= programData.academy.rating ? 'filled' : 'empty']"
-                      >
-                        ★
-                      </span>
-                    </div>
-                    <span class="rating-text">{{ programData.academy.rating }}/5</span>
-                  </div>
+
+                <div
+                  v-if="programData.program.duration && (programData.program.pricingType === 'per-month' || programData.program.pricingType === 'per-week' || programData.program.pricingType === 'per-term')"
+                  class="detail-pill">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                    <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                  </svg>
+                  <span>{{ programData.program.duration }} {{ getDurationUnit(programData.program.pricingType) }}</span>
                 </div>
-                <p class="academy-location" v-if="programData.academy.location">{{ programData.academy.location }}</p>
+
+                <div v-if="programData.program.maxCapacity" class="detail-pill">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M17 21V19C17 16.7909 15.2091 15 13 15H5C2.79086 15 1 16.7909 1 19V21M13 7C13 9.20914 11.2091 11 9 11C6.79086 11 5 9.20914 5 7C5 4.79086 6.79086 3 9 3C11.2091 3 13 4.79086 13 7Z"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                  </svg>
+                  <span>{{ programData.program.maxCapacity }} spots</span>
+                </div>
+
+                <div v-if="programData.academy.location" class="detail-pill location-pill">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M21 10C21 17 12 23 12 23C12 23 3 17 3 10C3 5.02944 7.02944 1 12 1C16.9706 1 21 5.02944 21 10Z"
+                      stroke="currentColor" stroke-width="2" />
+                    <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" />
+                  </svg>
+                  <span>{{ programData.academy.location }}</span>
+                </div>
               </div>
 
-              <!-- Program Information -->
-              <div class="program-info">
-                <div class="info-grid">
-                  <div class="info-item" v-if="programData.program.ageGroup">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15C10.9391 15 9.92172 15.4214 9.17157 16.1716C8.42143 16.9217 8 17.9391 8 19V21" stroke="#666" stroke-width="2"/>
-                      <circle cx="12" cy="7" r="4" stroke="#666" stroke-width="2"/>
+              <!-- Schedule & Coaches in Compact Cards -->
+              <div class="details-row">
+                <div
+                  v-if="programData.program.timeSlotsByDay && Object.keys(programData.program.timeSlotsByDay).length > 0"
+                  class="schedule-card-compact">
+                  <div class="compact-header">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
+                      <path d="M16 2V6M8 2V6M3 10H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                     </svg>
-                    <span class="info-label">Age Group:</span>
-                    <span class="info-value">{{ programData.program.ageGroup }}</span>
+                    Schedule
                   </div>
-                  
-                  <div class="info-item" v-if="programData.program.duration && (programData.program.pricingType === 'per-month' || programData.program.pricingType === 'per-week' || programData.program.pricingType === 'per-term')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="12" cy="12" r="10" stroke="#666" stroke-width="2"/>
-                      <polyline points="12,6 12,12 16,14" stroke="#666" stroke-width="2"/>
-                    </svg>
-                    <span class="info-label">Duration:</span>
-                    <span class="info-value">{{ programData.program.duration }} {{ getDurationUnit(programData.program.pricingType) }}</span>
-                  </div>
-
-                  <div class="info-item" v-if="programData.program.maxCapacity">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="#666" stroke-width="2"/>
-                      <circle cx="9" cy="7" r="4" stroke="#666" stroke-width="2"/>
-                    </svg>
-                    <span class="info-label">Capacity:</span>
-                    <span class="info-value">{{ programData.program.maxCapacity }} students</span>
-                  </div>
-                </div>
-
-                <div class="program-description" v-if="programData.program.description">
-                  <h5>Description</h5>
-                  <p>{{ programData.program.description }}</p>
-                </div>
-
-                <!-- Program Schedule -->
-                <div class="program-schedule" v-if="programData.program.timeSlotsByDay && Object.keys(programData.program.timeSlotsByDay).length > 0">
-                  <h5>Schedule</h5>
-                  <div class="schedule-grid">
-                    <div 
-                      v-for="[day, slots] in Object.entries(programData.program.timeSlotsByDay)" 
-                      :key="day" 
-                      class="day-schedule"
-                    >
-                      <span class="day-name">{{ day }}</span>
-                      <div class="time-slots">
-                        <span 
-                          v-for="slot in slots" 
-                          :key="`${day}-${slot.startTime}`" 
-                          class="time-slot"
-                        >
-                          {{ slot.startTime }} - {{ slot.endTime }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Coaches -->
-                <div class="program-coaches" v-if="programData.program.coaches && programData.program.coaches.length > 0">
-                  <h5>Coaches</h5>
-                  <div class="coaches-list">
-                    <div 
-                      v-for="coach in programData.program.coaches" 
-                      :key="coach.name || coach" 
-                      class="coach-item"
-                    >
-                      <span class="coach-name">{{ typeof coach === 'object' ? coach.name : coach }}</span>
-                      <span v-if="typeof coach === 'object' && coach.specialty" class="coach-specialty">
-                        - {{ coach.specialty }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Pricing and Registration -->
-                <div class="program-pricing">
-                  <div class="pricing-info">
-                    <span class="price" v-if="programData.program.price">
-                      EGP {{ programData.program.price }}
-                      <span class="pricing-type">
-                        {{ getPricingTypeLabel(programData.program.pricingType) }}
-                      </span>
+                  <div class="compact-content">
+                    <span v-for="[day, slots] in Object.entries(programData.program.timeSlotsByDay).slice(0, 2)"
+                      :key="day" class="day-tag">
+                      {{ day.substring(0, 3) }}: {{ slots[0]?.startTime }}
                     </span>
-                    <span class="total-price" v-if="programData.program.price && programData.program.duration && (programData.program.pricingType === 'per-month' || programData.program.pricingType === 'per-week' || programData.program.pricingType === 'per-term')">
-                      Total: EGP {{ programData.program.price * programData.program.duration }}
+                    <span v-if="Object.keys(programData.program.timeSlotsByDay).length > 2" class="more-tag">
+                      +{{ Object.keys(programData.program.timeSlotsByDay).length - 2 }}
                     </span>
                   </div>
-                  <button 
-                    @click="registerForProgram(programData)"
-                    class="register-button"
-                  >
-                    Register Now
-                  </button>
                 </div>
+
+                <div v-if="programData.program.coaches && programData.program.coaches.length > 0"
+                  class="coaches-card-compact">
+                  <div class="compact-header">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M17 21V19C17 16.7909 15.2091 15 13 15H5C2.79086 15 1 16.7909 1 19V21M23 21V19C23 16.7909 21.2091 15 19 15M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                    Coaches
+                  </div>
+                  <div class="compact-content">
+                    {{programData.program.coaches.slice(0, 2).map(c => typeof c === 'object' ? c.name : c).join(', ')
+                    }}
+                    <span v-if="programData.program.coaches.length > 2">...</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Description (if exists) -->
+              <div v-if="programData.program.description" class="description-card-compact">
+                <p>{{ programData.program.description.length > 120 ? programData.program.description.substring(0, 120) +
+                  '...' : programData.program.description }}</p>
+              </div>
+
+              <!-- Pricing and Registration -->
+              <div class="program-action-footer">
+                <div class="price-display">
+                  <span class="price-amount">{{ programData.program.price }} EGP</span>
+                  <span class="price-label">{{ getPricingTypeLabel(programData.program.pricingType) }}</span>
+                </div>
+                <button @click="registerForProgram(programData)" class="register-button-compact">
+                  Register Now
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
@@ -234,7 +207,7 @@ const projectName = computed(() => currentProject.value?.name);
 // Flatten all programs with their academy info
 const allPrograms = computed(() => {
   if (!academies.value || academies.value.length === 0) return [];
-  
+
   const programs = [];
   academies.value.forEach(academy => {
     if (academy.programs && academy.programs.length > 0) {
@@ -247,7 +220,7 @@ const allPrograms = computed(() => {
       });
     }
   });
-  
+
   return programs;
 });
 
@@ -273,7 +246,7 @@ const fetchAcademies = async () => {
 
 const toggleProgram = (programData) => {
   const programKey = `${programData.academyId}-${programData.program.id || programData.program.name}`;
-  
+
   if (expandedProgram.value === programKey) {
     expandedProgram.value = null; // Collapse
   } else {
@@ -397,7 +370,10 @@ watch(currentProject, (newProject) => {
 }
 
 .program-basic-info {
-  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
 }
 
 .program-name {
@@ -405,6 +381,7 @@ watch(currentProject, (newProject) => {
   font-weight: 600;
   color: #333;
   margin: 0 0 8px 0;
+  line-height: 1.2;
 }
 
 .program-sport {
@@ -420,7 +397,6 @@ watch(currentProject, (newProject) => {
 
 .program-academy {
   display: flex;
-  flex-direction: column;
   align-items: flex-end;
   gap: 8px;
 }
@@ -439,265 +415,195 @@ watch(currentProject, (newProject) => {
   transform: rotate(180deg);
 }
 
+/* Modern Compact Program Details */
 .program-details {
   padding: 20px;
   border-top: 1px solid #e9ecef;
-  background: white;
-  margin: 0 20px 20px 20px;
-  border-radius: 12px;
+  background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+  margin: 0 12px 12px 12px;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
-.academy-info {
-  margin-bottom: 20px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
+.details-pills-grid {
   display: flex;
-  gap: 16px;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
-.academy-image-section {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.academy-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.academy-image-placeholder {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
-  background: #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.academy-header {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  flex: 1;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.academy-header h4 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-  margin: 0;
-}
-
-.academy-type {
-  background: #e8f5e8;
-  color: #2e7d32;
-  font-size: 0.75rem;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-weight: 500;
-  text-transform: capitalize;
-}
-
-.academy-rating {
+.detail-pill {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
-}
-
-.stars {
-  display: flex;
-  gap: 1px;
-}
-
-.star {
-  font-size: 12px;
-}
-
-.star.filled {
-  color: #ffd700;
-}
-
-.star.empty {
-  color: #e1e5e9;
-}
-
-.rating-text {
-  font-size: 0.75rem;
-  color: #666;
+  background: #f1f5f9;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
   font-weight: 500;
+  color: #475569;
+  border: 1px solid #e2e8f0;
 }
 
-.academy-location {
-  color: #666;
-  font-size: 0.9rem;
-  margin: 0;
+.detail-pill svg {
+  flex-shrink: 0;
+  stroke: #64748b;
+  width: 16px;
+  height: 16px;
 }
 
-.program-info {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.location-pill {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #fbbf24;
+  color: #78350f;
+  font-weight: 600;
 }
 
-.info-grid {
+.location-pill svg {
+  stroke: #78350f;
+}
+
+.details-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
-.info-item {
+.schedule-card-compact,
+.coaches-card-compact {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.coaches-card-compact {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.compact-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #166534;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.info-label {
-  font-size: 0.8rem;
-  color: #666;
+.coaches-card-compact .compact-header {
+  color: #1e40af;
+}
+
+.compact-header svg {
+  stroke: #16a34a;
+}
+
+.coaches-card-compact .compact-header svg {
+  stroke: #3b82f6;
+}
+
+.compact-content {
+  font-size: 0.85rem;
+  color: #166534;
   font-weight: 500;
-  min-width: 80px;
-}
-
-.info-value {
-  font-size: 0.9rem;
-  color: #333;
-  font-weight: 600;
-}
-
-.program-description h5,
-.program-schedule h5,
-.program-coaches h5 {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 12px 0;
-}
-
-.program-description p {
-  color: #666;
-  line-height: 1.6;
-  margin: 0;
-  font-size: 0.9rem;
-}
-
-.schedule-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.day-schedule {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.day-name {
-  font-weight: 600;
-  color: #333;
-  min-width: 80px;
-  font-size: 0.9rem;
-}
-
-.time-slots {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-}
-
-.time-slot {
-  background: #e8f5e8;
-  color: #2e7d32;
-  font-size: 0.8rem;
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.coaches-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.coach-item {
-  display: flex;
+  gap: 6px;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #f8f9fa;
+}
+
+.coaches-card-compact .compact-content {
+  color: #1e40af;
+}
+
+.day-tag {
+  background: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #86efac;
+}
+
+.more-tag {
+  background: #dcfce7;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #166534;
+}
+
+.description-card-compact {
+  background: #fafafa;
+  border-left: 3px solid #AF1E23;
   border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
 }
 
-.coach-name {
-  font-weight: 500;
-  color: #333;
+.description-card-compact p {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #64748b;
+  margin: 0;
 }
 
-.coach-specialty {
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.program-pricing {
+.program-action-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 2px dashed #e2e8f0;
 }
 
-.pricing-info {
+.price-display {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
-.monthly-price {
-  font-size: 1.125rem;
-  font-weight: 700;
+.price-amount {
+  font-size: 1.5rem;
+  font-weight: 800;
   color: #AF1E23;
+  line-height: 1;
 }
 
-.total-price {
-  font-size: 0.9rem;
-  color: #666;
+.price-label {
+  font-size: 0.75rem;
+  color: #64748b;
   font-weight: 500;
 }
 
-.register-button {
-  background: #AF1E23;
+.register-button-compact {
+  background: linear-gradient(135deg, #AF1E23 0%, #d32f2f 100%);
   color: white;
   border: none;
   padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
+  border-radius: 12px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
   font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
 }
 
-.register-button:hover {
-  background: #AF1E23;
+.register-button-compact:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(175, 30, 35, 0.4);
+}
+
+.register-button-compact svg {
+  flex-shrink: 0;
 }
 
 /* Loading and Error States */
@@ -724,8 +630,13 @@ watch(currentProject, (newProject) => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .error-icon,
@@ -774,34 +685,32 @@ watch(currentProject, (newProject) => {
   .academy-programs-page {
     padding: 16px 0;
   }
-  
+
   /* Page header responsive styles moved to PageHeader component */
-  
+
   .programs-section {
     padding: 20px;
   }
-  
+
   .program-header {
-    flex-direction: column;
     align-items: flex-start;
-    gap: 16px;
   }
-  
+
   .program-academy {
     align-items: flex-start;
   }
-  
+
   .info-grid {
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  
+
   .program-pricing {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
   }
-  
+
   .pricing-info {
     align-items: center;
     text-align: center;
@@ -812,16 +721,16 @@ watch(currentProject, (newProject) => {
   .programs-section {
     padding: 16px;
   }
-  
+
   .program-header {
     padding: 16px;
   }
-  
+
   .program-details {
     padding: 16px;
     margin: 16px;
   }
-  
+
   .day-schedule {
     flex-direction: column;
     align-items: flex-start;

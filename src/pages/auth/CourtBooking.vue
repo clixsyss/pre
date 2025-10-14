@@ -298,10 +298,13 @@ const selectDay = async (day) => {
   if (selectedCourt.value && projectId.value) {
     try {
       loading.value = true;
-      const slots = await bookingService.getAvailableTimeSlots(
+      
+      // OPTIMIZED: Pass court data directly to avoid re-fetching
+      const slots = await bookingService.getAvailableTimeSlotsOptimized(
         projectId.value,
         selectedCourt.value.id,
-        day.toISOString().split('T')[0]
+        day.toISOString().split('T')[0],
+        selectedCourt.value // Pass court data directly
       );
       timeSlotsData.value = slots;
       console.log('Fetched time slots with availability:', slots);

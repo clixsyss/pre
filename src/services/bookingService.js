@@ -229,6 +229,148 @@ export class BookingService {
         })
     }
 
+    // OPTIMIZED VERSION: Get available time slots without re-fetching court data
+    async getAvailableTimeSlotsOptimized(projectId, courtId, date, courtData) {
+        return performanceService.timeOperation('getAvailableTimeSlotsOptimized', async () => {
+            try {
+                console.log('🚀 OPTIMIZED: Getting time slots (skipping court fetch)')
+                
+                // Step 1: Generate time slots from court data (NO FIRESTORE FETCH!)
+                let baseSlots = [];
+                
+                if (!courtData) {
+                    console.warn('⚠️ No court data provided, falling back to regular method');
+                    return this.getAvailableTimeSlots(projectId, courtId, date);
+                }
+                
+                console.log('📋 Using provided court data');
+                
+                // Get the day of week for the selected date
+                const selectedDate = new Date(date);
+                const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                const dayOfWeek = dayNames[selectedDate.getDay()];
+                
+                console.log('📅 Day of week:', dayOfWeek);
+                
+                // Check if court has availability schedule
+                if (courtData.availability && courtData.availability[dayOfWeek]) {
+                    const daySchedule = courtData.availability[dayOfWeek];
+                    
+                    // Check if court is open on this day
+                    if (!daySchedule.enabled) {
+                        console.log(`🚫 Court is closed on ${dayOfWeek}`);
+                        return []; // Return empty - court closed
+                    }
+                    
+                    // Parse start and end times
+                    const startTime = daySchedule.startTime || '08:00';
+                    const endTime = daySchedule.endTime || '22:00';
+                    const startHour = parseInt(startTime.split(':')[0]);
+                    const startMinute = parseInt(startTime.split(':')[1]);
+                    const endHour = parseInt(endTime.split(':')[0]);
+                    const endMinute = parseInt(endTime.split(':')[1]);
+                    const intervalMinutes = courtData.bookingIntervalMinutes || 60;
+                    
+                    console.log(`⏰ ${startTime} to ${endTime}, ${intervalMinutes} min intervals`);
+                    
+                    // Generate slots
+                    const slots = [];
+                    const currentTime = new Date();
+                    currentTime.setHours(startHour, startMinute, 0, 0);
+                    const endDateTime = new Date();
+                    endDateTime.setHours(endHour, endMinute, 0, 0);
+                    
+                    while (currentTime < endDateTime) {
+                        slots.push({
+                            time: currentTime.toLocaleTimeString('en-US', { 
+                                hour: '2-digit', 
+                                minute: '2-digit',
+                                hour12: true 
+                            }),
+                            isReserved: false,
+                            startTime: new Date(currentTime)
+                        });
+                        currentTime.setMinutes(currentTime.getMinutes() + intervalMinutes);
+                    }
+                    
+                    baseSlots = slots;
+                    console.log(`✅ Generated ${slots.length} slots`);
+                } else {
+                    // No availability data - use default
+                    console.log('🔍 No availability schedule, using defaults');
+                    baseSlots = this.generateTimeSlots(8, 22, 60);
+                }
+                
+                // Step 2: Fetch bookings with OPTIMIZED query (simplified, faster)
+                console.log('🔍 Fetching bookings for court:', courtId, 'on date:', date);
+                
+                const collectionPath = `projects/${projectId}/bookings`;
+                
+                // Simplified query - only filter by courtId and date, status filter in JS
+                const filters = [
+                    { field: 'courtId', operator: '==', value: courtId },
+                    { field: 'date', operator: '==', value: date }
+                ];
+                
+                console.log('🚀 Executing simplified Firestore query...');
+                const startTime = Date.now();
+                
+                let result;
+                try {
+                    // Set a shorter timeout for the query
+                    result = await firestoreService.getDocs(collectionPath, { 
+                        filters,
+                        timeoutMs: 3000 // 3 second timeout
+                    });
+                    console.log(`⏱️ Query took ${Date.now() - startTime}ms`);
+                } catch (queryError) {
+                    console.warn('⚠️ Bookings query failed, assuming no bookings:', queryError);
+                    // If query fails, show all slots as available
+                    return baseSlots.map(slot => ({ ...slot, isReserved: false }));
+                }
+                
+                const bookedSlots = [];
+                
+                // Filter by status in JavaScript (faster than compound query)
+                result.docs.forEach((doc) => {
+                    const booking = doc.data();
+                    const status = booking.status || 'pending';
+                    
+                    // Only consider confirmed and pending bookings
+                    if (status === 'confirmed' || status === 'pending') {
+                        if (booking.timeSlots) {
+                            const normalizedSlots = booking.timeSlots.map(time => {
+                                if (time.match(/^\d:\d{2} [AP]M$/)) {
+                                    return '0' + time;
+                                }
+                                return time;
+                            });
+                            bookedSlots.push(...normalizedSlots);
+                        }
+                    }
+                });
+                
+                console.log('📅 Booked slots after filtering:', bookedSlots);
+                
+                // Mark reserved slots
+                const availableSlots = baseSlots.map(slot => ({
+                    ...slot,
+                    isReserved: bookedSlots.includes(slot.time)
+                }));
+                
+                console.log('✅ Time slots ready:', { 
+                    total: availableSlots.length, 
+                    booked: bookedSlots.length 
+                });
+                
+                return availableSlots;
+            } catch (error) {
+                console.error("❌ Error in optimized time slots:", error);
+                return this.generateTimeSlots();
+            }
+        })
+    }
+
     // Create a court booking in a specific project
     async createCourtBooking(projectId, bookingData) {
         return performanceService.timeOperation('createCourtBooking', async () => {

@@ -1,17 +1,6 @@
 <template>
   <div class="academy-booking-page">
-    <div class="page-header">
-      <div class="header-content">
-        <button class="back-button" @click="$router.go(-1)">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <h1>{{ $t('academyProgramsTitle') }}</h1>
-      </div>
-      <p class="header-subtitle">{{ $t('academyProgramsDesc') }}</p>
-    </div>
+    <PageHeader :title="$t('academyProgramsTitle')" :subtitle="$t('academyProgramsDesc')" />
 
     <div class="academy-content">
       <!-- Academy Selection -->
@@ -84,46 +73,74 @@
         </div>
       </div>
 
-      <!-- Program Details -->
+      <!-- Program Details - Simplified & Modern -->}
       <div v-if="selectedProgram" class="program-details-section">
-        <h2 class="section-title">Program Details</h2>
-        <div class="program-details-card">
-          <div class="detail-row">
-            <span class="detail-label">Program Name:</span>
-            <span class="detail-value">{{ selectedProgram.name }}</span>
+        <div class="program-hero-card">
+          <!-- Header -->
+          <div class="program-hero-header">
+            <div class="hero-badge">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="currentColor"/>
+              </svg>
+              {{ selectedProgram.sport }}
+            </div>
+            <h3 class="program-hero-title">{{ selectedProgram.name }}</h3>
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Sport:</span>
-            <span class="detail-value">{{ selectedProgram.sport }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Duration:</span>
-            <span class="detail-value">{{ formatDuration(selectedProgram) }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Price:</span>
-            <span class="detail-value">{{ selectedProgram.price }} EGP</span>
-          </div>
-          <div v-if="selectedProgram.ageGroup" class="detail-row">
-            <span class="detail-label">Age Group:</span>
-            <span class="detail-value">{{ selectedProgram.ageGroup }}</span>
-          </div>
-          <div v-if="selectedProgram.coaches && selectedProgram.coaches.length > 0" class="detail-row">
-            <span class="detail-label">Coaches:</span>
-            <span class="detail-value">{{ selectedProgram.coaches.join(', ') }}</span>
-          </div>
-          <div v-if="selectedProgram.schedule && selectedProgram.schedule.length > 0" class="detail-row">
-            <span class="detail-label">Schedule:</span>
-            <div class="schedule-list">
-              <div v-for="(session, idx) in selectedProgram.schedule" :key="idx" class="schedule-item">
-                {{ session.day }} at {{ session.time }}
-                <span v-if="session.location" class="location">({{ session.location }})</span>
-              </div>
+
+          <!-- Key Info Grid -->
+          <div class="info-grid">
+            <div class="info-pill">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 8V12L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <span>{{ formatDuration(selectedProgram) }}</span>
+            </div>
+            <div class="info-pill price-pill">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2V22M17 5H9.5C8.57174 5 7.6815 5.36875 7.02513 6.02513C6.36875 6.6815 6 7.57174 6 8.5C6 9.42826 6.36875 10.3185 7.02513 10.9749C7.6815 11.6313 8.57174 12 9.5 12H14.5C15.4283 12 16.3185 12.3687 16.9749 13.0251C17.6313 13.6815 18 14.5717 18 15.5C18 16.4283 17.6313 17.3185 16.9749 17.9749C16.3185 18.6313 15.4283 19 14.5 19H6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span>{{ selectedProgram.price }} EGP</span>
+            </div>
+            <div v-if="selectedProgram.ageGroup" class="info-pill">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
+                <path d="M6 21V19C6 17.3431 7.34315 16 9 16H15C16.6569 16 18 17.3431 18 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span>Ages {{ selectedProgram.ageGroup }}</span>
             </div>
           </div>
-          <div v-if="selectedProgram.description" class="detail-row">
-            <span class="detail-label">Description:</span>
-            <p class="description-text">{{ selectedProgram.description }}</p>
+
+          <!-- Schedule (if exists) -->
+          <div v-if="selectedProgram.schedule && selectedProgram.schedule.length > 0" class="schedule-compact">
+            <div class="schedule-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                <path d="M16 2V6M8 2V6M3 10H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Schedule
+            </div>
+            <div class="schedule-chips">
+              <span v-for="(session, idx) in selectedProgram.schedule.slice(0, 3)" :key="idx" class="schedule-chip">
+                {{ session.day }} {{ session.time }}
+              </span>
+              <span v-if="selectedProgram.schedule.length > 3" class="schedule-chip more">
+                +{{ selectedProgram.schedule.length - 3 }} more
+              </span>
+            </div>
+          </div>
+
+          <!-- Coaches (if exist) -->
+          <div v-if="selectedProgram.coaches && selectedProgram.coaches.length > 0" class="coaches-compact">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88M13 7C13 9.20914 11.2091 11 9 11C6.79086 11 5 9.20914 5 7C5 4.79086 6.79086 3 9 3C11.2091 3 13 4.79086 13 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>{{ selectedProgram.coaches.join(', ') }}</span>
+          </div>
+
+          <!-- Description (collapsible) -->
+          <div v-if="selectedProgram.description" class="description-compact">
+            <p>{{ selectedProgram.description }}</p>
           </div>
         </div>
       </div>
@@ -212,6 +229,7 @@ import { useRouter } from 'vue-router';
 import { useAcademiesStore } from 'src/stores/academyStore';
 import { useNotificationStore } from 'src/stores/notifications';
 import bookingService from 'src/services/bookingService';
+import PageHeader from 'src/components/PageHeader.vue';
 
 // Component name for ESLint
 defineOptions({
@@ -464,59 +482,165 @@ onMounted(async () => {
   opacity: 1;
 }
 
-.program-details-card {
-  background: #f8f9fa;
-  border-radius: 12px;
-  padding: 20px;
+/* Modern Program Hero Card */
+.program-hero-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
 }
 
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 12px 0;
-  border-bottom: 1px solid #e1e5e9;
+.program-hero-header {
+  margin-bottom: 20px;
 }
 
-.detail-row:last-child {
-  border-bottom: none;
-}
-
-.detail-label {
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #AF1E23 0%, #d32f2f 100%);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
   font-weight: 600;
-  color: #333;
-  min-width: 120px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.3);
 }
 
-.detail-value {
-  color: #666;
-  text-align: right;
-  flex: 1;
+.hero-badge svg {
+  flex-shrink: 0;
 }
 
-.schedule-list {
+.program-hero-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.info-pill {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.info-pill:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.info-pill svg {
+  flex-shrink: 0;
+  stroke: #64748b;
+}
+
+.price-pill {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #fbbf24;
+  color: #78350f;
+  font-weight: 700;
+}
+
+.price-pill svg {
+  stroke: #78350f;
+}
+
+.schedule-compact {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.schedule-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #166534;
+  margin-bottom: 10px;
+}
+
+.schedule-header svg {
+  stroke: #16a34a;
+}
+
+.schedule-chips {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.schedule-item {
+.schedule-chip {
   background: white;
-  padding: 8px 12px;
-  border-radius: 8px;
+  border: 1px solid #86efac;
+  color: #166534;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.schedule-chip.more {
+  background: #dcfce7;
+  font-weight: 600;
+}
+
+.coaches-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
   font-size: 0.9rem;
+  color: #1e40af;
+  font-weight: 500;
 }
 
-.location {
-  color: #666;
-  font-style: italic;
+.coaches-compact svg {
+  flex-shrink: 0;
+  stroke: #3b82f6;
 }
 
-.description-text {
-  margin: 8px 0 0 0;
-  line-height: 1.5;
-  color: #666;
+.description-compact {
+  background: #fafafa;
+  border-left: 4px solid #AF1E23;
+  border-radius: 8px;
+  padding: 14px;
+  margin-top: 12px;
 }
+
+.description-compact p {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #475569;
+  margin: 0;
+}
+
+/* Old styles removed - using new compact design */
 
 .participant-form {
   display: grid;

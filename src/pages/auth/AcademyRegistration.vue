@@ -1,17 +1,7 @@
 <template>
   <div class="academy-registration-page">
-    <div class="page-header">
-      <div class="header-content">
-        <button class="back-button" @click="$router.go(-1)">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <h1>{{ $t('programRegistration') }}</h1>
-      </div>
-      <p class="header-subtitle">{{ $t('completeRegistrationFor') }} {{ program?.name }}</p>
-    </div>
+
+    <PageHeader :title="$t('programRegistration')" :subtitle="$t('completeRegistrationFor') + program?.name" />
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
@@ -29,40 +19,27 @@
 
     <!-- Registration Form -->
     <div v-else-if="program && academy" class="registration-content">
-      <!-- Program Summary -->
-      <div class="program-summary">
-        <h2 class="section-title">{{ $t('programSummary') }}</h2>
-        <div class="summary-card">
-          <div class="summary-header">
+      <!-- Program Summary - COMPACT -->
+      <div class="program-summary-modern">
+        <div class="summary-hero">
+          <div class="hero-left">
+            <div class="program-badge">{{ program.category || 'Sports' }}</div>
             <h3>{{ program.name }}</h3>
-            <span class="academy-name">{{ academy.name }}</span>
+            <div class="academy-tag">📍 {{ academy.name }}</div>
           </div>
-          <div class="summary-details">
-            <div class="detail-row">
-              <span class="label">{{ $t('category') }}:</span>
-              <span class="value">{{ program.category || $t('sportsAcademy') }}</span>
-            </div>
-            <div class="detail-row" v-if="program.ageGroup">
-              <span class="label">{{ $t('ageGroup') }}:</span>
-              <span class="value">{{ program.ageGroup }}</span>
-            </div>
-            <div class="detail-row" v-if="program.duration && (program.pricingType === 'per-month' || program.pricingType === 'per-week' || program.pricingType === 'per-term')">
-              <span class="label">{{ $t('duration') }}:</span>
-              <span class="value">{{ program.duration }} {{ getDurationUnit(program.pricingType) }}</span>
-            </div>
-            <div class="detail-row" v-if="program.maxCapacity">
-              <span class="label">{{ $t('maxCapacity') }}:</span>
-              <span class="value">{{ program.maxCapacity }} {{ $t('students') }}</span>
-            </div>
-            <div class="detail-row" v-if="program.price">
-              <span class="label">{{ $t('price') }}:</span>
-              <span class="value">EGP {{ program.price }}{{ getPricingTypeLabel(program.pricingType) }}</span>
-            </div>
-            <div class="detail-row total">
-              <span class="label">{{ $t('totalCost') }}:</span>
-              <span class="value">EGP {{ totalCost }}</span>
-            </div>
+          <div class="price-hero">
+            <div class="total-price">{{ totalCost }} EGP</div>
+            <div class="price-note">Total Cost</div>
           </div>
+        </div>
+        
+        <!-- Quick Details -->
+        <div class="summary-pills">
+          <span v-if="program.ageGroup" class="sum-pill">{{ program.ageGroup }}</span>
+          <span v-if="program.duration && (program.pricingType === 'per-month' || program.pricingType === 'per-week' || program.pricingType === 'per-term')" class="sum-pill">
+            ⏱️ {{ program.duration }} {{ getDurationUnit(program.pricingType) }}
+          </span>
+          <span v-if="program.maxCapacity" class="sum-pill">{{ program.maxCapacity }} spots</span>
         </div>
       </div>
 
@@ -184,6 +161,7 @@ import { useProjectStore } from 'src/stores/projectStore';
 import { serverTimestamp } from 'firebase/firestore';
 import optimizedAuthService from 'src/services/optimizedAuthService';
 import firestoreService from 'src/services/firestoreService';
+import PageHeader from 'src/components/PageHeader.vue';
 
 // Component name for ESLint
 defineOptions({
@@ -389,17 +367,6 @@ const submitRegistration = async () => {
   }
 };
 
-const getPricingTypeLabel = (pricingType) => {
-  const labels = {
-    'per-session': '/session',
-    'per-week': '/week',
-    'per-month': '/month',
-    'per-term': '/term',
-    'one-time': ' one-time'
-  };
-  return labels[pricingType] || '/month';
-};
-
 const getDurationUnit = (pricingType) => {
   const units = {
     'per-week': 'weeks',
@@ -471,7 +438,94 @@ onMounted(() => {
   gap: 32px;
 }
 
-.program-summary,
+/* Modern Compact Summary */
+.program-summary-modern {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 2px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+}
+
+.summary-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.hero-left {
+  flex: 1;
+}
+
+.program-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #AF1E23 0%, #d32f2f 100%);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hero-left h3 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1a202c;
+  margin: 0 0 8px 0;
+}
+
+.academy-tag {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.price-hero {
+  text-align: right;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  padding: 12px 20px;
+  border-radius: 16px;
+  border: 2px solid #fbbf24;
+}
+
+.total-price {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: #78350f;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.price-note {
+  font-size: 0.75rem;
+  color: #92400e;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sum-pill {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid #e2e8f0;
+}
+
 .registration-form {
   background: white;
   border: 1px solid #e1e5e9;
@@ -485,66 +539,6 @@ onMounted(() => {
   font-weight: 600;
   color: #333;
   margin: 0 0 20px 0;
-}
-
-.summary-card {
-  background: #f8f9fa;
-  border-radius: 12px;
-  padding: 20px;
-}
-
-.summary-header {
-  margin-bottom: 16px;
-}
-
-.summary-header h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 8px 0;
-}
-
-.academy-name {
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.summary-details {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.detail-row:last-child {
-  border-bottom: none;
-}
-
-.detail-row.total {
-  font-weight: 700;
-  font-size: 1.125rem;
-  color: #333;
-  border-top: 2px solid #e1e5e9;
-  border-bottom: none;
-  padding-top: 12px;
-  margin-top: 8px;
-}
-
-.detail-row .label {
-  color: #666;
-  font-weight: 500;
-}
-
-.detail-row .value {
-  color: #333;
-  font-weight: 600;
 }
 
 .form-group {
@@ -610,17 +604,21 @@ onMounted(() => {
 }
 
 .submit-btn {
-  background: #AF1E23;
+  background: linear-gradient(135deg, #AF1E23 0%, #d32f2f 100%);
   color: white;
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: #AF1E23;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(175, 30, 35, 0.4);
 }
 
 .submit-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .button-loading {
@@ -756,7 +754,15 @@ onMounted(() => {
     font-size: 1.5rem;
   }
   
-  .program-summary,
+  .summary-hero {
+    flex-direction: column;
+  }
+  
+  .price-hero {
+    text-align: left;
+    width: 100%;
+  }
+  
   .registration-form {
     padding: 20px;
   }
@@ -767,19 +773,13 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-  .program-summary,
+  .program-summary-modern,
   .registration-form {
     padding: 16px;
   }
   
-  .summary-card {
-    padding: 16px;
-  }
-  
-  .detail-row {
+  .summary-pills {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
   }
 }
 </style>
