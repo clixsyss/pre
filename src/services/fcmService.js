@@ -94,7 +94,23 @@ class FCMService {
           console.log('🎉 FCMService: Token length:', token.length);
           this.currentToken = token;
           
-          // Save token to Firestore with retry
+          // Mirror orange-pharmacies: write flat fcmToken immediately after retrieval
+          try {
+            const userId = await this.getCurrentUserId();
+            if (userId) {
+              const { FirebaseFirestore } = await import('@capacitor-firebase/firestore');
+              await FirebaseFirestore.setDocument({
+                reference: `users/${userId}`,
+                data: { fcmToken: token },
+                merge: true
+              });
+              console.log('✅ FCMService: Immediate user fcmToken updated (native)');
+            }
+          } catch (e) {
+            console.warn('⚠️ FCMService: Immediate flat fcmToken write failed (native):', e);
+          }
+
+          // Save token to Firestore with retry for subcollection record
           await this.saveTokenWithRetry(token, this.platform);
         } else {
           console.warn('⚠️ FCMService: No token received');
@@ -454,6 +470,17 @@ class FCMService {
         });
         
         console.log('✅ FCMService: Token saved successfully via Capacitor Firestore!');
+        // Mirror orange-pharmacies: also store flat fcmToken on the user document
+        try {
+          await FirebaseFirestore.setDocument({
+            reference: `users/${userId}`,
+            data: { fcmToken: token },
+            merge: true
+          });
+          console.log('✅ FCMService: User fcmToken updated (native)');
+        } catch (e) {
+          console.warn('⚠️ FCMService: Failed to set flat fcmToken (native):', e);
+        }
       } else {
         // Use Web SDK for web platform
         console.log('🌐 FCMService: Using Web SDK to save token...');
@@ -472,6 +499,14 @@ class FCMService {
         }, { merge: true });
         
         console.log('✅ FCMService: Token saved successfully via Web SDK!');
+        // Mirror orange-pharmacies: also store flat fcmToken on the user document
+        try {
+          const userRef = doc(db, 'users', userId);
+          await updateDoc(userRef, { fcmToken: token });
+          console.log('✅ FCMService: User fcmToken updated (web)');
+        } catch (e) {
+          console.warn('⚠️ FCMService: Failed to set flat fcmToken (web):', e);
+        }
       }
     } catch (error) {
       console.error('❌ FCMService: Error saving token:', error);

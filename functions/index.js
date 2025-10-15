@@ -509,7 +509,8 @@ async function collectTokens(projectId, audience) {
           if (belongsToProject) {
             projectUserCount++
             
-            // Collect tokens for this user
+            // Collect tokens for this user - check both subcollection AND flat fcmToken field
+            // 1. Check subcollection (existing approach)
             const tokensRef = userDoc.ref.collection('tokens')
             const tokensSnapshot = await tokensRef.get()
             
@@ -523,6 +524,15 @@ async function collectTokens(projectId, audience) {
                 })
               }
             })
+            
+            // 2. Check flat fcmToken field (orange-pharmacies approach)
+            if (userData.fcmToken) {
+              tokens.push({
+                token: userData.fcmToken,
+                userId: userDoc.id,
+                platform: 'ios' // Default platform for flat token
+              })
+            }
           }
         }
       }
@@ -554,7 +564,8 @@ async function collectTokens(projectId, audience) {
           continue
         }
         
-        // Collect tokens for this user
+        // Collect tokens for this user - check both subcollection AND flat fcmToken field
+        // 1. Check subcollection (existing approach)
         const tokensRef = admin.firestore()
           .collection('users')
           .doc(uid)
@@ -572,6 +583,15 @@ async function collectTokens(projectId, audience) {
             })
           }
         })
+        
+        // 2. Check flat fcmToken field (orange-pharmacies approach)
+        if (userData.fcmToken) {
+          tokens.push({
+            token: userData.fcmToken,
+            userId: uid,
+            platform: 'ios' // Default platform for flat token
+          })
+        }
       }
     } else if (audience.topic) {
       // Topic-based sending
