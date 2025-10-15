@@ -3,16 +3,15 @@
  * Handles Firebase Cloud Messaging for push notifications across Web, iOS, and Android
  * 
  * Features:
- * - Device token registration and management
+ * - Device token registration and management using @capacitor-firebase/messaging
  * - Foreground notification handling
- * - Background notification handling (via service worker for web)
+ * - Background notification handling
  * - Token refresh handling
  * - Bilingual notification support (English/Arabic)
  */
 
 import { getMessaging, getToken, onMessage, deleteToken } from 'firebase/messaging';
 import { Capacitor } from '@capacitor/core';
-import { PushNotifications } from '@capacitor/push-notifications';
 import { 
   collection, 
   doc, 
@@ -33,9 +32,10 @@ class FCMService {
     this.platform = Capacitor.getPlatform();
     this.currentToken = null;
     this.notificationHandlers = [];
+    this.FirebaseMessaging = null; // Will be loaded dynamically
     
-    // VAPID key for web push (get this from Firebase Console > Project Settings > Cloud Messaging)
-    this.vapidKey = 'BDL03mUP_fsEjpZLMLwj-EW0XGFUPXDu8alAQgAKrlcGrHe39yxSF8DH1yn75Y93vOYc-5nNcRctEhMoBPvQatQ'; // TODO: Replace with your actual VAPID key
+    // VAPID key for web push
+    this.vapidKey = 'BDL03mUP_fsEjpZLMLwj-EW0XGFUPXDu8alAQgAKrlcGrHe39yxSF8DH1yn75Y93vOYc-5nNcRctEhMoBPvQatQ';
     
     console.log('FCMService: Initialized', { isNative: this.isNative, platform: this.platform });
   }
@@ -62,39 +62,95 @@ class FCMService {
   }
 
   /**
-   * Initialize FCM for native platforms (iOS/Android)
+   * Initialize FCM for native platforms (iOS/Android) using @capacitor-firebase/messaging
    */
   async initializeNative() {
-    console.log('FCMService: Initializing native push notifications...');
+    console.log('FCMService: Initializing native Firebase Messaging...');
     
     try {
-      // Request permission
-      console.log('FCMService: Requesting push notification permissions...');
-      const permissionResult = await PushNotifications.requestPermissions();
+      // Import FirebaseMessaging plugin
+      const { FirebaseMessaging } = await import('@capacitor-firebase/messaging');
+      this.FirebaseMessaging = FirebaseMessaging;
+      console.log('FCMService: FirebaseMessaging plugin loaded');
+      
+      // Request permissions
+      console.log('FCMService: Requesting notification permissions...');
+      const permissionResult = await FirebaseMessaging.requestPermissions();
       console.log('FCMService: Permission result:', permissionResult);
       
       if (permissionResult.receive === 'granted') {
-        console.log('FCMService: Permission granted, proceeding with registration...');
+        console.log('FCMService: Permission granted ✅');
         
-        // Set up listeners BEFORE registration (they should be set up first)
-        console.log('FCMService: Setting up native listeners BEFORE registration...');
+        // Set up listeners FIRST
         this.setupNativeListeners();
         
-        // Register with FCM
-        console.log('FCMService: About to call PushNotifications.register()...');
-        await PushNotifications.register();
-        console.log('FCMService: PushNotifications.register() completed');
-        console.log('FCMService: Registered for push notifications');
+        // Get the FCM token
+        console.log('FCMService: Getting FCM token...');
+        const result = await FirebaseMessaging.getToken();
+        const token = result.token;
         
-        console.log('FCMService: Native initialization complete');
+        if (token) {
+          console.log('🎉 FCMService: Got FCM token:', token);
+          console.log('🎉 FCMService: Token length:', token.length);
+          this.currentToken = token;
+          
+          // Save token to Firestore with retry
+          await this.saveTokenWithRetry(token, this.platform);
+        } else {
+          console.warn('⚠️ FCMService: No token received');
+        }
+        
+        console.log('✅ FCMService: Native initialization complete');
       } else {
         console.warn('FCMService: Push notification permission denied');
         throw new Error('Push notification permission denied');
       }
     } catch (error) {
       console.error('FCMService: Native initialization error:', error);
-      console.error('FCMService: Error details:', error.message, error.code);
+      console.error('FCMService: Error details:', error.message);
       throw error;
+    }
+  }
+
+  /**
+   * Save token with retry logic for when user authentication is delayed
+   */
+  async saveTokenWithRetry(token, platform, retryCount = 0) {
+    try {
+      // On native platforms, use Capacitor Firebase Auth to check current user
+      let currentUserId = null;
+      
+      if (this.isNative) {
+        // Use Capacitor Firebase Authentication
+        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+        const { user } = await FirebaseAuthentication.getCurrentUser();
+        currentUserId = user?.uid;
+        console.log('🔍 FCMService: Capacitor Auth check - User ID:', currentUserId);
+      } else {
+        // Use Web SDK for web platform
+        currentUserId = auth.currentUser?.uid;
+        console.log('🔍 FCMService: Web Auth check - User ID:', currentUserId);
+      }
+      
+      if (currentUserId) {
+        console.log('🎉 FCMService: Saving token to Firestore for user:', currentUserId);
+        await this.saveTokenToFirestore(token, platform);
+        console.log('✅ FCMService: Token saved successfully!');
+      } else if (retryCount < 10) {
+        console.log(`⚠️ FCMService: No authenticated user yet, retrying in 1s... (attempt ${retryCount + 1}/10)`);
+        setTimeout(() => this.saveTokenWithRetry(token, platform, retryCount + 1), 1000);
+      } else {
+        console.error('⚠️ FCMService: No authenticated user after 10 attempts, token not saved');
+        throw new Error('Failed to save token: No authenticated user');
+      }
+    } catch (error) {
+      console.error('❌ FCMService: Error in saveTokenWithRetry:', error);
+      if (retryCount < 10) {
+        console.log(`⚠️ FCMService: Retrying after error... (attempt ${retryCount + 1}/10)`);
+        setTimeout(() => this.saveTokenWithRetry(token, platform, retryCount + 1), 1000);
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -142,7 +198,6 @@ class FCMService {
   async getWebToken() {
     try {
       console.log('FCMService: Attempting to get FCM token...');
-      console.log('FCMService: VAPID key:', this.vapidKey.substring(0, 10) + '...');
       
       // Check if service worker is registered
       if ('serviceWorker' in navigator) {
@@ -154,7 +209,6 @@ class FCMService {
           try {
             const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
             console.log('FCMService: Service worker registered successfully:', registration.scope);
-            // Wait a bit for the service worker to be ready
             await navigator.serviceWorker.ready;
           } catch (swError) {
             console.error('FCMService: Service worker registration failed:', swError);
@@ -178,66 +232,45 @@ class FCMService {
       return token;
     } catch (error) {
       console.error('FCMService: Error getting web token:', error);
-      console.error('FCMService: Error details:', error.code, error.message);
       throw error;
     }
   }
 
   /**
-   * Set up native platform listeners
+   * Set up native platform listeners using @capacitor-firebase/messaging
    */
   setupNativeListeners() {
     console.log('FCMService: Setting up native listeners...');
-    console.log('FCMService: Platform:', this.platform);
-    console.log('FCMService: Current user:', auth.currentUser?.uid);
-    console.log('FCMService: PushNotifications plugin:', PushNotifications);
-    console.log('FCMService: PushNotifications.addListener:', typeof PushNotifications.addListener);
     
-    // Test listener setup
-    console.log('FCMService: Adding registration listener...');
-    const registrationListener = PushNotifications.addListener('registration', async (token) => {
-      console.log('🎉🎉🎉 FCMService: *** REGISTRATION EVENT FIRED ***');
-      console.log('🎉 FCMService: Native registration success!');
-      console.log('🎉 FCMService: Token:', token.value);
-      console.log('🎉 FCMService: Token length:', token.value?.length);
-      console.log('🎉 FCMService: Full token object:', JSON.stringify(token));
-      this.currentToken = token.value;
+    if (!this.FirebaseMessaging) {
+      console.error('FCMService: FirebaseMessaging plugin not loaded');
+      return;
+    }
+
+    // Listen for token refresh
+    this.FirebaseMessaging.addListener('tokenReceived', async (event) => {
+      console.log('🎉 FCMService: Token refreshed!');
+      console.log('🎉 FCMService: New token:', event.token);
+      this.currentToken = event.token;
       
-      // Save token to Firestore - try multiple times if user not ready
-      const saveTokenWithRetry = async (retryCount = 0) => {
-        if (auth.currentUser) {
-          console.log('🎉 FCMService: Saving token to Firestore for user:', auth.currentUser.uid);
-          await this.saveTokenToFirestore(token.value, this.platform);
-          console.log('✅ FCMService: Token saved successfully!');
-        } else if (retryCount < 5) {
-          console.log(`⚠️ FCMService: No authenticated user yet, retrying in 1s... (attempt ${retryCount + 1}/5)`);
-          setTimeout(() => saveTokenWithRetry(retryCount + 1), 1000);
-        } else {
-          console.warn('⚠️ FCMService: No authenticated user after 5 attempts, token not saved');
-        }
-      };
-      
-      await saveTokenWithRetry();
-    });
-    console.log('FCMService: Registration listener added:', registrationListener);
-
-    // Listen for registration errors
-    PushNotifications.addListener('registrationError', (error) => {
-      console.error('❌ FCMService: Registration error:', error);
-      console.error('❌ FCMService: Error details:', JSON.stringify(error));
+      // Update token in Firestore (use retry logic)
+      console.log('🔄 FCMService: Triggering token save after refresh...');
+      await this.saveTokenWithRetry(event.token, this.platform);
     });
 
-    // Listen for push notification received (foreground)
-    PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('FCMService: Push notification received (foreground):', notification);
-      this.handleForegroundNotification(notification);
+    // Listen for notification received (foreground)
+    this.FirebaseMessaging.addListener('notificationReceived', (event) => {
+      console.log('📬 FCMService: Notification received (foreground):', event.notification);
+      this.handleForegroundNotification(event.notification);
     });
 
-    // Listen for push notification tapped (background/killed)
-    PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-      console.log('FCMService: Push notification action performed:', notification);
-      this.handleNotificationTap(notification);
+    // Listen for notification action performed (tap)
+    this.FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
+      console.log('👆 FCMService: Notification tapped:', event.notification);
+      this.handleNotificationTap(event);
     });
+    
+    console.log('✅ FCMService: Native listeners set up successfully');
   }
 
   /**
@@ -263,7 +296,7 @@ class FCMService {
     let title, body, data;
     
     if (this.isNative) {
-      // Capacitor format
+      // @capacitor-firebase/messaging format
       title = notification.title;
       body = notification.body;
       data = notification.data || {};
@@ -274,7 +307,7 @@ class FCMService {
       data = notification.data || {};
     }
     
-    // Get user's preferred language (assuming you have i18n set up)
+    // Get user's preferred language
     const userLang = localStorage.getItem('user-language') || 'en';
     
     // Use bilingual content if available
@@ -316,19 +349,13 @@ class FCMService {
   }
 
   /**
-   * Handle notification tap (when user taps on notification)
+   * Handle notification tap
    */
-  handleNotificationTap(notification) {
-    console.log('FCMService: Handling notification tap:', notification);
+  handleNotificationTap(event) {
+    console.log('FCMService: Handling notification tap:', event);
     
-    // Extract data based on platform
-    let data;
-    
-    if (this.isNative) {
-      data = notification.notification?.data || {};
-    } else {
-      data = notification.data || {};
-    }
+    // Extract data
+    const data = event.notification?.data || {};
     
     this.handleNotificationAction(data);
   }
@@ -364,7 +391,6 @@ class FCMService {
           router.push('/promotions');
           break;
         default:
-          // Default to notifications page
           router.push('/notifications');
       }
     });
@@ -375,36 +401,100 @@ class FCMService {
    */
   async saveTokenToFirestore(token, platform) {
     try {
-      const user = auth.currentUser;
-      if (!user) {
+      // Get current user - use Capacitor plugin on native, Web SDK on web
+      let userId = null;
+      
+      if (this.isNative) {
+        // Use Capacitor Firebase Authentication on native platforms
+        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+        const { user } = await FirebaseAuthentication.getCurrentUser();
+        userId = user?.uid;
+        console.log('🔍 FCMService: Getting user from Capacitor Auth:', userId);
+      } else {
+        // Use Web SDK for web platform
+        userId = auth.currentUser?.uid;
+        console.log('🔍 FCMService: Getting user from Web SDK:', userId);
+      }
+      
+      if (!userId) {
         console.warn('FCMService: No authenticated user, skipping token save');
         return;
       }
 
-      console.log('FCMService: Saving token to Firestore:', { token, platform, userId: user.uid });
+      console.log('💾 FCMService: Preparing to save token to Firestore:', { token, platform, userId });
 
-      // Create a unique ID for this token (use the token itself as the ID)
+      // Create a unique ID for this token
       const tokenId = this.hashToken(token);
+      const tokenPath = `users/${userId}/tokens/${tokenId}`;
       
-      // Save to users/{uid}/tokens/{tokenId}
-      const tokenRef = doc(db, 'users', user.uid, 'tokens', tokenId);
+      console.log('📍 FCMService: Token path:', tokenPath);
       
-      await setDoc(tokenRef, {
-        token,
-        platform,
-        createdAt: serverTimestamp(),
-        lastSeenAt: serverTimestamp(),
-        deviceInfo: {
-          userAgent: navigator.userAgent || 'Unknown',
-          isNative: this.isNative,
-          platformType: this.platform
-        }
-      }, { merge: true });
-
-      console.log('FCMService: Token saved successfully');
+      // On iOS, use Capacitor Firestore plugin for better compatibility
+      if (this.isNative) {
+        console.log('📱 FCMService: Using Capacitor Firestore plugin to save token...');
+        const { FirebaseFirestore } = await import('@capacitor-firebase/firestore');
+        
+        const tokenData = {
+          token,
+          platform,
+          createdAt: new Date().toISOString(), // Capacitor plugin uses ISO strings
+          lastSeenAt: new Date().toISOString(),
+          deviceInfo: {
+            userAgent: navigator.userAgent || 'Unknown',
+            isNative: this.isNative,
+            platformType: this.platform
+          }
+        };
+        
+        console.log('📤 FCMService: Calling Capacitor setDocument...');
+        await FirebaseFirestore.setDocument({
+          reference: tokenPath,
+          data: tokenData,
+          merge: true
+        });
+        
+        console.log('✅ FCMService: Token saved successfully via Capacitor Firestore!');
+      } else {
+        // Use Web SDK for web platform
+        console.log('🌐 FCMService: Using Web SDK to save token...');
+        const tokenRef = doc(db, 'users', userId, 'tokens', tokenId);
+        
+        await setDoc(tokenRef, {
+          token,
+          platform,
+          createdAt: serverTimestamp(),
+          lastSeenAt: serverTimestamp(),
+          deviceInfo: {
+            userAgent: navigator.userAgent || 'Unknown',
+            isNative: this.isNative,
+            platformType: this.platform
+          }
+        }, { merge: true });
+        
+        console.log('✅ FCMService: Token saved successfully via Web SDK!');
+      }
     } catch (error) {
-      console.error('FCMService: Error saving token:', error);
+      console.error('❌ FCMService: Error saving token:', error);
+      console.error('❌ FCMService: Error details:', error.message, error.code);
       throw error;
+    }
+  }
+
+  /**
+   * Get current authenticated user ID (works on both native and web)
+   */
+  async getCurrentUserId() {
+    try {
+      if (this.isNative) {
+        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+        const { user } = await FirebaseAuthentication.getCurrentUser();
+        return user?.uid;
+      } else {
+        return auth.currentUser?.uid;
+      }
+    } catch (error) {
+      console.error('FCMService: Error getting current user:', error);
+      return null;
     }
   }
 
@@ -413,13 +503,13 @@ class FCMService {
    */
   async updateTokenLastSeen() {
     try {
-      const user = auth.currentUser;
-      if (!user || !this.currentToken) {
+      const userId = await this.getCurrentUserId();
+      if (!userId || !this.currentToken) {
         return;
       }
 
       const tokenId = this.hashToken(this.currentToken);
-      const tokenRef = doc(db, 'users', user.uid, 'tokens', tokenId);
+      const tokenRef = doc(db, 'users', userId, 'tokens', tokenId);
       
       await updateDoc(tokenRef, {
         lastSeenAt: serverTimestamp()
@@ -436,8 +526,8 @@ class FCMService {
    */
   async removeTokenFromFirestore(token) {
     try {
-      const user = auth.currentUser;
-      if (!user) {
+      const userId = await this.getCurrentUserId();
+      if (!userId) {
         console.warn('FCMService: No authenticated user, skipping token removal');
         return;
       }
@@ -445,7 +535,7 @@ class FCMService {
       console.log('FCMService: Removing token from Firestore:', token);
 
       const tokenId = this.hashToken(token);
-      const tokenRef = doc(db, 'users', user.uid, 'tokens', tokenId);
+      const tokenRef = doc(db, 'users', userId, 'tokens', tokenId);
       
       await deleteDoc(tokenRef);
 
@@ -461,14 +551,14 @@ class FCMService {
    */
   async removeAllTokens() {
     try {
-      const user = auth.currentUser;
-      if (!user) {
+      const userId = await this.getCurrentUserId();
+      if (!userId) {
         return;
       }
 
-      console.log('FCMService: Removing all tokens for user:', user.uid);
+      console.log('FCMService: Removing all tokens for user:', userId);
 
-      const tokensRef = collection(db, 'users', user.uid, 'tokens');
+      const tokensRef = collection(db, 'users', userId, 'tokens');
       const q = query(tokensRef);
       const snapshot = await getDocs(q);
 
@@ -495,8 +585,8 @@ class FCMService {
       }
 
       // Platform-specific unregistration
-      if (this.isNative) {
-        await PushNotifications.removeAllListeners();
+      if (this.isNative && this.FirebaseMessaging) {
+        await this.FirebaseMessaging.removeAllListeners();
         console.log('FCMService: Native listeners removed');
       } else if (this.messaging) {
         // Delete token from FCM
@@ -544,8 +634,7 @@ class FCMService {
    */
   async subscribeToTopic(topic) {
     console.log('FCMService: Topic subscription must be done server-side:', topic);
-    // This should be implemented as a Cloud Function that the client calls
-    // The function would use admin.messaging().subscribeToTopic([tokens], topic)
+    // This should be implemented as a Cloud Function
   }
 
   /**
@@ -554,20 +643,18 @@ class FCMService {
    */
   async unsubscribeFromTopic(topic) {
     console.log('FCMService: Topic unsubscription must be done server-side:', topic);
-    // This should be implemented as a Cloud Function that the client calls
-    // The function would use admin.messaging().unsubscribeFromTopic([tokens], topic)
+    // This should be implemented as a Cloud Function
   }
 
   /**
    * Create a simple hash of the token for use as document ID
    */
   hashToken(token) {
-    // Simple hash function for token ID
     let hash = 0;
     for (let i = 0; i < token.length; i++) {
       const char = token.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      hash = hash & hash;
     }
     return Math.abs(hash).toString(36);
   }
@@ -576,24 +663,26 @@ class FCMService {
    * Check if notifications are enabled
    */
   async isNotificationsEnabled() {
-    if (this.isNative) {
-      const result = await PushNotifications.checkPermissions();
+    if (this.isNative && this.FirebaseMessaging) {
+      const result = await this.FirebaseMessaging.checkPermissions();
       return result.receive === 'granted';
-    } else {
+    } else if (!this.isNative) {
       return Notification.permission === 'granted';
     }
+    return false;
   }
 
   /**
    * Get notification permission status
    */
   async getPermissionStatus() {
-    if (this.isNative) {
-      const result = await PushNotifications.checkPermissions();
+    if (this.isNative && this.FirebaseMessaging) {
+      const result = await this.FirebaseMessaging.checkPermissions();
       return result.receive;
-    } else {
+    } else if (!this.isNative) {
       return Notification.permission;
     }
+    return 'prompt';
   }
 }
 
@@ -602,4 +691,3 @@ export const fcmService = new FCMService();
 
 // Export class for testing
 export default FCMService;
-

@@ -14,12 +14,12 @@ dependencies {
     implementation project(':capacitor-firebase-app')
     implementation project(':capacitor-firebase-authentication')
     implementation project(':capacitor-firebase-firestore')
+    implementation project(':capacitor-firebase-messaging')
     implementation project(':capacitor-firebase-storage')
     implementation project(':capacitor-camera')
     implementation project(':capacitor-filesystem')
     implementation project(':capacitor-keyboard')
     implementation project(':capacitor-network')
-    implementation project(':capacitor-push-notifications')
     implementation project(':capacitor-share')
     implementation project(':capacitor-splash-screen')
 
