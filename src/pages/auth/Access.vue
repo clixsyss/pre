@@ -1,8 +1,27 @@
 <template>
   <div class="access-page">
+    <PageHeader
+      :title="$t('gateAccess') || 'Gate Access'"
+      :subtitle="$t('gateAccessDesc') || 'Control your gate and manage access passes'"
+    />
 
-    <PageHeader :title="$t('gateAccess') || 'Gate Access'"
-      :subtitle="$t('gateAccessDesc') || 'Control your gate and manage access passes'" />
+    <!-- User Blocking Warning Bar -->
+    <div
+      v-if="userBlockingStatus.isBlocked && !userBlockingStatus.loading"
+      class="blocking-warning-bar"
+    >
+      <div class="blocking-content">
+        <q-icon name="warning" size="24px" class="blocking-icon" />
+        <div class="blocking-text">
+          <div class="blocking-title">
+            {{ userBlockingService.getBlockingMessage(userBlockingStatus.blockingDetails).title }}
+          </div>
+          <div class="blocking-message">
+            {{ userBlockingService.getBlockingMessage(userBlockingStatus.blockingDetails).message }}
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Tab Navigation -->
     <div class="tabs-container">
@@ -11,7 +30,11 @@
           <q-icon name="bluetooth" class="tab-icon" />
           <span class="tab-label">{{ $t('bleControl') || 'BLE Control' }}</span>
         </button>
-        <button class="tab-btn" :class="{ active: activeTab === 'passes' }" @click="activeTab = 'passes'">
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'passes' }"
+          @click="activeTab = 'passes'"
+        >
           <q-icon name="qr_code" class="tab-icon" />
           <span class="tab-label">{{ $t('gatePasses') || 'Gate Passes' }}</span>
         </button>
@@ -25,7 +48,10 @@
         <div class="ble-control-section">
           <!-- Bluetooth Icon -->
           <div class="bluetooth-icon-container">
-            <div class="bluetooth-icon" :class="{ connected: isConnected, connecting: isConnecting }">
+            <div
+              class="bluetooth-icon"
+              :class="{ connected: isConnected, connecting: isConnecting }"
+            >
               <q-icon name="bluetooth" size="48px" />
               <div v-if="isConnecting" class="pulse-ring"></div>
             </div>
@@ -76,24 +102,49 @@
           <!-- Action Buttons -->
           <div class="button-group">
             <!-- Quick Open Button (Auto-connect and Open) -->
-            <q-btn v-if="!isConnected && lastConnectedDevice" unelevated rounded color="positive" size="lg"
-              class="action-button quick-action" :loading="autoConnecting || isOpening"
-              :disable="autoConnecting || isOpening || (bleChecked && !isBLESupported)" @click="quickOpenGate">
+            <q-btn
+              v-if="!isConnected && lastConnectedDevice"
+              unelevated
+              rounded
+              color="positive"
+              size="lg"
+              class="action-button quick-action"
+              :loading="autoConnecting || isOpening"
+              :disable="autoConnecting || isOpening || (bleChecked && !isBLESupported)"
+              @click="quickOpenGate"
+            >
               <q-icon name="flash_on" size="28px" left />
               {{ $t('quickOpen') || 'Quick Open Gate' }}
             </q-btn>
 
             <!-- Connect Button (First time or manual connection) -->
-            <q-btn v-if="!isConnected && !lastConnectedDevice" unelevated rounded color="primary" size="lg"
-              class="action-button" :loading="isConnecting" :disable="isConnecting || (bleChecked && !isBLESupported)"
-              @click="handleConnect">
+            <q-btn
+              v-if="!isConnected && !lastConnectedDevice"
+              unelevated
+              rounded
+              color="primary"
+              size="lg"
+              class="action-button"
+              :loading="isConnecting"
+              :disable="isConnecting || (bleChecked && !isBLESupported)"
+              @click="handleConnect"
+            >
               <q-icon name="bluetooth_searching" size="24px" left />
               {{ $t('connect') || 'Connect to Gate' }}
             </q-btn>
 
             <!-- Open Gate Button (When already connected) -->
-            <q-btn v-if="isConnected" unelevated rounded color="positive" size="lg" class="action-button"
-              :loading="isOpening" :disable="isOpening" @click="handleOpenGate">
+            <q-btn
+              v-if="isConnected"
+              unelevated
+              rounded
+              color="positive"
+              size="lg"
+              class="action-button"
+              :loading="isOpening"
+              :disable="isOpening"
+              @click="handleOpenGate"
+            >
               <q-icon name="door_open" size="28px" left />
               {{ $t('openGate') || 'Open Gate' }}
             </q-btn>
@@ -101,22 +152,45 @@
             <!-- Secondary Actions Row -->
             <div v-if="isConnected || lastConnectedDevice" class="secondary-actions">
               <!-- Disconnect Button -->
-              <q-btn v-if="isConnected" flat rounded color="negative" size="sm" class="secondary-button"
-                @click="handleDisconnect">
+              <q-btn
+                v-if="isConnected"
+                flat
+                rounded
+                color="negative"
+                size="sm"
+                class="secondary-button"
+                @click="handleDisconnect"
+              >
                 <q-icon name="bluetooth_disabled" size="18px" left />
                 {{ $t('disconnect') || 'Disconnect' }}
               </q-btn>
 
               <!-- New Connection Button -->
-              <q-btn v-if="lastConnectedDevice && !isConnected" flat rounded color="primary" size="sm"
-                class="secondary-button" :loading="isConnecting" :disable="isConnecting" @click="handleConnect">
+              <q-btn
+                v-if="lastConnectedDevice && !isConnected"
+                flat
+                rounded
+                color="primary"
+                size="sm"
+                class="secondary-button"
+                :loading="isConnecting"
+                :disable="isConnecting"
+                @click="handleConnect"
+              >
                 <q-icon name="bluetooth_searching" size="18px" left />
                 {{ $t('newConnection') || 'New Device' }}
               </q-btn>
 
               <!-- Forget Device Button -->
-              <q-btn v-if="lastConnectedDevice && !isConnected" flat rounded color="grey" size="sm"
-                class="secondary-button" @click="forgetDevice">
+              <q-btn
+                v-if="lastConnectedDevice && !isConnected"
+                flat
+                rounded
+                color="grey"
+                size="sm"
+                class="secondary-button"
+                @click="forgetDevice"
+              >
                 <q-icon name="delete_outline" size="18px" left />
                 {{ $t('forget') || 'Forget' }}
               </q-btn>
@@ -125,7 +199,10 @@
 
           <!-- Status Message -->
           <div v-if="statusMessage" class="status-message" :class="statusMessageType">
-            <q-icon :name="statusMessageType === 'success' ? 'check_circle' : 'error'" size="20px" />
+            <q-icon
+              :name="statusMessageType === 'success' ? 'check_circle' : 'error'"
+              size="20px"
+            />
             <span>{{ statusMessage }}</span>
           </div>
         </div>
@@ -136,11 +213,22 @@
         <div class="passes-section">
           <!-- Generate Pass Button -->
           <div class="generate-section">
-            <q-btn unelevated rounded color="primary" size="lg" class="generate-btn" :disable="passes.length >= 10"
-              @click="showGenerateDialog = true">
+            <q-btn
+              unelevated
+              rounded
+              color="primary"
+              size="lg"
+              class="generate-btn"
+              :disable="passes.length >= 10 || userBlockingStatus.isBlocked"
+              @click="showGenerateDialog = true"
+            >
               <q-icon name="add_circle" size="24px" left />
               {{ $t('generatePass') || 'Generate Pass' }} ({{ passes.length }}/10)
             </q-btn>
+            <div v-if="userBlockingStatus.isBlocked" class="generate-disabled-hint">
+              <q-icon name="block" size="16px" />
+              <span>{{ $t('generationBlocked') || 'Pass generation is currently disabled' }}</span>
+            </div>
           </div>
 
           <!-- Passes List -->
@@ -150,7 +238,10 @@
                 <div class="pass-info">
                   <div class="pass-header">
                     <h3>{{ pass.guestName }}</h3>
-                    <q-badge :color="pass.status === 'active' ? 'positive' : 'negative'" :label="pass.status" />
+                    <q-badge
+                      :color="pass.status === 'active' ? 'positive' : 'negative'"
+                      :label="pass.status"
+                    />
                   </div>
                   <div class="pass-details">
                     <div class="detail-row">
@@ -170,6 +261,15 @@
               <q-card-actions align="right">
                 <q-btn flat color="primary" icon="share" @click="sharePass(pass)">
                   {{ $t('share') || 'Share' }}
+                </q-btn>
+                <q-btn
+                  v-if="pass.phoneNumber"
+                  flat
+                  color="positive"
+                  icon="chat"
+                  @click="sendPassViaWhatsApp(pass)"
+                >
+                  {{ $t('whatsapp') || 'WhatsApp' }}
                 </q-btn>
                 <q-btn flat color="negative" icon="delete" @click="deletePass(pass.id)">
                   {{ $t('delete') || 'Delete' }}
@@ -196,25 +296,65 @@
         </q-card-section>
 
         <q-card-section class="q-pt-none">
-          <q-input v-model="newPass.guestName" :label="$t('guestName') || 'Guest Name'" outlined class="q-mb-md" />
-          <q-input v-model="newPass.purpose" :label="$t('purpose') || 'Purpose of Visit'" outlined class="q-mb-md" />
-          <q-input v-model="newPass.validUntil" :label="$t('validUntil') || 'Valid Until'" outlined
-            type="datetime-local" class="q-mb-md" />
+          <q-input
+            v-model="newPass.guestName"
+            :label="$t('guestName') || 'Guest Name'"
+            outlined
+            class="q-mb-md"
+          />
+          <q-input
+            v-model="newPass.purpose"
+            :label="$t('purpose') || 'Purpose of Visit'"
+            outlined
+            class="q-mb-md"
+          />
+          <q-input
+            v-model="newPass.validUntil"
+            :label="$t('validUntil') || 'Valid Until'"
+            outlined
+            type="datetime-local"
+            class="q-mb-md"
+          />
+          <q-input
+            v-model="newPass.phoneNumber"
+            :label="$t('phoneNumber') || 'Phone Number (for WhatsApp)'"
+            outlined
+            class="q-mb-md"
+            type="tel"
+            :hint="
+              $t('phoneNumberHint') || 'Optional: Enter phone number to send pass via WhatsApp'
+            "
+          />
         </q-card-section>
 
         <q-card-actions align="right">
           <q-btn flat :label="$t('cancel') || 'Cancel'" color="primary" v-close-popup />
-          <q-btn unelevated :label="$t('generate') || 'Generate'" color="primary" @click="generatePass"
-            :disable="!newPass.guestName || !newPass.validUntil" />
+          <q-btn
+            unelevated
+            :label="$t('generate') || 'Generate'"
+            color="primary"
+            @click="generatePass"
+            :disable="!newPass.guestName || !newPass.validUntil"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <!-- Floating Quick Action Button (Shows on all tabs when device is saved) -->
-    <q-page-sticky v-if="lastConnectedDevice && !isConnected && activeTab === 'ble'" position="bottom-right"
-      :offset="[18, 18]">
-      <q-btn fab icon="flash_on" color="positive" :loading="autoConnecting || isOpening"
-        :disable="autoConnecting || isOpening" @click="quickOpenGate" class="fab-button">
+    <q-page-sticky
+      v-if="lastConnectedDevice && !isConnected && activeTab === 'ble'"
+      position="bottom-right"
+      :offset="[18, 18]"
+    >
+      <q-btn
+        fab
+        icon="flash_on"
+        color="positive"
+        :loading="autoConnecting || isOpening"
+        :disable="autoConnecting || isOpening"
+        @click="quickOpenGate"
+        class="fab-button"
+      >
         <q-tooltip anchor="top middle" self="bottom middle" :offset="[0, 8]">
           {{ $t('quickOpen') || 'Quick Open Gate' }}
         </q-tooltip>
@@ -224,13 +364,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import { Capacitor } from '@capacitor/core'
 import { Share } from '@capacitor/share'
 import { useBluetooth } from '../../composables/useBluetooth'
 import QRCode from 'qrcode'
 import { Notify } from 'quasar'
 import PageHeader from '../../components/PageHeader.vue'
+import userBlockingService from '../../services/userBlockingService'
+import whatsappService from '../../services/whatsappService'
+import { auth } from '../../boot/firebase'
 
 // Component name for ESLint
 defineOptions({
@@ -272,6 +415,14 @@ const newPass = ref({
   guestName: '',
   purpose: '',
   validUntil: '',
+  phoneNumber: '', // Add phone number for WhatsApp
+})
+
+// User blocking state
+const userBlockingStatus = ref({
+  isBlocked: false,
+  blockingDetails: null,
+  loading: true,
 })
 
 // QR refs storage
@@ -423,6 +574,41 @@ const handleOpenGate = async () => {
 }
 
 /**
+ * User Blocking Functions
+ */
+const checkUserBlockingStatus = async () => {
+  try {
+    userBlockingStatus.value.loading = true
+
+    if (!auth.currentUser) {
+      userBlockingStatus.value = {
+        isBlocked: false,
+        blockingDetails: null,
+        loading: false,
+      }
+      return
+    }
+
+    // Use the simple blocking check from the original system
+    const result = await userBlockingService.checkUserBlockingStatus(auth.currentUser.uid)
+    userBlockingStatus.value = {
+      ...result,
+      loading: false,
+    }
+
+    console.log('🔍 User eligibility checked:', userBlockingStatus.value)
+  } catch (error) {
+    console.error('❌ Error checking user eligibility:', error)
+    userBlockingStatus.value = {
+      isBlocked: false,
+      blockingDetails: null,
+      loading: false,
+      error: error.message,
+    }
+  }
+}
+
+/**
  * Pass Management Functions
  */
 const setQRRef = (el, passId) => {
@@ -433,26 +619,89 @@ const setQRRef = (el, passId) => {
 
 const generatePass = async () => {
   try {
+    // Check if user is blocked from generating passes
+    if (userBlockingStatus.value.isBlocked) {
+      const blockingMessage = userBlockingService.getBlockingMessage(
+        userBlockingStatus.value.blockingDetails,
+      )
+      Notify.create({
+        type: 'warning',
+        message: blockingMessage.message,
+        position: 'top',
+        timeout: 5000,
+        actions: [{ label: 'OK', color: 'white' }],
+      })
+      return
+    }
+
+    // Validate inputs
+    if (!newPass.value.guestName || newPass.value.guestName.trim().length < 2) {
+      Notify.create({
+        type: 'negative',
+        message: 'Guest name must be at least 2 characters long',
+        position: 'top',
+        timeout: 3000,
+      })
+      return
+    }
+
+    if (!newPass.value.validUntil) {
+      Notify.create({
+        type: 'negative',
+        message: 'Valid until date is required',
+        position: 'top',
+        timeout: 3000,
+      })
+      return
+    }
+
+    // Validate phone number if provided
+    if (newPass.value.phoneNumber && newPass.value.phoneNumber.trim()) {
+      const phoneRegex = /^[+]?[1-9][\d]{0,15}$/
+      if (!phoneRegex.test(newPass.value.phoneNumber.replace(/\s/g, ''))) {
+        Notify.create({
+          type: 'negative',
+          message: 'Please enter a valid phone number',
+          position: 'top',
+          timeout: 3000,
+        })
+        return
+      }
+    }
+
+    // Sanitize inputs
+    const sanitizedGuestName = newPass.value.guestName.trim().substring(0, 100)
+    const sanitizedPurpose = (newPass.value.purpose || 'Guest Visit').trim().substring(0, 200)
+    const sanitizedPhoneNumber = newPass.value.phoneNumber
+      ? newPass.value.phoneNumber.trim().substring(0, 20)
+      : null
+
+    // Create local pass object (original simple approach)
     const pass = {
       id: Date.now().toString(),
-      guestName: newPass.value.guestName,
-      purpose: newPass.value.purpose || 'Guest Visit',
+      guestName: sanitizedGuestName,
+      purpose: sanitizedPurpose,
       validUntil: new Date(newPass.value.validUntil).toISOString(),
       status: 'active',
       createdAt: new Date().toISOString(),
       code: `GATE-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+      phoneNumber: sanitizedPhoneNumber,
     }
 
     passes.value.push(pass)
 
-    // Save to localStorage
-    localStorage.setItem('gatePasses', JSON.stringify(passes.value))
+    // Save to localStorage with user-specific key (only if authenticated)
+    if (auth.currentUser?.uid) {
+      const userPassesKey = `gatePasses_${auth.currentUser.uid}`
+      localStorage.setItem(userPassesKey, JSON.stringify(passes.value))
+    }
 
     // Reset form
     newPass.value = {
       guestName: '',
       purpose: '',
       validUntil: '',
+      phoneNumber: '',
     }
 
     showGenerateDialog.value = false
@@ -461,17 +710,38 @@ const generatePass = async () => {
     await nextTick()
     await generateQRCode(pass)
 
-    Notify.create({
-      type: 'positive',
-      message: 'Pass generated successfully',
-      position: 'top',
-      timeout: 2000,
-    })
+    // Send via WhatsApp if phone number provided
+    if (pass.phoneNumber && pass.phoneNumber.trim()) {
+      try {
+        await whatsappService.sendGatePassViaWhatsApp(pass, pass.phoneNumber)
+        Notify.create({
+          type: 'positive',
+          message: 'Pass generated and sent via WhatsApp!',
+          position: 'top',
+          timeout: 3000,
+        })
+      } catch (whatsappError) {
+        console.warn('⚠️ WhatsApp sending failed:', whatsappError)
+        Notify.create({
+          type: 'positive',
+          message: 'Pass generated successfully (WhatsApp sending failed)',
+          position: 'top',
+          timeout: 3000,
+        })
+      }
+    } else {
+      Notify.create({
+        type: 'positive',
+        message: 'Pass generated successfully',
+        position: 'top',
+        timeout: 2000,
+      })
+    }
   } catch (error) {
     console.error('Error generating pass:', error)
     Notify.create({
       type: 'negative',
-      message: 'Failed to generate pass',
+      message: error.message || 'Failed to generate pass',
       position: 'top',
       timeout: 3000,
     })
@@ -512,7 +782,10 @@ const generateQRCode = async (pass) => {
 
 const deletePass = (passId) => {
   passes.value = passes.value.filter((p) => p.id !== passId)
-  localStorage.setItem('gatePasses', JSON.stringify(passes.value))
+  if (auth.currentUser?.uid) {
+    const userPassesKey = `gatePasses_${auth.currentUser.uid}`
+    localStorage.setItem(userPassesKey, JSON.stringify(passes.value))
+  }
   qrRefs.delete(passId)
 
   Notify.create({
@@ -575,6 +848,36 @@ const sharePass = async (pass) => {
   }
 }
 
+const sendPassViaWhatsApp = async (pass) => {
+  try {
+    if (!pass.phoneNumber || !pass.phoneNumber.trim()) {
+      Notify.create({
+        type: 'warning',
+        message: 'Phone number is required to send via WhatsApp',
+        position: 'top',
+        timeout: 3000,
+      })
+      return
+    }
+
+    await whatsappService.sendGatePassViaWhatsApp(pass, pass.phoneNumber)
+    Notify.create({
+      type: 'positive',
+      message: 'Pass sent via WhatsApp!',
+      position: 'top',
+      timeout: 2000,
+    })
+  } catch (error) {
+    console.error('Error sending pass via WhatsApp:', error)
+    Notify.create({
+      type: 'negative',
+      message: 'Failed to send via WhatsApp. Please try again.',
+      position: 'top',
+      timeout: 3000,
+    })
+  }
+}
+
 const downloadQRCode = (canvas, guestName) => {
   try {
     const dataUrl = canvas.toDataURL('image/png')
@@ -608,6 +911,18 @@ const formatDate = (dateString) => {
   })
 }
 
+// Watch for user changes to clear passes
+watch(
+  () => auth.currentUser?.uid,
+  (newUserId, oldUserId) => {
+    if (newUserId !== oldUserId) {
+      console.log('👤 User changed, clearing passes')
+      passes.value = []
+      qrRefs.clear()
+    }
+  },
+)
+
 // Initialize
 onMounted(async () => {
   console.log('🚀 AccessPage mounted')
@@ -624,6 +939,15 @@ onMounted(async () => {
   }
 
   try {
+    // Check user blocking status
+    await checkUserBlockingStatus()
+    console.log('✅ User blocking status checked')
+  } catch (error) {
+    console.error('❌ Error checking user blocking status:', error)
+    // Continue anyway - don't block the UI
+  }
+
+  try {
     // Load last connected device for quick reconnection
     const savedDevice = localStorage.getItem('lastGateDevice')
     if (savedDevice) {
@@ -636,13 +960,26 @@ onMounted(async () => {
   }
 
   try {
-    // Load saved passes
-    const savedPasses = localStorage.getItem('gatePasses')
-    if (savedPasses) {
-      passes.value = JSON.parse(savedPasses)
-      console.log(`✅ Loaded ${passes.value.length} saved passes`)
+    // Load saved passes for current user (only if authenticated)
+    if (auth.currentUser?.uid) {
+      const userPassesKey = `gatePasses_${auth.currentUser.uid}`
+      const savedPasses = localStorage.getItem(userPassesKey)
+      if (savedPasses) {
+        passes.value = JSON.parse(savedPasses)
+        console.log(
+          `✅ Loaded ${passes.value.length} saved passes for user ${auth.currentUser.uid}`,
+        )
+      } else {
+        console.log('📝 No saved passes found for user')
+        passes.value = []
+      }
+    } else {
+      console.log('👤 No authenticated user, skipping pass loading')
+      passes.value = []
+    }
 
-      // Generate QR codes for loaded passes
+    // Generate QR codes for loaded passes
+    if (passes.value.length > 0) {
       await nextTick()
       for (const pass of passes.value) {
         try {
@@ -652,8 +989,6 @@ onMounted(async () => {
           // Continue with other passes
         }
       }
-    } else {
-      console.log('ℹ️ No saved passes found')
     }
   } catch (error) {
     console.error('❌ Error loading passes:', error)
@@ -671,6 +1006,58 @@ onMounted(async () => {
   max-width: 1000px;
   margin: 0 auto;
   box-sizing: border-box;
+}
+
+/* User Blocking Warning Bar */
+.blocking-warning-bar {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+  margin-bottom: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.blocking-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+}
+
+.blocking-icon {
+  color: white;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.blocking-text {
+  flex: 1;
+}
+
+.blocking-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.blocking-message {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  opacity: 0.95;
+  white-space: pre-line;
 }
 
 /* Tabs Navigation */
@@ -704,7 +1091,7 @@ onMounted(async () => {
 }
 
 .tab-btn.active {
-  background: #AF1E23;
+  background: #af1e23;
   color: white;
   box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
 }
@@ -783,7 +1170,6 @@ onMounted(async () => {
 }
 
 @keyframes pulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -997,6 +1383,21 @@ onMounted(async () => {
   font-weight: 600;
 }
 
+.generate-disabled-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: #ffebee;
+  color: #c62828;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+  justify-content: center;
+}
+
 .passes-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -1089,7 +1490,6 @@ onMounted(async () => {
 }
 
 @keyframes pulse-fab {
-
   0%,
   100% {
     box-shadow: 0 8px 24px rgba(76, 175, 80, 0.5);
@@ -1107,7 +1507,6 @@ onMounted(async () => {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-
   .tab-btn {
     padding: 10px 12px;
   }
