@@ -79,9 +79,18 @@ echo "🔧 Installing CocoaPods dependencies..."
 echo "📋 Pod version: $(pod --version)"
 
 # Install pods with verbose output
+echo "🚀 Running pod install --repo-update --verbose..."
 pod install --repo-update --verbose || {
-    echo "❌ pod install failed, trying without repo update..."
-    pod install --verbose
+    echo "❌ pod install with repo-update failed, trying without repo update..."
+    echo "🚀 Running pod install --verbose..."
+    pod install --verbose || {
+        echo "❌ pod install failed completely, trying with clean install..."
+        echo "🧹 Cleaning Pods directory..."
+        rm -rf Pods
+        rm -f Podfile.lock
+        echo "🚀 Running pod install --clean-install..."
+        pod install --clean-install --verbose
+    }
 }
 
 echo "✅ CocoaPods dependencies installed successfully!"
@@ -100,6 +109,15 @@ if [ -d "Pods" ]; then
         echo "📂 Target Support Files contents:"
         ls -la "Pods/Target Support Files/" 2>&1 || echo "Target Support Files not found"
     fi
+    
+    # Verify workspace was created
+    if [ -f "App.xcworkspace" ]; then
+        echo "✅ App.xcworkspace created successfully!"
+    else
+        echo "❌ ERROR: App.xcworkspace not created!"
+        exit 1
+    fi
+    
 else
     echo "❌ ERROR: Pods directory was not created!"
     exit 1
