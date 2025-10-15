@@ -179,21 +179,29 @@ class FCMService {
    */
   setupNativeListeners() {
     console.log('FCMService: Setting up native listeners...');
+    console.log('FCMService: Platform:', this.platform);
+    console.log('FCMService: Current user:', auth.currentUser?.uid);
     
     // Listen for registration success
     PushNotifications.addListener('registration', async (token) => {
-      console.log('FCMService: Native registration success:', token.value);
+      console.log('🎉 FCMService: Native registration success!');
+      console.log('🎉 FCMService: Token:', token.value);
       this.currentToken = token.value;
       
       // Save token to Firestore
       if (auth.currentUser) {
+        console.log('🎉 FCMService: Saving token to Firestore for user:', auth.currentUser.uid);
         await this.saveTokenToFirestore(token.value, this.platform);
+        console.log('✅ FCMService: Token saved successfully!');
+      } else {
+        console.warn('⚠️ FCMService: No authenticated user, token not saved');
       }
     });
 
     // Listen for registration errors
     PushNotifications.addListener('registrationError', (error) => {
-      console.error('FCMService: Registration error:', error);
+      console.error('❌ FCMService: Registration error:', error);
+      console.error('❌ FCMService: Error details:', JSON.stringify(error));
     });
 
     // Listen for push notification received (foreground)
