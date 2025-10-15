@@ -123,7 +123,25 @@ else
     exit 1
 fi
 
+# Final verification - ensure the exact files that Xcode Cloud needs exist
+echo "🔍 Final verification for Xcode Cloud..."
+if [ -f "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig" ]; then
+    echo "✅ Pods-App.release.xcconfig verified for Xcode Cloud"
+else
+    echo "❌ CRITICAL: Pods-App.release.xcconfig missing - this will cause Xcode Cloud to fail"
+    exit 1
+fi
+
+if [ -f "App.xcworkspace" ]; then
+    echo "✅ App.xcworkspace verified for Xcode Cloud"
+else
+    echo "❌ CRITICAL: App.xcworkspace missing - this will cause Xcode Cloud to fail"
+    exit 1
+fi
+
 echo "================================================"
 echo "🎉 Post-clone script completed successfully!"
+echo "📋 Xcode Cloud should now use App.xcworkspace"
+echo "📋 All required Pods configuration files are present"
 echo "================================================"
 
