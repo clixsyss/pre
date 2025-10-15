@@ -95,8 +95,10 @@ export default defineBoot(async ({ app, router }) => {
           console.log('FCM Boot: iOS fallback - Found authenticated user, initializing FCM...');
           console.log('FCM Boot: User ID:', user.uid);
           
-          // Initialize FCM
-          initializeFCM('ios-fallback-check');
+          // Wait a bit more to ensure auth context is fully ready
+          setTimeout(() => {
+            initializeFCM('ios-fallback-check');
+          }, 1000);
         } else if (!user) {
           console.log('FCM Boot: iOS fallback - No user authenticated');
         } else if (fcmInitialized) {
@@ -105,7 +107,7 @@ export default defineBoot(async ({ app, router }) => {
       } catch (error) {
         console.error('FCM Boot: iOS fallback check failed:', error);
       }
-    }, 3000); // 3 seconds after boot
+    }, 5000); // Increased to 5 seconds after boot
   }
 
   // Listen for navigation messages from service worker

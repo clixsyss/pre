@@ -1,47 +1,53 @@
 import UIKit
 import Capacitor
-import CapacitorFirebaseApp
-import FirebaseCore
-import FirebaseFirestore
-import FirebaseStorage
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
-    var primaryApp: FirebaseApp?
-    var secondaryApp: FirebaseApp?
 
-    func application(
-        _ application: UIApplication,
-        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
-    ) -> Bool {
-        print("🔥 Firebase initialization starting...")
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Override point for customization after application launch.
         
-        // Initialize the primary (default) Firebase project (PRE)
-        // This uses native iOS Firebase for better performance and native features
-        FirebaseApp.configure()
-        print("✅ Primary Firebase (PRE) initialized successfully (Native iOS)")
-
-        // Note: Secondary Firebase (Smart Mirror) is initialized via Web SDK in JavaScript
-        // This avoids conflicts and ensures proper auth functionality
-        print("ℹ️  Secondary Firebase (Smart Mirror) will be initialized via Web SDK")
-        print("   → Web SDK initialization is platform-independent and more reliable for secondary apps")
-
-        // Store primary app reference
-        primaryApp = FirebaseApp.app()
+        // Request notification permissions and register for remote notifications
+        print("📱 AppDelegate: App launched")
+        print("📱 AppDelegate: Registering for remote notifications...")
         
-        print("🎯 Firebase initialization complete:")
-        print("   → Primary (PRE): \(primaryApp?.options.projectID ?? "none") [Native iOS]")
-        print("   → Secondary (Smart Mirror): Will use Web SDK [JavaScript]")
-
-        // Initialize Capacitor bridge
-        self.window = UIWindow(frame: UIScreen.main.bounds)
-        let bridge = CAPBridgeViewController()
-        self.window?.rootViewController = bridge
-        self.window?.makeKeyAndVisible()
-
+        UNUserNotificationCenter.current().delegate = self
+        
+        // Request authorization
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            print("📱 AppDelegate: Notification authorization - granted: \(granted), error: \(String(describing: error))")
+            
+            if granted {
+                DispatchQueue.main.async {
+                    print("📱 AppDelegate: Calling registerForRemoteNotifications()")
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
+        }
+        
         return true
+    }
+    
+    // Called when APNs registration succeeds
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        print("✅ AppDelegate: Successfully registered for remote notifications!")
+        print("✅ AppDelegate: Device token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
+        print("✅ AppDelegate: Device token length: \(deviceToken.count)")
+        
+        // Capacitor will handle this and trigger the 'registration' event
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+    }
+    
+    // Called when APNs registration fails
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("❌ AppDelegate: Failed to register for remote notifications!")
+        print("❌ AppDelegate: Error: \(error.localizedDescription)")
+        print("❌ AppDelegate: Error details: \(error)")
+        
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
@@ -78,5 +84,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // tracking app url opens, make sure to keep this call
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
+}
 
+// MARK: - UNUserNotificationCenterDelegate
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    
+    // Called when a notification is received while app is in foreground
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        print("📬 AppDelegate: Notification received in foreground")
+        print("📬 AppDelegate: Notification content: \(notification.request.content.userInfo)")
+        
+        // Show notification even when app is in foreground
+        completionHandler([.banner, .badge, .sound])
+    }
+    
+    // Called when user taps on a notification
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        print("👆 AppDelegate: User tapped notification")
+        print("👆 AppDelegate: Notification content: \(response.notification.request.content.userInfo)")
+        
+        completionHandler()
+    }
 }

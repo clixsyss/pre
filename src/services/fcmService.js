@@ -69,22 +69,31 @@ class FCMService {
     
     try {
       // Request permission
+      console.log('FCMService: Requesting push notification permissions...');
       const permissionResult = await PushNotifications.requestPermissions();
       console.log('FCMService: Permission result:', permissionResult);
       
       if (permissionResult.receive === 'granted') {
+        console.log('FCMService: Permission granted, proceeding with registration...');
+        
+        // Set up listeners BEFORE registration (they should be set up first)
+        console.log('FCMService: Setting up native listeners BEFORE registration...');
+        this.setupNativeListeners();
+        
         // Register with FCM
+        console.log('FCMService: About to call PushNotifications.register()...');
         await PushNotifications.register();
+        console.log('FCMService: PushNotifications.register() completed');
         console.log('FCMService: Registered for push notifications');
         
-        // Set up listeners
-        this.setupNativeListeners();
+        console.log('FCMService: Native initialization complete');
       } else {
         console.warn('FCMService: Push notification permission denied');
         throw new Error('Push notification permission denied');
       }
     } catch (error) {
       console.error('FCMService: Native initialization error:', error);
+      console.error('FCMService: Error details:', error.message, error.code);
       throw error;
     }
   }
@@ -181,22 +190,36 @@ class FCMService {
     console.log('FCMService: Setting up native listeners...');
     console.log('FCMService: Platform:', this.platform);
     console.log('FCMService: Current user:', auth.currentUser?.uid);
+    console.log('FCMService: PushNotifications plugin:', PushNotifications);
+    console.log('FCMService: PushNotifications.addListener:', typeof PushNotifications.addListener);
     
-    // Listen for registration success
-    PushNotifications.addListener('registration', async (token) => {
+    // Test listener setup
+    console.log('FCMService: Adding registration listener...');
+    const registrationListener = PushNotifications.addListener('registration', async (token) => {
+      console.log('🎉🎉🎉 FCMService: *** REGISTRATION EVENT FIRED ***');
       console.log('🎉 FCMService: Native registration success!');
       console.log('🎉 FCMService: Token:', token.value);
+      console.log('🎉 FCMService: Token length:', token.value?.length);
+      console.log('🎉 FCMService: Full token object:', JSON.stringify(token));
       this.currentToken = token.value;
       
-      // Save token to Firestore
-      if (auth.currentUser) {
-        console.log('🎉 FCMService: Saving token to Firestore for user:', auth.currentUser.uid);
-        await this.saveTokenToFirestore(token.value, this.platform);
-        console.log('✅ FCMService: Token saved successfully!');
-      } else {
-        console.warn('⚠️ FCMService: No authenticated user, token not saved');
-      }
+      // Save token to Firestore - try multiple times if user not ready
+      const saveTokenWithRetry = async (retryCount = 0) => {
+        if (auth.currentUser) {
+          console.log('🎉 FCMService: Saving token to Firestore for user:', auth.currentUser.uid);
+          await this.saveTokenToFirestore(token.value, this.platform);
+          console.log('✅ FCMService: Token saved successfully!');
+        } else if (retryCount < 5) {
+          console.log(`⚠️ FCMService: No authenticated user yet, retrying in 1s... (attempt ${retryCount + 1}/5)`);
+          setTimeout(() => saveTokenWithRetry(retryCount + 1), 1000);
+        } else {
+          console.warn('⚠️ FCMService: No authenticated user after 5 attempts, token not saved');
+        }
+      };
+      
+      await saveTokenWithRetry();
     });
+    console.log('FCMService: Registration listener added:', registrationListener);
 
     // Listen for registration errors
     PushNotifications.addListener('registrationError', (error) => {
