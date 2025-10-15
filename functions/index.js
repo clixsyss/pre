@@ -274,7 +274,7 @@ exports.checkMigrationStatus = functions.https.onCall(async (data, context) => {
 
 /**
  * Send push notification immediately when a notification document is created
- * Triggers on: onCreate of /notifications/{notificationId}
+ * Triggers on: onCreate of /projects/{projectId}/notifications/{notificationId}
  */
 exports.sendNotificationOnCreate = functions
   .runWith({
@@ -282,13 +282,17 @@ exports.sendNotificationOnCreate = functions
     memory: '1GB'
   })
   .firestore
-  .document('notifications/{notificationId}')
+  .document('projects/{projectId}/notifications/{notificationId}')
   .onCreate(async (snap, context) => {
     try {
-      const notificationId = context.params.notificationId
+      const { projectId, notificationId } = context.params
       const notification = snap.data()
       
-      console.log('[sendNotificationOnCreate] Processing notification:', notificationId)
+      console.log('[sendNotificationOnCreate] Processing notification:', {
+        projectId,
+        notificationId,
+        projectName: notification.projectName
+      })
       
       // Only send if sendNow is true
       if (!notification.sendNow) {
@@ -303,7 +307,7 @@ exports.sendNotificationOnCreate = functions
       }
       
       // Send the notification
-      await sendNotification(notificationId, notification)
+      await sendNotification(projectId, notificationId, notification)
       
       return null
     } catch (error) {
@@ -311,6 +315,8 @@ exports.sendNotificationOnCreate = functions
       // Update notification status to failed
       try {
         await admin.firestore()
+          .collection('projects')
+          .doc(context.params.projectId)
           .collection('notifications')
           .doc(context.params.notificationId)
           .update({
@@ -327,66 +333,39 @@ exports.sendNotificationOnCreate = functions
 
 /**
  * Scheduled function to send pending notifications
- * Runs every minute to check for scheduled notifications
+ * TEMPORARILY DISABLED - Will be re-enabled with project-specific support
+ * Runs every minute to check for scheduled notifications across all projects
  */
-exports.sendScheduledNotifications = functions.pubsub
-  .schedule('every 1 minutes')
-  .onRun(async (context) => {
-    try {
-      console.log('[sendScheduledNotifications] Running scheduled check...')
-      
-      const now = admin.firestore.Timestamp.now()
-      const notificationsRef = admin.firestore().collection('notifications')
-      
-      // Query for pending notifications that should be sent now
-      const query = notificationsRef
-        .where('status', '==', 'pending')
-        .where('sendNow', '==', false)
-        .where('scheduledAt', '<=', now)
-        .limit(10) // Process max 10 at a time to avoid timeout
-      
-      const snapshot = await query.get()
-      
-      console.log('[sendScheduledNotifications] Found', snapshot.size, 'notifications to send')
-      
-      if (snapshot.empty) {
-        return null
-      }
-      
-      // Send each notification
-      const sendPromises = snapshot.docs.map(async (doc) => {
-        const notificationId = doc.id
-        const notification = doc.data()
-        
-        try {
-          await sendNotification(notificationId, notification)
-        } catch (error) {
-          console.error('[sendScheduledNotifications] Error sending:', notificationId, error)
-          // Update status to failed
-          await doc.ref.update({
-            status: 'failed',
-            error: error.message,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-          })
-        }
-      })
-      
-      await Promise.all(sendPromises)
-      
-      console.log('[sendScheduledNotifications] Completed')
-      return null
-    } catch (error) {
-      console.error('[sendScheduledNotifications] Error:', error)
-      throw error
-    }
-  })
+// exports.sendScheduledNotifications = functions.pubsub
+//   .schedule('every 1 minutes')
+//   .onRun(async (context) => {
+//     try {
+//       console.log('[sendScheduledNotifications] Running scheduled check...')
+//       
+//       // TODO: Update to iterate through all projects
+//       // const projectsSnapshot = await admin.firestore().collection('projects').get()
+//       // for (const projectDoc of projectsSnapshot.docs) {
+//       //   const projectId = projectDoc.id
+//       //   // Query project-specific notifications...
+//       // }
+//       
+//       return null
+//     } catch (error) {
+//       console.error('[sendScheduledNotifications] Error:', error)
+//       throw error
+//     }
+//   })
 
 /**
  * Helper function to send a notification
  * Handles token collection, message building, and sending
  */
-async function sendNotification(notificationId, notification) {
-  console.log('[sendNotification] Sending notification:', notificationId)
+async function sendNotification(projectId, notificationId, notification) {
+  console.log('[sendNotification] Sending notification:', {
+    projectId,
+    notificationId,
+    projectName: notification.projectName
+  })
   
   try {
     // Validate notification data
@@ -398,14 +377,16 @@ async function sendNotification(notificationId, notification) {
       throw new Error('Missing required Arabic content')
     }
     
-    // Collect device tokens based on audience
-    const tokens = await collectTokens(notification.audience)
+    // Collect device tokens based on audience and project
+    const tokens = await collectTokens(projectId, notification.audience)
     
     if (tokens.length === 0) {
       console.log('[sendNotification] No tokens found for notification:', notificationId)
       
       // Update status to sent (even though no tokens, to avoid retrying)
       await admin.firestore()
+        .collection('projects')
+        .doc(projectId)
         .collection('notifications')
         .doc(notificationId)
         .update({
@@ -472,6 +453,8 @@ async function sendNotification(notificationId, notification) {
     
     // Update notification status
     await admin.firestore()
+      .collection('projects')
+      .doc(projectId)
       .collection('notifications')
       .doc(notificationId)
       .update({
@@ -484,6 +467,7 @@ async function sendNotification(notificationId, notification) {
       })
     
     console.log('[sendNotification] Notification sent successfully:', {
+      projectId,
       notificationId,
       tokens: tokens.length,
       success: totalSuccess,
@@ -497,43 +481,80 @@ async function sendNotification(notificationId, notification) {
 }
 
 /**
- * Collect device tokens based on audience targeting
+ * Collect device tokens based on audience targeting and project
  */
-async function collectTokens(audience) {
-  console.log('[collectTokens] Collecting tokens for audience:', audience)
+async function collectTokens(projectId, audience) {
+  console.log('[collectTokens] Collecting tokens for:', { projectId, audience })
   
   const tokens = []
   
   try {
     if (audience.all) {
-      // Get all user tokens
-      console.log('[collectTokens] Getting tokens for all users')
+      // Get all users belonging to this project
+      console.log('[collectTokens] Getting tokens for all users in project:', projectId)
       const usersRef = admin.firestore().collection('users')
       const usersSnapshot = await usersRef.get()
       
-      console.log('[collectTokens] Found', usersSnapshot.size, 'users')
+      console.log('[collectTokens] Found', usersSnapshot.size, 'total users, filtering by project')
       
-      // Collect tokens from all users
+      // Filter users by project and collect their tokens
+      let projectUserCount = 0
       for (const userDoc of usersSnapshot.docs) {
-        const tokensRef = userDoc.ref.collection('tokens')
-        const tokensSnapshot = await tokensRef.get()
+        const userData = userDoc.data()
         
-        tokensSnapshot.docs.forEach(tokenDoc => {
-          const tokenData = tokenDoc.data()
-          if (tokenData.token) {
-            tokens.push({
-              token: tokenData.token,
-              userId: userDoc.id,
-              platform: tokenData.platform
+        // Check if user belongs to this project
+        if (userData.projects && Array.isArray(userData.projects)) {
+          const belongsToProject = userData.projects.some(p => p.projectId === projectId)
+          
+          if (belongsToProject) {
+            projectUserCount++
+            
+            // Collect tokens for this user
+            const tokensRef = userDoc.ref.collection('tokens')
+            const tokensSnapshot = await tokensRef.get()
+            
+            tokensSnapshot.docs.forEach(tokenDoc => {
+              const tokenData = tokenDoc.data()
+              if (tokenData.token) {
+                tokens.push({
+                  token: tokenData.token,
+                  userId: userDoc.id,
+                  platform: tokenData.platform
+                })
+              }
             })
           }
-        })
+        }
       }
+      
+      console.log('[collectTokens] Found', projectUserCount, 'users in project')
     } else if (audience.uids && audience.uids.length > 0) {
-      // Get tokens for specific users
+      // Get tokens for specific users (still verify they belong to project)
       console.log('[collectTokens] Getting tokens for', audience.uids.length, 'specific users')
       
       for (const uid of audience.uids) {
+        // Verify user belongs to project
+        const userDoc = await admin.firestore()
+          .collection('users')
+          .doc(uid)
+          .get()
+        
+        if (!userDoc.exists) {
+          console.warn('[collectTokens] User not found:', uid)
+          continue
+        }
+        
+        const userData = userDoc.data()
+        const belongsToProject = userData.projects && 
+          Array.isArray(userData.projects) &&
+          userData.projects.some(p => p.projectId === projectId)
+        
+        if (!belongsToProject) {
+          console.warn('[collectTokens] User does not belong to project:', uid, projectId)
+          continue
+        }
+        
+        // Collect tokens for this user
         const tokensRef = admin.firestore()
           .collection('users')
           .doc(uid)
@@ -559,7 +580,7 @@ async function collectTokens(audience) {
       // TODO: Implement topic-based token collection or use admin.messaging().sendToTopic()
     }
     
-    console.log('[collectTokens] Collected', tokens.length, 'tokens')
+    console.log('[collectTokens] Collected', tokens.length, 'tokens for project', projectId)
     return tokens
   } catch (error) {
     console.error('[collectTokens] Error:', error)
