@@ -38,3 +38,4 @@ yarn-error.log*
 ios/App/build.xcarchive/
 ios/App/build/
 *.xcarchive
+ios/App/build*
