@@ -1,18 +1,21 @@
-#!/bin/sh
+#!/bin/bash
 # ci_post_clone.sh
 # This script runs immediately after Xcode Cloud clones your repo.
 
 echo "🚀 Running ci_post_clone.sh..."
+echo "Current directory: $(pwd)"
+echo "Contents of current directory:"
+ls -la
 
-# Install npm dependencies first (required for Capacitor plugins)
 echo "📦 Installing npm dependencies..."
 npm install
 
 echo "✅ npm dependencies installed successfully!"
 
-# Now install CocoaPods
 echo "📦 Installing CocoaPods dependencies..."
 cd ios/App || exit 1
+
+echo "Current directory after cd: $(pwd)"
 
 # Make sure cocoapods is available
 if ! command -v pod &> /dev/null; then
