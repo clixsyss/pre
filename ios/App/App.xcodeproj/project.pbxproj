@@ -186,7 +186,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "echo \"🚀 Installing npm dependencies...\"\ncd \"${SRCROOT}/../../..\"\nnpm install\necho \"✅ npm dependencies installed successfully!\"\n";
+			shellScript = "echo \"🚀 Installing npm dependencies...\"\necho \"Current directory: $(pwd)\"\necho \"SRCROOT: ${SRCROOT}\"\necho \"Contents of SRCROOT: $(ls -la \"${SRCROOT}\")\"\necho \"Contents of parent: $(ls -la \"${SRCROOT}/..\")\"\necho \"Contents of grandparent: $(ls -la \"${SRCROOT}/../..\")\"\necho \"Contents of great-grandparent: $(ls -la \"${SRCROOT}/../../..\")\"\ncd \"${SRCROOT}/../../..\"\necho \"After cd, current directory: $(pwd)\"\necho \"Contents of current directory: $(ls -la)\"\necho \"Looking for package.json: $(find . -name package.json -maxdepth 3)\"\nnpm install\necho \"✅ npm dependencies installed successfully!\"\necho \"Checking if Capacitor Keyboard files exist:\"\necho \"$(find . -name KeyboardPlugin.h 2>/dev/null || echo 'KeyboardPlugin.h not found')\"\n";
 			showEnvVarsInLog = 0;
 		};
 		3A436C251095B6B819168304 /* [CP] Embed Pods Frameworks */ = {
