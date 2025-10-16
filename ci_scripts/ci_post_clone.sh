@@ -2,7 +2,7 @@
 # ci_post_clone.sh
 # This script runs immediately after Xcode Cloud clones your repo.
 
-echo "🚀 Running ci_post_clone.sh..."
+echo "🚀 CI SCRIPT IS RUNNING!"
 echo "Current directory: $(pwd)"
 echo "Contents of current directory:"
 ls -la
