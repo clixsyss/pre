@@ -40,6 +40,30 @@ fi
 echo "Project root: $(pwd)"
 echo ""
 
+# Setup Node.js environment (Xcode Cloud uses Homebrew)
+echo "🔧 Setting up Node.js environment..."
+export PATH="/usr/local/bin:$PATH"
+export PATH="$HOME/.homebrew/bin:$PATH"
+export PATH="/opt/homebrew/bin:$PATH"
+
+# Check if npm is available
+if ! command -v npm &> /dev/null; then
+    echo "⚠️  npm not found in PATH, attempting to locate..."
+    # Xcode Cloud typically has node installed via Homebrew
+    if [ -f "/usr/local/bin/node" ]; then
+        export PATH="/usr/local/bin:$PATH"
+    elif [ -f "$HOME/.homebrew/bin/node" ]; then
+        export PATH="$HOME/.homebrew/bin:$PATH"
+    elif [ -f "/opt/homebrew/bin/node" ]; then
+        export PATH="/opt/homebrew/bin:$PATH"
+    fi
+fi
+
+echo "Node version: $(node --version 2>&1 || echo 'not found')"
+echo "npm version: $(npm --version 2>&1 || echo 'not found')"
+echo "PATH: $PATH"
+echo ""
+
 # Step 1: Install npm dependencies
 echo "📦 Step 1/4: Installing npm dependencies..."
 npm ci --prefer-offline --no-audit
