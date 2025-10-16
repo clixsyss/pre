@@ -14,12 +14,10 @@ export default defineBoot(async ({ app, router }) => {
   // Make FCM service available globally
   app.config.globalProperties.$fcm = fcmService;
 
-  // Track if FCM has been initialized to prevent duplicate initialization
-  let fcmInitialized = false;
-
-  // Helper function to initialize FCM
+  // Helper function to initialize FCM (uses fcmService's internal tracking)
   const initializeFCM = async (source) => {
-    if (fcmInitialized) {
+    // Check fcmService's internal flag instead of local variable
+    if (fcmService.isInitialized) {
       console.log(`FCM Boot: Already initialized, skipping (source: ${source})`);
       return;
     }
@@ -27,17 +25,20 @@ export default defineBoot(async ({ app, router }) => {
     console.log(`FCM Boot: Initializing FCM (source: ${source})...`);
     
     try {
-      // Initialize FCM
+      // Initialize FCM (this sets fcmService.isInitialized internally)
       const success = await fcmService.initialize();
       
       if (success) {
-        fcmInitialized = true;
         console.log(`FCM Boot: FCM initialized successfully (source: ${source})`);
         
         // Update token last seen periodically (every 24 hours)
-        setInterval(() => {
-          fcmService.updateTokenLastSeen();
-        }, 24 * 60 * 60 * 1000);
+        // Only set interval once
+        if (!fcmService.hasTokenUpdateInterval) {
+          fcmService.hasTokenUpdateInterval = true;
+          setInterval(() => {
+            fcmService.updateTokenLastSeen();
+          }, 24 * 60 * 60 * 1000);
+        }
       } else {
         console.warn(`FCM Boot: FCM initialization failed (source: ${source})`);
       }
@@ -69,7 +70,6 @@ export default defineBoot(async ({ app, router }) => {
       }, delay);
     } else {
       console.log('FCM Boot: User logged out, unregistering FCM...');
-      fcmInitialized = false;
       
       try {
         await fcmService.unregister();
@@ -91,7 +91,7 @@ export default defineBoot(async ({ app, router }) => {
         const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
         const { user } = await FirebaseAuthentication.getCurrentUser();
         
-        if (user && user.uid && !fcmInitialized) {
+        if (user && user.uid && !fcmService.isInitialized) {
           console.log('FCM Boot: iOS fallback - Found authenticated user, initializing FCM...');
           console.log('FCM Boot: User ID:', user.uid);
           
@@ -101,7 +101,7 @@ export default defineBoot(async ({ app, router }) => {
           }, 1000);
         } else if (!user) {
           console.log('FCM Boot: iOS fallback - No user authenticated');
-        } else if (fcmInitialized) {
+        } else if (fcmService.isInitialized) {
           console.log('FCM Boot: iOS fallback - FCM already initialized, skipping');
         }
       } catch (error) {

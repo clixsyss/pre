@@ -85,9 +85,9 @@ const requestPermission = async () => {
     console.log('Permission result:', permission);
     
     if (permission === 'granted') {
-      // Initialize FCM
-      await fcmService.initialize();
-      console.log('FCM initialized successfully');
+      // FCM is already initialized by the boot file (src/boot/fcm.js)
+      // Just log success - no need to initialize again
+      console.log('Notifications enabled - FCM is managed by boot file');
     }
   } catch (error) {
     console.error('Error requesting permission:', error);

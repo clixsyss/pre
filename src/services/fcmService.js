@@ -35,6 +35,7 @@ class FCMService {
     this.FirebaseMessaging = null; // Will be loaded dynamically
     this.listenersSetup = false; // Track if listeners have been set up
     this.isInitialized = false; // Track if FCM has been initialized
+    this.hasTokenUpdateInterval = false; // Track if token update interval is set
     
     // VAPID key for web push
     this.vapidKey = 'BDL03mUP_fsEjpZLMLwj-EW0XGFUPXDu8alAQgAKrlcGrHe39yxSF8DH1yn75Y93vOYc-5nNcRctEhMoBPvQatQ';

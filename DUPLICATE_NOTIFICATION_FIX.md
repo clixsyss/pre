@@ -57,10 +57,25 @@ After these changes:
 ## Files Modified
 1. `/src/services/fcmService.js`
 2. `/src/services/optimizedAuthService.js`
+3. `/src/boot/fcm.js` (Updated to use shared initialization flag)
+4. `/src/pages/auth/EnableNotifications.vue` (Removed duplicate initialization)
 
 ## Files to Keep (No Longer Used for Notifications)
 - `/src/services/notificationService.js` - Keep for backward compatibility but not actively used
 - The `notificationService` is now deprecated in favor of `fcmService`
+
+## Additional Fix (Second Pass)
+
+### 4. **EnableNotifications.vue**
+- Removed duplicate `fcmService.initialize()` call on line 89
+- This page was re-initializing FCM when user granted permissions
+- Now it just logs success since the boot file handles all initialization
+
+### 5. **fcm.js Boot File**
+- Changed from local `fcmInitialized` flag to using `fcmService.isInitialized`
+- This ensures all initialization paths check the same flag
+- Added `hasTokenUpdateInterval` flag to prevent multiple interval timers
+- Now all three initialization paths (currentUser, onAuthStateChanged, iOS fallback) use the same shared state
 
 ## Migration Notes
 If you have any custom code calling `notificationService.addNotificationListeners()`, remove those calls. The FCM boot file handles everything automatically now.
