@@ -10,9 +10,25 @@ echo "Contents of current directory:"
 ls -la
 
 echo "📦 Installing npm dependencies..."
-npm install
+npm ci --prefer-offline --no-audit
 
 echo "✅ npm dependencies installed successfully!"
+
+# Verify critical Capacitor packages
+echo "🔍 Verifying Capacitor Keyboard installation..."
+if [ ! -d "node_modules/@capacitor/keyboard/ios/Sources/KeyboardPlugin/include" ]; then
+  echo "❌ ERROR: Capacitor Keyboard files not found after npm install!"
+  echo "Attempting to reinstall @capacitor/keyboard..."
+  npm install @capacitor/keyboard@7.0.3 --force
+fi
+
+# Double-check the files exist
+if [ -f "node_modules/@capacitor/keyboard/ios/Sources/KeyboardPlugin/include/Keyboard.h" ]; then
+  echo "✅ Keyboard.h found"
+else
+  echo "❌ ERROR: Keyboard.h still missing!"
+  exit 1
+fi
 
 echo "🏗️  Building Quasar app..."
 npm run build
@@ -28,6 +44,8 @@ echo "📦 Installing CocoaPods dependencies..."
 cd ios/App || exit 1
 
 echo "Current directory after cd: $(pwd)"
+echo "Verifying node_modules path from iOS directory:"
+ls -la ../../node_modules/@capacitor/keyboard/ios/Sources/KeyboardPlugin/include/ || echo "❌ Cannot access keyboard include files from here"
 
 # Make sure cocoapods is available
 if ! command -v pod &> /dev/null; then
@@ -41,7 +59,7 @@ pod cache clean --all || true
 
 # Install pods
 echo "Installing pods..."
-pod install --repo-update
+pod install --repo-update --verbose
 
 echo "✅ Pods installed successfully!"
 echo "✅ CI post-clone script completed!"
