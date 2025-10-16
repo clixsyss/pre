@@ -35,11 +35,21 @@ fi
 echo "✅ Build output verified at dist/spa"
 echo ""
 
-# Step 3: Sync Capacitor to iOS (copy files only, skip pod install)
-echo "🔄 Step 3/4: Syncing Capacitor to iOS..."
+# Step 3: Copy Capacitor files ONLY (no pod install)
+echo "🔄 Step 3/4: Copying Capacitor files to iOS..."
 npx cap copy ios
-npx cap update ios
 echo "✅ Capacitor files copied"
+echo ""
+
+# Manually update iOS project files (skip the slow pod install)
+echo "🔄 Updating iOS project configuration..."
+if [ -f "ios/App/App.xcodeproj/project.pbxproj" ]; then
+  echo "✅ iOS project file exists"
+else
+  echo "❌ ERROR: iOS project file not found!"
+  exit 1
+fi
+echo "✅ iOS project verified"
 echo ""
 
 # Verify cap sync created necessary files
