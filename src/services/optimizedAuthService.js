@@ -5,7 +5,6 @@
 import { auth, isNative } from '../boot/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth'
 import cacheService from './cacheService'
-import notificationService from './notificationService'
 
 class OptimizedAuthService {
   constructor() {
@@ -207,11 +206,8 @@ class OptimizedAuthService {
    */
   async signOut() {
     try {
-      // Clear FCM token before signing out
-      if (this.currentUser && this.currentUser.uid) {
-        console.log('🔔 OptimizedAuthService: Clearing FCM token...')
-        await notificationService.clearToken(this.currentUser.uid)
-      }
+      // FCM token cleanup is handled by the fcm boot file (onAuthStateChanged)
+      // No need to manually clear here to avoid conflicts
       
       // Use Capacitor plugin for iOS, Web SDK for others
       const { Capacitor } = await import('@capacitor/core')
@@ -226,12 +222,11 @@ class OptimizedAuthService {
         await firebaseSignOut(this.auth)
       }
       
-      // Clear cached user and remove notification listeners
+      // Clear cached user (FCM cleanup handled by fcm boot file)
       this.currentUser = null
       cacheService.clear()
-      notificationService.removeNotificationListeners()
       
-      console.log('🚀 OptimizedAuthService: User signed out, cache cleared, notifications removed')
+      console.log('🚀 OptimizedAuthService: User signed out, cache cleared')
     } catch (error) {
       console.error('Sign out error:', error)
       throw error
@@ -240,18 +235,13 @@ class OptimizedAuthService {
 
   /**
    * Initialize notifications for the user
-   * This matches the getNotificationsOnLaunch function from orange-pharmacies
+   * NOTE: This method is now deprecated - FCM is handled by fcmService via the fcm boot file
+   * Keeping this for backward compatibility but it does nothing
    */
-  async initializeNotifications(userId) {
-    try {
-      console.log('🔔 OptimizedAuthService: Initializing notifications for user:', userId)
-      await notificationService.initializeNotifications(userId)
-      notificationService.addNotificationListeners()
-      console.log('🔔 OptimizedAuthService: Notifications initialized successfully')
-    } catch (error) {
-      console.error('🔔 OptimizedAuthService: Error initializing notifications:', error)
-      // Don't throw - notifications are not critical for app functionality
-    }
+  async initializeNotifications() {
+    // Notifications are now handled by fcmService in the fcm boot file
+    // This prevents duplicate listener registration
+    console.log('🔔 OptimizedAuthService: Notification initialization skipped (handled by fcmService)')
   }
 
   /**
@@ -264,19 +254,12 @@ class OptimizedAuthService {
       this.currentUser = user
       
       if (user) {
-        // Initialize notifications for authenticated users
-        // Using setTimeout to ensure this doesn't block the auth flow
-        setTimeout(async () => {
-          try {
-            await this.initializeNotifications(user.uid)
-          } catch (error) {
-            console.error('🔔 Failed to initialize notifications (non-blocking):', error)
-          }
-        }, 1000)
+        // Notifications are initialized by fcmService via the fcm boot file
+        // No need to initialize here to avoid duplicates
+        console.log('🔔 User authenticated - FCM is handled by boot file')
       } else {
-        // Clear cache and notifications on sign out
+        // Clear cache on sign out (FCM cleanup handled by fcm boot file)
         cacheService.clear()
-        notificationService.removeNotificationListeners()
       }
       
       callback(user)

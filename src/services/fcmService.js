@@ -33,6 +33,8 @@ class FCMService {
     this.currentToken = null;
     this.notificationHandlers = [];
     this.FirebaseMessaging = null; // Will be loaded dynamically
+    this.listenersSetup = false; // Track if listeners have been set up
+    this.isInitialized = false; // Track if FCM has been initialized
     
     // VAPID key for web push
     this.vapidKey = 'BDL03mUP_fsEjpZLMLwj-EW0XGFUPXDu8alAQgAKrlcGrHe39yxSF8DH1yn75Y93vOYc-5nNcRctEhMoBPvQatQ';
@@ -45,6 +47,12 @@ class FCMService {
    */
   async initialize() {
     try {
+      // Prevent duplicate initialization
+      if (this.isInitialized) {
+        console.log('FCMService: Already initialized, skipping...');
+        return true;
+      }
+      
       console.log('FCMService: Starting initialization...');
       
       if (this.isNative) {
@@ -53,6 +61,7 @@ class FCMService {
         await this.initializeWeb();
       }
       
+      this.isInitialized = true;
       console.log('FCMService: Initialization complete');
       return true;
     } catch (error) {
@@ -263,6 +272,12 @@ class FCMService {
       return;
     }
 
+    // Check if listeners already set up to prevent duplicates
+    if (this.listenersSetup) {
+      console.log('FCMService: Native listeners already set up, skipping...');
+      return;
+    }
+
     // Listen for token refresh
     this.FirebaseMessaging.addListener('tokenReceived', async (event) => {
       console.log('🎉 FCMService: Token refreshed!');
@@ -286,6 +301,7 @@ class FCMService {
       this.handleNotificationTap(event);
     });
     
+    this.listenersSetup = true;
     console.log('✅ FCMService: Native listeners set up successfully');
   }
 
@@ -623,6 +639,7 @@ class FCMService {
       if (this.isNative && this.FirebaseMessaging) {
         await this.FirebaseMessaging.removeAllListeners();
         console.log('FCMService: Native listeners removed');
+        this.listenersSetup = false; // Reset listener flag
       } else if (this.messaging) {
         // Delete token from FCM
         await deleteToken(this.messaging);
@@ -630,6 +647,7 @@ class FCMService {
       }
 
       this.currentToken = null;
+      this.isInitialized = false; // Reset initialization flag
       console.log('FCMService: Unregistered successfully');
     } catch (error) {
       console.error('FCMService: Error unregistering:', error);
