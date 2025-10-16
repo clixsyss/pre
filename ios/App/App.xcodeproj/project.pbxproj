@@ -112,6 +112,7 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				3A436C251095B6B819168304 /* [CP] Embed Pods Frameworks */,
+				07FF7C9D2EA10A0E004F3C4A /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -174,20 +175,22 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		D753549B1C424DF986E017A3 /* Install npm dependencies */ = {
+		07FF7C9D2EA10A0E004F3C4A /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
+			inputFileListPaths = (
+			);
 			inputPaths = (
 			);
-			name = "Install npm dependencies";
+			outputFileListPaths = (
+			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "echo \"🚀 Installing npm dependencies...\"\necho \"Current directory: $(pwd)\"\necho \"SRCROOT: ${SRCROOT}\"\necho \"Contents of SRCROOT: $(ls -la \"${SRCROOT}\")\"\necho \"Contents of parent: $(ls -la \"${SRCROOT}/..\")\"\necho \"Contents of grandparent: $(ls -la \"${SRCROOT}/../..\")\"\necho \"Contents of great-grandparent: $(ls -la \"${SRCROOT}/../../..\")\"\ncd \"${SRCROOT}/../../..\"\necho \"After cd, current directory: $(pwd)\"\necho \"Contents of current directory: $(ls -la)\"\necho \"Looking for package.json: $(find . -name package.json -maxdepth 3)\"\nnpm install\necho \"✅ npm dependencies installed successfully!\"\necho \"Checking if Capacitor Keyboard files exist:\"\necho \"$(find . -name KeyboardPlugin.h 2>/dev/null || echo 'KeyboardPlugin.h not found')\"\n";
-			showEnvVarsInLog = 0;
+			shellScript = "echo \"🚀 Installing npm dependencies...\"\necho \"Current directory: $(pwd)\"\necho \"SRCROOT: ${SRCROOT}\"\necho \"Contents of SRCROOT: $(ls -la \\\"${SRCROOT}\\\")\"\necho \"Contents of parent: $(ls -la \\\"${SRCROOT}/..\\\")\"\necho \"Contents of grandparent: $(ls -la \\\"${SRCROOT}/../..\\\")\"\necho \"Contents of great-grandparent: $(ls -la \\\"${SRCROOT}/../../..\\\")\"\ncd \\\"${SRCROOT}/../../..\\\"\necho \"After cd, current directory: $(pwd)\"\necho \"Contents of current directory: $(ls -la)\"\necho \"Looking for package.json: $(find . -name package.json -maxdepth 3)\"\nif [ -f \\\"package.json\\\" ]; then\n    echo \\\"✅ Found package.json, running npm install...\\\"\n    npm install\n    echo \\\"✅ npm dependencies installed successfully!\\\"\n    echo \\\"Checking if Capacitor Keyboard files exist:\\\"\n    find . -name \\\"KeyboardPlugin.h\\\" 2>/dev/null || echo \\\"KeyboardPlugin.h not found\\\"\nelse\n    echo \\\"❌ package.json not found in $(pwd)\\\"\n    echo \\\"Contents of current directory:\\\"\n    ls -la\n    exit 1\nfi\n";
 		};
 		3A436C251095B6B819168304 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -224,6 +227,21 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		D753549B1C424DF986E017A3 /* Install npm dependencies */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Install npm dependencies";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "echo \"🚀 Installing npm dependencies...\"\necho \"Current directory: $(pwd)\"\necho \"SRCROOT: ${SRCROOT}\"\necho \"Contents of SRCROOT: $(ls -la \"${SRCROOT}\")\"\necho \"Contents of parent: $(ls -la \"${SRCROOT}/..\")\"\necho \"Contents of grandparent: $(ls -la \"${SRCROOT}/../..\")\"\necho \"Contents of great-grandparent: $(ls -la \"${SRCROOT}/../../..\")\"\ncd \"${SRCROOT}/../../..\"\necho \"After cd, current directory: $(pwd)\"\necho \"Contents of current directory: $(ls -la)\"\necho \"Looking for package.json: $(find . -name package.json -maxdepth 3)\"\nnpm install\necho \"✅ npm dependencies installed successfully!\"\necho \"Checking if Capacitor Keyboard files exist:\"\necho \"$(find . -name KeyboardPlugin.h 2>/dev/null || echo 'KeyboardPlugin.h not found')\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
