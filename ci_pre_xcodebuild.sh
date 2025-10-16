@@ -40,27 +40,33 @@ fi
 echo "Project root: $(pwd)"
 echo ""
 
-# Setup Node.js environment (Xcode Cloud uses Homebrew)
+# Setup Node.js environment
 echo "🔧 Setting up Node.js environment..."
-export PATH="/usr/local/bin:$PATH"
-export PATH="$HOME/.homebrew/bin:$PATH"
-export PATH="/opt/homebrew/bin:$PATH"
 
-# Check if npm is available
-if ! command -v npm &> /dev/null; then
-    echo "⚠️  npm not found in PATH, attempting to locate..."
-    # Xcode Cloud typically has node installed via Homebrew
-    if [ -f "/usr/local/bin/node" ]; then
-        export PATH="/usr/local/bin:$PATH"
-    elif [ -f "$HOME/.homebrew/bin/node" ]; then
-        export PATH="$HOME/.homebrew/bin:$PATH"
-    elif [ -f "/opt/homebrew/bin/node" ]; then
-        export PATH="/opt/homebrew/bin:$PATH"
-    fi
+# Xcode Cloud provides Homebrew at /Users/local/Homebrew
+export HOMEBREW_PREFIX="/Users/local/Homebrew"
+if [ -d "$HOMEBREW_PREFIX" ]; then
+    echo "✅ Found Homebrew at $HOMEBREW_PREFIX"
+    eval "$($HOMEBREW_PREFIX/bin/brew shellenv)"
+    export PATH="$HOMEBREW_PREFIX/bin:$PATH"
 fi
 
-echo "Node version: $(node --version 2>&1 || echo 'not found')"
-echo "npm version: $(npm --version 2>&1 || echo 'not found')"
+# Check if node is installed, if not install it via Homebrew
+if ! command -v node &> /dev/null; then
+    echo "⚠️  Node.js not found, installing via Homebrew..."
+    if command -v brew &> /dev/null; then
+        brew install node
+    else
+        echo "❌ ERROR: Homebrew not available, cannot install Node.js"
+        exit 1
+    fi
+else
+    echo "✅ Node.js is already installed"
+fi
+
+# Verify installation
+echo "Node version: $(node --version)"
+echo "npm version: $(npm --version)"
 echo "PATH: $PATH"
 echo ""
 
