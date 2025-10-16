@@ -2,64 +2,62 @@
 # ci_post_clone.sh
 # This script runs immediately after Xcode Cloud clones your repo.
 
-set -e  # Exit on error
+set -e  # Exit immediately if a command exits with a non-zero status
 
-echo "🚀 CI SCRIPT IS RUNNING!"
+echo "========================================="
+echo "🚀 CI POST-CLONE SCRIPT STARTING"
+echo "========================================="
 echo "Current directory: $(pwd)"
-echo "Contents of current directory:"
-ls -la
+echo ""
 
-echo "📦 Installing npm dependencies..."
+# Step 1: Install npm dependencies
+echo "📦 Step 1/4: Installing npm dependencies..."
 npm ci --prefer-offline --no-audit
+echo "✅ npm dependencies installed"
+echo ""
 
-echo "✅ npm dependencies installed successfully!"
+# Step 2: Build Quasar app
+echo "🏗️  Step 2/4: Building Quasar app..."
+npm run build
+echo "✅ Quasar build completed"
+echo ""
 
-# Verify critical Capacitor packages
-echo "🔍 Verifying Capacitor Keyboard installation..."
-if [ ! -d "node_modules/@capacitor/keyboard/ios/Sources/KeyboardPlugin/include" ]; then
-  echo "❌ ERROR: Capacitor Keyboard files not found after npm install!"
-  echo "Attempting to reinstall @capacitor/keyboard..."
-  npm install @capacitor/keyboard@7.0.3 --force
+# Verify build output exists
+if [ ! -d "dist/spa" ]; then
+  echo "❌ ERROR: dist/spa directory not found after build!"
+  exit 1
 fi
+echo "✅ Build output verified at dist/spa"
+echo ""
 
-# Double-check the files exist
-if [ -f "node_modules/@capacitor/keyboard/ios/Sources/KeyboardPlugin/include/Keyboard.h" ]; then
-  echo "✅ Keyboard.h found"
-else
-  echo "❌ ERROR: Keyboard.h still missing!"
+# Step 3: Sync Capacitor to iOS
+echo "🔄 Step 3/4: Syncing Capacitor to iOS..."
+npx cap sync ios --no-build
+echo "✅ Capacitor sync completed"
+echo ""
+
+# Step 4: Install CocoaPods
+echo "📦 Step 4/4: Installing CocoaPods dependencies..."
+cd ios/App || { echo "❌ Failed to cd into ios/App"; exit 1; }
+
+# Verify Podfile exists
+if [ ! -f "Podfile" ]; then
+  echo "❌ ERROR: Podfile not found!"
   exit 1
 fi
 
-echo "🏗️  Building Quasar app..."
-npm run build
+# Install pods without updating repo (faster)
+echo "Running: pod install"
+pod install
+echo "✅ CocoaPods installed successfully"
+echo ""
 
-echo "✅ Quasar build completed!"
-
-echo "🔄 Syncing Capacitor to iOS..."
-npx cap sync ios
-
-echo "✅ Capacitor sync completed!"
-
-echo "📦 Installing CocoaPods dependencies..."
-cd ios/App || exit 1
-
-echo "Current directory after cd: $(pwd)"
-echo "Verifying node_modules path from iOS directory:"
-ls -la ../../node_modules/@capacitor/keyboard/ios/Sources/KeyboardPlugin/include/ || echo "❌ Cannot access keyboard include files from here"
-
-# Make sure cocoapods is available
-if ! command -v pod &> /dev/null; then
-  echo "Installing CocoaPods..."
-  sudo gem install cocoapods
+# Verify Pods were created
+if [ ! -d "Pods" ]; then
+  echo "❌ ERROR: Pods directory was not created!"
+  exit 1
 fi
 
-# Clean pod cache and install fresh
-echo "Cleaning CocoaPods cache..."
-pod cache clean --all || true
-
-# Install pods
-echo "Installing pods..."
-pod install --repo-update --verbose
-
-echo "✅ Pods installed successfully!"
-echo "✅ CI post-clone script completed!"
+echo "========================================="
+echo "✅ CI POST-CLONE SCRIPT COMPLETED"
+echo "========================================="
