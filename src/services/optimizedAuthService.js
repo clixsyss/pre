@@ -5,6 +5,7 @@
 import { auth, isNative } from '../boot/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth'
 import cacheService from './cacheService'
+import notificationService from './notificationService'
 
 class OptimizedAuthService {
   constructor() {
@@ -206,6 +207,12 @@ class OptimizedAuthService {
    */
   async signOut() {
     try {
+      // Clear FCM token before signing out
+      if (this.currentUser && this.currentUser.uid) {
+        console.log('🔔 OptimizedAuthService: Clearing FCM token...')
+        await notificationService.clearToken(this.currentUser.uid)
+      }
+      
       // Use Capacitor plugin for iOS, Web SDK for others
       const { Capacitor } = await import('@capacitor/core')
       const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
@@ -219,14 +226,31 @@ class OptimizedAuthService {
         await firebaseSignOut(this.auth)
       }
       
-      // Clear cached user
+      // Clear cached user and remove notification listeners
       this.currentUser = null
       cacheService.clear()
+      notificationService.removeNotificationListeners()
       
-      console.log('🚀 OptimizedAuthService: User signed out, cache cleared')
+      console.log('🚀 OptimizedAuthService: User signed out, cache cleared, notifications removed')
     } catch (error) {
       console.error('Sign out error:', error)
       throw error
+    }
+  }
+
+  /**
+   * Initialize notifications for the user
+   * This matches the getNotificationsOnLaunch function from orange-pharmacies
+   */
+  async initializeNotifications(userId) {
+    try {
+      console.log('🔔 OptimizedAuthService: Initializing notifications for user:', userId)
+      await notificationService.initializeNotifications(userId)
+      notificationService.addNotificationListeners()
+      console.log('🔔 OptimizedAuthService: Notifications initialized successfully')
+    } catch (error) {
+      console.error('🔔 OptimizedAuthService: Error initializing notifications:', error)
+      // Don't throw - notifications are not critical for app functionality
     }
   }
 
@@ -235,13 +259,24 @@ class OptimizedAuthService {
    */
   onAuthStateChanged(callback) {
     // Use Web SDK for all platforms
-    return onAuthStateChanged(this.auth, (user) => {
+    return onAuthStateChanged(this.auth, async (user) => {
       console.log('🚀 OptimizedAuthService: Auth state changed, user:', user ? 'authenticated' : 'not authenticated')
       this.currentUser = user
       
-      // Clear cache on sign out
-      if (!user) {
+      if (user) {
+        // Initialize notifications for authenticated users
+        // Using setTimeout to ensure this doesn't block the auth flow
+        setTimeout(async () => {
+          try {
+            await this.initializeNotifications(user.uid)
+          } catch (error) {
+            console.error('🔔 Failed to initialize notifications (non-blocking):', error)
+          }
+        }, 1000)
+      } else {
+        // Clear cache and notifications on sign out
         cacheService.clear()
+        notificationService.removeNotificationListeners()
       }
       
       callback(user)
