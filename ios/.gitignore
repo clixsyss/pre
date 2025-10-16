@@ -1,5 +1,5 @@
 App/build
-# App/Pods
+App/Pods
 App/output
 App/App/public
 DerivedData
@@ -11,3 +11,15 @@ capacitor-cordova-ios-plugins
 # Generated Config files
 App/App/capacitor.config.json
 App/App/config.xml
+
+# Cordova plugins
+capacitor-cordova-ios-plugins
+
+# User / IDE files
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+.DS_Store
+.idea/
+.vscode/
