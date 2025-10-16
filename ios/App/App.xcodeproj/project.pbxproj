@@ -106,7 +106,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
 		buildPhases = (
-			07FF7C9E2EA10A0F004F3C4A /* Setup Dependencies */,
 			825181889E2B2A7FFDC2263D /* [CP] Check Pods Manifest.lock */,
 			504EC3001FED79650016851F /* Sources */,
 			504EC3011FED79650016851F /* Frameworks */,
@@ -174,28 +173,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		07FF7C9E2EA10A0F004F3C4A /* Setup Dependencies */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${SRCROOT}/../package.json",
-				"${SRCROOT}/../package-lock.json",
-			);
-			name = "Setup Dependencies";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"${SRCROOT}/../dist/spa",
-				"${SRCROOT}/Pods",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/bash;
-			shellScript = "set -e\necho \"🚀 SETUP DEPENDENCIES SCRIPT STARTING\"\necho \"Current directory: $(pwd)\"\necho \"SRCROOT: ${SRCROOT}\"\n\n# Navigate to project root\nPROJECT_ROOT=\"${SRCROOT}/../..\"\necho \"Navigating to: ${PROJECT_ROOT}\"\ncd \"${PROJECT_ROOT}\"\necho \"After cd, current directory: $(pwd)\"\n\n# Check if package.json exists\nif [ ! -f \"package.json\" ]; then\n    echo \"❌ ERROR: package.json not found in $(pwd)\"\n    echo \"Contents of current directory:\"\n    ls -la\n    exit 1\nfi\n\necho \"✅ Found package.json\"\n\n# Install npm dependencies\necho \"📦 Installing npm dependencies...\"\nnpm ci --prefer-offline --no-audit\necho \"✅ npm dependencies installed\"\n\n# Build Quasar app\necho \"🏗️ Building Quasar app...\"\nnpm run build\necho \"✅ Quasar build completed\"\n\n# Verify build output\necho \"Verifying build output...\"\nif [ ! -d \"dist/spa\" ]; then\n    echo \"❌ ERROR: dist/spa directory not found after build!\"\n    exit 1\nfi\necho \"✅ Build output verified\"\n\n# Copy Capacitor files\necho \"🔄 Copying Capacitor files to iOS...\"\nnpx cap copy ios\necho \"✅ Capacitor files copied\"\n\n# Install CocoaPods\necho \"📦 Installing CocoaPods dependencies...\"\ncd ios/App\necho \"Current directory: $(pwd)\"\n\n# Ensure CocoaPods is available\nif ! command -v pod &> /dev/null; then\n    echo \"Installing CocoaPods...\"\n    export GEM_HOME=\"$HOME/.gem\"\n    export PATH=\"$GEM_HOME/bin:$PATH\"\n    gem install cocoapods --user-install --no-document\nfi\n\n# Install pods\necho \"Running: pod install\"\npod install\necho \"✅ CocoaPods installed successfully\"\n\necho \"✅ SETUP DEPENDENCIES SCRIPT COMPLETED\"\n";
-		};
 		3A436C251095B6B819168304 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -230,7 +207,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			shellScript = "echo \"🚀 COCOAPODS CHECK SCRIPT STARTING\"\necho \"Current directory: $(pwd)\"\necho \"SRCROOT: ${SRCROOT}\"\n\n# Check if Pods directory exists\nif [ ! -d \"${PODS_ROOT}\" ]; then\n    echo \"⚠️  Pods directory not found, running setup...\"\n    \n    # Navigate to project root\n    PROJECT_ROOT=\"${SRCROOT}/../..\"\n    echo \"Navigating to: ${PROJECT_ROOT}\"\n    cd \"${PROJECT_ROOT}\"\n    echo \"After cd, current directory: $(pwd)\"\n    \n    # Check if package.json exists\n    if [ ! -f \"package.json\" ]; then\n        echo \"❌ ERROR: package.json not found in $(pwd)\"\n        exit 1\n    fi\n    \n    echo \"✅ Found package.json\"\n    \n    # Install npm dependencies\n    echo \"📦 Installing npm dependencies...\"\n    npm ci --prefer-offline --no-audit\n    echo \"✅ npm dependencies installed\"\n    \n    # Build Quasar app\n    echo \"🏗️ Building Quasar app...\"\n    npm run build\n    echo \"✅ Quasar build completed\"\n    \n    # Verify build output\n    if [ ! -d \"dist/spa\" ]; then\n        echo \"❌ ERROR: dist/spa directory not found after build!\"\n        exit 1\n    fi\n    echo \"✅ Build output verified\"\n    \n    # Copy Capacitor files\n    echo \"🔄 Copying Capacitor files to iOS...\"\n    npx cap copy ios\n    echo \"✅ Capacitor files copied\"\n    \n    # Install CocoaPods\n    echo \"📦 Installing CocoaPods dependencies...\"\n    cd ios/App\n    \n    # Ensure CocoaPods is available\n    if ! command -v pod &> /dev/null; then\n        echo \"Installing CocoaPods...\"\n        export GEM_HOME=\"$HOME/.gem\"\n        export PATH=\"$GEM_HOME/bin:$PATH\"\n        gem install cocoapods --user-install --no-document\n    fi\n    \n    # Install pods\n    echo \"Running: pod install\"\n    pod install\n    echo \"✅ CocoaPods installed successfully\"\n    \n    echo \"✅ SETUP COMPLETED, CONTINUING WITH PODS CHECK\"\nfi\n\n# Now run the original CocoaPods check\ndiff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
