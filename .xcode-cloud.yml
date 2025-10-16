@@ -16,10 +16,7 @@ build:
   # Pre-build actions
   pre_build:
     - script: ci_scripts/ci_post_clone.sh
-    
-  # Post-build actions  
-  post_build:
-    - script: ios/App/App.xcworkspace/xcshareddata/ci_scripts/ci_post_xcodebuild.sh
+    - script: ci_scripts/ci_pre_xcodebuild.sh
 
 # Test configuration (if needed)
 test:
