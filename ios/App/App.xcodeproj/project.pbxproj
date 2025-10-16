@@ -106,13 +106,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
 			buildPhases = (
-				D753549B1C424DF986E017A3 /* Install npm dependencies */,
 				825181889E2B2A7FFDC2263D /* [CP] Check Pods Manifest.lock */,
+				D753549B1C424DF986E017A3 /* Install npm dependencies */,
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				3A436C251095B6B819168304 /* [CP] Embed Pods Frameworks */,
-				07FF7C9D2EA10A0E004F3C4A /* ShellScript */,
+				07FF7C9D2EA10A0E004F3C4A /* Install npm dependencies */,
 			);
 			buildRules = (
 			);
@@ -175,7 +175,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		07FF7C9D2EA10A0E004F3C4A /* ShellScript */ = {
+		07FF7C9D2EA10A0E004F3C4A /* Install npm dependencies */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
