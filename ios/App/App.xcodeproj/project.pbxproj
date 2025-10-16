@@ -106,8 +106,8 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
 			buildPhases = (
-				825181889E2B2A7FFDC2263D /* [CP] Check Pods Manifest.lock */,
 				07FF7C9D2EA10A0E004F3C4A /* Install npm dependencies */,
+				825181889E2B2A7FFDC2263D /* [CP] Check Pods Manifest.lock */,
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
