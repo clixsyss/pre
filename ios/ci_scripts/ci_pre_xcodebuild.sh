@@ -6,19 +6,38 @@ set -e  # Exit on error
 echo ""
 echo "========================================="
 echo "========================================="
-echo "🚀 CI PRE-XCODEBUILD SCRIPT (iOS) STARTING"
+echo "🚀 CI PRE-XCODEBUILD SCRIPT STARTING"
 echo "========================================="
 echo "========================================="
 echo ""
 echo "Script location: $0"
-echo "Current directory: $(pwd)"
+echo "Initial directory: $(pwd)"
 echo "Date: $(date)"
 echo ""
 
-# Navigate to project root
-echo "📁 Navigating to project root..."
-cd ../.. || { echo "❌ Failed to navigate to project root"; exit 1; }
-echo "Current directory: $(pwd)"
+# Navigate to project root (where package.json is)
+# Xcode Cloud might run this from ci_scripts/ or ios/App/ci_scripts/
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+echo "Script directory: $SCRIPT_DIR"
+
+# Find project root by looking for package.json
+if [ -f "../package.json" ]; then
+  cd ..
+elif [ -f "../../package.json" ]; then
+  cd ../..
+elif [ -f "../../../package.json" ]; then
+  cd ../../..
+elif [ -f "package.json" ]; then
+  # Already at root
+  :
+else
+  echo "❌ ERROR: Cannot find package.json from $(pwd)"
+  echo "Listing current directory:"
+  ls -la
+  exit 1
+fi
+
+echo "Project root: $(pwd)"
 echo ""
 
 # Step 1: Install npm dependencies
@@ -145,5 +164,5 @@ fi
 echo "✅ Pods-App.release.xcconfig verified"
 
 echo "========================================="
-echo "✅ CI PRE-XCODEBUILD SCRIPT (iOS) COMPLETED"
+echo "✅ CI PRE-XCODEBUILD SCRIPT COMPLETED"
 echo "========================================="
