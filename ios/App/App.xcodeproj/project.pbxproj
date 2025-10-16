@@ -184,13 +184,14 @@
 			);
 			inputPaths = (
 			);
+			name = "Install npm dependencies";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "set -e\necho \"🚀 Installing npm dependencies...\"\necho \"Current directory: $(pwd)\"\necho \"SRCROOT: ${SRCROOT}\"\n\n# Navigate to project root\nPROJECT_ROOT=\"${SRCROOT}/../../..\"\necho \"Navigating to: ${PROJECT_ROOT}\"\ncd \"${PROJECT_ROOT}\"\necho \"After cd, current directory: $(pwd)\"\n\n# Check if package.json exists\nif [ ! -f \"package.json\" ]; then\n    echo \"❌ ERROR: package.json not found in $(pwd)\"\n    echo \"Contents of current directory:\"\n    ls -la\n    exit 1\nfi\n\necho \"✅ Found package.json\"\necho \"Running npm install...\"\n\n# Run npm install\nif npm install --prefer-offline --no-audit --progress=false; then\n    echo \"✅ npm dependencies installed successfully!\"\nelse\n    echo \"❌ ERROR: npm install failed with exit code $?\"\n    exit 1\nfi\n\n# Verify Capacitor plugins are installed\necho \"Verifying Capacitor Keyboard plugin installation...\"\nif [ -d \"node_modules/@capacitor/keyboard\" ]; then\n    echo \"✅ @capacitor/keyboard found in node_modules\"\n    echo \"Contents of @capacitor/keyboard:\"\n    ls -la \"node_modules/@capacitor/keyboard/\" | head -10\nelse\n    echo \"❌ WARNING: @capacitor/keyboard not found in node_modules\"\nfi\n\necho \"✅ npm install script completed successfully\"\n";
+			shellScript = "set -e\necho \"🚀 Installing npm dependencies...\"\necho \"Current directory: $(pwd)\"\necho \"SRCROOT: ${SRCROOT}\"\n\n# Navigate to project root (repository root)\n# SRCROOT is /Volumes/workspace/repository/ios/App\n# We need to go to /Volumes/workspace/repository\nPROJECT_ROOT=\"${SRCROOT}/../..\"\necho \"Navigating to: ${PROJECT_ROOT}\"\ncd \"${PROJECT_ROOT}\"\necho \"After cd, current directory: $(pwd)\"\n\n# Check if package.json exists\nif [ ! -f \"package.json\" ]; then\n    echo \"❌ ERROR: package.json not found in $(pwd)\"\n    echo \"Contents of current directory:\"\n    ls -la\n    exit 1\nfi\n\necho \"✅ Found package.json\"\necho \"Running npm install...\"\n\n# Run npm install\nif npm install --prefer-offline --no-audit --progress=false; then\n    echo \"✅ npm dependencies installed successfully!\"\nelse\n    echo \"❌ ERROR: npm install failed with exit code $?\"\n    exit 1\nfi\n\n# Verify Capacitor plugins are installed\necho \"Verifying Capacitor Keyboard plugin installation...\"\nif [ -d \"node_modules/@capacitor/keyboard\" ]; then\n    echo \"✅ @capacitor/keyboard found in node_modules\"\n    echo \"Contents of @capacitor/keyboard/ios/Sources/KeyboardPlugin/include:\"\n    ls -la \"node_modules/@capacitor/keyboard/ios/Sources/KeyboardPlugin/include/\" 2>/dev/null || echo \"Directory not found\"\nelse\n    echo \"❌ WARNING: @capacitor/keyboard not found in node_modules\"\nfi\n\necho \"✅ npm install script completed successfully\"\n";
 		};
 		3A436C251095B6B819168304 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
