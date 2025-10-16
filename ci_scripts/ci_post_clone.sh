@@ -4,10 +4,16 @@
 
 set -e  # Exit immediately if a command exits with a non-zero status
 
+echo ""
+echo "========================================="
 echo "========================================="
 echo "🚀 CI POST-CLONE SCRIPT STARTING"
 echo "========================================="
+echo "========================================="
+echo ""
+echo "Script location: $0"
 echo "Current directory: $(pwd)"
+echo "Date: $(date)"
 echo ""
 
 # Step 1: Install npm dependencies
@@ -30,25 +36,25 @@ fi
 echo "✅ Build output verified at dist/spa"
 echo ""
 
-# Step 3: Sync Capacitor to iOS
+# Step 3: Sync Capacitor to iOS (copy files only, skip pod install)
 echo "🔄 Step 3/4: Syncing Capacitor to iOS..."
-npx cap sync ios
-echo "✅ Capacitor sync completed"
+npx cap copy ios
+npx cap update ios
+echo "✅ Capacitor files copied"
 echo ""
 
 # Verify cap sync created necessary files
 if [ ! -f "ios/App/Podfile" ]; then
-  echo "❌ ERROR: Podfile not created by cap sync!"
+  echo "❌ ERROR: Podfile not found at ios/App/Podfile!"
+  ls -la ios/App/ || true
   exit 1
 fi
 echo "✅ Podfile verified"
 
-# Step 4: Install CocoaPods
+# Step 4: Install CocoaPods MANUALLY (not via cap sync)
 echo "📦 Step 4/4: Installing CocoaPods dependencies..."
-cd ios/App || { echo "❌ Failed to cd into ios/App"; exit 1; }
-echo "Current directory: $(pwd)"
 
-# Ensure CocoaPods is installed
+# Ensure CocoaPods is installed first
 if ! command -v pod &> /dev/null; then
   echo "⚠️  CocoaPods not found, installing..."
   export GEM_HOME="$HOME/.gem"
@@ -57,15 +63,45 @@ if ! command -v pod &> /dev/null; then
 fi
 
 # Verify pod command works
-pod --version || { echo "❌ pod command failed"; exit 1; }
+echo "Pod version: $(pod --version)"
 
-# Install pods
-echo "Running: pod install"
-pod install --verbose
+# Change to iOS app directory
+cd ios/App || { echo "❌ Failed to cd into ios/App"; exit 1; }
+echo "Current directory: $(pwd)"
+echo ""
+
+# Show what we're working with
+echo "Podfile contents:"
+head -30 Podfile
+echo ""
+
+# Install pods with explicit flags (NO repo update for speed)
+echo "Running: pod install (this may take 2-5 minutes for Firebase dependencies...)"
+echo "Started at: $(date)"
+
+# Run with parallel jobs for faster download
+pod install --verbose 2>&1 | tee pod-install.log &
+POD_PID=$!
+
+# Wait for pod install with timeout monitoring
+SECONDS=0
+while kill -0 $POD_PID 2>/dev/null; do
+  sleep 30
+  echo "⏱️  Pod install still running... ${SECONDS}s elapsed"
+  if [ $SECONDS -gt 600 ]; then
+    echo "⚠️  WARNING: Pod install taking longer than 10 minutes!"
+  fi
+done
+
+wait $POD_PID
 PODS_EXIT_CODE=$?
+echo "Completed at: $(date) (took ${SECONDS}s)"
 
 if [ $PODS_EXIT_CODE -ne 0 ]; then
+  echo ""
   echo "❌ ERROR: pod install failed with exit code $PODS_EXIT_CODE"
+  echo "Last 50 lines of output:"
+  tail -50 pod-install.log
   exit 1
 fi
 
@@ -75,13 +111,19 @@ echo ""
 # Verify Pods were created
 if [ ! -d "Pods" ]; then
   echo "❌ ERROR: Pods directory was not created!"
+  echo "Contents of ios/App directory:"
+  ls -la
   exit 1
 fi
 
+# List what was created
+echo "Pods directory contents:"
+ls -la Pods/ | head -20
+
 if [ ! -f "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig" ]; then
   echo "❌ ERROR: Pods-App.release.xcconfig not found!"
-  echo "Contents of Pods directory:"
-  ls -la Pods/ || true
+  echo "Contents of Pods/Target Support Files:"
+  ls -la "Pods/Target Support Files/" || true
   exit 1
 fi
 
