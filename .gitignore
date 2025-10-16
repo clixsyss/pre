@@ -39,3 +39,11 @@ ios/App/build.xcarchive/
 ios/App/build/
 *.xcarchive
 ios/App/build*
+
+# iOS Capacitor sync artifacts (prevent duplicates)
+ios/App/App/public
+ios/capacitor-cordova-ios-plugins*/
+ios/App/App/config*.xml
+!ios/App/App/config.xml
+ios/App/App/GoogleService-Info\ *.plist
+ios/App/DerivedData

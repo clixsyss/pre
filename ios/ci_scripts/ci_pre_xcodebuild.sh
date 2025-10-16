@@ -1,18 +1,19 @@
 #!/bin/sh
 # This script runs before the Xcode build starts in Xcode Cloud.
 
-echo "⚙️ Running ci_pre_xcodebuild.sh..."
+set -e  # Exit on error
 
-# Navigate to the iOS app directory (adjust if your ios path is different)
-cd ios/App || exit 1
+echo "⚙️ Running ci_pre_xcodebuild.sh (from ios/ci_scripts)..."
+echo "Current directory: $(pwd)"
 
-# Make sure CocoaPods is available and install pods
-if ! command -v pod &> /dev/null; then
-  echo "Installing CocoaPods..."
-  sudo gem install cocoapods
+# Verify that the build was created
+if [ ! -d "../dist/spa" ]; then
+  echo "❌ ERROR: dist/spa directory not found! Build may have failed."
+  echo "Attempting to build from ios directory..."
+  cd .. || exit 1
+  npm run build
+  npx cap sync ios
+  cd ios || exit 1
 fi
 
-echo "Installing pods..."
-pod install --repo-update
-
-echo "✅ Pods installed successfully."
+echo "✅ Pre-build verification completed."
