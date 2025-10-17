@@ -5,24 +5,6 @@
       :subtitle="$t('gateAccessDesc') || 'Control your gate and manage access passes'"
     />
 
-    <!-- User Blocking Warning Bar -->
-    <div
-      v-if="userBlockingStatus.isBlocked && !userBlockingStatus.loading"
-      class="blocking-warning-bar"
-    >
-      <div class="blocking-content">
-        <q-icon name="warning" size="24px" class="blocking-icon" />
-        <div class="blocking-text">
-          <div class="blocking-title">
-            {{ userBlockingService.getBlockingMessage(userBlockingStatus.blockingDetails).title }}
-          </div>
-          <div class="blocking-message">
-            {{ userBlockingService.getBlockingMessage(userBlockingStatus.blockingDetails).message }}
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Tab Navigation -->
     <div class="tabs-container">
       <div class="tabs-nav">
@@ -33,7 +15,7 @@
         <button
           class="tab-btn"
           :class="{ active: activeTab === 'passes' }"
-          @click="activeTab = 'passes'"
+          @click="switchToPassesTab"
         >
           <q-icon name="qr_code" class="tab-icon" />
           <span class="tab-label">{{ $t('gatePasses') || 'Gate Passes' }}</span>
@@ -210,6 +192,23 @@
 
       <!-- Gate Passes Panel -->
       <div v-if="activeTab === 'passes'" class="passes-content">
+        <!-- User Blocking Warning Bar (only shown in passes tab) -->
+        <div
+          v-if="userBlockingStatus.isBlocked && !userBlockingStatus.loading"
+          class="blocking-warning-bar"
+        >
+          <div class="blocking-content">
+            <q-icon name="warning" size="24px" class="blocking-icon" />
+            <div class="blocking-text">
+              <div class="blocking-title">Access Restricted</div>
+              <div class="blocking-message">
+                You are currently blocked from generating passes. Please contact support for
+                assistance.
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="passes-section">
           <!-- Generate Pass Button -->
           <div class="generate-section">
@@ -219,11 +218,13 @@
               color="primary"
               size="lg"
               class="generate-btn"
-              :disable="passes.length >= 10 || userBlockingStatus.isBlocked"
+              :disable="passes.length >= passLimits.monthlyLimit || userBlockingStatus.isBlocked"
               @click="showGenerateDialog = true"
             >
               <q-icon name="add_circle" size="24px" left />
-              {{ $t('generatePass') || 'Generate Pass' }} ({{ passes.length }}/10)
+              {{ $t('generatePass') || 'Generate Pass' }} ({{ passes.length }}/{{
+                passLimits.monthlyLimit
+              }})
             </q-btn>
             <div v-if="userBlockingStatus.isBlocked" class="generate-disabled-hint">
               <q-icon name="block" size="16px" />
@@ -371,8 +372,8 @@ import { useBluetooth } from '../../composables/useBluetooth'
 import QRCode from 'qrcode'
 import { Notify } from 'quasar'
 import PageHeader from '../../components/PageHeader.vue'
-import userBlockingService from '../../services/userBlockingService'
 import whatsappService from '../../services/whatsappService'
+import { checkUserEligibility, createGuestPass, markPassAsSent } from '../../api/guestPassAPI'
 import { auth } from '../../boot/firebase'
 
 // Component name for ESLint
@@ -423,6 +424,13 @@ const userBlockingStatus = ref({
   isBlocked: false,
   blockingDetails: null,
   loading: true,
+})
+
+// Pass limits state
+const passLimits = ref({
+  monthlyLimit: 10, // Default fallback
+  usedThisMonth: 0,
+  remainingQuota: 10,
 })
 
 // QR refs storage
@@ -589,11 +597,47 @@ const checkUserBlockingStatus = async () => {
       return
     }
 
-    // Use the simple blocking check from the original system
-    const result = await userBlockingService.checkUserBlockingStatus(auth.currentUser.uid)
-    userBlockingStatus.value = {
-      ...result,
-      loading: false,
+    // Use the centralized API to check user eligibility (matches admin dashboard)
+    const result = await checkUserEligibility('project123', auth.currentUser.uid)
+
+    if (result.success && result.data.canGenerate) {
+      // User is eligible to generate passes
+      userBlockingStatus.value = {
+        isBlocked: false,
+        blockingDetails: null,
+        loading: false,
+      }
+
+      // Update pass limits from API response
+      passLimits.value = {
+        monthlyLimit: result.data.monthlyLimit || 10,
+        usedThisMonth: result.data.usedThisMonth || 0,
+        remainingQuota:
+          result.data.remainingQuota || result.data.monthlyLimit - result.data.usedThisMonth || 10,
+      }
+    } else {
+      // User is blocked or has reached limit
+      userBlockingStatus.value = {
+        isBlocked: true,
+        blockingDetails: result.data.blockingDetails || {
+          reason: result.message,
+          blockedBy: 'admin',
+          blockedUntil: null,
+        },
+        loading: false,
+      }
+
+      // Still update limits even if blocked
+      if (result.data.monthlyLimit !== undefined) {
+        passLimits.value = {
+          monthlyLimit: result.data.monthlyLimit || 10,
+          usedThisMonth: result.data.usedThisMonth || 0,
+          remainingQuota:
+            result.data.remainingQuota ||
+            result.data.monthlyLimit - result.data.usedThisMonth ||
+            10,
+        }
+      }
     }
 
     console.log('🔍 User eligibility checked:', userBlockingStatus.value)
@@ -617,16 +661,36 @@ const setQRRef = (el, passId) => {
   }
 }
 
+// Switch to passes tab and refresh user status
+const switchToPassesTab = async () => {
+  activeTab.value = 'passes'
+  // Refresh user blocking status when switching to passes tab
+  await checkUserBlockingStatus()
+}
+
 const generatePass = async () => {
   try {
+    // Refresh user blocking status before generating pass
+    await checkUserBlockingStatus()
+
     // Check if user is blocked from generating passes
     if (userBlockingStatus.value.isBlocked) {
-      const blockingMessage = userBlockingService.getBlockingMessage(
-        userBlockingStatus.value.blockingDetails,
-      )
       Notify.create({
         type: 'warning',
-        message: blockingMessage.message,
+        message:
+          'You are currently blocked from generating passes. Please contact support for assistance.',
+        position: 'top',
+        timeout: 5000,
+        actions: [{ label: 'OK', color: 'white' }],
+      })
+      return
+    }
+
+    // Check if user has reached their pass limit
+    if (passes.value.length >= passLimits.value.monthlyLimit) {
+      Notify.create({
+        type: 'warning',
+        message: `You have reached your monthly limit of ${passLimits.value.monthlyLimit} passes.`,
         position: 'top',
         timeout: 5000,
         actions: [{ label: 'OK', color: 'white' }],
@@ -676,19 +740,40 @@ const generatePass = async () => {
       ? newPass.value.phoneNumber.trim().substring(0, 20)
       : null
 
-    // Create local pass object (original simple approach)
+    // Create guest pass using centralized API (matches admin dashboard)
+    const userName = auth.currentUser?.displayName || auth.currentUser?.email || 'Unknown User'
+    const result = await createGuestPass(
+      'project123', // Project ID - you might want to make this dynamic
+      auth.currentUser.uid,
+      userName,
+      sanitizedGuestName,
+      sanitizedPurpose,
+      newPass.value.validUntil,
+      sanitizedPhoneNumber,
+    )
+
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to create guest pass')
+    }
+
+    // Create local pass object for display
     const pass = {
-      id: Date.now().toString(),
+      id: result.passId,
       guestName: sanitizedGuestName,
       purpose: sanitizedPurpose,
       validUntil: new Date(newPass.value.validUntil).toISOString(),
       status: 'active',
       createdAt: new Date().toISOString(),
-      code: `GATE-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+      code: result.passId,
       phoneNumber: sanitizedPhoneNumber,
+      firebaseRef: result.passRef, // Store Firebase reference for marking as sent
     }
 
     passes.value.push(pass)
+
+    // Update pass limits
+    passLimits.value.usedThisMonth = (passLimits.value.usedThisMonth || 0) + 1
+    passLimits.value.remainingQuota = passLimits.value.monthlyLimit - passLimits.value.usedThisMonth
 
     // Save to localStorage with user-specific key (only if authenticated)
     if (auth.currentUser?.uid) {
@@ -713,20 +798,56 @@ const generatePass = async () => {
     // Send via WhatsApp if phone number provided
     if (pass.phoneNumber && pass.phoneNumber.trim()) {
       try {
-        await whatsappService.sendGatePassViaWhatsApp(pass, pass.phoneNumber)
-        Notify.create({
-          type: 'positive',
-          message: 'Pass generated and sent via WhatsApp!',
-          position: 'top',
-          timeout: 3000,
-        })
+        // Get the QR code as data URL
+        const canvas = qrRefs.get(pass.id)
+        if (canvas) {
+          const qrCodeDataUrl = canvas.toDataURL('image/png')
+
+          // Send message with QR code image
+          const result = await whatsappService.sendGatePassWithImage(
+            pass,
+            pass.phoneNumber,
+            qrCodeDataUrl,
+          )
+
+          // Show appropriate message based on result
+          if (result.success) {
+            Notify.create({
+              type: 'positive',
+              message: result.message || 'Pass generated and sent via WhatsApp!',
+              position: 'top',
+              timeout: 5000,
+            })
+          } else {
+            throw new Error(result.message || 'WhatsApp sending failed')
+          }
+        } else {
+          // Fallback: just send the message
+          const result = await whatsappService.sendGatePassViaWhatsApp(pass, pass.phoneNumber)
+
+          if (result.success) {
+            Notify.create({
+              type: 'positive',
+              message: 'Pass generated and sent via WhatsApp!',
+              position: 'top',
+              timeout: 3000,
+            })
+          } else {
+            throw new Error('WhatsApp sending failed')
+          }
+        }
+
+        // Mark as sent in Firebase
+        if (pass.firebaseRef) {
+          await markPassAsSent(pass.firebaseRef)
+        }
       } catch (whatsappError) {
         console.warn('⚠️ WhatsApp sending failed:', whatsappError)
         Notify.create({
-          type: 'positive',
-          message: 'Pass generated successfully (WhatsApp sending failed)',
+          type: 'warning',
+          message: `Pass generated successfully. ${whatsappError.message || 'WhatsApp sending failed - please share manually.'}`,
           position: 'top',
-          timeout: 3000,
+          timeout: 5000,
         })
       }
     } else {

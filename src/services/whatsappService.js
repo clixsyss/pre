@@ -56,9 +56,10 @@ class WhatsAppService {
    * Send gate pass via WhatsApp
    * @param {Object} pass - Gate pass object
    * @param {string} phoneNumber - Recipient's phone number
+   * @param {string} qrCodeDataUrl - Optional QR code as data URL
    * @returns {Promise<Object>} - Success status and message
    */
-  async sendGatePassViaWhatsApp(pass, phoneNumber) {
+  async sendGatePassViaWhatsApp(pass, phoneNumber, qrCodeDataUrl = null) {
     try {
       // Validate inputs
       const validatedPass = validatePass(pass)
@@ -70,8 +71,8 @@ class WhatsAppService {
       // Create WhatsApp message
       const message = this.createGatePassMessage(validatedPass)
 
-      // Create WhatsApp URL
-      const whatsappUrl = this.createWhatsAppUrl(formattedPhone, message)
+      // Create WhatsApp URL with QR code if provided
+      const whatsappUrl = this.createWhatsAppUrlWithImage(formattedPhone, message, qrCodeDataUrl)
 
       console.log('📱 Sending gate pass via WhatsApp')
 
@@ -123,28 +124,14 @@ class WhatsAppService {
     // Sanitize all user inputs to prevent XSS
     const guestName = sanitizeString(pass.guestName, 100)
     const purpose = sanitizeString(pass.purpose, 200)
-    const code = sanitizeString(pass.code, 50)
 
-    return `🚪 *Gate Pass for ${guestName}*
+    return `This is a guest for ${guestName}
 
-📋 *Pass Details:*
-• Guest: ${guestName}
-• Purpose: ${purpose}
-• Valid Until: ${validUntil}
-• Pass Code: ${code}
+Pass Details:
+Valid Until: ${validUntil}
+Purpose: ${purpose}
 
-📱 *Instructions:*
-1. Show this message at the gate
-2. The QR code will be sent separately
-3. Present valid ID when requested
-
-⚠️ *Important:*
-• This pass is valid only for the specified time
-• Do not share this pass with others
-• Contact the property management if you have issues
-
----
-Sent via PRE Group Mobile App`
+Please show the QR code image at the gate for entry.`
   }
 
   /**
@@ -161,6 +148,126 @@ Sent via PRE Group Mobile App`
 
     const encodedMessage = encodeURIComponent(message)
     return `https://wa.me/${phoneNumber}?text=${encodedMessage}`
+  }
+
+  /**
+   * Send gate pass with QR code image via native share
+   * @param {Object} pass - Gate pass object
+   * @param {string} phoneNumber - Recipient's phone number
+   * @param {string} qrCodeDataUrl - QR code as data URL
+   * @returns {Promise<Object>} - Success status
+   */
+  async sendGatePassWithImage(pass, phoneNumber, qrCodeDataUrl) {
+    try {
+      // Validate inputs
+      const validatedPass = validatePass(pass)
+      const validatedPhone = validatePhoneNumber(phoneNumber)
+
+      // Create WhatsApp message
+      const message = this.createGatePassMessage(validatedPass)
+
+      console.log('📱 Sending gate pass with QR code image via WhatsApp')
+
+      if (Capacitor.isNativePlatform()) {
+        // For native platforms, use the Share plugin to send both text and image
+        const { Share } = await import('@capacitor/share')
+
+        // Convert data URL to blob for sharing
+        const response = await fetch(qrCodeDataUrl)
+        const blob = await response.blob()
+
+        // Create a temporary file URL for the image
+        const imageUrl = URL.createObjectURL(blob)
+
+        try {
+          await Share.share({
+            title: `Gate Pass for ${validatedPass.guestName}`,
+            text: message,
+            url: imageUrl,
+            dialogTitle: 'Share Gate Pass via WhatsApp',
+          })
+
+          return {
+            success: true,
+            message: 'Gate pass with QR code sent via WhatsApp',
+          }
+        } catch (shareError) {
+          console.warn('Share failed, falling back to WhatsApp URL:', shareError)
+          // Fallback to WhatsApp URL
+          const formattedPhone = this.formatPhoneNumber(validatedPhone)
+          const whatsappUrl = this.createWhatsAppUrl(formattedPhone, message)
+          return await this.openWhatsAppNative(whatsappUrl)
+        }
+      } else {
+        // For web, download the QR code and open WhatsApp with message
+        try {
+          // Download the QR code image
+          const link = document.createElement('a')
+          link.href = qrCodeDataUrl
+          link.download = `gate-pass-${validatedPass.guestName.replace(/\s+/g, '-')}.png`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+
+          // Open WhatsApp with message
+          const formattedPhone = this.formatPhoneNumber(validatedPhone)
+          const whatsappUrl = this.createWhatsAppUrl(formattedPhone, message)
+
+          // Try to open WhatsApp Web
+          const newWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
+
+          if (!newWindow) {
+            // If popup is blocked, show instructions
+            return {
+              success: true,
+              message:
+                'QR code downloaded. Please open WhatsApp manually and send the downloaded image along with the message.',
+            }
+          }
+
+          return {
+            success: true,
+            message:
+              'QR code downloaded and WhatsApp opened. Please attach the downloaded image to your message.',
+          }
+        } catch (webError) {
+          console.warn('Web sharing failed, using fallback:', webError)
+          // Fallback: just open WhatsApp with message (without trying to open window)
+          const formattedPhone = this.formatPhoneNumber(validatedPhone)
+          const whatsappUrl = this.createWhatsAppUrl(formattedPhone, message)
+
+          // For fallback, just return success with instructions
+          return {
+            success: true,
+            message:
+              'QR code downloaded. Please open WhatsApp manually and send the downloaded image along with the message.',
+            whatsappUrl: whatsappUrl,
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error sending gate pass with image via WhatsApp:', error)
+
+      // Try fallback: just send message without image
+      try {
+        const formattedPhone = this.formatPhoneNumber(phoneNumber)
+        const message = this.createGatePassMessage(validatePass(pass))
+        const whatsappUrl = this.createWhatsAppUrl(formattedPhone, message)
+
+        if (Capacitor.isNativePlatform()) {
+          return await this.openWhatsAppNative(whatsappUrl)
+        } else {
+          return {
+            success: true,
+            message: 'WhatsApp opened with message. Please manually attach the QR code image.',
+            whatsappUrl: whatsappUrl,
+          }
+        }
+      } catch (fallbackError) {
+        console.error('❌ Fallback also failed:', fallbackError)
+        throw new Error('Failed to send via WhatsApp')
+      }
+    }
   }
 
   /**
@@ -200,16 +307,26 @@ Sent via PRE Group Mobile App`
       const newWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
 
       if (!newWindow) {
-        throw new Error('Popup blocked. Please allow popups for this site.')
+        // If popup is blocked, return success with instructions
+        return {
+          success: true,
+          message: 'Popup blocked. Please manually open WhatsApp and send the message.',
+          whatsappUrl: whatsappUrl,
+        }
       }
 
       return {
         success: true,
         message: 'WhatsApp Web opened successfully',
       }
-    } catch {
-      console.error('❌ Error opening WhatsApp Web')
-      throw new Error('Failed to open WhatsApp Web')
+    } catch (error) {
+      console.error('❌ Error opening WhatsApp Web:', error)
+      // Return success with instructions instead of throwing error
+      return {
+        success: true,
+        message: 'Please manually open WhatsApp and send the message.',
+        whatsappUrl: whatsappUrl,
+      }
     }
   }
 
