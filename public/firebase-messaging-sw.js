@@ -137,21 +137,28 @@ self.addEventListener('notificationclick', (event) => {
           // Focus the existing window and navigate to the URL
           return client.focus().then((focusedClient) => {
             if ('navigate' in focusedClient) {
-              return focusedClient.navigate(urlToOpen);
+              // Add a small delay to allow the app to initialize
+              setTimeout(() => {
+                return focusedClient.navigate(urlToOpen);
+              }, 100);
             }
-            // If navigate is not supported, post a message
-            focusedClient.postMessage({
-              type: 'NOTIFICATION_CLICK',
-              url: urlToOpen,
-              data: data
-            });
+            // If navigate is not supported, post a message with delay
+            setTimeout(() => {
+              focusedClient.postMessage({
+                type: 'NOTIFICATION_CLICK',
+                url: urlToOpen,
+                data: data
+              });
+            }, 100);
           });
         }
       }
 
-      // If no window is open, open a new one
+      // If no window is open, open a new one with a small delay
       if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
+        setTimeout(() => {
+          return clients.openWindow(urlToOpen);
+        }, 100);
       }
     })
   );

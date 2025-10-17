@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import FirebaseCore
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -13,6 +14,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Configure Firebase
         FirebaseApp.configure()
         print("📱 AppDelegate: Firebase configured")
+        
+        // Set notification delegate to enable sound and presentation
+        UNUserNotificationCenter.current().delegate = self
+        
+        // Clear badge when app opens
+        UIApplication.shared.applicationIconBadgeNumber = 0
         
         return true
     }
@@ -72,6 +79,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Restart any tasks that were paused (or not yet started) while the application was inactive.
+        // Clear badge when app becomes active
+        UIApplication.shared.applicationIconBadgeNumber = 0
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
@@ -86,5 +95,41 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         // Called when the app was launched with an activity, including Universal Links.
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
+    }
+}
+
+// MARK: - UNUserNotificationCenterDelegate
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    // Handle notifications when app is in foreground - enables sound, badge, and banner
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        print("🔔 AppDelegate: Will present notification in foreground")
+        
+        // Show banner, play sound, and update badge even when app is in foreground
+        if #available(iOS 14.0, *) {
+            completionHandler([.banner, .sound, .badge])
+        } else {
+            completionHandler([.alert, .sound, .badge])
+        }
+    }
+    
+    // Handle notification tap
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        print("👆 AppDelegate: User tapped notification")
+        
+        // Let Capacitor handle the notification response
+        NotificationCenter.default.post(
+            name: NSNotification.Name("CAPNotificationDidReceiveResponse"),
+            object: response
+        )
+        
+        completionHandler()
     }
 }

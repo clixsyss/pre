@@ -7,6 +7,7 @@
 import { defineBoot } from '#q-app/wrappers';
 import { fcmService } from 'src/services/fcmService';
 import { auth } from 'src/boot/firebase';
+import optimizedAuthService from 'src/services/optimizedAuthService';
 
 export default defineBoot(async ({ app, router }) => {
   console.log('FCM Boot: Starting...');
@@ -112,13 +113,45 @@ export default defineBoot(async ({ app, router }) => {
 
   // Listen for navigation messages from service worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('message', (event) => {
+    navigator.serviceWorker.addEventListener('message', async (event) => {
       if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
         console.log('FCM Boot: Received navigation message from service worker:', event.data);
+        
+        // Wait for authentication state to be ready before navigating
+        await waitForAuthenticationState();
+        
+        // Navigate to the URL
         router.push(event.data.url);
       }
     });
   }
+
+  // Helper function to wait for authentication state to be ready
+  const waitForAuthenticationState = async () => {
+    const maxWaitTime = 5000; // 5 seconds max wait
+    const checkInterval = 100; // Check every 100ms
+    let elapsed = 0;
+    
+    console.log('FCM Boot: Waiting for authentication state...');
+    
+    while (elapsed < maxWaitTime) {
+      try {
+        const currentUser = await optimizedAuthService.getCurrentUser();
+        if (currentUser) {
+          console.log('FCM Boot: Authentication state ready, user:', currentUser.uid);
+          return true;
+        }
+      } catch (error) {
+        console.warn('FCM Boot: Error checking auth state:', error);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      elapsed += checkInterval;
+    }
+    
+    console.warn('FCM Boot: Authentication state not ready after timeout, proceeding anyway');
+    return false;
+  };
 
   console.log('FCM Boot: Complete');
 });

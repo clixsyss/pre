@@ -19,179 +19,6 @@
     <!-- Ads Carousel -->
     <AdsCarousel />
 
-    <!-- Quick Actions -->
-    <div class="quick-actions-section">
-      <h2 class="section-title">{{ $t('quickActions') }}</h2>
-      <div class="actions-scroll">
-
-        <button class="action-card" @click="navigateToGate">
-          <div class="action-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <!-- QR Code outer border -->
-              <rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="1.5" fill="none"/>
-              
-              <!-- Top-left finder pattern -->
-              <rect x="4" y="4" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none"/>
-              <rect x="5" y="5" width="4" height="4" fill="currentColor"/>
-              <rect x="6" y="6" width="2" height="2" fill="white"/>
-              
-              <!-- Top-right finder pattern -->
-              <rect x="14" y="4" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none"/>
-              <rect x="15" y="5" width="4" height="4" fill="currentColor"/>
-              <rect x="16" y="6" width="2" height="2" fill="white"/>
-              
-              <!-- Bottom-left finder pattern -->
-              <rect x="4" y="14" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none"/>
-              <rect x="5" y="15" width="4" height="4" fill="currentColor"/>
-              <rect x="6" y="16" width="2" height="2" fill="white"/>
-              
-              <!-- Data pattern (random-looking squares) -->
-              <rect x="11" y="5" width="1" height="1" fill="currentColor"/>
-              <rect x="12" y="6" width="1" height="1" fill="currentColor"/>
-              <rect x="11" y="7" width="1" height="1" fill="currentColor"/>
-              <rect x="13" y="7" width="1" height="1" fill="currentColor"/>
-              <rect x="5" y="11" width="1" height="1" fill="currentColor"/>
-              <rect x="7" y="11" width="1" height="1" fill="currentColor"/>
-              <rect x="9" y="11" width="1" height="1" fill="currentColor"/>
-              <rect x="6" y="12" width="1" height="1" fill="currentColor"/>
-              <rect x="8" y="12" width="1" height="1" fill="currentColor"/>
-              <rect x="11" y="12" width="1" height="1" fill="currentColor"/>
-              <rect x="13" y="12" width="1" height="1" fill="currentColor"/>
-              <rect x="15" y="11" width="1" height="1" fill="currentColor"/>
-              <rect x="17" y="11" width="1" height="1" fill="currentColor"/>
-              <rect x="19" y="11" width="1" height="1" fill="currentColor"/>
-              <rect x="16" y="12" width="1" height="1" fill="currentColor"/>
-              <rect x="18" y="12" width="1" height="1" fill="currentColor"/>
-              <rect x="11" y="15" width="1" height="1" fill="currentColor"/>
-              <rect x="13" y="15" width="1" height="1" fill="currentColor"/>
-              <rect x="15" y="15" width="1" height="1" fill="currentColor"/>
-              <rect x="17" y="15" width="1" height="1" fill="currentColor"/>
-              <rect x="19" y="15" width="1" height="1" fill="currentColor"/>
-              <rect x="12" y="16" width="1" height="1" fill="currentColor"/>
-              <rect x="14" y="16" width="1" height="1" fill="currentColor"/>
-              <rect x="18" y="16" width="1" height="1" fill="currentColor"/>
-            </svg>
-          </div>
-          <div class="action-content">
-            <h3>{{ $t('gateAccess') }}</h3>
-          </div>
-        </button>
-
-        <button class="action-card" @click="navigateToServices">
-          <div class="action-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path
-                d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </div>
-          <div class="action-content">
-            <h3>{{ $t('services') }}</h3>
-          </div>
-        </button>
-
-        <button class="action-card" @click="navigateToMyBookings">
-          <div class="action-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round" />
-              <path
-                d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
-                stroke="currentColor" stroke-width="2" />
-            </svg>
-          </div>
-          <div class="action-content">
-            <h3>{{ $t('bookingsShortcut') }}</h3>
-          </div>
-        </button>
-
-        <button class="action-card" @click="navigateToSmartDevices">
-          <div class="action-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 21C9 21.5523 9.44772 22 10 22H14C14.5523 22 15 21.5523 15 21V20H9V21Z" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path
-                d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </div>
-          <div class="action-content">
-            <h3>{{ $t('smartDevices') }}</h3>
-          </div>
-        </button>
-
-        <button class="action-card" @click="navigateToCalendar">
-          <div class="action-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
-              <path d="M3 10H21" stroke="currentColor" stroke-width="2" />
-            </svg>
-          </div>
-          <div class="action-content">
-            <h3>{{ $t('calendar') }}</h3>
-          </div>
-        </button>
-
-        <button class="action-card" @click="navigateToMyOrders">
-          <div class="action-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </div>
-          <div class="action-content">
-            <h3>{{ $t('myOrders') }}</h3>
-          </div>
-        </button>
-
-        <button class="action-card" @click="navigateToStores">
-          <div class="action-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </div>
-          <div class="action-content">
-            <h3>Stores</h3>
-          </div>
-        </button>
-
-        <button class="action-card" @click="navigateToNews">
-          <div class="action-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z"
-                stroke="currentColor" stroke-width="2" />
-              <path d="M22 6L12 13L2 6" stroke="currentColor" stroke-width="2" />
-            </svg>
-          </div>
-          <div class="action-content">
-            <h3>News</h3>
-          </div>
-        </button>
-
-        <!-- <button class="action-card" @click="navigateToMyBookings">
-          <div class="action-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M16 21V19A4 4 0 0 0 12 15H8A4 4 0 0 0 4 19V21" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" />
-              <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
-            </svg>
-          </div>
-          <div class="action-content">
-            <h3>Profile</h3>
-          </div>
-        </button> -->
-      </div>
-    </div>
-
     <!-- Stats Overview -->
     <div class="stats-overview">
       <div class="stat-card" :class="{ 'loading': isStatsLoading }" @click="navigateToCalendar">
@@ -444,37 +271,37 @@ const isStatsLoading = computed(() => {
 // })
 
 // Navigation methods
-const navigateToGate = () => {
-  router.push('/access')
-}
+// const navigateToGate = () => {
+//   router.push('/access')
+// }
 
-const navigateToServices = () => {
-  router.push('/services')
-}
+// const navigateToServices = () => {
+//   router.push('/services')
+// }
 
-const navigateToMyBookings = () => {
-  router.push('/my-bookings')
-}
+// const navigateToMyBookings = () => {
+//   router.push('/my-bookings')
+// }
 
-const navigateToCalendar = () => {
-  router.push('/calendar')
-}
+// const navigateToCalendar = () => {
+//   router.push('/calendar')
+// }
 
-const navigateToMyOrders = () => {
-  router.push('/stores-shopping?tab=orders')
-}
+// const navigateToMyOrders = () => {
+//   router.push('/stores-shopping?tab=orders')
+// }
 
-const navigateToStores = () => {
-  router.push('/stores-shopping?tab=stores')
-}
+// const navigateToStores = () => {
+//   router.push('/stores-shopping?tab=stores')
+// }
 
-const navigateToSmartDevices = () => {
-  router.push('/smart-devices')
-}
+// const navigateToSmartDevices = () => {
+//   router.push('/smart-devices')
+// }
 
-const navigateToNews = () => {
-  router.push('/news')
-}
+// const navigateToNews = () => {
+//   router.push('/news')
+// }
 
 // Format timestamp for display
 // const formatTimestamp = (timestamp) => {

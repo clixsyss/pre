@@ -487,6 +487,7 @@ async function collectTokens(projectId, audience) {
   console.log('[collectTokens] Collecting tokens for:', { projectId, audience })
   
   const tokens = []
+  const tokenSet = new Set() // Track unique tokens to avoid duplicates
   
   try {
     if (audience.all) {
@@ -510,13 +511,16 @@ async function collectTokens(projectId, audience) {
             projectUserCount++
             
             // Collect tokens for this user - check both subcollection AND flat fcmToken field
+            // Use Set to avoid duplicate tokens
+            
             // 1. Check subcollection (existing approach)
             const tokensRef = userDoc.ref.collection('tokens')
             const tokensSnapshot = await tokensRef.get()
             
             tokensSnapshot.docs.forEach(tokenDoc => {
               const tokenData = tokenDoc.data()
-              if (tokenData.token) {
+              if (tokenData.token && !tokenSet.has(tokenData.token)) {
+                tokenSet.add(tokenData.token)
                 tokens.push({
                   token: tokenData.token,
                   userId: userDoc.id,
@@ -526,7 +530,9 @@ async function collectTokens(projectId, audience) {
             })
             
             // 2. Check flat fcmToken field (orange-pharmacies approach)
-            if (userData.fcmToken) {
+            // Only add if not already in set
+            if (userData.fcmToken && !tokenSet.has(userData.fcmToken)) {
+              tokenSet.add(userData.fcmToken)
               tokens.push({
                 token: userData.fcmToken,
                 userId: userDoc.id,
@@ -538,6 +544,7 @@ async function collectTokens(projectId, audience) {
       }
       
       console.log('[collectTokens] Found', projectUserCount, 'users in project')
+      console.log('[collectTokens] Collected', tokens.length, 'unique tokens (deduplicated)')
     } else if (audience.uids && audience.uids.length > 0) {
       // Get tokens for specific users (still verify they belong to project)
       console.log('[collectTokens] Getting tokens for', audience.uids.length, 'specific users')
@@ -565,6 +572,8 @@ async function collectTokens(projectId, audience) {
         }
         
         // Collect tokens for this user - check both subcollection AND flat fcmToken field
+        // Use Set to avoid duplicate tokens
+        
         // 1. Check subcollection (existing approach)
         const tokensRef = admin.firestore()
           .collection('users')
@@ -575,7 +584,8 @@ async function collectTokens(projectId, audience) {
         
         tokensSnapshot.docs.forEach(tokenDoc => {
           const tokenData = tokenDoc.data()
-          if (tokenData.token) {
+          if (tokenData.token && !tokenSet.has(tokenData.token)) {
+            tokenSet.add(tokenData.token)
             tokens.push({
               token: tokenData.token,
               userId: uid,
@@ -585,7 +595,9 @@ async function collectTokens(projectId, audience) {
         })
         
         // 2. Check flat fcmToken field (orange-pharmacies approach)
-        if (userData.fcmToken) {
+        // Only add if not already in set
+        if (userData.fcmToken && !tokenSet.has(userData.fcmToken)) {
+          tokenSet.add(userData.fcmToken)
           tokens.push({
             token: userData.fcmToken,
             userId: uid,
@@ -593,6 +605,8 @@ async function collectTokens(projectId, audience) {
           })
         }
       }
+      
+      console.log('[collectTokens] Collected', tokens.length, 'unique tokens for specific users (deduplicated)')
     } else if (audience.topic) {
       // Topic-based sending
       // Note: Topics must be managed separately via subscribeToTopic API

@@ -1,4 +1,45 @@
 <template>
+  <!-- Details Modal -->
+  <div v-if="selectedNotification" class="notification-details-overlay" @click="closeDetails">
+    <div class="notification-details-modal" @click.stop>
+      <!-- Header -->
+      <div class="details-header">
+        <h3>Notification Details</h3>
+        <button @click="closeDetails" class="close-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="details-content">
+        <div class="details-icon" :class="getIconClass(selectedNotification.type)">
+          <component :is="getIconComponent(selectedNotification.type)" />
+        </div>
+        
+        <h2 class="details-title">{{ getNotificationTitle(selectedNotification) }}</h2>
+        <p class="details-body">{{ getNotificationBody(selectedNotification) }}</p>
+        
+        <div class="details-meta">
+          <span class="details-time">{{ formatTime(selectedNotification.createdAt) }}</span>
+          <span class="details-type">{{ selectedNotification.type || 'General' }}</span>
+        </div>
+        
+        <!-- Image if available -->
+        <img v-if="selectedNotification.meta?.image" :src="selectedNotification.meta.image" alt="Notification image" class="details-image" />
+        
+        <!-- Action button if available -->
+        <button v-if="selectedNotification.meta?.deepLink || selectedNotification.actionUrl" @click="handleDetailsAction" class="details-action-btn">
+          View Details
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div v-if="isOpen" class="notification-center-overlay" @click="handleOverlayClick">
     <div class="notification-center-modal" @click.stop>
       <!-- Header -->
@@ -66,8 +107,8 @@
 
           <!-- Content -->
           <div class="notification-content">
-            <h4 class="notification-title">{{ notification.title }}</h4>
-            <p class="notification-message">{{ notification.message }}</p>
+            <h4 class="notification-title">{{ getNotificationTitle(notification) }}</h4>
+            <p class="notification-message">{{ getNotificationBody(notification) }}</p>
             <span class="notification-time">{{ formatTime(notification.createdAt) }}</span>
           </div>
 
@@ -89,10 +130,9 @@
 </template>
 
 <script setup>
-import { computed, h } from 'vue'
+import { computed, h, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationCenterStore } from '../stores/notificationCenter'
-import { useProjectStore } from '../stores/projectStore'
 import { formatDistanceToNow } from 'date-fns'
 
 // Component name for ESLint
@@ -102,14 +142,15 @@ defineOptions({
 
 const router = useRouter()
 const notificationStore = useNotificationCenterStore()
-const projectStore = useProjectStore()
+
+// State
+const selectedNotification = ref(null)
 
 // Computed
 const isOpen = computed(() => notificationStore.isModalOpen)
 const sortedNotifications = computed(() => notificationStore.sortedNotifications)
 const unreadCount = computed(() => notificationStore.unreadCount)
 const isLoading = computed(() => notificationStore.isLoading)
-const currentProjectId = computed(() => projectStore.selectedProject?.id)
 
 // Methods
 const closeNotificationCenter = () => {
@@ -121,21 +162,52 @@ const handleOverlayClick = () => {
 }
 
 const handleMarkAllAsRead = async () => {
-  if (currentProjectId.value) {
-    await notificationStore.markAllAsRead(currentProjectId.value)
+  // Get userId from optimizedAuthService
+  const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
+  const currentUser = await optimizedAuthService.getCurrentUser()
+  const userId = currentUser?.uid
+  
+  console.log('NotificationCenter: Mark all as read clicked, userId:', userId)
+  
+  if (userId) {
+    await notificationStore.markAllAsRead(userId)
+  } else {
+    console.error('NotificationCenter: No userId available for mark all as read')
   }
 }
 
 const handleNotificationClick = async (notification) => {
+  // Get userId from optimizedAuthService
+  const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
+  const currentUser = await optimizedAuthService.getCurrentUser()
+  const userId = currentUser?.uid
+  
+  console.log('NotificationCenter: Notification clicked:', { 
+    id: notification.id, 
+    read: notification.read, 
+    userId 
+  })
+  
   // Mark as read
-  if (!notification.read && currentProjectId.value) {
-    await notificationStore.markAsRead(notification.id, currentProjectId.value)
+  if (!notification.read && userId) {
+    console.log('NotificationCenter: Marking notification as read:', notification.id)
+    await notificationStore.markAsRead(notification.id, userId)
   }
 
-  // Navigate if there's an action URL
-  if (notification.actionUrl) {
+  // Show details modal instead of navigating
+  selectedNotification.value = notification
+}
+
+const closeDetails = () => {
+  selectedNotification.value = null
+}
+
+const handleDetailsAction = () => {
+  const url = selectedNotification.value?.meta?.deepLink || selectedNotification.value?.actionUrl
+  if (url) {
+    closeDetails()
     closeNotificationCenter()
-    router.push(notification.actionUrl)
+    router.push(url)
   }
 }
 
@@ -148,6 +220,34 @@ const formatTime = (timestamp) => {
   } catch {
     return ''
   }
+}
+
+// Get notification title based on language and format
+const getNotificationTitle = (notification) => {
+  // Get user's preferred language
+  const userLang = localStorage.getItem('user-language') || 'en'
+  
+  // Dashboard notifications have title_en/title_ar
+  if (notification.title_en || notification.title_ar) {
+    return userLang === 'ar' ? (notification.title_ar || notification.title_en) : notification.title_en
+  }
+  
+  // In-app notifications have simple title
+  return notification.title || ''
+}
+
+// Get notification body based on language and format
+const getNotificationBody = (notification) => {
+  // Get user's preferred language
+  const userLang = localStorage.getItem('user-language') || 'en'
+  
+  // Dashboard notifications have body_en/body_ar
+  if (notification.body_en || notification.body_ar) {
+    return userLang === 'ar' ? (notification.body_ar || notification.body_en) : notification.body_en
+  }
+  
+  // In-app notifications have simple message
+  return notification.message || ''
 }
 
 const getIconClass = (type) => {
@@ -311,10 +411,7 @@ padding-top: 40px;
   justify-content: center;
 }
 
-.close-btn:hover {
-  background: rgba(246, 246, 246, 0.1);
-  color: #F6F6F6;
-}
+/* Removed hover effect for mobile */
 
 /* Actions Bar */
 .actions-bar {
@@ -341,9 +438,7 @@ padding-top: 40px;
   transition: all 0.2s ease;
 }
 
-.mark-all-read-btn:hover {
-  background: rgba(175, 30, 35, 0.1);
-}
+/* Removed hover effect for mobile */
 
 .unread-badge {
   background: rgba(175, 30, 35, 0.1);
@@ -442,11 +537,7 @@ padding-top: 40px;
   border: 2px solid transparent;
 }
 
-.notification-item:hover {
-  border-color: rgba(175, 30, 35, 0.2);
-  transform: translateX(4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
+/* Removed hover effect for mobile */
 
 .notification-item.unread {
   background: #FFFFFF;
@@ -627,8 +718,136 @@ padding-top: 40px;
   border-radius: 3px;
 }
 
-.notifications-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(35, 31, 32, 0.3);
+/* Removed hover effect for mobile */
+
+/* Details Modal */
+.notification-details-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  padding: 20px;
+}
+
+.notification-details-modal {
+  background: #FFFFFF;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.details-header {
+  background: #231F20;
+  color: #F6F6F6;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 16px 16px 0 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.details-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.details-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.details-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  font-size: 28px;
+}
+
+.details-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #231F20;
+  margin: 0;
+  text-align: center;
+}
+
+.details-body {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #666;
+  margin: 0;
+  text-align: center;
+  white-space: pre-wrap;
+}
+
+.details-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid #E5E5E5;
+  border-bottom: 1px solid #E5E5E5;
+}
+
+.details-time {
+  font-size: 14px;
+  color: #999;
+}
+
+.details-type {
+  font-size: 14px;
+  color: #AF1E23;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.details-image {
+  width: 100%;
+  border-radius: 12px;
+  object-fit: cover;
+  max-height: 300px;
+}
+
+.details-action-btn {
+  background: #AF1E23;
+  color: #F6F6F6;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.details-action-btn:active {
+  transform: scale(0.98);
+  background: #8A1820;
 }
 </style>
 

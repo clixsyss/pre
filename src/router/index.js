@@ -292,12 +292,23 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
 
   if (requiresAuth && !user) {
     // Route requires auth but user is not authenticated
+    // Store the intended route for later redirect
+    if (to.path !== '/onboarding') {
+      localStorage.setItem('intendedRoute', to.path)
+      console.log('Storing intended route for later redirect:', to.path)
+    }
     next('/onboarding')
     resolve()
   } else if (!requiresAuth && user && to.path === '/onboarding') {
     // User is authenticated but trying to access onboarding
-    // Only redirect if they're not in the middle of registration
-    if (!from.path || !from.path.startsWith('/register')) {
+    // Check if there's an intended route to redirect to
+    const intendedRoute = localStorage.getItem('intendedRoute')
+    if (intendedRoute) {
+      console.log('Redirecting to intended route:', intendedRoute)
+      localStorage.removeItem('intendedRoute')
+      next(intendedRoute)
+      resolve()
+    } else if (!from.path || !from.path.startsWith('/register')) {
       next('/home')
       resolve()
     } else {
@@ -430,7 +441,7 @@ router.beforeEach(async (to, from, next) => {
   return new Promise((resolve) => {
     let resolved = false
 
-    // Wait a bit longer for authentication state to be established
+    // Wait longer for authentication state to be established, especially for iOS
     const timeout = setTimeout(() => {
       if (!resolved) {
         console.log('Auth check timeout, allowing navigation')
@@ -438,13 +449,17 @@ router.beforeEach(async (to, from, next) => {
         next()
         resolve()
       }
-    }, 3000) // Increased to 3s to allow auth state to establish
+    }, 5000) // Increased to 5s to allow auth state to establish
 
-    // Add a small delay to allow authentication state to be established
+    // Add a delay to allow authentication state to be established
     const checkAuth = async () => {
       try {
-        // Wait a bit for auth state to be established
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        // Check if this is a notification-triggered navigation
+        const isNotificationNavigation = from.path === '/' && to.path !== '/onboarding'
+        
+        // Wait longer for notification-triggered navigation
+        const waitTime = isNotificationNavigation ? 1500 : 500
+        await new Promise((resolve) => setTimeout(resolve, waitTime))
 
         const currentUser = await optimizedAuthService.getCurrentUser()
 
@@ -453,7 +468,23 @@ router.beforeEach(async (to, from, next) => {
         console.log(
           'Current user from authService:',
           currentUser ? 'authenticated' : 'not authenticated',
+          isNotificationNavigation ? '(notification-triggered)' : ''
         )
+
+        // If this is notification-triggered and no user yet, wait a bit more
+        if (isNotificationNavigation && !currentUser) {
+          console.log('Notification navigation: waiting for auth state...')
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+          
+          const retryUser = await optimizedAuthService.getCurrentUser()
+          if (retryUser) {
+            console.log('Notification navigation: auth state ready on retry')
+            clearTimeout(timeout)
+            resolved = true
+            processAuthState(retryUser, to, from, next, resolve, requiresAuth)
+            return
+          }
+        }
 
         clearTimeout(timeout)
         resolved = true

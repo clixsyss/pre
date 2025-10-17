@@ -756,16 +756,24 @@ service cloud.firestore {
     
     // PROJECT NOTIFICATIONS - Allow users to read their own notifications within a project
     match /projects/{projectId}/notifications/{notificationId} {
-      allow read: if request.auth != null && 
-        (resource == null || resource.data.userId == request.auth.uid);
-      allow update: if request.auth != null && 
-        resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
     
     // Allow listing project notifications for authenticated users
     match /projects/{projectId}/notifications {
       allow list: if request.auth != null;
+    }
+    
+    // USER NOTIFICATION READ STATUS - Allow users to manage their own read status
+    match /users/{userId}/notificationReadStatus/{notificationId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow listing user notification read status
+    match /users/{userId}/notificationReadStatus {
+      allow list: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

@@ -31,7 +31,7 @@ class OptimizedAuthService {
       const { Capacitor } = await import('@capacitor/core')
       if (Capacitor.getPlatform() === 'ios') {
         console.log('OptimizedAuthService: iOS detected, waiting for Firebase to stabilize...')
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await new Promise(resolve => setTimeout(resolve, 1000)) // Increased delay for iOS
       }
       
       this.initialized = true
@@ -74,12 +74,15 @@ class OptimizedAuthService {
             await this.initialize()
           }
           
+          // Additional wait for iOS to ensure auth state is ready
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
           const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
           
           // Wrap in timeout to prevent hanging
           const getUserPromise = FirebaseAuthentication.getCurrentUser()
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('getCurrentUser timeout')), 3000)
+            setTimeout(() => reject(new Error('getCurrentUser timeout')), 5000) // Increased timeout
           )
           
           const result = await Promise.race([getUserPromise, timeoutPromise])
