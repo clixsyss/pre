@@ -303,7 +303,7 @@
 
       <!-- Closed Bookings Tab -->
       <div v-else-if="activeTab === 'closed'" class="bookings-content">
-        <div v-if="loadingBookings" class="loading-container">
+        <div v-if="loadingClosedBookings" class="loading-container">
           <div class="loading-spinner"></div>
           <p>Loading closed bookings...</p>
         </div>
@@ -373,10 +373,12 @@ const projectStore = useProjectStore();
 // Reactive state
 const activeTab = ref('services');
 const loadingBookings = ref(false);
+const loadingClosedBookings = ref(false);
 const openBookings = ref([]);
 const closedBookings = ref([]);
 const showBookingModal = ref(false);
 const selectedBooking = ref(null);
+const closedBookingsLoaded = ref(false);
 
 // Computed properties
 const tabs = computed(() => [
@@ -399,18 +401,29 @@ const tabs = computed(() => [
   }
 ]);
 
+// Watch for tab changes to lazy load closed bookings
+watch(activeTab, async (newTab) => {
+  if (newTab === 'closed' && !closedBookingsLoaded.value) {
+    await loadClosedBookings();
+  }
+});
+
 // Load service categories and bookings on component mount
 onMounted(async () => {
   if (projectStore.selectedProject?.id) {
-    await loadServiceCategories();
-    await loadBookings();
+    // Load service categories and open bookings in parallel
+    await Promise.all([
+      loadServiceCategories(),
+      loadOpenBookings()
+    ]);
   }
 });
 
 // Watch for project changes
 watch(() => projectStore.selectedProject?.id, async (newProjectId) => {
   if (newProjectId) {
-    await loadBookings();
+    closedBookingsLoaded.value = false;
+    await loadOpenBookings();
   }
 });
 
@@ -421,10 +434,8 @@ const loadServiceCategories = async () => {
 };
 
 const navigateToCategory = (category) => {
-  // Navigate to category details page
   router.push(`/service-category/${category.id}`);
 };
-
 
 const navigateToCourtBooking = () => {
   router.push('/court-booking');
@@ -438,26 +449,16 @@ const navigateToStores = () => {
   router.push('/stores-shopping');
 };
 
-// const navigateToMyBookings = () => {
-//   router.push('/my-bookings');
-// };
-
-// const navigateToCalendar = () => {
-//   router.push('/calendar');
-// };
-
 const navigateToSmartDevices = () => {
   router.push('/smart-devices');
 };
 
-// Load bookings function
-const loadBookings = async () => {
+// Optimized: Load only open bookings initially (much faster)
+const loadOpenBookings = async () => {
   if (!projectStore.selectedProject?.id) return;
 
   try {
     loadingBookings.value = true;
-
-    // Get current user
     const user = await optimizedAuthService.getCurrentUser();
 
     if (!user) {
@@ -465,19 +466,47 @@ const loadBookings = async () => {
       return;
     }
 
-    // Load open bookings (including processing)
-    const [openResults, processingResults, closedResults] = await Promise.all([
-      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'open'),
-      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'processing'),
-      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'closed')
-    ]);
+    // Single optimized query for open bookings (open + processing)
+    const openResults = await serviceBookingService.getActiveServiceBookings(
+      projectStore.selectedProject.id, 
+      user.uid
+    );
 
-    openBookings.value = [...openResults, ...processingResults];
-    closedBookings.value = closedResults;
+    openBookings.value = openResults;
+    console.log('✅ Fast load: Open bookings loaded:', openResults.length);
   } catch (error) {
-    console.error('Error loading bookings:', error);
+    console.error('Error loading open bookings:', error);
   } finally {
     loadingBookings.value = false;
+  }
+};
+
+// Lazy load closed bookings only when user switches to that tab
+const loadClosedBookings = async () => {
+  if (!projectStore.selectedProject?.id || closedBookingsLoaded.value) return;
+
+  try {
+    loadingClosedBookings.value = true;
+    const user = await optimizedAuthService.getCurrentUser();
+
+    if (!user) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    const closedResults = await serviceBookingService.getServiceBookingsByStatus(
+      projectStore.selectedProject.id, 
+      user.uid, 
+      'closed'
+    );
+
+    closedBookings.value = closedResults;
+    closedBookingsLoaded.value = true;
+    console.log('✅ Lazy load: Closed bookings loaded:', closedResults.length);
+  } catch (error) {
+    console.error('Error loading closed bookings:', error);
+  } finally {
+    loadingClosedBookings.value = false;
   }
 };
 

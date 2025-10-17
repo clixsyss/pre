@@ -285,6 +285,88 @@ class RequestSubmissionService {
   }
 
   /**
+   * Get active user request submissions (pending + in_progress) - OPTIMIZED
+   * @param {string} projectId - The project ID
+   * @param {string} userId - The user ID
+   * @returns {Promise<Array>} Array of active request submissions
+   */
+  async getActiveUserSubmissions(projectId, userId) {
+    try {
+      console.log('🚀 FAST: Getting active user submissions (pending + in_progress)', {
+        projectId,
+        userId
+      });
+
+      const { default: firestoreService } = await import('./firestoreService');
+      await firestoreService.initialize();
+      
+      const collectionPath = `projects/${projectId}/requestSubmissions`;
+      const queryOptions = {
+        filters: [
+          { field: 'userId', operator: '==', value: userId },
+          { field: 'status', operator: 'in', value: ['pending', 'in_progress'] }
+        ],
+        orderBy: [{ field: 'createdAt', direction: 'desc' }],
+        limit: 50, // Limit for performance
+        timeoutMs: 4000 // Faster timeout
+      };
+      
+      const result = await firestoreService.getDocs(collectionPath, queryOptions);
+      const submissions = result.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      console.log('✅ FAST: Active user submissions retrieved:', submissions.length);
+      return submissions;
+    } catch (error) {
+      console.error('❌ Error getting active user submissions:', error);
+      throw new Error(`Failed to get active submissions: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get closed user request submissions (completed + rejected) - LAZY LOADED
+   * @param {string} projectId - The project ID
+   * @param {string} userId - The user ID
+   * @returns {Promise<Array>} Array of closed request submissions
+   */
+  async getClosedUserSubmissions(projectId, userId) {
+    try {
+      console.log('🚀 LAZY: Getting closed user submissions (completed + rejected)', {
+        projectId,
+        userId
+      });
+
+      const { default: firestoreService } = await import('./firestoreService');
+      await firestoreService.initialize();
+      
+      const collectionPath = `projects/${projectId}/requestSubmissions`;
+      const queryOptions = {
+        filters: [
+          { field: 'userId', operator: '==', value: userId },
+          { field: 'status', operator: 'in', value: ['completed', 'rejected'] }
+        ],
+        orderBy: [{ field: 'createdAt', direction: 'desc' }],
+        limit: 50, // Limit for performance
+        timeoutMs: 4000 // Faster timeout
+      };
+      
+      const result = await firestoreService.getDocs(collectionPath, queryOptions);
+      const submissions = result.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      console.log('✅ LAZY: Closed user submissions retrieved:', submissions.length);
+      return submissions;
+    } catch (error) {
+      console.error('❌ Error getting closed user submissions:', error);
+      throw new Error(`Failed to get closed submissions: ${error.message}`);
+    }
+  }
+
+  /**
    * Get request submissions for a user
    * @param {string} projectId - The project ID
    * @param {string} userId - The user ID
@@ -309,8 +391,9 @@ class RequestSubmissionService {
           filters: [
             { field: 'userId', operator: '==', value: userId }
           ],
-          orderBy: { field: 'createdAt', direction: 'desc' },
-          timeoutMs: 10000
+          orderBy: [{ field: 'createdAt', direction: 'desc' }],
+          limit: 100, // Add limit
+          timeoutMs: 6000 // Reduced timeout
         };
         
         const result = await firestoreService.getDocs(collectionPath, queryOptions);

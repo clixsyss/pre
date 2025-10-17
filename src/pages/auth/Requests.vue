@@ -107,7 +107,7 @@
 
       <!-- Closed Requests Tab -->
       <div v-else-if="activeTab === 'closed'" class="requests-content">
-        <div v-if="loadingRequests" class="loading-container">
+        <div v-if="loadingClosedRequests" class="loading-container">
           <div class="loading-spinner"></div>
           <p>Loading closed requests...</p>
         </div>
@@ -176,10 +176,10 @@ const projectStore = useProjectStore();
 // Reactive state
 const activeTab = ref('requests');
 const loadingRequests = ref(false);
-const myRequests = ref([]);
+const loadingClosedRequests = ref(false);
 const openRequests = ref([]);
 const closedRequests = ref([]);
-// Modal state removed; navigation is used instead
+const closedRequestsLoaded = ref(false);
 
 // Computed properties
 const tabs = computed(() => [
@@ -202,19 +202,32 @@ const tabs = computed(() => [
   }
 ]);
 
+// Watch for tab changes to lazy load closed requests
+watch(activeTab, async (newTab) => {
+  if (newTab === 'closed' && !closedRequestsLoaded.value) {
+    await loadClosedRequests();
+  }
+});
+
 // Load request categories on component mount
 onMounted(async () => {
   if (projectStore.selectedProject?.id) {
-    await loadRequestCategories();
-    await loadMyRequests();
+    // Load request categories and open requests in parallel for faster initial load
+    await Promise.all([
+      loadRequestCategories(),
+      loadOpenRequests()
+    ]);
   }
 });
 
 // Watch for project changes
 watch(() => projectStore.selectedProject?.id, async (newProjectId) => {
   if (newProjectId) {
-    await loadRequestCategories();
-    await loadMyRequests();
+    closedRequestsLoaded.value = false;
+    await Promise.all([
+      loadRequestCategories(),
+      loadOpenRequests()
+    ]);
   }
 });
 
@@ -224,31 +237,48 @@ const loadRequestCategories = async () => {
   }
 };
 
-const loadMyRequests = async () => {
+// Optimized: Load only open requests initially (much faster)
+const loadOpenRequests = async () => {
   if (!projectStore.selectedProject?.id) return;
   
   try {
     loadingRequests.value = true;
     const user = await optimizedAuthService.getCurrentUser();
     if (user) {
-      const requests = await requestSubmissionService.getUserSubmissions(
+      const requests = await requestSubmissionService.getActiveUserSubmissions(
         projectStore.selectedProject.id, 
         user.uid
       );
-      myRequests.value = requests;
-      
-      // Separate requests by status
-      openRequests.value = requests.filter(req => 
-        req.status === 'pending' || req.status === 'in_progress'
-      );
-      closedRequests.value = requests.filter(req => 
-        req.status === 'completed' || req.status === 'rejected'
-      );
+      openRequests.value = requests;
+      console.log('✅ Fast load: Open requests loaded:', requests.length);
     }
   } catch (error) {
-    console.error('Error loading my requests:', error);
+    console.error('Error loading open requests:', error);
   } finally {
     loadingRequests.value = false;
+  }
+};
+
+// Lazy load closed requests only when user switches to that tab
+const loadClosedRequests = async () => {
+  if (!projectStore.selectedProject?.id || closedRequestsLoaded.value) return;
+  
+  try {
+    loadingClosedRequests.value = true;
+    const user = await optimizedAuthService.getCurrentUser();
+    if (user) {
+      const requests = await requestSubmissionService.getClosedUserSubmissions(
+        projectStore.selectedProject.id, 
+        user.uid
+      );
+      closedRequests.value = requests;
+      closedRequestsLoaded.value = true;
+      console.log('✅ Lazy load: Closed requests loaded:', requests.length);
+    }
+  } catch (error) {
+    console.error('Error loading closed requests:', error);
+  } finally {
+    loadingClosedRequests.value = false;
   }
 };
 

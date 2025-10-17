@@ -20,7 +20,7 @@
     <AdsCarousel />
 
     <!-- Stats Overview -->
-    <div class="stats-overview">
+    <!-- <div class="stats-overview">
       <div class="stat-card" :class="{ 'loading': isStatsLoading }" @click="navigateToCalendar">
         <div class="stat-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -36,7 +36,7 @@
         </div>
       </div>
 
-      <!-- <div class="stat-card" :class="{ 'loading': isStatsLoading }" @click="navigateToMyBookings">
+      <div class="stat-card" :class="{ 'loading': isStatsLoading }" @click="navigateToMyBookings">
         <div class="stat-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -47,22 +47,22 @@
           <div class="stat-number">{{ isStatsLoading ? '...' : activeBookingsCount }}</div>
           <div class="stat-label">My Bookings</div>
         </div>
-      </div> -->
-    </div>
+      </div>
+    </div> -->
 
     <!-- Smart Device Widget - Only show if current project has Smart Mirror connection -->
     <SmartDeviceWidget v-if="hasSmartMirrorConnection" :key="currentProjectId" />
 
     <!-- Content Grid -->
     <div class="content-grid">
-      <!-- News Feed -->
-      <div class="news-section">
-        <ModernNewsFeed :project-id="currentProjectId" />
-      </div>
-
       <!-- Upcoming Bookings -->
       <div class="bookings-section">
         <UpcomingBookingsCard />
+      </div>
+
+      <!-- News Feed -->
+      <div class="news-section">
+        <ModernNewsFeed :project-id="currentProjectId" />
       </div>
     </div>
 
@@ -161,28 +161,28 @@ const hasSmartMirrorConnection = computed(() => {
 })
 
 // Computed properties for dynamic stats
-const upcomingEventsCount = computed(() => {
-  if (!academiesStore.userBookings || academiesStore.userBookings.length === 0) return 0
+// const upcomingEventsCount = computed(() => {
+//   if (!academiesStore.userBookings || academiesStore.userBookings.length === 0) return 0
 
-  try {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0) // Reset time to start of day
+//   try {
+//     const today = new Date()
+//     today.setHours(0, 0, 0, 0) // Reset time to start of day
 
-    const upcomingBookings = academiesStore.userBookings.filter(booking => {
-      if (booking.type === 'court' && booking.date) {
-        const bookingDate = new Date(booking.date)
-        bookingDate.setHours(0, 0, 0, 0) // Reset time to start of day
-        return bookingDate >= today && booking.status !== 'cancelled'
-      }
-      return false
-    })
+//     const upcomingBookings = academiesStore.userBookings.filter(booking => {
+//       if (booking.type === 'court' && booking.date) {
+//         const bookingDate = new Date(booking.date)
+//         bookingDate.setHours(0, 0, 0, 0) // Reset time to start of day
+//         return bookingDate >= today && booking.status !== 'cancelled'
+//       }
+//       return false
+//     })
 
-    return upcomingBookings.length
-  } catch (error) {
-    console.error('Error calculating upcoming events:', error)
-    return 0
-  }
-})
+//     return upcomingBookings.length
+//   } catch (error) {
+//     console.error('Error calculating upcoming events:', error)
+//     return 0
+//   }
+// })
 
 // const activeBookingsCount = computed(() => {
 //   if (!academiesStore.userBookings || academiesStore.userBookings.length === 0) return 0
@@ -200,14 +200,14 @@ const upcomingEventsCount = computed(() => {
 // })
 
 // Check if stats are loading - only show loading when we're actively fetching data
-const isStatsLoading = computed(() => {
-  // If we have no bookings array yet, we're still loading
-  if (!academiesStore.userBookings) return true
+// const isStatsLoading = computed(() => {
+//   // If we have no bookings array yet, we're still loading
+//   if (!academiesStore.userBookings) return true
 
-  // If we have an empty array, it means we've fetched data but found nothing
-  // This is not loading, it's just no data
-  return false
-})
+//   // If we have an empty array, it means we've fetched data but found nothing
+//   // This is not loading, it's just no data
+//   return false
+// })
 
 // DISABLED: Fetch notifications from Firestore - Now using Notification Center in header
 // const fetchNotifications = async () => {

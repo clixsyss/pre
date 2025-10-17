@@ -162,6 +162,45 @@ class ServiceBookingService {
   }
 
   /**
+   * Get active service bookings (open + processing) - OPTIMIZED for faster loading
+   * @param {string} projectId - Project ID
+   * @param {string} userId - User ID
+   * @returns {Promise<Array>} Array of active bookings
+   */
+  async getActiveServiceBookings(projectId, userId) {
+    return performanceService.timeOperation('getActiveServiceBookings', async () => {
+      try {
+        console.log('🚀 FAST: Getting active service bookings (open + processing):', { projectId, userId })
+        
+        const collectionPath = `projects/${projectId}/serviceBookings`
+        const queryOptions = {
+          filters: [
+            { field: 'userId', operator: '==', value: userId },
+            { field: 'status', operator: 'in', value: ['open', 'processing'] }
+          ],
+          orderBy: [
+            { field: 'lastMessageAt', direction: 'desc' }
+          ],
+          limit: 50, // Limit for performance
+          timeoutMs: 4000 // Faster timeout
+        }
+        
+        const result = await firestoreService.getDocs(collectionPath, queryOptions)
+        
+        console.log('✅ FAST: Active bookings retrieved in single query:', result.docs.length)
+        return result.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+      } catch (error) {
+        console.error('❌ Error fetching active service bookings:', error);
+        errorHandlingService.handleFirestoreError(error, 'getActiveServiceBookings')
+        throw error;
+      }
+    })
+  }
+
+  /**
    * Get user's service bookings by status
    * @param {string} projectId - Project ID
    * @param {string} userId - User ID
@@ -182,7 +221,8 @@ class ServiceBookingService {
           orderBy: [
             { field: 'lastMessageAt', direction: 'desc' }
           ],
-          timeoutMs: 6000
+          limit: 50, // Add limit for performance
+          timeoutMs: 4000 // Reduced timeout for faster response
         }
         
         const result = await firestoreService.getDocs(collectionPath, queryOptions)
