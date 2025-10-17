@@ -2,6 +2,7 @@ import firestoreService from './firestoreService'
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
 import optimizedAuthService from './optimizedAuthService'
+import { createViolationNotification } from './notificationCenterService'
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore'
 import { ref, deleteObject } from 'firebase/storage'
 import { db, storage } from '../boot/firebase'
@@ -272,6 +273,22 @@ export const addMessage = async (projectId, fineId, messageData) => {
       lastMessageAt: new Date(),
       updatedAt: new Date()
     });
+
+    // Send notification if admin is replying to user
+    try {
+      if (messageData.senderType === 'admin' && currentFine.userId) {
+        await createViolationNotification(
+          currentFine.userId,
+          projectId,
+          'New Reply on Your Violation',
+          `Admin has replied to your violation case: ${currentFine.title || 'Violation'}`,
+          `/violation-chat/${fineId}`
+        );
+        console.log('✅ Violation reply notification sent');
+      }
+    } catch (notifError) {
+      console.error('⚠️ Failed to send violation reply notification:', notifError);
+    }
 
     return newMessage;
   } catch (error) {

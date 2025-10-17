@@ -3,6 +3,7 @@ import fileUploadService from './fileUploadService'
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
 import optimizedAuthService from './optimizedAuthService'
+import { createNotification, NOTIFICATION_TYPES } from './notificationCenterService'
 
 class ComplaintService {
   constructor() {
@@ -41,6 +42,22 @@ class ComplaintService {
         const result = await firestoreService.addDoc(collectionPath, complaint)
         
         console.log('✅ Complaint created successfully:', { complaintId: result.id })
+        
+        // Send notification to user
+        try {
+          await createNotification({
+            userId,
+            projectId,
+            title: 'Complaint Submitted',
+            message: `Your complaint "${complaintData.title}" has been submitted and will be reviewed soon.`,
+            type: NOTIFICATION_TYPES.COMPLAINT,
+            actionUrl: `/complaints/${result.id}`
+          });
+          console.log('✅ Complaint notification sent');
+        } catch (notifError) {
+          console.error('⚠️ Failed to send complaint notification:', notifError);
+        }
+        
         return { id: result.id, ...complaint };
       } catch (error) {
         console.error('❌ Error creating complaint:', error);
@@ -185,6 +202,24 @@ class ComplaintService {
         });
 
         console.log('✅ Message added successfully')
+        
+        // Send notification if admin is replying to user
+        try {
+          if (messageData.senderType === 'admin' && currentComplaint.userId !== messageData.senderId) {
+            await createNotification({
+              userId: currentComplaint.userId,
+              projectId,
+              title: 'New Reply on Your Complaint',
+              message: `Admin has replied to your complaint: "${currentComplaint.title}"`,
+              type: NOTIFICATION_TYPES.COMPLAINT,
+              actionUrl: `/complaints/${complaintId}`
+            });
+            console.log('✅ Complaint reply notification sent');
+          }
+        } catch (notifError) {
+          console.error('⚠️ Failed to send complaint reply notification:', notifError);
+        }
+        
         return message;
       } catch (error) {
         console.error('❌ Error adding message:', error);

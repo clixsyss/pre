@@ -4,6 +4,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../boot/firebase';
 import fileUploadService from './fileUploadService';
+import { createRequestNotification } from './notificationCenterService';
 
 class RequestSubmissionService {
   /**
@@ -113,6 +114,20 @@ class RequestSubmissionService {
         submissionId: submissionId,
         categoryId: submissionData.categoryId
       });
+
+      // Send notification to user
+      try {
+        await createRequestNotification(
+          submissionData.userId,
+          submissionData.projectId,
+          'Request Submitted',
+          `Your ${submissionData.categoryName || 'request'} has been submitted and will be reviewed by management.`,
+          `/request-chat/${submissionId}`
+        );
+        console.log('✅ Request submission notification sent');
+      } catch (notifError) {
+        console.error('⚠️ Failed to send request submission notification:', notifError);
+      }
 
       return submissionId;
 
@@ -534,6 +549,30 @@ class RequestSubmissionService {
       console.log('✅ RequestSubmissionService: Message added successfully', {
         messageId: docRef.id
       });
+
+      // Send notification if admin is replying to user
+      try {
+        if (messageData.senderType === 'admin') {
+          // Get submission details to find user
+          const { doc, getDoc } = await import('firebase/firestore');
+          const submissionRef = doc(db, `projects/${projectId}/requestSubmissions/${submissionId}`);
+          const submissionSnap = await getDoc(submissionRef);
+          
+          if (submissionSnap.exists()) {
+            const submission = submissionSnap.data();
+            await createRequestNotification(
+              submission.userId,
+              projectId,
+              'New Reply on Your Request',
+              `Admin has replied to your ${submission.categoryName || 'request'}.`,
+              `/request-chat/${submissionId}`
+            );
+            console.log('✅ Request reply notification sent');
+          }
+        }
+      } catch (notifError) {
+        console.error('⚠️ Failed to send request reply notification:', notifError);
+      }
 
       return docRef.id;
 

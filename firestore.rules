@@ -753,6 +753,20 @@ service cloud.firestore {
     match /guestPassUsers {
       allow list: if request.auth != null;
     }
+    
+    // PROJECT NOTIFICATIONS - Allow users to read their own notifications within a project
+    match /projects/{projectId}/notifications/{notificationId} {
+      allow read: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid);
+      allow update: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null;
+    }
+    
+    // Allow listing project notifications for authenticated users
+    match /projects/{projectId}/notifications {
+      allow list: if request.auth != null;
+    }
   }
 }
 

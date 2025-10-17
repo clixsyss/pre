@@ -1,6 +1,7 @@
 import firestoreService from './firestoreService'
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
+import { createBookingNotification } from './notificationCenterService'
 
 export class BookingService {
     constructor() {
@@ -428,6 +429,25 @@ export class BookingService {
                 const { default: cacheService } = await import('./cacheService');
                 cacheService.invalidatePattern(`collection:projects/${projectId}/bookings`);
                 
+                // Send notification to user
+                try {
+                    const timeSlotText = bookingData.timeSlots.length === 1 
+                        ? bookingData.timeSlots[0] 
+                        : `${bookingData.timeSlots[0]} - ${bookingData.timeSlots[bookingData.timeSlots.length - 1]}`;
+                    
+                    await createBookingNotification(
+                        bookingData.userId,
+                        projectId,
+                        'Court Booking Received',
+                        `Your booking for ${bookingData.courtName || 'court'} on ${bookingData.date} at ${timeSlotText} is pending confirmation.`,
+                        '/my-bookings'
+                    );
+                    console.log('✅ Booking notification sent');
+                } catch (notifError) {
+                    console.error('⚠️ Failed to send booking notification:', notifError);
+                    // Don't fail the booking if notification fails
+                }
+                
                 console.log('🎉 Court booking completed successfully with ID:', bookingId);
                 return { success: true, bookingId, booking: { ...newBooking, id: bookingId } };
             } catch (error) {
@@ -472,6 +492,21 @@ export class BookingService {
                 console.log('🔍 Firestore addDoc result:', result);
                 const bookingId = result.id || result.documentId || result;
                 console.log('✅ Academy booking created successfully:', { bookingId })
+                
+                // Send notification to user
+                try {
+                    await createBookingNotification(
+                        bookingData.userId,
+                        projectId,
+                        'Academy Program Registration',
+                        `Your registration for ${bookingData.programName || 'program'} has been submitted and is pending confirmation.`,
+                        '/academy-booking'
+                    );
+                    console.log('✅ Academy booking notification sent');
+                } catch (notifError) {
+                    console.error('⚠️ Failed to send academy booking notification:', notifError);
+                }
+                
                 return { success: true, bookingId, booking: { ...newBooking, id: bookingId } };
             } catch (error) {
                 console.error("❌ Error creating academy booking:", error);

@@ -2,6 +2,7 @@ import firestoreService from './firestoreService'
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
 import optimizedAuthService from './optimizedAuthService'
+import { createNotification, NOTIFICATION_TYPES } from './notificationCenterService'
 
 // Create a new support chat
 export const createSupportChat = async (projectId, data) => {
@@ -32,6 +33,22 @@ export const createSupportChat = async (projectId, data) => {
       const result = await firestoreService.addDoc(collectionPath, supportChatData)
       
       console.log('✅ Support chat created successfully:', { chatId: result.id })
+      
+      // Send notification to user
+      try {
+        await createNotification({
+          userId: user.uid,
+          projectId,
+          title: 'Support Chat Created',
+          message: 'Your support request has been received. Our team will respond soon.',
+          type: NOTIFICATION_TYPES.INFO,
+          actionUrl: `/support-chat/${result.id}`
+        });
+        console.log('✅ Support chat notification sent');
+      } catch (notifError) {
+        console.error('⚠️ Failed to send support chat notification:', notifError);
+      }
+      
       return { id: result.id, ...supportChatData };
     } catch (error) {
       console.error('❌ Error creating support chat:', error);
@@ -167,6 +184,24 @@ export const addMessageToSupportChat = async (projectId, chatId, message) => {
       });
 
       console.log('✅ Message added to support chat successfully')
+      
+      // Send notification if admin is replying to user
+      try {
+        if (newMessage.senderType === 'admin' && chatData.userId !== user.uid) {
+          await createNotification({
+            userId: chatData.userId,
+            projectId,
+            title: 'New Reply from Support Team',
+            message: 'Support team has responded to your ticket.',
+            type: NOTIFICATION_TYPES.INFO,
+            actionUrl: `/support-chat/${chatId}`
+          });
+          console.log('✅ Support chat reply notification sent');
+        }
+      } catch (notifError) {
+        console.error('⚠️ Failed to send support chat reply notification:', notifError);
+      }
+      
       return newMessage;
     } catch (error) {
       console.error('❌ Error adding message to support chat:', error);

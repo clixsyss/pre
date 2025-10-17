@@ -307,7 +307,7 @@ import ModernNewsFeed from '../../components/ModernNewsFeed.vue'
 import SmartDeviceWidget from '../../components/SmartDeviceWidget.vue'
 import AdsCarousel from '../../components/AdsCarousel.vue'
 // import sampleDataService from '../../services/sampleDataService.js' // Disabled - using real Firebase data only
-import notificationService from '../../services/notificationService.js'
+// import notificationService from '../../services/notificationService.js' // Disabled - using Notification Center in header
 import optimizedAuthService from '../../services/optimizedAuthService'
 
 // Component name for ESLint
@@ -323,8 +323,8 @@ const smartMirrorStore = useSmartMirrorStore()
 const user = ref(null)
 // const activeTab = ref('all')
 const showProjectSwitcher = ref(false)
-const notifications = ref([])
-const isLoadingNotifications = ref(false)
+// const notifications = ref([]) // Disabled - using Notification Center in header
+// const isLoadingNotifications = ref(false) // Disabled - using Notification Center in header
 const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => projectStore.selectedProject?.id)
 
@@ -382,59 +382,59 @@ const isStatsLoading = computed(() => {
   return false
 })
 
-// Fetch notifications from Firestore
-const fetchNotifications = async () => {
-  console.log('🔍 Fetching notifications...')
-  console.log('📋 Current Project ID:', currentProjectId.value)
-  console.log('📋 Selected Project:', projectStore.selectedProject)
+// DISABLED: Fetch notifications from Firestore - Now using Notification Center in header
+// const fetchNotifications = async () => {
+//   console.log('🔍 Fetching notifications...')
+//   console.log('📋 Current Project ID:', currentProjectId.value)
+//   console.log('📋 Selected Project:', projectStore.selectedProject)
 
-  if (!currentProjectId.value) {
-    console.log('❌ No project ID available, skipping notification fetch')
-    return
-  }
+//   if (!currentProjectId.value) {
+//     console.log('❌ No project ID available, skipping notification fetch')
+//     return
+//   }
 
-  try {
-    isLoadingNotifications.value = true
-    console.log('🔄 Calling notificationService.fetchNotifications with:', currentProjectId.value, { activeOnly: true })
-    const fetchedNotifications = await notificationService.fetchNotifications(currentProjectId.value, { activeOnly: true })
-    console.log('✅ Fetched notifications:', fetchedNotifications)
-    notifications.value = fetchedNotifications
-  } catch (error) {
-    console.error('❌ Error fetching notifications:', error)
-    // Fallback to sample data if Firestore fails
-    notifications.value = [
-      {
-        id: 'fallback-1',
-        title: 'Welcome to PRE Group!',
-        message: 'We\'re excited to have you as part of our community.',
-        type: 'announcement',
-        priority: 'normal',
-        createdAt: new Date(Date.now() - 40 * 60 * 1000), // 40 minutes ago
-        isActive: true
-      },
-      {
-        id: 'fallback-2',
-        title: 'Community Guidelines Updated',
-        message: 'New community guidelines have been updated. Please review the latest policies.',
-        type: 'announcement',
-        priority: 'normal',
-        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-        isActive: true
-      },
-      {
-        id: 'fallback-3',
-        title: 'Emergency Maintenance',
-        message: 'Emergency maintenance scheduled for tomorrow. Please be prepared for temporary service interruption.',
-        type: 'emergency',
-        priority: 'high',
-        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-        isActive: true
-      }
-    ]
-  } finally {
-    isLoadingNotifications.value = false
-  }
-}
+//   try {
+//     isLoadingNotifications.value = true
+//     console.log('🔄 Calling notificationService.fetchNotifications with:', currentProjectId.value, { activeOnly: true })
+//     const fetchedNotifications = await notificationService.fetchNotifications(currentProjectId.value, { activeOnly: true })
+//     console.log('✅ Fetched notifications:', fetchedNotifications)
+//     notifications.value = fetchedNotifications
+//   } catch (error) {
+//     console.error('❌ Error fetching notifications:', error)
+//     // Fallback to sample data if Firestore fails
+//     notifications.value = [
+//       {
+//         id: 'fallback-1',
+//         title: 'Welcome to PRE Group!',
+//         message: 'We\'re excited to have you as part of our community.',
+//         type: 'announcement',
+//         priority: 'normal',
+//         createdAt: new Date(Date.now() - 40 * 60 * 1000), // 40 minutes ago
+//         isActive: true
+//       },
+//       {
+//         id: 'fallback-2',
+//         title: 'Community Guidelines Updated',
+//         message: 'New community guidelines have been updated. Please review the latest policies.',
+//         type: 'announcement',
+//         priority: 'normal',
+//         createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+//         isActive: true
+//       },
+//       {
+//         id: 'fallback-3',
+//         title: 'Emergency Maintenance',
+//         message: 'Emergency maintenance scheduled for tomorrow. Please be prepared for temporary service interruption.',
+//         type: 'emergency',
+//         priority: 'high',
+//         createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+//         isActive: true
+//       }
+//     ]
+//   } finally {
+//     isLoadingNotifications.value = false
+//   }
+// }
 
 // const filteredNews = computed(() => {
 //   if (activeTab.value === 'emergency') {
@@ -590,8 +590,8 @@ onMounted(async () => {
         console.error('Error initializing Smart Mirror app:', error)
       }
 
-      // Fetch notifications
-      await fetchNotifications()
+      // Notifications now handled by Notification Center in header
+      // await fetchNotifications()
     } else {
       // User not authenticated, redirect to sign in
       console.log('No authenticated user found in Home component, redirecting to signin')
@@ -618,8 +618,8 @@ onMounted(async () => {
         await academiesStore.fetchUserBookings(user.value.uid, newProject.id)
       }
 
-      // Refresh notifications for the new project
-      await fetchNotifications()
+      // Notifications now handled by Notification Center in header
+      // await fetchNotifications()
     } catch (error) {
       console.error('Error refreshing data for new project:', error)
     }

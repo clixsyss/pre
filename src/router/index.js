@@ -258,6 +258,12 @@ const routes = [
     component: () => import('../pages/auth/RequestCategoryDetails.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/test-notifications',
+    name: 'TestNotifications',
+    component: () => import('../pages/auth/TestNotifications.vue'),
+    meta: { requiresAuth: true },
+  },
   // Catch all route - redirect to onboarding
   {
     path: '/:pathMatch(.*)*',

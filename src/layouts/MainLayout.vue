@@ -26,26 +26,44 @@
           </div>
           
           <!-- Current Project Display -->
-          <div v-else-if="currentProject" class="current-project">
+          <button v-else-if="currentProject" @click="showProjectSwitcher = true" class="current-project" title="Switch Project">
             <span class="project-name">{{ currentProject.name }}</span>
-            <!-- <span v-if="currentProject.userUnit" class="project-unit"> - {{ currentProject.userUnit }}</span> -->
-            <button @click="showProjectSwitcher = true" class="change-project-btn" title="Switch Project">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-          </div>
+            <svg class="project-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
         </div>
         
         <!-- Logo Section (Center) -->
         <div class="header-center">
-          <div class="logo">
-            <img src="../assets/logo.png" alt="PRE Logo" class="logo-image" />
-          </div>
+          <button @click="toggleQuickMenu" class="logo-button" :class="{ 'menu-open': showQuickMenu }">
+            <div class="logo-wrapper">
+              <img src="../assets/logo.png" alt="PRE Logo" class="logo-image" />
+              <svg class="logo-arrow" :class="{ 'pulse': !hasSeenLogoHint && !showQuickMenu }" width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </button>
+          
+          <!-- First-time hint -->
+          <transition name="hint-fade">
+            <div v-if="showLogoHint" class="logo-hint">
+              <span>Tap for quick actions</span>
+            </div>
+          </transition>
         </div>
         
         <!-- Gate Access Section (Right) -->
         <div class="header-right">
+          <!-- Notification Bell -->
+          <button @click="openNotificationCenter" class="notification-bell-btn" title="Notifications">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span v-if="notificationUnreadCount > 0" class="notification-badge">{{ notificationUnreadCount }}</span>
+          </button>
+          
           <router-link to="/access" class="gate-access-btn" title="Gate Access">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <!-- QR Code outer border -->
@@ -150,9 +168,11 @@
       </div>
     </div>
 
-    <!-- Main Content -->
+    <!-- Main Content with Page Transitions -->
     <main class="main-content" :class="{ 'keyboard-visible': isKeyboardVisible && isChatPage }">
-      <slot />
+      <transition :name="pageTransition" mode="out-in">
+        <slot />
+      </transition>
     </main>
 
     <!-- Bottom Navigation -->
@@ -218,6 +238,38 @@
         @dismiss="handleSuspensionDismiss"
         @contactSupport="handleContactSupport"
       />
+
+      <!-- Notification Center -->
+      <NotificationCenter />
+
+      <!-- Quick Menu Backdrop (must be before dropdown to ensure proper stacking) -->
+      <transition name="quick-menu-backdrop">
+        <div 
+          v-if="showQuickMenu" 
+          class="quick-menu-backdrop" 
+          @click.stop="showQuickMenu = false"
+        ></div>
+      </transition>
+
+      <!-- Quick Menu Dropdown -->
+      <transition name="quick-menu">
+        <div v-if="showQuickMenu" class="quick-menu-dropdown" @click.stop>
+          <div class="quick-menu-content">
+            <div class="quick-menu-grid">
+              <button 
+                v-for="item in quickMenuItems" 
+                :key="item.path"
+                @click="navigateToPage(item.path)"
+                class="quick-menu-item"
+                :class="{ 'active': isActivePage(item.path) }"
+              >
+                <div class="quick-menu-icon" v-html="item.icon"></div>
+                <span class="quick-menu-label">{{ item.label }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
   </div>
 </template>
 
@@ -226,9 +278,11 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { useSmartMirrorStore } from '../stores/smartMirrorStore'
+import { useNotificationCenterStore } from '../stores/notificationCenter'
 import { useSwipeNavigation } from '../composables/useSwipeNavigation'
 import ViolationNotificationPopup from '../components/ViolationNotificationPopup.vue'
 import SuspensionMessage from '../components/SuspensionMessage.vue'
+import NotificationCenter from '../components/NotificationCenter.vue'
 import { markViolationsAsShown, hasActiveViolations, clearOldNotificationHistory } from '../services/violationNotificationService'
 import { checkUserSuspension, getSuspensionMessage } from '../services/suspensionService'
 import optimizedAuthService from '../services/optimizedAuthService'
@@ -242,6 +296,7 @@ const router = useRouter()
 const route = useRoute()
 const projectStore = useProjectStore()
 const smartMirrorStore = useSmartMirrorStore()
+const notificationCenterStore = useNotificationCenterStore()
 
 // Initialize swipe navigation
 const {
@@ -253,6 +308,9 @@ const showProjectSwitcher = ref(false)
 const showSwipeHint = ref(false)
 const showViolationNotification = ref(false)
 const violationCount = ref(0)
+const showQuickMenu = ref(false)
+const showLogoHint = ref(false)
+const hasSeenLogoHint = ref(false)
 
 // Suspension state
 const showSuspensionMessage = ref(false)
@@ -263,10 +321,23 @@ const isUserSuspended = ref(false)
 const isKeyboardVisible = ref(false)
 const isChatPage = ref(false)
 
+// Page transition state
+const transitionDirection = ref('slide-left')
+const previousRoute = ref(null)
+
+// Tab order for determining transition direction
+const tabOrder = ['/home', '/services', '/facilities', '/profile']
+
 // Computed properties
 const currentProject = computed(() => projectStore.selectedProject)
 const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => currentProject.value?.id)
+const notificationUnreadCount = computed(() => notificationCenterStore.unreadCount)
+
+// Page transition name based on navigation direction
+const pageTransition = computed(() => {
+  return transitionDirection.value
+})
 
 // Hide bottom navigation when keyboard is visible on chat pages
 const shouldHideBottomNav = computed(() => {
@@ -274,7 +345,81 @@ const shouldHideBottomNav = computed(() => {
   return false
 })
 
+// Quick menu items
+const quickMenuItems = [
+  {
+    path: '/home',
+    label: 'Home',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  },
+  {
+    path: '/services',
+    label: 'Services',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  },
+  {
+    path: '/access',
+    label: 'Gate Access',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="1.5" fill="none"/><rect x="4" y="4" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none"/><rect x="5" y="5" width="4" height="4" fill="currentColor"/></svg>'
+  },
+  {
+    path: '/my-bookings',
+    label: 'My Bookings',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/></svg>'
+  },
+  {
+    path: '/calendar',
+    label: 'Calendar',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3 10H21" stroke="currentColor" stroke-width="2"/></svg>'
+  },
+  {
+    path: '/smart-devices',
+    label: 'Smart Devices',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 21C9 21.5523 9.44772 22 10 22H14C14.5523 22 15 21.5523 15 21V20H9V21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  },
+  {
+    path: '/stores-shopping',
+    label: 'Stores',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  },
+  {
+    path: '/news',
+    label: 'News',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2"/><path d="M22 6L12 13L2 6" stroke="currentColor" stroke-width="2"/></svg>'
+  },
+  {
+    path: '/facilities',
+    label: 'Requests',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  },
+  {
+    path: '/profile',
+    label: 'Profile',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  }
+]
+
 // Methods
+const toggleQuickMenu = () => {
+  showQuickMenu.value = !showQuickMenu.value
+  
+  // Hide hint and mark as seen when user interacts
+  if (showLogoHint.value) {
+    showLogoHint.value = false
+    hasSeenLogoHint.value = true
+    localStorage.setItem('hasSeenLogoHint', 'true')
+  }
+}
+
+const navigateToPage = (path) => {
+  router.push(path)
+  showQuickMenu.value = false
+}
+
+const isActivePage = (path) => {
+  return route.path === path || route.path.startsWith(path + '/')
+}
+
 // Keyboard detection methods
 const detectKeyboardVisibility = () => {
   const initialViewportHeight = window.innerHeight
@@ -377,6 +522,27 @@ const switchToProject = async (project) => {
 const goToProjectSelection = () => {
   showProjectSwitcher.value = false
   router.push('/profile')
+}
+
+// Notification Center methods
+const openNotificationCenter = () => {
+  notificationCenterStore.openModal()
+}
+
+const initializeNotificationCenter = async () => {
+  try {
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    
+    if (!currentUser || !currentProject.value) {
+      console.log('NotificationCenter: Cannot initialize without user and project')
+      return
+    }
+
+    console.log('NotificationCenter: Initializing for user:', currentUser.uid, 'project:', currentProject.value.id)
+    notificationCenterStore.subscribeToNotifications(currentUser.uid, currentProject.value.id)
+  } catch (error) {
+    console.error('NotificationCenter: Error initializing:', error)
+  }
 }
 
 // Violation notification methods
@@ -534,6 +700,15 @@ watch(
       // Reset violation notifications when switching projects
       resetViolationNotifications()
       
+      // Re-initialize notification center for new project
+      setTimeout(async () => {
+        try {
+          await initializeNotificationCenter()
+        } catch (error) {
+          console.error('❌ Error initializing notification center after project change:', error)
+        }
+      }, 500)
+      
       // Check for violations with a small delay to ensure everything is loaded
       setTimeout(async () => {
         try {
@@ -604,12 +779,58 @@ const handleProjectStoreReady = async () => {
   }, 500) // Small delay to ensure UI loads first
 }
 
+// Watch for route changes to set transition direction and close quick menu
+watch(() => route.path, (newPath, oldPath) => {
+  if (!oldPath || !newPath) return
+  
+  // Close quick menu on route change
+  showQuickMenu.value = false
+  
+  // Determine transition direction based on tab order
+  const getBaseRoute = (path) => {
+    return tabOrder.find(tab => path.startsWith(tab)) || path
+  }
+  
+  const oldBaseRoute = getBaseRoute(oldPath)
+  const newBaseRoute = getBaseRoute(newPath)
+  
+  const oldIndex = tabOrder.indexOf(oldBaseRoute)
+  const newIndex = tabOrder.indexOf(newBaseRoute)
+  
+  if (oldIndex !== -1 && newIndex !== -1) {
+    // Navigation within main tabs
+    if (newIndex > oldIndex) {
+      transitionDirection.value = 'slide-left'
+    } else if (newIndex < oldIndex) {
+      transitionDirection.value = 'slide-right'
+    } else {
+      transitionDirection.value = 'fade'
+    }
+  } else {
+    // Default fade for non-tab navigation
+    transitionDirection.value = 'fade'
+  }
+  
+  previousRoute.value = oldPath
+})
+
 // Load user projects when component mounts
 onMounted(async () => {
   // Reset violation notifications when app starts
   resetViolationNotifications()
   
   window.addEventListener('projectStoreReady', handleProjectStoreReady)
+  
+  // Initialize notification center
+  if (projectStore.hasSelectedProject) {
+    setTimeout(async () => {
+      try {
+        await initializeNotificationCenter()
+      } catch (error) {
+        console.error('❌ Error initializing notification center during mount:', error)
+      }
+    }, 500)
+  }
   
   // Check for violations with a delay to avoid blocking UI
   if (projectStore.hasSelectedProject) {
@@ -638,6 +859,8 @@ onMounted(async () => {
   const navHeight = 80 // Smaller dead zone
   addDeadZone(0, window.innerHeight - navHeight, window.innerWidth, navHeight)
   
+  // Touch listener is handled by backdrop click now - removed redundant listener
+  
   // Show swipe hint for first-time users
   const hasSeenSwipeHint = localStorage.getItem('hasSeenSwipeHint')
   if (!hasSeenSwipeHint) {
@@ -652,6 +875,26 @@ onMounted(async () => {
     }, 2000)
   }
   
+  // Show logo hint for first-time users
+  const seenLogoHint = localStorage.getItem('hasSeenLogoHint')
+  if (!seenLogoHint) {
+    hasSeenLogoHint.value = false
+    // Show hint after swipe hint disappears
+    setTimeout(() => {
+      showLogoHint.value = true
+      // Hide hint after 5 seconds
+      setTimeout(() => {
+        showLogoHint.value = false
+        if (!hasSeenLogoHint.value) {
+          localStorage.setItem('hasSeenLogoHint', 'true')
+          hasSeenLogoHint.value = true
+        }
+      }, 5000)
+    }, hasSeenSwipeHint ? 2000 : 7000) // Show after swipe hint or earlier if swipe hint already seen
+  } else {
+    hasSeenLogoHint.value = true
+  }
+  
   return () => {
     cleanupKeyboardDetection()
   }
@@ -661,6 +904,9 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('showSuspensionMessage', handleSuspensionMessage)
   window.removeEventListener('projectStoreReady', handleProjectStoreReady)
+  
+  // Clean up notification center
+  notificationCenterStore.clearNotifications()
 })
 </script>
 
@@ -708,6 +954,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 .header-right {
@@ -717,15 +964,201 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-.logo {
-  display: flex;
-  align-items: center;
+/* Logo Button Styles */
+.logo-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.logo-button:active {
+  transform: scale(0.98);
+}
+
+.logo-wrapper {
+  position: relative;
+  display: inline-block;
 }
 
 .logo-image {
   height: 40px;
   width: auto;
   object-fit: contain;
+  display: block;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 0 0 transparent);
+}
+
+/* Removed hover effects for mobile */
+
+.logo-button.menu-open .logo-image {
+  filter: drop-shadow(0 4px 12px rgba(175, 30, 35, 0.5));
+}
+
+.logo-arrow {
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(246, 246, 246, 0.3);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Pulsing animation for first-time hint */
+.logo-arrow.pulse {
+  opacity: 1 !important;
+  color: #AF1E23 !important;
+  animation: arrowPulse 2s ease-in-out infinite;
+}
+
+@keyframes arrowPulse {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    filter: drop-shadow(0 2px 8px rgba(175, 30, 35, 0.4));
+  }
+  50% {
+    transform: translateX(-50%) translateY(3px);
+    opacity: 0.6;
+    filter: drop-shadow(0 4px 12px rgba(175, 30, 35, 0.6));
+  }
+}
+
+/* Removed hover effects for mobile */
+
+.logo-button.menu-open .logo-arrow {
+  opacity: 1;
+  transform: translateX(-50%) rotate(180deg);
+  color: #AF1E23;
+  bottom: -5px;
+  filter: drop-shadow(0 2px 4px rgba(175, 30, 35, 0.3));
+  animation: none;
+}
+
+/* Logo hint tooltip */
+.logo-hint {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 12px;
+  background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
+  color: #F6F6F6;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 
+    0 4px 16px rgba(175, 30, 35, 0.4),
+    0 0 0 2px rgba(175, 30, 35, 0.2);
+  z-index: 1001;
+  pointer-events: none;
+  animation: hintBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.logo-hint::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid #AF1E23;
+}
+
+@keyframes hintBounce {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px) scale(0.8);
+  }
+  50% {
+    transform: translateX(-50%) translateY(2px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.hint-fade-enter-active {
+  animation: hintBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hint-fade-leave-active {
+  animation: hintFadeOut 0.3s ease;
+}
+
+@keyframes hintFadeOut {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-5px) scale(0.95);
+  }
+}
+
+/* Notification Bell Button */
+.notification-bell-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(175, 30, 35, 0.1);
+  border: 2px solid rgba(175, 30, 35, 0.3);
+  border-radius: 12px;
+  padding: 10px;
+  color: #F6F6F6;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.notification-bell-btn:active {
+  transform: scale(0.95);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #AF1E23;
+  color: #F6F6F6;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #231F20;
+  box-shadow: 0 2px 6px rgba(175, 30, 35, 0.4);
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 6px rgba(175, 30, 35, 0.4);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(175, 30, 35, 0.6);
+  }
 }
 
 /* Gate Access Button */
@@ -824,11 +1257,20 @@ onUnmounted(() => {
 .current-project {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  gap: 6px;
   padding: 8px 12px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(175, 30, 35, 0.1);
+  border: 2px solid rgba(175, 30, 35, 0.3);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.current-project:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .project-label {
@@ -847,6 +1289,16 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
+.project-arrow {
+  color: rgba(246, 246, 246, 0.5);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.current-project:active .project-arrow {
+  color: rgba(246, 246, 246, 0.8);
+}
+
 .project-unit {
   color: rgba(255, 255, 255, 0.8);
   font-size: 0.75rem;
@@ -856,25 +1308,6 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.change-project-btn {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Mobile app - hover effects disabled */
-/* .change-project-btn:hover {
-  color: #F6F6F6;
-  background: rgba(255, 255, 255, 0.1);
-} */
 
 .qr-icon {
   width: 32px;
@@ -1014,29 +1447,40 @@ onUnmounted(() => {
 }
 
 .modal-content {
-  background: #F6F6F6;
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  background: rgba(35, 31, 32, 0.98);
+  border: 2px solid rgba(175, 30, 35, 0.3);
+  border-radius: 20px;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(175, 30, 35, 0.1);
   max-width: 90vw;
   max-height: 90vh;
   overflow: hidden;
-  animation: modal-slide-up 0.3s ease-out;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: modal-slide-up 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes modal-slide-up {
-  from {
+  0% {
     opacity: 0;
-    transform: translateY(20px) scale(0.95);
+    transform: translateY(30px) scale(0.9);
+    filter: blur(4px);
   }
-  to {
+  50% {
+    opacity: 0.8;
+    filter: blur(1px);
+  }
+  100% {
     opacity: 1;
     transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 
 .project-switcher-modal {
-  width: 500px;
-  max-height: 600px;
+  width: 520px;
+  max-height: 650px;
 }
 
 .modal-header {
@@ -1044,34 +1488,38 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 24px 24px 16px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 2px solid rgba(175, 30, 35, 0.2);
 }
 
 .modal-header h3 {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
-  color: #111827;
+  color: #F6F6F6;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(175, 30, 35, 0.1);
+  border: 2px solid rgba(175, 30, 35, 0.3);
+  border-radius: 12px;
+  padding: 8px;
+  color: #F6F6F6;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  min-width: 36px;
+  min-height: 36px;
 }
 
-/* Mobile app - hover effects disabled */
-/* .close-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
-} */
+.close-btn:active {
+  transform: scale(0.95);
+  background: rgba(175, 30, 35, 0.2);
+  border-color: rgba(175, 30, 35, 0.4);
+}
 
 .modal-body {
   padding: 16px 24px;
@@ -1090,39 +1538,46 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  transition: all 0.2s ease;
-  background: #F6F6F6;
+  background: rgba(175, 30, 35, 0.05);
+  border: 2px solid rgba(175, 30, 35, 0.2);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(10px);
 }
 
-/* Mobile app - hover effects disabled */
-/* .project-option:hover {
-  border-color: #AF1E23;
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.1);
-} */
+.project-option:active {
+  background: rgba(175, 30, 35, 0.1);
+  border-color: rgba(175, 30, 35, 0.4);
+  transform: scale(0.98);
+}
 
 .project-option.current {
+  background: rgba(175, 30, 35, 0.2);
   border-color: #AF1E23;
-  background: #F6F6F6;
+  box-shadow: 
+    0 4px 16px rgba(175, 30, 35, 0.3),
+    0 0 0 2px rgba(175, 30, 35, 0.15);
+  transform: scale(1.02);
 }
 
 .project-info h4 {
   margin: 0 0 4px 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: #F6F6F6;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .project-info p {
   margin: 0 0 4px 0;
   font-size: 0.875rem;
-  color: #6b7280;
+  color: rgba(246, 246, 246, 0.7);
 }
 
 .project-role {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: rgba(246, 246, 246, 0.6);
   font-weight: 500;
 }
 
@@ -1133,35 +1588,42 @@ onUnmounted(() => {
 }
 
 .current-badge {
-  background: #AF1E23;
+  background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
   color: #F6F6F6;
-  padding: 4px 12px;
-  border-radius: 20px;
+  padding: 8px 16px;
+  border-radius: 12px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
+  border: 2px solid rgba(175, 30, 35, 0.3);
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.3);
+  backdrop-filter: blur(10px);
 }
 
 .switch-btn {
-  background: #AF1E23;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(175, 30, 35, 0.1);
+  border: 2px solid rgba(175, 30, 35, 0.3);
+  border-radius: 12px;
+  padding: 10px 20px;
   color: #F6F6F6;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  min-width: 80px;
 }
 
-/* Mobile app - hover effects disabled */
-/* .switch-btn:hover:not(:disabled) {
-  background: #AF1E23;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-} */
+.switch-btn:active:not(:disabled) {
+  transform: scale(0.95);
+  background: rgba(175, 30, 35, 0.2);
+  border-color: rgba(175, 30, 35, 0.4);
+}
 
 .switch-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none;
 }
@@ -1182,32 +1644,33 @@ onUnmounted(() => {
 
 .modal-footer {
   padding: 16px 24px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 2px solid rgba(175, 30, 35, 0.2);
   display: flex;
   justify-content: center;
 }
 
 .secondary-btn {
-  background: none;
-  border: 2px solid #e5e7eb;
-  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(175, 30, 35, 0.1);
+  border: 2px solid rgba(175, 30, 35, 0.3);
+  border-radius: 12px;
   padding: 12px 24px;
-  border-radius: 8px;
+  color: #F6F6F6;
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
-/* Mobile app - hover effects disabled */
-/* .secondary-btn:hover {
-  border-color: #AF1E23;
-  color: #AF1E23;
-  background: #F6F6F6;
-} */
+.secondary-btn:active {
+  transform: scale(0.95);
+  background: rgba(175, 30, 35, 0.15);
+  border-color: rgba(175, 30, 35, 0.4);
+}
 
 /* Responsive Design */
 @media (max-width: 768px) {
@@ -1237,6 +1700,26 @@ onUnmounted(() => {
     gap: 8px;
   }
   
+  .notification-bell-btn {
+    padding: 8px;
+    border-radius: 10px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .notification-bell-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .notification-badge {
+    font-size: 0.6rem;
+    min-width: 16px;
+    height: 16px;
+    top: -3px;
+    right: -3px;
+  }
+
   .gate-access-btn {
     padding: 8px;
     font-size: 0.8rem;
@@ -1549,6 +2032,25 @@ onUnmounted(() => {
     height: 28px;
   }
   
+  .notification-bell-btn {
+    padding: 6px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .notification-bell-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .notification-badge {
+    font-size: 0.55rem;
+    min-width: 14px;
+    height: 14px;
+    top: -2px;
+    right: -2px;
+  }
+
   .gate-access-btn {
     padding: 6px;
     min-width: 40px;
@@ -1594,5 +2096,397 @@ onUnmounted(() => {
   .tab-name {
     font-size: 0.65rem;
   }
+}
+
+/* ================================
+   Quick Menu Dropdown Styles
+   ================================ */
+
+/* Quick Menu Backdrop */
+.quick-menu-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Quick Menu Dropdown */
+.quick-menu-dropdown {
+  position: fixed;
+  top: 75px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 90%;
+  max-width: 520px;
+}
+
+.quick-menu-content {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.2),
+    0 0 1px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.quick-menu-content::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid #ffffff;
+  filter: drop-shadow(0 -2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* Grid layout for menu items */
+.quick-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+/* Individual menu items */
+.quick-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+  border: 1px solid #f0f0f0;
+  border-radius: 16px;
+  padding: 18px 12px;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-align: center;
+  min-height: 95px;
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-menu-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(175, 30, 35, 0.05) 0%, rgba(212, 32, 40, 0.05) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* Removed hover effects for mobile */
+
+.quick-menu-item:active {
+  transform: translateY(-2px) scale(1);
+  transition: all 0.1s ease;
+}
+
+.quick-menu-item.active {
+  background: linear-gradient(135deg, #fff5f4 0%, #ffe8e8 100%);
+  border-color: #AF1E23;
+  box-shadow: 
+    0 4px 16px rgba(175, 30, 35, 0.25),
+    0 0 0 2px rgba(175, 30, 35, 0.1);
+  transform: scale(1.05);
+}
+
+.quick-menu-item.active::before {
+  opacity: 1;
+}
+
+/* Menu item icon */
+.quick-menu-icon {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #F6F6F6;
+  flex-shrink: 0;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
+  position: relative;
+  z-index: 1;
+}
+
+.quick-menu-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, #d42028 0%, #AF1E23 100%);
+  border-radius: 14px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.quick-menu-item.active .quick-menu-icon {
+  background: linear-gradient(135deg, #d42028 0%, #AF1E23 100%);
+  box-shadow: 
+    0 6px 20px rgba(175, 30, 35, 0.4),
+    0 0 0 3px rgba(175, 30, 35, 0.1);
+  transform: scale(1.15) rotate(5deg);
+}
+
+/* Removed hover effects for mobile */
+
+/* Menu item label */
+.quick-menu-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.3;
+}
+
+.quick-menu-item.active .quick-menu-label {
+  color: #AF1E23;
+  font-weight: 700;
+}
+
+/* Scrollbar styling */
+.quick-menu-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.quick-menu-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.quick-menu-content::-webkit-scrollbar-thumb {
+  background: #e0e0e0;
+  border-radius: 3px;
+}
+
+/* Removed hover effects for mobile */
+
+/* Enhanced Animations */
+.quick-menu-enter-active {
+  animation: menuSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.quick-menu-leave-active {
+  animation: menuSlideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes menuSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-30px) scale(0.85) rotateX(20deg);
+    filter: blur(6px);
+  }
+  40% {
+    opacity: 0.5;
+    transform: translateX(-50%) translateY(-8px) scale(0.95) rotateX(5deg);
+    filter: blur(2px);
+  }
+  70% {
+    opacity: 0.9;
+    transform: translateX(-50%) translateY(5px) scale(1.02) rotateX(-2deg);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1) rotateX(0deg);
+    filter: blur(0);
+  }
+}
+
+@keyframes menuSlideOut {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px) scale(0.9);
+    filter: blur(3px);
+  }
+}
+
+.quick-menu-backdrop-enter-active {
+  animation: backdropFadeIn 0.4s ease;
+}
+
+.quick-menu-backdrop-leave-active {
+  animation: backdropFadeOut 0.3s ease;
+}
+
+@keyframes backdropFadeIn {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+}
+
+@keyframes backdropFadeOut {
+  0% {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+  100% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+}
+
+/* Add staggered animation to menu items */
+.quick-menu-item {
+  animation: menuItemFadeIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+.quick-menu-item:nth-child(1) { animation-delay: 0.05s; }
+.quick-menu-item:nth-child(2) { animation-delay: 0.1s; }
+.quick-menu-item:nth-child(3) { animation-delay: 0.15s; }
+.quick-menu-item:nth-child(4) { animation-delay: 0.2s; }
+.quick-menu-item:nth-child(5) { animation-delay: 0.25s; }
+.quick-menu-item:nth-child(6) { animation-delay: 0.3s; }
+.quick-menu-item:nth-child(7) { animation-delay: 0.35s; }
+.quick-menu-item:nth-child(8) { animation-delay: 0.4s; }
+.quick-menu-item:nth-child(9) { animation-delay: 0.45s; }
+.quick-menu-item:nth-child(10) { animation-delay: 0.5s; }
+
+@keyframes menuItemFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .quick-menu-dropdown {
+    top: 70px;
+    width: 95%;
+  }
+
+  .quick-menu-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+  }
+
+  .quick-menu-item {
+    padding: 12px 8px;
+    min-height: 80px;
+  }
+
+  .quick-menu-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .quick-menu-label {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .quick-menu-dropdown {
+    top: 65px;
+    width: calc(100% - 16px);
+  }
+
+  .quick-menu-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .quick-menu-item {
+    padding: 10px 6px;
+    min-height: 75px;
+  }
+
+  .quick-menu-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .quick-menu-label {
+    font-size: 0.75rem;
+  }
+}
+
+/* ================================
+   Page Transition Animations
+   ================================ */
+
+/* Slide Left Transition (going forward) */
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-left-enter-from {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.slide-left-leave-to {
+  opacity: 0;
+  transform: translateX(-100%);
+}
+
+/* Slide Right Transition (going backward) */
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-right-enter-from {
+  opacity: 0;
+  transform: translateX(-100%);
+}
+
+.slide-right-leave-to {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+/* Fade Transition (for non-tab navigation) */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Ensure smooth transitions */
+.main-content {
+  position: relative;
+  overflow: hidden;
+}
+
+.main-content > * {
+  width: 100%;
 }
 </style>
