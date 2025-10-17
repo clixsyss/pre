@@ -377,39 +377,51 @@ class SmartMirrorService {
       // Only restore if we have a PRE user ID (for isolation)
       if (!this.preUserId) {
         console.log('⚠️ Smart Mirror Service: Cannot restore connections - no PRE user ID set')
+        console.log('💡 TIP: Make sure setPreUserId() is called before initializeApp()')
         return
       }
       
       const storageKey = this.getStorageKey()
       const storedConnections = localStorage.getItem(storageKey)
-      console.log(`Restoring project connections from localStorage (key: ${storageKey}):`, storedConnections)
+      console.log(`📦 Restoring project connections from localStorage`)
+      console.log(`   Key: ${storageKey}`)
+      console.log(`   PRE User: ${this.preUserId}`)
+      console.log(`   Data exists: ${!!storedConnections}`)
       
       if (storedConnections) {
         const connections = JSON.parse(storedConnections)
-        console.log('Parsed connections:', connections)
+        console.log(`   Projects found: ${Object.keys(connections).length}`)
         
         for (const [projectId, connectionData] of Object.entries(connections)) {
           if (connectionData.isConnected) {
-            // Restore connection data - now we check by email instead of userId
-            // This allows different projects to have different smart home accounts
+            // Restore connection data
             this.projectConnections.set(projectId, {
-              user: { uid: connectionData.userId }, // Use the stored userId for this project
+              user: { uid: connectionData.userId },
               userProfile: connectionData.userProfile,
               rooms: connectionData.rooms || [],
               devices: connectionData.devices || [],
               isConnected: true,
-              email: connectionData.email, // Store the email for this project
-              password: connectionData.password, // Store the password for re-authentication
-              projectId: projectId
+              email: connectionData.email,
+              password: connectionData.password,
+              projectId: projectId,
+              lastUpdated: connectionData.lastUpdated
             })
-            console.log(`Restored connection for project ${projectId} with email ${connectionData.email}`)
+            console.log(`   ✅ Restored: Project ${projectId}`)
+            console.log(`      Email: ${connectionData.email}`)
+            console.log(`      Devices: ${connectionData.devices?.length || 0}`)
+            console.log(`      Rooms: ${connectionData.rooms?.length || 0}`)
           }
         }
+      } else {
+        console.log('   ℹ️ No stored connections found')
       }
       
-      console.log('Final projectConnections:', Array.from(this.projectConnections.keys()))
+      console.log(`📊 Final state: ${this.projectConnections.size} project(s) connected`)
+      if (this.projectConnections.size > 0) {
+        console.log(`   Connected projects: ${Array.from(this.projectConnections.keys()).join(', ')}`)
+      }
     } catch (error) {
-      console.error('Error restoring project connections:', error)
+      console.error('❌ Error restoring project connections:', error)
     }
   }
 
