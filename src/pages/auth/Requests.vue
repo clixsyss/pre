@@ -1,17 +1,5 @@
 <template>
   <div class="services-page">
-    <!-- Pull to Refresh Indicator -->
-    <div v-if="isPulling || isRefreshing" class="pull-to-refresh-indicator" :style="{ transform: `translateY(${pullDistance}px)` }">
-      <div class="refresh-spinner" :class="{ active: isRefreshing }">
-        <svg v-if="!isRefreshing" class="refresh-arrow" :class="{ flip: pullDistance >= 80 }" width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M12 5V19M12 5L5 12M12 5L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <svg v-else class="spinner" width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="15" stroke-linecap="round"/>
-        </svg>
-      </div>
-    </div>
-
     <div class="hero-section">
       <div class="hero-content">
         <div class="hero-text">
@@ -119,7 +107,7 @@
 
       <!-- Closed Requests Tab -->
       <div v-else-if="activeTab === 'closed'" class="requests-content">
-        <div v-if="loadingClosedRequests" class="loading-container">
+        <div v-if="loadingRequests" class="loading-container">
           <div class="loading-spinner"></div>
           <p>Loading closed requests...</p>
         </div>
@@ -171,7 +159,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { usePullToRefresh } from '../../composables/usePullToRefresh';
 import { useRequestCategoriesStore } from '../../stores/requestCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
 import requestSubmissionService from '../../services/requestSubmissionService';
@@ -189,26 +176,10 @@ const projectStore = useProjectStore();
 // Reactive state
 const activeTab = ref('requests');
 const loadingRequests = ref(false);
-const loadingClosedRequests = ref(false);
+const myRequests = ref([]);
 const openRequests = ref([]);
 const closedRequests = ref([]);
-const closedRequestsLoaded = ref(false);
-
-// Pull-to-refresh functionality
-const { isRefreshing, pullDistance, isPulling, setupPullToRefresh } = usePullToRefresh({
-  onRefresh: async () => {
-    console.log('🔄 Refreshing requests...')
-    await Promise.all([
-      loadRequestCategories(),
-      loadOpenRequests()
-    ])
-    // Reset closed requests to force reload next time
-    if (closedRequestsLoaded.value) {
-      closedRequestsLoaded.value = false
-    }
-  },
-  threshold: 80
-});
+// Modal state removed; navigation is used instead
 
 // Computed properties
 const tabs = computed(() => [
@@ -231,35 +202,19 @@ const tabs = computed(() => [
   }
 ]);
 
-// Watch for tab changes to lazy load closed requests
-watch(activeTab, async (newTab) => {
-  if (newTab === 'closed' && !closedRequestsLoaded.value) {
-    await loadClosedRequests();
-  }
-});
-
 // Load request categories on component mount
 onMounted(async () => {
   if (projectStore.selectedProject?.id) {
-    // Load request categories and open requests in parallel for faster initial load
-    await Promise.all([
-      loadRequestCategories(),
-      loadOpenRequests()
-    ]);
+    await loadRequestCategories();
+    await loadMyRequests();
   }
-  
-  // Setup pull-to-refresh
-  setupPullToRefresh();
 });
 
 // Watch for project changes
 watch(() => projectStore.selectedProject?.id, async (newProjectId) => {
   if (newProjectId) {
-    closedRequestsLoaded.value = false;
-    await Promise.all([
-      loadRequestCategories(),
-      loadOpenRequests()
-    ]);
+    await loadRequestCategories();
+    await loadMyRequests();
   }
 });
 
@@ -269,48 +224,31 @@ const loadRequestCategories = async () => {
   }
 };
 
-// Optimized: Load only open requests initially (much faster)
-const loadOpenRequests = async () => {
+const loadMyRequests = async () => {
   if (!projectStore.selectedProject?.id) return;
   
   try {
     loadingRequests.value = true;
     const user = await optimizedAuthService.getCurrentUser();
     if (user) {
-      const requests = await requestSubmissionService.getActiveUserSubmissions(
+      const requests = await requestSubmissionService.getUserSubmissions(
         projectStore.selectedProject.id, 
         user.uid
       );
-      openRequests.value = requests;
-      console.log('✅ Fast load: Open requests loaded:', requests.length);
+      myRequests.value = requests;
+      
+      // Separate requests by status
+      openRequests.value = requests.filter(req => 
+        req.status === 'pending' || req.status === 'in_progress'
+      );
+      closedRequests.value = requests.filter(req => 
+        req.status === 'completed' || req.status === 'rejected'
+      );
     }
   } catch (error) {
-    console.error('Error loading open requests:', error);
+    console.error('Error loading my requests:', error);
   } finally {
     loadingRequests.value = false;
-  }
-};
-
-// Lazy load closed requests only when user switches to that tab
-const loadClosedRequests = async () => {
-  if (!projectStore.selectedProject?.id || closedRequestsLoaded.value) return;
-  
-  try {
-    loadingClosedRequests.value = true;
-    const user = await optimizedAuthService.getCurrentUser();
-    if (user) {
-      const requests = await requestSubmissionService.getClosedUserSubmissions(
-        projectStore.selectedProject.id, 
-        user.uid
-      );
-      closedRequests.value = requests;
-      closedRequestsLoaded.value = true;
-      console.log('✅ Lazy load: Closed requests loaded:', requests.length);
-    }
-  } catch (error) {
-    console.error('Error loading closed requests:', error);
-  } finally {
-    loadingClosedRequests.value = false;
   }
 };
 
@@ -360,51 +298,6 @@ const getRequestPreview = (request) => {
 .services-page {
   background: #fafafa;
   min-height: 100vh;
-  position: relative;
-}
-
-/* Pull to Refresh Indicator */
-.pull-to-refresh-indicator {
-  position: absolute;
-  top: -60px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  transition: transform 0.2s ease-out;
-}
-
-.refresh-spinner {
-  width: 40px;
-  height: 40px;
-  background: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.refresh-spinner.active .spinner {
-  animation: spin 1s linear infinite;
-}
-
-.refresh-arrow {
-  color: #AF1E23;
-  transition: transform 0.3s ease;
-}
-
-.refresh-arrow.flip {
-  transform: rotate(180deg);
-}
-
-.spinner {
-  color: #AF1E23;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* Hero Section */

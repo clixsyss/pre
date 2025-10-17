@@ -1,17 +1,5 @@
 <template>
   <div class="services-page">
-    <!-- Pull to Refresh Indicator -->
-    <div v-if="isPulling || isRefreshing" class="pull-to-refresh-indicator" :style="{ transform: `translateY(${pullDistance}px)` }">
-      <div class="refresh-spinner" :class="{ active: isRefreshing }">
-        <svg v-if="!isRefreshing" class="refresh-arrow" :class="{ flip: pullDistance >= 80 }" width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M12 5V19M12 5L5 12M12 5L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <svg v-else class="spinner" width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="15" stroke-linecap="round"/>
-        </svg>
-      </div>
-    </div>
-
     <div class="hero-section">
       <div class="hero-content">
         <div class="hero-text">
@@ -315,7 +303,7 @@
 
       <!-- Closed Bookings Tab -->
       <div v-else-if="activeTab === 'closed'" class="bookings-content">
-        <div v-if="loadingClosedBookings" class="loading-container">
+        <div v-if="loadingBookings" class="loading-container">
           <div class="loading-spinner"></div>
           <p>Loading closed bookings...</p>
         </div>
@@ -367,7 +355,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { usePullToRefresh } from '../../composables/usePullToRefresh';
 import optimizedAuthService from 'src/services/optimizedAuthService';
 import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
@@ -386,28 +373,10 @@ const projectStore = useProjectStore();
 // Reactive state
 const activeTab = ref('services');
 const loadingBookings = ref(false);
-const loadingClosedBookings = ref(false);
 const openBookings = ref([]);
 const closedBookings = ref([]);
 const showBookingModal = ref(false);
 const selectedBooking = ref(null);
-const closedBookingsLoaded = ref(false);
-
-// Pull-to-refresh functionality
-const { isRefreshing, pullDistance, isPulling, setupPullToRefresh } = usePullToRefresh({
-  onRefresh: async () => {
-    console.log('🔄 Refreshing services and bookings...')
-    await Promise.all([
-      loadServiceCategories(),
-      loadOpenBookings()
-    ])
-    // Reset closed bookings to force reload next time
-    if (closedBookingsLoaded.value) {
-      closedBookingsLoaded.value = false
-    }
-  },
-  threshold: 80
-});
 
 // Computed properties
 const tabs = computed(() => [
@@ -430,32 +399,18 @@ const tabs = computed(() => [
   }
 ]);
 
-// Watch for tab changes to lazy load closed bookings
-watch(activeTab, async (newTab) => {
-  if (newTab === 'closed' && !closedBookingsLoaded.value) {
-    await loadClosedBookings();
-  }
-});
-
 // Load service categories and bookings on component mount
 onMounted(async () => {
   if (projectStore.selectedProject?.id) {
-    // Load service categories and open bookings in parallel
-    await Promise.all([
-      loadServiceCategories(),
-      loadOpenBookings()
-    ]);
+    await loadServiceCategories();
+    await loadBookings();
   }
-  
-  // Setup pull-to-refresh
-  setupPullToRefresh();
 });
 
 // Watch for project changes
 watch(() => projectStore.selectedProject?.id, async (newProjectId) => {
   if (newProjectId) {
-    closedBookingsLoaded.value = false;
-    await loadOpenBookings();
+    await loadBookings();
   }
 });
 
@@ -466,8 +421,10 @@ const loadServiceCategories = async () => {
 };
 
 const navigateToCategory = (category) => {
+  // Navigate to category details page
   router.push(`/service-category/${category.id}`);
 };
+
 
 const navigateToCourtBooking = () => {
   router.push('/court-booking');
@@ -481,16 +438,26 @@ const navigateToStores = () => {
   router.push('/stores-shopping');
 };
 
+// const navigateToMyBookings = () => {
+//   router.push('/my-bookings');
+// };
+
+// const navigateToCalendar = () => {
+//   router.push('/calendar');
+// };
+
 const navigateToSmartDevices = () => {
   router.push('/smart-devices');
 };
 
-// Optimized: Load only open bookings initially (much faster)
-const loadOpenBookings = async () => {
+// Load bookings function
+const loadBookings = async () => {
   if (!projectStore.selectedProject?.id) return;
 
   try {
     loadingBookings.value = true;
+
+    // Get current user
     const user = await optimizedAuthService.getCurrentUser();
 
     if (!user) {
@@ -498,47 +465,19 @@ const loadOpenBookings = async () => {
       return;
     }
 
-    // Single optimized query for open bookings (open + processing)
-    const openResults = await serviceBookingService.getActiveServiceBookings(
-      projectStore.selectedProject.id, 
-      user.uid
-    );
+    // Load open bookings (including processing)
+    const [openResults, processingResults, closedResults] = await Promise.all([
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'open'),
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'processing'),
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'closed')
+    ]);
 
-    openBookings.value = openResults;
-    console.log('✅ Fast load: Open bookings loaded:', openResults.length);
+    openBookings.value = [...openResults, ...processingResults];
+    closedBookings.value = closedResults;
   } catch (error) {
-    console.error('Error loading open bookings:', error);
+    console.error('Error loading bookings:', error);
   } finally {
     loadingBookings.value = false;
-  }
-};
-
-// Lazy load closed bookings only when user switches to that tab
-const loadClosedBookings = async () => {
-  if (!projectStore.selectedProject?.id || closedBookingsLoaded.value) return;
-
-  try {
-    loadingClosedBookings.value = true;
-    const user = await optimizedAuthService.getCurrentUser();
-
-    if (!user) {
-      console.error('User not authenticated');
-      return;
-    }
-
-    const closedResults = await serviceBookingService.getServiceBookingsByStatus(
-      projectStore.selectedProject.id, 
-      user.uid, 
-      'closed'
-    );
-
-    closedBookings.value = closedResults;
-    closedBookingsLoaded.value = true;
-    console.log('✅ Lazy load: Closed bookings loaded:', closedResults.length);
-  } catch (error) {
-    console.error('Error loading closed bookings:', error);
-  } finally {
-    loadingClosedBookings.value = false;
   }
 };
 
@@ -669,51 +608,6 @@ const getLastMessagePreview = (booking) => {
 <style scoped>
 .services-page {
   background: #fafafa;
-  position: relative;
-}
-
-/* Pull to Refresh Indicator */
-.pull-to-refresh-indicator {
-  position: absolute;
-  top: -60px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  transition: transform 0.2s ease-out;
-}
-
-.refresh-spinner {
-  width: 40px;
-  height: 40px;
-  background: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.refresh-spinner.active .spinner {
-  animation: spin 1s linear infinite;
-}
-
-.refresh-arrow {
-  color: #AF1E23;
-  transition: transform 0.3s ease;
-}
-
-.refresh-arrow.flip {
-  transform: rotate(180deg);
-}
-
-.spinner {
-  color: #AF1E23;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* Hero Section */

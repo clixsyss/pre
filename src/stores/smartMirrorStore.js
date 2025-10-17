@@ -216,13 +216,10 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
   }
 
   const isProjectConnected = (projectId) => {
-    // Check if project has a connection - don't require devices to be loaded yet
+    // Check if project has a connection AND if we have devices loaded for it
     const hasConnection = projectConnections.value.has(projectId)
-    const connectionData = projectConnections.value.get(projectId)
-    
-    // Return true if we have a connection record with isConnected flag
-    // Don't require devices or currentProjectId match - those might still be loading
-    return hasConnection && connectionData?.isConnected === true
+    const hasDevices = hasConnection && devices.value.length > 0 && currentProjectId.value === projectId
+    return hasConnection && hasDevices
   }
 
   const getProjectConnectionStatus = (projectId) => {
@@ -336,12 +333,6 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
     selectedHomepageDevices.value = selectedDevices
   }
 
-  // Set PRE user ID for Smart Mirror isolation
-  const setPreUserId = (userId) => {
-    console.log('🔐 SmartMirrorStore: Setting PRE user ID:', userId)
-    smartMirrorService.setPreUserId(userId)
-  }
-
   const loadDeviceSettingsForProject = (projectId) => {
     try {
       const savedSettings = localStorage.getItem(`deviceSettings_${projectId}`)
@@ -417,7 +408,6 @@ export const useSmartMirrorStore = defineStore('smartMirror', () => {
     initializeApp,
     disconnect,
     switchToProject,
-    setPreUserId,
     isProjectConnected,
     getProjectConnectionStatus,
     getProjectDevices,
