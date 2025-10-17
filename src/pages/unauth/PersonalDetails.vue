@@ -249,6 +249,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../../boot/firebase'
 import { useRegistrationStore } from '../../stores/registration'
@@ -270,6 +271,13 @@ const backIdFile = ref(null)
 const profilePictureFile = ref(null)
 const frontIdPreview = ref(null)
 const backIdPreview = ref(null)
+
+// Setup keyboard handling for better mobile UX
+useFormKeyboard({
+  scrollToInput: true,
+  hideOnBackdropClick: true,
+  scrollOffset: 180
+})
 
 const formData = reactive({
   email: '',
@@ -511,6 +519,9 @@ const handleSubmit = async () => {
 .personal-details-page {
   min-height: 100vh;
   background-color: #f8f9fa;
+  /* Enable scrolling for keyboard visibility */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .separator-line {
@@ -800,6 +811,8 @@ const handleSubmit = async () => {
   padding: 40px 20px;
   max-width: 500px;
   margin: 0 auto;
+  /* Add extra bottom padding for keyboard */
+  padding-bottom: 200px;
 }
 
 .icon-section {

@@ -182,8 +182,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { Keyboard } from '@capacitor/keyboard'
-import { Capacitor } from '@capacitor/core'
+import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
 import { smartMirrorService } from '../../services/smartMirrorService'
@@ -204,6 +203,13 @@ const loading = ref(false)
 const showPassword = ref(false)
 const showPendingModal = ref(false)
 
+// Setup keyboard handling for better mobile UX
+useFormKeyboard({
+  scrollToInput: true,
+  hideOnBackdropClick: true,
+  scrollOffset: 150
+})
+
 const formData = reactive({
   email: '',
   password: '',
@@ -215,14 +221,8 @@ const goBack = () => {
 }
 
 const handlePageClick = async () => {
-  // Dismiss keyboard when clicking outside form (iOS/Android)
-  if (Capacitor.isNativePlatform()) {
-    try {
-      await Keyboard.hide()
-    } catch {
-      // Keyboard API might not be available, ignore error
-    }
-  }
+  // Keyboard is now automatically hidden by composable when clicking outside inputs
+  // No need for manual handling
 }
 
 const togglePassword = () => {
@@ -574,6 +574,9 @@ const goToSignUp = () => {
 .signin-page {
   min-height: 100vh;
   background-color: #f8f9fa;
+  /* Enable scrolling for keyboard visibility */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .header {
@@ -611,6 +614,8 @@ const goToSignUp = () => {
   padding: 40px 20px;
   max-width: 400px;
   margin: 0 auto;
+  /* Add extra bottom padding for keyboard */
+  padding-bottom: 100px;
 }
 
 .welcome-section {
@@ -674,6 +679,10 @@ const goToSignUp = () => {
   font-size: 1rem;
   transition: border-color 0.3s ease;
   box-sizing: border-box;
+  /* iOS keyboard improvements */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 .form-input:focus {

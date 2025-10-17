@@ -152,6 +152,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useNotificationStore } from '../../stores/notifications'
 
 // Component name for ESLint
@@ -163,6 +164,13 @@ const router = useRouter()
 const notificationStore = useNotificationStore()
 const loading = ref(false)
 const showFAQ = ref(false)
+
+// Setup keyboard handling for better mobile UX
+useFormKeyboard({
+  scrollToInput: true,
+  hideOnBackdropClick: true,
+  scrollOffset: 150
+})
 
 const formData = reactive({
   name: '',
@@ -233,6 +241,10 @@ const handleSubmit = async () => {
 .support-page {
   min-height: 100vh;
   background-color: #f8f9fa;
+  padding-bottom: 200px;
+  /* Enable scrolling for keyboard visibility */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .header {
@@ -381,6 +393,10 @@ const handleSubmit = async () => {
   box-sizing: border-box;
   background-color: white;
   font-family: inherit;
+  /* iOS keyboard improvements */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 .form-input:focus {

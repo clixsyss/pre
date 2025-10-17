@@ -376,6 +376,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore'
@@ -392,6 +393,13 @@ const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
 const currentStep = ref('personal')
 const loading = ref(false)
+
+// Setup keyboard handling for better mobile UX
+useFormKeyboard({
+  scrollToInput: true,
+  hideOnBackdropClick: true,
+  scrollOffset: 150
+})
 
 const personalForm = reactive({
   email: '',
@@ -783,6 +791,9 @@ const goToSignIn = () => {
 .register-page {
   min-height: 100vh;
   background-color: #f8f9fa;
+  /* Enable scrolling for keyboard visibility */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .header {
@@ -1011,6 +1022,8 @@ const goToSignIn = () => {
   max-width: 500px;
   margin: 0 auto;
   margin-top: 20px;
+  /* Add extra bottom padding for keyboard */
+  padding-bottom: 150px;
 }
 
 .divider {
@@ -1143,6 +1156,10 @@ const goToSignIn = () => {
   box-sizing: border-box;
   background-color: white;
   font-family: inherit;
+  /* iOS keyboard improvements */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 .form-input:focus {

@@ -156,6 +156,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useFormKeyboard } from 'src/composables/useFormKeyboard';
 import { useAcademiesStore } from 'src/stores/academyStore';
 import { useProjectStore } from 'src/stores/projectStore';
 import { serverTimestamp } from 'firebase/firestore';
@@ -172,6 +173,13 @@ const router = useRouter();
 const route = useRoute();
 const academiesStore = useAcademiesStore();
 const projectStore = useProjectStore();
+
+// Setup keyboard handling for better mobile UX
+useFormKeyboard({
+  scrollToInput: true,
+  hideOnBackdropClick: true,
+  scrollOffset: 150
+});
 
 // Reactive state
 const loading = ref(false);
@@ -390,6 +398,10 @@ onMounted(() => {
 .academy-registration-page {
   max-width: 800px;
   margin: 0 auto;
+  padding-bottom: 200px;
+  /* Enable scrolling for keyboard visibility */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .page-header {
@@ -560,6 +572,10 @@ onMounted(() => {
   border-radius: 8px;
   font-size: 1rem;
   transition: border-color 0.2s ease;
+  /* iOS keyboard improvements */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 .form-input:focus,

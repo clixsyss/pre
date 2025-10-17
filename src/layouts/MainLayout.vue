@@ -1740,6 +1740,7 @@ onUnmounted(() => {
   .current-project {
     padding: 6px 10px;
     font-size: 0.8rem;
+    height: 36px;
   }
   
   .project-name {
@@ -2483,7 +2484,10 @@ onUnmounted(() => {
 /* Ensure smooth transitions */
 .main-content {
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  height: 100%;
 }
 
 .main-content > * {

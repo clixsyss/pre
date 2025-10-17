@@ -226,6 +226,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useFormKeyboard } from 'src/composables/useFormKeyboard';
 import { useAcademiesStore } from 'src/stores/academyStore';
 import { useNotificationStore } from 'src/stores/notifications';
 import bookingService from 'src/services/bookingService';
@@ -239,6 +240,13 @@ defineOptions({
 const router = useRouter();
 const academiesStore = useAcademiesStore();
 const notificationStore = useNotificationStore();
+
+// Setup keyboard handling for better mobile UX
+useFormKeyboard({
+  scrollToInput: true,
+  hideOnBackdropClick: true,
+  scrollOffset: 150
+});
 
 // Reactive data
 const selectedAcademy = ref(null);
@@ -329,6 +337,10 @@ onMounted(async () => {
 .academy-booking-page {
   max-width: 800px;
   margin: 0 auto;
+  padding-bottom: 200px;
+  /* Enable scrolling for keyboard visibility */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .page-header {
@@ -669,6 +681,10 @@ onMounted(async () => {
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.2s ease;
+  /* iOS keyboard improvements */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 .form-input:focus {

@@ -234,6 +234,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useFormKeyboard } from '../../composables/useFormKeyboard';
 import { useRequestCategoriesStore } from '../../stores/requestCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
 import optimizedAuthService from '../../services/optimizedAuthService';
@@ -247,6 +248,13 @@ defineOptions({
 
 const route = useRoute();
 const router = useRouter();
+
+// Setup keyboard handling for better mobile UX
+useFormKeyboard({
+  scrollToInput: true,
+  hideOnBackdropClick: true,
+  scrollOffset: 150
+});
 const requestCategoriesStore = useRequestCategoriesStore();
 const projectStore = useProjectStore();
 
@@ -620,6 +628,10 @@ const submitRequest = async () => {
 .request-category-details {
   background: #fafafa;
   min-height: 100vh;
+  padding-bottom: 200px;
+  /* Enable scrolling for keyboard visibility */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Header */
@@ -809,6 +821,10 @@ const submitRequest = async () => {
   border-radius: 8px;
   font-size: 1rem;
   transition: border-color 0.2s, box-shadow 0.2s;
+  /* iOS keyboard improvements */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 .field-input:focus,
