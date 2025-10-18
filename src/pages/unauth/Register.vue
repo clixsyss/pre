@@ -79,8 +79,67 @@
 
           <div class="form-group">
             <label for="password" class="form-label">Password</label>
-            <input id="password" v-model="personalForm.password" type="password" class="form-input"
-              placeholder="Create a strong password" required minlength="8" />
+            <div class="password-input-wrapper">
+              <input id="password" v-model="personalForm.password" :type="showPassword ? 'text' : 'password'" class="form-input"
+                placeholder="Create a strong password" required minlength="8" />
+              <button type="button" @click="togglePassword" class="password-toggle">
+                <svg
+                  v-if="showPassword"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <svg
+                  v-else
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M2 12C2 12 6 4 12 4C18 4 22 12 22 12C22 12 18 20 12 20C6 20 2 12 2 12Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M2 2L22 22"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
             <div class="password-requirements">
               <small>Password must be at least 8 characters long</small>
             </div>
@@ -88,8 +147,67 @@
 
           <div class="form-group">
             <label for="confirmPassword" class="form-label">Confirm Password</label>
-            <input id="confirmPassword" v-model="personalForm.confirmPassword" type="password" class="form-input"
-              placeholder="Confirm your password" required />
+            <div class="password-input-wrapper">
+              <input id="confirmPassword" v-model="personalForm.confirmPassword" :type="showConfirmPassword ? 'text' : 'password'" class="form-input"
+                placeholder="Confirm your password" required />
+              <button type="button" @click="toggleConfirmPassword" class="password-toggle">
+                <svg
+                  v-if="showConfirmPassword"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <svg
+                  v-else
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M2 12C2 12 6 4 12 4C18 4 22 12 22 12C22 12 18 20 12 20C6 20 2 12 2 12Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M2 2L22 22"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <button type="submit" class="proceed-btn" :disabled="loading || !canProceed">
@@ -393,6 +511,8 @@ const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
 const currentStep = ref('personal')
 const loading = ref(false)
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 // Setup keyboard handling for better mobile UX
 useFormKeyboard({
@@ -783,6 +903,14 @@ const goToOnboarding = () => {
 
 const goToSignIn = () => {
   router.push('/signin')
+}
+
+const togglePassword = () => {
+  showPassword.value = !showPassword.value
+}
+
+const toggleConfirmPassword = () => {
+  showConfirmPassword.value = !showConfirmPassword.value
 }
 
 </script>
@@ -1182,6 +1310,22 @@ select.form-input:disabled {
   margin-top: 5px;
   color: #666;
   font-size: 0.85rem;
+}
+
+.password-input-wrapper {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
 }
 
 

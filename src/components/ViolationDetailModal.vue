@@ -140,7 +140,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useModalState } from '../composables/useModalState'
 
 // Component name for ESLint
 defineOptions({
@@ -165,6 +166,7 @@ const props = defineProps({
 
 // Emits
 const emit = defineEmits(['close', 'start-chat'])
+const { openModal, closeModal: hideNavigationBars } = useModalState()
 
 // Reactive state
 const showImageModal = ref(false)
@@ -255,6 +257,23 @@ const getStatusClass = (status) => {
   }
   return classMap[status] || 'status-issued'
 }
+
+// Watch modal states to manage navigation bar visibility and background scrolling
+watch(() => props.isOpen, (isOpen) => {
+  if (isOpen) {
+    openModal()
+  } else {
+    hideNavigationBars()
+  }
+})
+
+watch(showImageModal, (isOpen) => {
+  if (isOpen) {
+    openModal()
+  } else {
+    hideNavigationBars()
+  }
+})
 </script>
 
 <style scoped>

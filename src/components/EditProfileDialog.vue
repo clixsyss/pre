@@ -294,6 +294,7 @@ import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../boot/firebase';
 import { useNotificationStore } from '../stores/notifications';
+import { useModalState } from '../composables/useModalState';
 import { updateUserProfile } from '../services/userService';
 import fileUploadService from '../services/fileUploadService';
 
@@ -311,6 +312,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'saved']);
 
 const notificationStore = useNotificationStore();
+const { openModal, closeModal } = useModalState();
 
 // Form data
 const formData = ref({
@@ -591,6 +593,23 @@ onMounted(() => {
     loadUserData();
   }
 });
+
+// Watch modal states to manage navigation bar visibility and background scrolling
+watch(() => props.isOpen, (isOpen) => {
+  if (isOpen) {
+    openModal()
+  } else {
+    closeModal()
+  }
+})
+
+watch(showDocumentModal, (isOpen) => {
+  if (isOpen) {
+    openModal()
+  } else {
+    closeModal()
+  }
+})
 </script>
 
 <style scoped>

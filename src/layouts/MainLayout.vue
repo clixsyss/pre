@@ -165,7 +165,7 @@
     </div>
 
     <!-- Main Content with Page Transitions -->
-    <main class="main-content" :class="{ 'keyboard-visible': isKeyboardVisible && isChatPage }">
+    <main class="main-content" :class="{ 'keyboard-visible': isKeyboardVisible }">
       <transition :name="pageTransition" mode="out-in">
         <slot />
       </transition>
@@ -277,6 +277,7 @@ import { useSmartMirrorStore } from '../stores/smartMirrorStore'
 import { useNotificationCenterStore } from '../stores/notificationCenter'
 import { useSwipeNavigation } from '../composables/useSwipeNavigation'
 import { useModalState } from '../composables/useModalState'
+import { useGlobalKeyboard } from '../composables/useGlobalKeyboard'
 import ViolationNotificationPopup from '../components/ViolationNotificationPopup.vue'
 import SuspensionMessage from '../components/SuspensionMessage.vue'
 import NotificationCenter from '../components/NotificationCenter.vue'
@@ -298,6 +299,9 @@ const notificationCenterStore = useNotificationCenterStore()
 const { openModal, closeModal } = useModalState()
 const { preloadAppData, reset: resetPreloader } = useDataPreloader()
 
+// Initialize global keyboard handling
+const { isKeyboardVisible } = useGlobalKeyboard()
+
 // Initialize swipe navigation
 const {
   addDeadZone
@@ -317,8 +321,7 @@ const showSuspensionMessage = ref(false)
 const suspensionMessage = ref(null)
 const isUserSuspended = ref(false)
 
-// Keyboard state
-const isKeyboardVisible = ref(false)
+// Chat page state
 const isChatPage = ref(false)
 
 // Page transition state
@@ -420,70 +423,7 @@ const isActivePage = (path) => {
   return route.path === path || route.path.startsWith(path + '/')
 }
 
-// Keyboard detection methods
-const detectKeyboardVisibility = () => {
-  const initialViewportHeight = window.innerHeight
-  let resizeTimeout = null
-  
-  const handleResize = () => {
-    // Debounce resize events
-    if (resizeTimeout) {
-      clearTimeout(resizeTimeout)
-    }
-    
-    resizeTimeout = setTimeout(() => {
-      const currentViewportHeight = window.innerHeight
-      const heightDifference = initialViewportHeight - currentViewportHeight
-      
-      // Consider keyboard visible if viewport height decreased by more than 150px
-      const keyboardVisible = heightDifference > 150
-      
-      // Only update if the state actually changed
-      if (isKeyboardVisible.value !== keyboardVisible) {
-        isKeyboardVisible.value = keyboardVisible
-        console.log('Keyboard visibility changed:', keyboardVisible, 'Height difference:', heightDifference)
-      }
-    }, 100)
-  }
-  
-  window.addEventListener('resize', handleResize)
-  
-  // Also listen for focus events on input elements
-  const handleFocus = (event) => {
-    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-      // Only set to true if we're on a chat page
-      if (isChatPage.value) {
-        setTimeout(() => {
-          isKeyboardVisible.value = true
-        }, 300) // Small delay to allow keyboard animation
-      }
-    }
-  }
-  
-  const handleBlur = (event) => {
-    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-      // Only set to false if we're on a chat page
-      if (isChatPage.value) {
-        setTimeout(() => {
-          isKeyboardVisible.value = false
-        }, 300) // Small delay to allow keyboard animation
-      }
-    }
-  }
-  
-  document.addEventListener('focusin', handleFocus)
-  document.addEventListener('focusout', handleBlur)
-  
-  // Cleanup function
-  return () => {
-    window.removeEventListener('resize', handleResize)
-    document.removeEventListener('focusin', handleFocus)
-    document.removeEventListener('focusout', handleBlur)
-    if (resizeTimeout) {
-      clearTimeout(resizeTimeout)
-    }
-  }
-}
+// Keyboard handling is now managed globally by useGlobalKeyboard
 
 const checkIfChatPage = () => {
   const chatRoutes = [
@@ -903,8 +843,7 @@ onMounted(async () => {
   
   window.addEventListener('showSuspensionMessage', handleSuspensionMessage)
   
-  // Initialize keyboard detection
-  const cleanupKeyboardDetection = detectKeyboardVisibility()
+  // Keyboard detection is now handled globally
   
   // Add dead zones for areas where swipe should be disabled
   // Bottom navigation area (prevent accidental swipes when tapping nav items)
@@ -948,7 +887,7 @@ onMounted(async () => {
   }
   
   return () => {
-    cleanupKeyboardDetection()
+    // Keyboard cleanup is handled globally
   }
 })
 

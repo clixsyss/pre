@@ -47,6 +47,16 @@ body.modal-open .bottom-navigation {
   pointer-events: none !important;
 }
 
+/* Prevent background scrolling when modal is open */
+body.modal-open {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+  height: 100% !important;
+  -webkit-overflow-scrolling: none !important;
+  overscroll-behavior: contain !important;
+}
+
 /* Global Theme Support */
 :root {
   --primary-color: #AF1E23;
@@ -210,6 +220,36 @@ body {
   /* Ensure body can expand beyond viewport */
   min-height: 100vh;
   position: relative;
+}
+
+/* Global Keyboard Handling */
+body.keyboard-open {
+  /* Prevent body from scrolling when keyboard is open */
+  overflow: hidden !important;
+  /* Ensure viewport stays in place */
+  position: fixed !important;
+  width: 100% !important;
+  height: 100% !important;
+  /* Prevent any layout shifts */
+  -webkit-overflow-scrolling: none !important;
+  overscroll-behavior: contain !important;
+}
+
+/* Ensure bottom navigation stays fixed when keyboard is open */
+body.keyboard-open .bottom-navigation {
+  position: fixed !important;
+  bottom: 0 !important;
+  z-index: 1000 !important;
+  transform: none !important;
+}
+
+/* Ensure main layout handles keyboard properly */
+.q-layout {
+  /* Allow the layout to handle scrolling */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Ensure proper height */
+  min-height: 100vh;
 }
 
 /* Theme transition for smooth switching */

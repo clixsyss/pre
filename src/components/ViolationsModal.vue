@@ -110,6 +110,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useProjectStore } from '../stores/projectStore'
+import { useModalState } from '../composables/useModalState'
 import { getUserFines } from '../services/finesService'
 import ViolationDetailModal from './ViolationDetailModal.vue'
 
@@ -135,6 +136,7 @@ const emit = defineEmits(['close', 'start-chat'])
 
 // Stores
 const projectStore = useProjectStore()
+const { openModal, closeModal: hideNavigationBars } = useModalState()
 
 // Reactive state
 const loading = ref(false)
@@ -237,6 +239,23 @@ watch(() => props.isOpen, (isOpen) => {
 onMounted(() => {
   if (props.isOpen) {
     loadViolations()
+  }
+})
+
+// Watch modal states to manage navigation bar visibility and background scrolling
+watch(() => props.isOpen, (isOpen) => {
+  if (isOpen) {
+    openModal()
+  } else {
+    hideNavigationBars()
+  }
+})
+
+watch(showDetailModal, (isOpen) => {
+  if (isOpen) {
+    openModal()
+  } else {
+    hideNavigationBars()
   }
 })
 </script>

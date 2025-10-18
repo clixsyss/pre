@@ -72,9 +72,6 @@ export function useFormKeyboard(options = {}) {
     isKeyboardVisible.value = true
     keyboardHeight.value = info.keyboardHeight || 0
 
-    // Add padding to body to push content up
-    document.body.style.paddingBottom = `${info.keyboardHeight}px`
-
     // Scroll to active input if enabled
     if (activeInput.value && scrollToInput) {
       scrollToInputElement(activeInput.value)
@@ -89,9 +86,6 @@ export function useFormKeyboard(options = {}) {
     isKeyboardVisible.value = false
     keyboardHeight.value = 0
     activeInput.value = null
-
-    // Remove padding from body
-    document.body.style.paddingBottom = '0px'
   }
 
   /**

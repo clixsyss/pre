@@ -1133,9 +1133,9 @@ onBeforeUnmount(() => {
 }
 
 .view-btn {
-  background: #f8f9fa;
-  color: #666;
-  border: 1px solid #e9ecef;
+  background: #AF1E23;
+  color: white;
+  border: 1px solid #AF1E23;
 }
 
 /* Mobile app - hover effects disabled */
@@ -1190,7 +1190,7 @@ onBeforeUnmount(() => {
   border-radius: 20px;
   max-width: 600px;
   width: 100%;
-  max-height: 90vh;
+  max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   /* iOS smooth scrolling */

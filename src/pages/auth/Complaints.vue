@@ -239,10 +239,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useComplaintStore } from '../../stores/complaintStore';
 import { useNotificationStore } from '../../stores/notifications';
+import { useModalState } from '../../composables/useModalState';
 import ModalHeader from '../../components/ModalHeader.vue';
 
 // Component name for ESLint
@@ -253,6 +254,7 @@ defineOptions({
 const router = useRouter();
 const complaintStore = useComplaintStore();
 const notificationStore = useNotificationStore();
+const { openModal, closeModal: hideNavigationBars } = useModalState();
 
 // Reactive data
 const showNewComplaintModal = ref(false);
@@ -445,6 +447,12 @@ onUnmounted(() => {
   if (unsubscribe.value) {
     unsubscribe.value();
   }
+});
+
+// Watch modal state to manage navigation bar visibility and background scrolling
+watch(showNewComplaintModal, (isOpen) => {
+  if (isOpen) openModal()
+  else hideNavigationBars()
 });
 </script>
 

@@ -182,7 +182,6 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
 import { smartMirrorService } from '../../services/smartMirrorService'
@@ -203,12 +202,7 @@ const loading = ref(false)
 const showPassword = ref(false)
 const showPendingModal = ref(false)
 
-// Setup keyboard handling for better mobile UX
-useFormKeyboard({
-  scrollToInput: true,
-  hideOnBackdropClick: true,
-  scrollOffset: 150
-})
+// Global keyboard handling is now managed by MainLayout
 
 const formData = reactive({
   email: '',

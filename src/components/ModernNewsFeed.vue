@@ -22,7 +22,7 @@
 
 
     <!-- Filter Tabs -->
-    <div v-if="showAll" class="filter-section">
+    <!-- <div v-if="showAll" class="filter-section">
       <div class="filter-tabs">
         <button v-for="tab in tabs" :key="tab.value" @click="activeTab = tab.value"
           :class="['filter-tab', { active: activeTab === tab.value }]">
@@ -31,7 +31,7 @@
           <span v-if="getTabCount(tab.value) > 0" class="filter-count">{{ getTabCount(tab.value) }}</span>
         </button>
       </div>
-    </div>
+    </div> -->
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
@@ -277,55 +277,55 @@ const videoIntersectionObserver = ref(null)
 const videoElements = ref(new Map())
 const isInitialMount = ref(true)
 
-const tabs = [
-  { 
-    label: 'All', 
-    value: 'all', 
-    icon: 'svg',
-    iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M3 6H21M3 12H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`
-  },
-  { 
-    label: 'General', 
-    value: 'general', 
-    icon: 'svg',
-    iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-      <path d="M19.4 15A1.65 1.65 0 0 0 21 13.4A1.65 1.65 0 0 0 19.4 12A1.65 1.65 0 0 0 18 13.4A1.65 1.65 0 0 0 19.4 15Z" stroke="currentColor" stroke-width="2"/>
-      <path d="M4.6 9A1.65 1.65 0 0 1 6 7.4A1.65 1.65 0 0 1 4.6 6A1.65 1.65 0 0 1 3 7.4A1.65 1.65 0 0 1 4.6 9Z" stroke="currentColor" stroke-width="2"/>
-    </svg>`
-  },
-  { 
-    label: 'Announcements', 
-    value: 'announcement', 
-    icon: 'svg',
-    iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M18 8A6 6 0 0 0 6 8C6 7 6 5 6 3A2 2 0 0 1 8 1H16A2 2 0 0 1 18 3C18 5 18 7 18 8Z" stroke="currentColor" stroke-width="2"/>
-      <path d="M13.73 21A2 2 0 0 1 10.27 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`
-  },
-  { 
-    label: 'Events', 
-    value: 'event', 
-    icon: 'svg',
-    iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-      <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
-    </svg>`
-  },
-  { 
-    label: 'Updates', 
-    value: 'update', 
-    icon: 'svg',
-    iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2"/>
-      <path d="M22 6L12 13L2 6" stroke="currentColor" stroke-width="2"/>
-    </svg>`
-  }
-]
+// const tabs = [
+//   { 
+//     label: 'All', 
+//     value: 'all', 
+//     icon: 'svg',
+//     iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+//       <path d="M3 6H21M3 12H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+//     </svg>`
+//   },
+//   { 
+//     label: 'General', 
+//     value: 'general', 
+//     icon: 'svg',
+//     iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+//       <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+//       <path d="M19.4 15A1.65 1.65 0 0 0 21 13.4A1.65 1.65 0 0 0 19.4 12A1.65 1.65 0 0 0 18 13.4A1.65 1.65 0 0 0 19.4 15Z" stroke="currentColor" stroke-width="2"/>
+//       <path d="M4.6 9A1.65 1.65 0 0 1 6 7.4A1.65 1.65 0 0 1 4.6 6A1.65 1.65 0 0 1 3 7.4A1.65 1.65 0 0 1 4.6 9Z" stroke="currentColor" stroke-width="2"/>
+//     </svg>`
+//   },
+//   { 
+//     label: 'Announcements', 
+//     value: 'announcement', 
+//     icon: 'svg',
+//     iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+//       <path d="M18 8A6 6 0 0 0 6 8C6 7 6 5 6 3A2 2 0 0 1 8 1H16A2 2 0 0 1 18 3C18 5 18 7 18 8Z" stroke="currentColor" stroke-width="2"/>
+//       <path d="M13.73 21A2 2 0 0 1 10.27 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+//     </svg>`
+//   },
+//   { 
+//     label: 'Events', 
+//     value: 'event', 
+//     icon: 'svg',
+//     iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+//       <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+//       <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+//       <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+//       <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+//     </svg>`
+//   },
+//   { 
+//     label: 'Updates', 
+//     value: 'update', 
+//     icon: 'svg',
+//     iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+//       <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2"/>
+//       <path d="M22 6L12 13L2 6" stroke="currentColor" stroke-width="2"/>
+//     </svg>`
+//   }
+// ]
 
 const filteredNews = computed(() => {
   let filtered = []
@@ -374,12 +374,12 @@ const filteredNews = computed(() => {
   })
 })
 
-const getTabCount = (tabValue) => {
-  if (tabValue === 'all') {
-    return newsItems.value.length
-  }
-  return newsItems.value.filter(item => item.type === tabValue).length
-}
+// const getTabCount = (tabValue) => {
+//   if (tabValue === 'all') {
+//     return newsItems.value.length
+//   }
+//   return newsItems.value.filter(item => item.type === tabValue).length
+// }
 
 const getCategoryClass = (category) => {
   const classes = {
@@ -2235,4 +2235,3 @@ onUnmounted(() => {
 }
 
 </style>
-
