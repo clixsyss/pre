@@ -911,7 +911,7 @@ import QRCode from 'qrcode'
 import PageHeader from '../../components/PageHeader.vue'
 import sharingService from '../../services/whatsappService'
 import { checkUserEligibility, createGuestPass, markPassAsSent } from '../../api/guestPassAPI'
-import { auth, firestore } from '../../boot/firebase'
+import { auth, db } from '../../boot/firebase'
 import { useNotificationStore } from '../../stores/notifications'
 
 defineOptions({
@@ -1114,13 +1114,18 @@ const fetchUserUnitInfo = async () => {
     }
 
     // Try to get unit info from user profile or Firebase
-    const userDoc = await firestore.collection('users').doc(auth.currentUser.uid).get()
-    
+    const userDoc = await db.collection('users').doc(auth.currentUser.uid).get()
+
     if (userDoc.exists) {
       const userData = userDoc.data()
       // Check for unit information in various possible fields
-      const unit = userData.unit || userData.unitNumber || userData.apartment || userData.address || userData.building
-      
+      const unit =
+        userData.unit ||
+        userData.unitNumber ||
+        userData.apartment ||
+        userData.address ||
+        userData.building
+
       if (unit) {
         userUnitInfo.value = unit
       } else {
@@ -1292,7 +1297,10 @@ const generatePass = async () => {
     showGenerateDialog.value = false
 
     await nextTick()
-    await generateQRCode(pass)
+    // Add a small delay to ensure canvas is properly mounted
+    setTimeout(async () => {
+      await generateQRCode(pass)
+    }, 100)
 
     // Share pass with QR code using native share
     try {
@@ -1357,23 +1365,58 @@ const generateQRCode = async (pass) => {
       validUntil: pass.validUntil,
     })
 
-    // Generate QR code as data URL
-    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
-      width: 280,
-      margin: 2,
-      color: {
-        dark: '#000000',
-        light: '#FFFFFF',
-      },
-    })
+    console.log('🎯 Generating QR code for pass:', pass.id)
 
-    // Create image from QR code data URL
-    const img = new Image()
-    img.onload = () => {
+    try {
+      // Method 1: Try using QRCode.toCanvas directly (more reliable)
+      const qrCanvas = document.createElement('canvas')
+      await QRCode.toCanvas(qrCanvas, qrData, {
+        width: 280,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      })
+
+      console.log('✅ QR code generated with toCanvas, drawing gate pass...')
+      
       // Draw the complete gate pass design
-      drawGatePass(ctx, img, pass, canvasWidth)
+      drawGatePass(ctx, qrCanvas, pass, canvasWidth)
+      console.log('✅ Gate pass drawn successfully')
+      
+    } catch (toCanvasError) {
+      console.warn('⚠️ toCanvas failed, trying dataURL method:', toCanvasError)
+      
+      // Method 2: Fallback to dataURL method
+      const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+        width: 280,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      })
+
+      console.log('✅ QR code generated with dataURL, creating image...')
+
+      // Create image from QR code data URL
+      const img = new Image()
+      img.onload = () => {
+        console.log('✅ Image loaded, drawing gate pass...')
+        try {
+          // Draw the complete gate pass design
+          drawGatePass(ctx, img, pass, canvasWidth)
+          console.log('✅ Gate pass drawn successfully')
+        } catch (drawError) {
+          console.error('❌ Error drawing gate pass:', drawError)
+        }
+      }
+      img.onerror = (error) => {
+        console.error('❌ Error loading QR code image:', error)
+      }
+      img.src = qrCodeDataUrl
     }
-    img.src = qrCodeDataUrl
   } catch (error) {
     console.error('❌ Error generating QR code:', error)
   }
@@ -1536,7 +1579,7 @@ watch(
     if (newUserId !== oldUserId) {
       passes.value = []
       qrRefs.clear()
-      
+
       // Fetch unit info for new user
       if (newUserId) {
         try {
@@ -1596,13 +1639,16 @@ onMounted(async () => {
 
     if (passes.value.length > 0) {
       await nextTick()
-      for (const pass of passes.value) {
-        try {
-          await generateQRCode(pass)
-        } catch (qrError) {
-          console.error('❌ Error generating QR for pass:', pass.id, qrError)
+      // Add a small delay to ensure canvas elements are properly mounted
+      setTimeout(async () => {
+        for (const pass of passes.value) {
+          try {
+            await generateQRCode(pass)
+          } catch (qrError) {
+            console.error('❌ Error generating QR for pass:', pass.id, qrError)
+          }
         }
-      }
+      }, 200)
     }
   } catch (error) {
     console.error('❌ Error loading passes:', error)
