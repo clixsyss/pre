@@ -8,50 +8,76 @@
     <!-- Modern Tab Navigation -->
     <div class="tabs-container">
       <div class="tabs-wrapper">
-        <button 
-          class="tab-button" 
-          :class="{ active: activeTab === 'ble' }" 
+        <button
+          class="tab-button"
+          :class="{ active: activeTab === 'ble' }"
           @click="activeTab = 'ble'"
         >
           <svg class="tab-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L16 6L12 10L12 14L16 18L12 22L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M8 6L12 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M8 18L12 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path
+              d="M12 2L16 6L12 10L12 14L16 18L12 22L12 2Z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M8 6L12 10"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M8 18L12 14"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
           <span class="tab-label">{{ $t('bleControl') || 'BLE Control' }}</span>
         </button>
-        
-        <button 
-          class="tab-button" 
-          :class="{ active: activeTab === 'passes' }" 
+
+        <button
+          class="tab-button"
+          :class="{ active: activeTab === 'passes' }"
           @click="switchToPassesTab"
         >
           <svg class="tab-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
             <!-- QR Code outer border -->
-            <rect x="2" y="2" width="20" height="20" stroke="currentColor" stroke-width="2" rx="1"/>
+            <rect
+              x="2"
+              y="2"
+              width="20"
+              height="20"
+              stroke="currentColor"
+              stroke-width="2"
+              rx="1"
+            />
             <!-- Top-left finder pattern -->
-            <rect x="4" y="4" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
-            <rect x="5.5" y="5.5" width="3" height="3" fill="currentColor"/>
+            <rect x="4" y="4" width="6" height="6" stroke="currentColor" stroke-width="1.5" />
+            <rect x="5.5" y="5.5" width="3" height="3" fill="currentColor" />
             <!-- Top-right finder pattern -->
-            <rect x="14" y="4" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
-            <rect x="15.5" y="5.5" width="3" height="3" fill="currentColor"/>
+            <rect x="14" y="4" width="6" height="6" stroke="currentColor" stroke-width="1.5" />
+            <rect x="15.5" y="5.5" width="3" height="3" fill="currentColor" />
             <!-- Bottom-left finder pattern -->
-            <rect x="4" y="14" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
-            <rect x="5.5" y="15.5" width="3" height="3" fill="currentColor"/>
+            <rect x="4" y="14" width="6" height="6" stroke="currentColor" stroke-width="1.5" />
+            <rect x="5.5" y="15.5" width="3" height="3" fill="currentColor" />
             <!-- Data dots -->
-            <circle cx="13" cy="13" r="1" fill="currentColor"/>
-            <circle cx="16" cy="13" r="1" fill="currentColor"/>
-            <circle cx="19" cy="13" r="1" fill="currentColor"/>
-            <circle cx="13" cy="16" r="1" fill="currentColor"/>
-            <circle cx="13" cy="19" r="1" fill="currentColor"/>
-            <circle cx="16" cy="16" r="1" fill="currentColor"/>
-            <circle cx="19" cy="16" r="1" fill="currentColor"/>
-            <circle cx="16" cy="19" r="1" fill="currentColor"/>
-            <circle cx="19" cy="19" r="1" fill="currentColor"/>
+            <circle cx="13" cy="13" r="1" fill="currentColor" />
+            <circle cx="16" cy="13" r="1" fill="currentColor" />
+            <circle cx="19" cy="13" r="1" fill="currentColor" />
+            <circle cx="13" cy="16" r="1" fill="currentColor" />
+            <circle cx="13" cy="19" r="1" fill="currentColor" />
+            <circle cx="16" cy="16" r="1" fill="currentColor" />
+            <circle cx="19" cy="16" r="1" fill="currentColor" />
+            <circle cx="16" cy="19" r="1" fill="currentColor" />
+            <circle cx="19" cy="19" r="1" fill="currentColor" />
           </svg>
           <span class="tab-label">{{ $t('gatePasses') || 'Gate Passes' }}</span>
         </button>
-        
+
         <div class="tab-indicator" :class="`tab-${activeTab}`"></div>
       </div>
     </div>
@@ -65,11 +91,32 @@
             <!-- Bluetooth Status Card -->
             <div class="status-card">
               <div class="bluetooth-icon-wrapper">
-                <div class="bluetooth-icon" :class="{ connected: isConnected, connecting: isConnecting }">
+                <div
+                  class="bluetooth-icon"
+                  :class="{ connected: isConnected, connecting: isConnecting }"
+                >
                   <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L16 6L12 10L12 14L16 18L12 22L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M8 6L12 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M8 18L12 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path
+                      d="M12 2L16 6L12 10L12 14L16 18L12 22L12 2Z"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M8 6L12 10"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M8 18L12 14"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                   <div v-if="isConnecting" class="pulse-ring"></div>
                 </div>
@@ -79,7 +126,13 @@
               <div class="status-info">
                 <div v-if="isConnected" class="status-badge connected">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path
+                      d="M20 6L9 17L4 12"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                   <span>{{ $t('connected') || 'Connected' }}</span>
                 </div>
@@ -89,40 +142,90 @@
                 </div>
                 <div v-else class="status-badge disconnected">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                    <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
-                    <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                    <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" />
+                    <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" />
                   </svg>
                   <span>{{ $t('disconnected') || 'Disconnected' }}</span>
                 </div>
 
                 <div v-if="deviceName" class="device-info">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" stroke-width="2"/>
-                    <line x1="12" y1="18" x2="12" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <rect
+                      x="5"
+                      y="2"
+                      width="14"
+                      height="20"
+                      rx="2"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <line
+                      x1="12"
+                      y1="18"
+                      x2="12"
+                      y2="18"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
                   </svg>
                   <span>{{ deviceName }}</span>
                 </div>
 
                 <div v-if="lastConnectedDevice && !isConnected" class="last-device">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                    <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                    <polyline
+                      points="12 6 12 12 16 14"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
                   </svg>
-                  <span>{{ $t('lastDevice') || 'Last device' }}: {{ lastConnectedDevice.name }}</span>
+                  <span
+                    >{{ $t('lastDevice') || 'Last device' }}: {{ lastConnectedDevice.name }}</span
+                  >
                 </div>
               </div>
 
               <!-- BLE Not Supported Warning -->
               <div v-if="!isBLESupported && bleChecked" class="warning-banner">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <line x1="12" y1="17" x2="12" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path
+                    d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <line
+                    x1="12"
+                    y1="9"
+                    x2="12"
+                    y2="13"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <line
+                    x1="12"
+                    y1="17"
+                    x2="12"
+                    y2="17"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
                 </svg>
                 <div class="warning-content">
                   <strong>{{ $t('bleNotSupported') || 'Bluetooth Not Supported' }}</strong>
-                  <p>{{ $t('bleNotSupportedDesc') || 'Your device or browser does not support Bluetooth Low Energy.' }}</p>
+                  <p>
+                    {{
+                      $t('bleNotSupportedDesc') ||
+                      'Your device or browser does not support Bluetooth Low Energy.'
+                    }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -137,8 +240,20 @@
                 :disabled="autoConnecting || isOpening || (bleChecked && !isBLESupported)"
                 @click="quickOpenGate"
               >
-                <svg v-if="!autoConnecting && !isOpening" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg
+                  v-if="!autoConnecting && !isOpening"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <polygon
+                    points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
                 <div v-else class="spinner"></div>
                 <span>{{ $t('quickOpen') || 'Quick Open Gate' }}</span>
@@ -153,8 +268,13 @@
                 @click="handleConnect"
               >
                 <svg v-if="!isConnecting" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                  <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                  <path
+                    d="M12 1v6m0 6v6m9-9h-6m-6 0H3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
                 </svg>
                 <div v-else class="spinner"></div>
                 <span>{{ $t('connect') || 'Connect to Gate' }}</span>
@@ -169,8 +289,19 @@
                 @click="handleOpenGate"
               >
                 <svg v-if="!isOpening" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M10 19H3V5C3 3.9 3.9 3 5 3H19C20.1 3 21 3.9 21 5V9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <path d="M3 11H10M18 11H21M18 15V21M18 15L15 18M18 15L21 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M10 19H3V5C3 3.9 3.9 3 5 3H19C20.1 3 21 3.9 21 5V9"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M3 11H10M18 11H21M18 15V21M18 15L15 18M18 15L21 18"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
                 <div v-else class="spinner"></div>
                 <span>{{ $t('openGate') || 'Open Gate' }}</span>
@@ -184,9 +315,31 @@
                   @click="handleDisconnect"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L16 6L12 10L12 14L16 18L12 22L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    <line x1="15" y1="15" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path
+                      d="M12 2L16 6L12 10L12 14L16 18L12 22L12 2Z"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <line
+                      x1="3"
+                      y1="3"
+                      x2="9"
+                      y2="9"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
+                    <line
+                      x1="15"
+                      y1="15"
+                      x2="21"
+                      y2="21"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
                   </svg>
                   <span>{{ $t('disconnect') || 'Disconnect' }}</span>
                 </button>
@@ -199,8 +352,13 @@
                   @click="handleConnect"
                 >
                   <svg v-if="!isConnecting" width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                    <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                    <path
+                      d="M12 1v6m0 6v6m9-9h-6m-6 0H3"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
                   </svg>
                   <div v-else class="spinner small"></div>
                   <span>{{ $t('newConnection') || 'New Device' }}</span>
@@ -212,8 +370,20 @@
                   @click="forgetDevice"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline
+                      points="3 6 5 6 21 6"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                   <span>{{ $t('forget') || 'Forget' }}</span>
                 </button>
@@ -223,13 +393,31 @@
             <!-- Status Message -->
             <transition name="slide-up">
               <div v-if="statusMessage" class="status-message" :class="statusMessageType">
-                <svg v-if="statusMessageType === 'success'" width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg
+                  v-if="statusMessageType === 'success'"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <path
+                    d="M20 6L9 17L4 12"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
-                <svg v-else-if="statusMessageType === 'error'" width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                  <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
-                  <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
+                <svg
+                  v-else-if="statusMessageType === 'error'"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                  <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" />
+                  <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" />
                 </svg>
                 <span>{{ statusMessage }}</span>
               </div>
@@ -240,15 +428,43 @@
         <!-- Gate Passes -->
         <div v-else-if="activeTab === 'passes'" key="passes" class="content-panel">
           <!-- Blocking Warning -->
-          <div v-if="userBlockingStatus.isBlocked && !userBlockingStatus.loading" class="blocking-alert">
+          <div
+            v-if="userBlockingStatus.isBlocked && !userBlockingStatus.loading"
+            class="blocking-alert"
+          >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <line x1="12" y1="17" x2="12" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path
+                d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <line
+                x1="12"
+                y1="9"
+                x2="12"
+                y2="13"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <line
+                x1="12"
+                y1="17"
+                x2="12"
+                y2="17"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
             </svg>
             <div class="alert-content">
               <strong>Access Restricted</strong>
-              <p>You are currently blocked from generating passes. Please contact support for assistance.</p>
+              <p>
+                You are currently blocked from generating passes. Please contact support for
+                assistance.
+              </p>
             </div>
           </div>
 
@@ -260,17 +476,44 @@
               @click="showGenerateDialog = true"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                <line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                <line
+                  x1="12"
+                  y1="8"
+                  x2="12"
+                  y2="16"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <line
+                  x1="8"
+                  y1="12"
+                  x2="16"
+                  y2="12"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
               </svg>
-              <span>{{ $t('generatePass') || 'Generate Pass' }} ({{ passes.length }}/{{ passLimits.monthlyLimit }})</span>
+              <span
+                >{{ $t('generatePass') || 'Generate Pass' }} ({{ passes.length }}/{{
+                  passLimits.monthlyLimit
+                }})</span
+              >
             </button>
-            
+
             <div v-if="userBlockingStatus.isBlocked" class="blocked-hint">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                <line
+                  x1="4.93"
+                  y1="4.93"
+                  x2="19.07"
+                  y2="19.07"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
               </svg>
               <span>{{ $t('generationBlocked') || 'Pass generation is currently disabled' }}</span>
             </div>
@@ -283,7 +526,7 @@
                     <h3 class="pass-name">{{ pass.guestName }}</h3>
                     <span class="pass-status" :class="pass.status">{{ pass.status }}</span>
                   </div>
-                  
+
                   <div class="pass-qr-container">
                     <canvas :ref="(el) => setQRRef(el, pass.id)" class="qr-code"></canvas>
                   </div>
@@ -292,17 +535,47 @@
                 <div class="pass-details">
                   <div class="pass-detail">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-                      <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                      <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                      <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+                      <rect
+                        x="3"
+                        y="4"
+                        width="18"
+                        height="18"
+                        rx="2"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                      <line
+                        x1="16"
+                        y1="2"
+                        x2="16"
+                        y2="6"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
+                      <line
+                        x1="8"
+                        y1="2"
+                        x2="8"
+                        y2="6"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
+                      <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" />
                     </svg>
                     <span>{{ formatDate(pass.validUntil) }}</span>
                   </div>
                   <div class="pass-detail">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                      <path
+                        d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
                     </svg>
                     <span>{{ pass.purpose }}</span>
                   </div>
@@ -311,28 +584,76 @@
                 <div class="pass-actions">
                   <button class="pass-action-button" @click="sharePass(pass)">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
-                      <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                      <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
-                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
-                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2" />
+                      <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                      <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2" />
+                      <line
+                        x1="8.59"
+                        y1="13.51"
+                        x2="15.42"
+                        y2="17.49"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                      <line
+                        x1="15.41"
+                        y1="6.51"
+                        x2="8.59"
+                        y2="10.49"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
                     </svg>
                     <span>{{ $t('share') || 'Share' }}</span>
                   </button>
-                  
-                  <button v-if="pass.phoneNumber" class="pass-action-button whatsapp" @click="sendPassViaWhatsApp(pass)">
+
+                  <button
+                    v-if="pass.phoneNumber"
+                    class="pass-action-button whatsapp"
+                    @click="sendPassViaWhatsApp(pass)"
+                  >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                      <path
+                        d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"
+                      />
                     </svg>
                     <span>{{ $t('whatsapp') || 'WhatsApp' }}</span>
                   </button>
-                  
+
                   <button class="pass-action-button danger" @click="deletePass(pass.id)">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <line x1="10" y1="11" x2="10" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                      <line x1="14" y1="11" x2="14" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      <polyline
+                        points="3 6 5 6 21 6"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <line
+                        x1="10"
+                        y1="11"
+                        x2="10"
+                        y2="17"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
+                      <line
+                        x1="14"
+                        y1="11"
+                        x2="14"
+                        y2="17"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
                     </svg>
                     <span>{{ $t('delete') || 'Delete' }}</span>
                   </button>
@@ -343,10 +664,42 @@
             <!-- Empty State -->
             <div v-else class="empty-state">
               <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="8" height="8" stroke="currentColor" stroke-width="1.5" rx="1"/>
-                <rect x="13" y="3" width="8" height="8" stroke="currentColor" stroke-width="1.5" rx="1"/>
-                <rect x="3" y="13" width="8" height="8" stroke="currentColor" stroke-width="1.5" rx="1"/>
-                <rect x="13" y="13" width="8" height="8" stroke="currentColor" stroke-width="1.5" rx="1"/>
+                <rect
+                  x="3"
+                  y="3"
+                  width="8"
+                  height="8"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  rx="1"
+                />
+                <rect
+                  x="13"
+                  y="3"
+                  width="8"
+                  height="8"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  rx="1"
+                />
+                <rect
+                  x="3"
+                  y="13"
+                  width="8"
+                  height="8"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  rx="1"
+                />
+                <rect
+                  x="13"
+                  y="13"
+                  width="8"
+                  height="8"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  rx="1"
+                />
               </svg>
               <h3>{{ $t('noPassesFound') || 'No Passes Found' }}</h3>
               <p>{{ $t('createFirstPass') || 'Create your first guest pass to get started' }}</p>
@@ -365,16 +718,34 @@
             <h2>{{ $t('generateNewPass') || 'Generate New Pass' }}</h2>
             <button class="modal-close" @click="showGenerateDialog = false">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line
+                  x1="18"
+                  y1="6"
+                  x2="6"
+                  y2="18"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <line
+                  x1="6"
+                  y1="6"
+                  x2="18"
+                  y2="18"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
               </svg>
             </button>
           </div>
 
           <!-- Modal Body -->
           <div class="modal-body">
-            <p class="modal-description">Fill in the guest details to generate a QR code access pass</p>
-            
+            <p class="modal-description">
+              Fill in the guest details to generate a QR code access pass
+            </p>
+
             <div class="form-fields">
               <input
                 v-model="newPass.guestName"
@@ -393,10 +764,34 @@
 
               <div class="datetime-wrapper">
                 <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+                  <rect
+                    x="3"
+                    y="4"
+                    width="18"
+                    height="18"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <line
+                    x1="16"
+                    y1="2"
+                    x2="16"
+                    y2="6"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <line
+                    x1="8"
+                    y1="2"
+                    x2="8"
+                    y2="6"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" />
                 </svg>
                 <input
                   v-model="newPass.validUntil"
@@ -408,8 +803,16 @@
 
               <div class="whatsapp-section">
                 <div class="whatsapp-header">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color: #25d366;">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    style="color: #25d366"
+                  >
+                    <path
+                      d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"
+                    />
                   </svg>
                   <span>Send via WhatsApp</span>
                 </div>
@@ -421,8 +824,24 @@
           <div class="modal-footer">
             <button class="modal-button secondary" @click="showGenerateDialog = false">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line
+                  x1="18"
+                  y1="6"
+                  x2="6"
+                  y2="18"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <line
+                  x1="6"
+                  y1="6"
+                  x2="18"
+                  y2="18"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
               </svg>
               {{ $t('cancel') || 'Cancel' }}
             </button>
@@ -432,10 +851,18 @@
               @click="generatePass"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="2" rx="2"/>
-                <rect x="5" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
-                <rect x="13" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
-                <rect x="5" y="13" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  rx="2"
+                />
+                <rect x="5" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5" />
+                <rect x="13" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5" />
+                <rect x="5" y="13" width="6" height="6" stroke="currentColor" stroke-width="1.5" />
               </svg>
               {{ $t('generate') || 'Generate Pass' }}
             </button>
@@ -453,8 +880,20 @@
         :disabled="autoConnecting || isOpening"
         @click="quickOpenGate"
       >
-        <svg v-if="!autoConnecting && !isOpening" width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg
+          v-if="!autoConnecting && !isOpening"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <polygon
+            points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
         <div v-else class="spinner"></div>
       </button>
@@ -472,7 +911,7 @@ import QRCode from 'qrcode'
 import PageHeader from '../../components/PageHeader.vue'
 import sharingService from '../../services/whatsappService'
 import { checkUserEligibility, createGuestPass, markPassAsSent } from '../../api/guestPassAPI'
-import { auth } from '../../boot/firebase'
+import { auth, firestore } from '../../boot/firebase'
 import { useNotificationStore } from '../../stores/notifications'
 
 defineOptions({
@@ -482,7 +921,7 @@ defineOptions({
 // Setup keyboard handling
 useFormKeyboard({
   scrollToInput: true,
-  hideOnBackdropClick: true
+  hideOnBackdropClick: true,
 })
 
 const notificationStore = useNotificationStore()
@@ -537,6 +976,9 @@ const passLimits = ref({
   usedThisMonth: 0,
   remainingQuota: 10,
 })
+
+// User unit information
+const userUnitInfo = ref('')
 
 // QR refs
 const qrRefs = new Map()
@@ -623,7 +1065,7 @@ const quickOpenGate = async () => {
 const forgetDevice = () => {
   lastConnectedDevice.value = null
   localStorage.removeItem('lastGateDevice')
-  
+
   notificationStore.showInfo('Device forgotten. You can connect to a new device.')
 }
 
@@ -662,6 +1104,42 @@ const handleOpenGate = async () => {
 }
 
 /**
+ * User Unit Information Functions
+ */
+const fetchUserUnitInfo = async () => {
+  try {
+    if (!auth.currentUser) {
+      userUnitInfo.value = 'No Unit Assigned'
+      return
+    }
+
+    // Try to get unit info from user profile or Firebase
+    const userDoc = await firestore.collection('users').doc(auth.currentUser.uid).get()
+    
+    if (userDoc.exists) {
+      const userData = userDoc.data()
+      // Check for unit information in various possible fields
+      const unit = userData.unit || userData.unitNumber || userData.apartment || userData.address || userData.building
+      
+      if (unit) {
+        userUnitInfo.value = unit
+      } else {
+        userUnitInfo.value = 'No Unit Assigned'
+      }
+    } else {
+      userUnitInfo.value = 'No Unit Assigned'
+    }
+  } catch (error) {
+    console.error('❌ Error fetching user unit info:', error)
+    userUnitInfo.value = 'No Unit Assigned'
+  }
+}
+
+const getUserUnitInfo = () => {
+  return userUnitInfo.value || 'No Unit Assigned'
+}
+
+/**
  * User Blocking Functions
  */
 const checkUserBlockingStatus = async () => {
@@ -689,7 +1167,8 @@ const checkUserBlockingStatus = async () => {
       passLimits.value = {
         monthlyLimit: result.data.monthlyLimit || 10,
         usedThisMonth: result.data.usedThisMonth || 0,
-        remainingQuota: result.data.remainingQuota || result.data.monthlyLimit - result.data.usedThisMonth || 10,
+        remainingQuota:
+          result.data.remainingQuota || result.data.monthlyLimit - result.data.usedThisMonth || 10,
       }
     } else {
       userBlockingStatus.value = {
@@ -706,7 +1185,10 @@ const checkUserBlockingStatus = async () => {
         passLimits.value = {
           monthlyLimit: result.data.monthlyLimit || 10,
           usedThisMonth: result.data.usedThisMonth || 0,
-          remainingQuota: result.data.remainingQuota || result.data.monthlyLimit - result.data.usedThisMonth || 10,
+          remainingQuota:
+            result.data.remainingQuota ||
+            result.data.monthlyLimit - result.data.usedThisMonth ||
+            10,
         }
       }
     }
@@ -740,12 +1222,16 @@ const generatePass = async () => {
     await checkUserBlockingStatus()
 
     if (userBlockingStatus.value.isBlocked) {
-      notificationStore.showWarning('You are currently blocked from generating passes. Please contact support for assistance.')
+      notificationStore.showWarning(
+        'You are currently blocked from generating passes. Please contact support for assistance.',
+      )
       return
     }
 
     if (passes.value.length >= passLimits.value.monthlyLimit) {
-      notificationStore.showWarning(`You have reached your monthly limit of ${passLimits.value.monthlyLimit} passes.`)
+      notificationStore.showWarning(
+        `You have reached your monthly limit of ${passLimits.value.monthlyLimit} passes.`,
+      )
       return
     }
 
@@ -758,7 +1244,6 @@ const generatePass = async () => {
       notificationStore.showError('Valid until date is required')
       return
     }
-
 
     const sanitizedGuestName = newPass.value.guestName.trim().substring(0, 100)
     const sanitizedPurpose = (newPass.value.purpose || 'Guest Visit').trim().substring(0, 200)
@@ -835,7 +1320,9 @@ const generatePass = async () => {
       }
     } catch (shareError) {
       console.warn('⚠️ Sharing failed:', shareError)
-      notificationStore.showWarning(`Pass generated successfully. ${shareError.message || 'Sharing failed - please share manually.'}`)
+      notificationStore.showWarning(
+        `Pass generated successfully. ${shareError.message || 'Sharing failed - please share manually.'}`,
+      )
     }
   } catch (error) {
     console.error('Error generating pass:', error)
@@ -853,12 +1340,12 @@ const generateQRCode = async (pass) => {
 
     // Set canvas size to match the gate pass design
     const canvasWidth = 400
-    const canvasHeight = 500
+    const canvasHeight = 450
     canvas.width = canvasWidth
     canvas.height = canvasHeight
 
     const ctx = canvas.getContext('2d')
-    
+
     // Clear canvas with white background
     ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, canvasWidth, canvasHeight)
@@ -872,7 +1359,7 @@ const generateQRCode = async (pass) => {
 
     // Generate QR code as data URL
     const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
-      width: 200,
+      width: 280,
       margin: 2,
       color: {
         dark: '#000000',
@@ -896,72 +1383,72 @@ const drawGatePass = (ctx, qrImg, pass, canvasWidth) => {
   // Set font properties
   ctx.fillStyle = '#000000'
   ctx.textAlign = 'center'
-  
-  // Draw title "Gate Pass"
-  ctx.font = 'bold 24px Arial, sans-serif'
+
+  // Draw title "Gate Pass" - larger and bolder
+  ctx.font = 'bold 32px Arial, sans-serif'
   ctx.fillText('Gate Pass', canvasWidth / 2, 40)
-  
-  // Draw subtitle "One Time Pass"
+
+  // Draw subtitle "One Time Pass" - smaller
   ctx.font = '16px Arial, sans-serif'
   ctx.fillText('One Time Pass', canvasWidth / 2, 65)
-  
-  // Draw QR code in center
-  const qrSize = 200
+
+  // Draw QR code in center - much larger
+  const qrSize = 280
   const qrX = (canvasWidth - qrSize) / 2
-  const qrY = 100
+  const qrY = 85
   ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize)
-  
-  // Draw information bar at bottom
-  const infoBarY = qrY + qrSize + 20
+
+  // Draw information bar at bottom - closer to bottom
+  const infoBarY = qrY + qrSize + 10
   const infoBarHeight = 80
-  const infoBarPadding = 20
-  
-  // Draw grey background for info bar
-  ctx.fillStyle = '#F5F5F5'
+  const infoBarPadding = 25
+
+  // Draw grey background for info bar - lighter grey
+  ctx.fillStyle = '#F8F8F8'
   ctx.fillRect(0, infoBarY, canvasWidth, infoBarHeight)
-  
-  // Draw border for info bar
-  ctx.strokeStyle = '#E0E0E0'
+
+  // Draw border for info bar - subtle
+  ctx.strokeStyle = '#DDDDDD'
   ctx.lineWidth = 1
   ctx.strokeRect(0, infoBarY, canvasWidth, infoBarHeight)
-  
-  // Left side - Unit and Guest info
+
+  // Left side - Unit and Visitor info
   ctx.textAlign = 'left'
   ctx.fillStyle = '#000000'
-  
+
   // Unit info
-  ctx.font = 'bold 12px Arial, sans-serif'
-  ctx.fillText('Unit', infoBarPadding, infoBarY + 20)
-  ctx.font = '12px Arial, sans-serif'
-  const unitInfo = '14 - 3 - 0 - Stella Heights' // This could be dynamic based on user data
-  ctx.fillText(unitInfo, infoBarPadding, infoBarY + 35)
-  
-  // Guest info
-  ctx.font = 'bold 12px Arial, sans-serif'
-  ctx.fillText('Visitor', infoBarPadding, infoBarY + 55)
-  ctx.font = '12px Arial, sans-serif'
-  ctx.fillText(pass.guestName, infoBarPadding, infoBarY + 70)
-  
+  ctx.font = 'bold 13px Arial, sans-serif'
+  ctx.fillText('Unit', infoBarPadding, infoBarY + 25)
+  ctx.font = '13px Arial, sans-serif'
+  const unitInfo = getUserUnitInfo() // Get unit info from user account
+  ctx.fillText(unitInfo, infoBarPadding, infoBarY + 42)
+
+  // Visitor info
+  ctx.font = 'bold 13px Arial, sans-serif'
+  ctx.fillText('Visitor', infoBarPadding, infoBarY + 62)
+  ctx.font = '13px Arial, sans-serif'
+  ctx.fillText(pass.guestName, infoBarPadding, infoBarY + 79)
+
   // Right side - Date and Inviter info
   ctx.textAlign = 'right'
-  
+
   // Date info
-  ctx.font = 'bold 12px Arial, sans-serif'
-  ctx.fillText('Date', canvasWidth - infoBarPadding, infoBarY + 20)
-  ctx.font = '12px Arial, sans-serif'
+  ctx.font = 'bold 13px Arial, sans-serif'
+  ctx.fillText('Date', canvasWidth - infoBarPadding, infoBarY + 25)
+  ctx.font = '13px Arial, sans-serif'
   const validDate = new Date(pass.validUntil).toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
-    year: 'numeric'
+    year: 'numeric',
   })
-  ctx.fillText(validDate, canvasWidth - infoBarPadding, infoBarY + 35)
-  
+  ctx.fillText(validDate, canvasWidth - infoBarPadding, infoBarY + 42)
+
   // Inviter info
-  ctx.font = 'bold 12px Arial, sans-serif'
-  ctx.fillText('Inviter', canvasWidth - infoBarPadding, infoBarY + 55)
-  ctx.font = '12px Arial, sans-serif'
+  ctx.font = 'bold 13px Arial, sans-serif'
+  ctx.fillText('Inviter', canvasWidth - infoBarPadding, infoBarY + 62)
+  ctx.font = '13px Arial, sans-serif'
   const inviterName = auth.currentUser?.displayName || auth.currentUser?.email || 'Unknown User'
-  ctx.fillText(inviterName, canvasWidth - infoBarPadding, infoBarY + 70)
+  ctx.fillText(inviterName, canvasWidth - infoBarPadding, infoBarY + 79)
 }
 
 const deletePass = (passId) => {
@@ -1045,10 +1532,19 @@ const formatDate = (dateString) => {
 // Watch for user changes
 watch(
   () => auth.currentUser?.uid,
-  (newUserId, oldUserId) => {
+  async (newUserId, oldUserId) => {
     if (newUserId !== oldUserId) {
       passes.value = []
       qrRefs.clear()
+      
+      // Fetch unit info for new user
+      if (newUserId) {
+        try {
+          await fetchUserUnitInfo()
+        } catch (error) {
+          console.error('❌ Error fetching user unit info on user change:', error)
+        }
+      }
     }
   },
 )
@@ -1067,6 +1563,12 @@ onMounted(async () => {
     await checkUserBlockingStatus()
   } catch (error) {
     console.error('❌ Error checking user blocking status:', error)
+  }
+
+  try {
+    await fetchUserUnitInfo()
+  } catch (error) {
+    console.error('❌ Error fetching user unit info:', error)
   }
 
   try {
@@ -1168,7 +1670,7 @@ onMounted(async () => {
   left: 6px;
   width: calc(50% - 6px);
   height: calc(100% - 12px);
-  background: linear-gradient(135deg, #AF1E23 0%, #8b161a 100%);
+  background: linear-gradient(135deg, #af1e23 0%, #8b161a 100%);
   border-radius: 12px;
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
@@ -1246,7 +1748,8 @@ onMounted(async () => {
 }
 
 @keyframes successPulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -1255,7 +1758,8 @@ onMounted(async () => {
 }
 
 @keyframes connectingPulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
@@ -1392,12 +1896,12 @@ onMounted(async () => {
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: white;
-  color: #AF1E23;
+  color: #af1e23;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .action-button.primary-action {
-  background: linear-gradient(135deg, #AF1E23 0%, #8b161a 100%);
+  background: linear-gradient(135deg, #af1e23 0%, #8b161a 100%);
   color: white;
   box-shadow: 0 6px 20px rgba(175, 30, 35, 0.3);
 }
@@ -1409,7 +1913,8 @@ onMounted(async () => {
 }
 
 @keyframes pulseGlow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
   }
   50% {
@@ -1539,7 +2044,7 @@ onMounted(async () => {
   padding: 18px 32px;
   border: none;
   border-radius: 14px;
-  background: linear-gradient(135deg, #AF1E23 0%, #8b161a 100%);
+  background: linear-gradient(135deg, #af1e23 0%, #8b161a 100%);
   color: white;
   font-size: 1rem;
   font-weight: 600;
@@ -1637,7 +2142,7 @@ onMounted(async () => {
   padding: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   width: 400px;
-  height: 500px;
+  height: 450px;
   max-width: 100%;
   display: block;
   margin: 0 auto;
@@ -1755,7 +2260,7 @@ onMounted(async () => {
 }
 
 .modal-header {
-  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  background: linear-gradient(135deg, #af1e23 0%, #af1e23 100%);
   color: white;
   padding: 18px 20px;
   display: flex;
@@ -1829,7 +2334,7 @@ onMounted(async () => {
 
 .form-input:focus {
   outline: none;
-  border-color: #AF1E23;
+  border-color: #af1e23;
   box-shadow: 0 0 0 3px rgba(175, 30, 35, 0.1);
 }
 
@@ -1912,7 +2417,7 @@ onMounted(async () => {
 }
 
 .modal-button.primary {
-  background: #AF1E23;
+  background: #af1e23;
   color: white;
 }
 
@@ -1951,7 +2456,8 @@ onMounted(async () => {
 }
 
 @keyframes fabPulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 8px 24px rgba(76, 175, 80, 0.5);
   }
   50% {
@@ -1993,7 +2499,9 @@ onMounted(async () => {
 /* Transitions */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 .fade-enter-from {
@@ -2083,23 +2591,23 @@ onMounted(async () => {
     margin: 0 10px;
     max-width: 95%;
   }
-  
+
   .modal-header {
     padding: 16px;
   }
-  
+
   .modal-header h2 {
     font-size: 1.1rem;
   }
-  
+
   .modal-body {
     padding: 20px;
   }
-  
+
   .modal-footer {
     padding: 16px 20px;
   }
-  
+
   .modal-button {
     width: 100%;
   }
