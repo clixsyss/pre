@@ -1,7 +1,7 @@
 <template>
   <div class="main-layout">
     <!-- Header (Black)  padding top-->
-    <header class="app-header" style="padding: 20px;">
+    <header class="app-header" :class="{ 'hide-for-modal': showProjectSwitcher }" style="padding: 20px;">
       <div class="header-content">
         <!-- Project Selection Section -->
         <div class="header-left">
@@ -172,7 +172,7 @@
     </main>
 
     <!-- Bottom Navigation -->
-    <nav class="bottom-navigation" :class="{ 'hidden': shouldHideBottomNav }">
+    <nav class="bottom-navigation" :class="{ 'hidden': shouldHideBottomNav, 'hide-for-modal': showProjectSwitcher }">
       <router-link to="/home" class="nav-item" :class="{ active: isActiveTab('home') }">
         <div class="nav-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -276,6 +276,7 @@ import { useProjectStore } from '../stores/projectStore'
 import { useSmartMirrorStore } from '../stores/smartMirrorStore'
 import { useNotificationCenterStore } from '../stores/notificationCenter'
 import { useSwipeNavigation } from '../composables/useSwipeNavigation'
+import { useModalState } from '../composables/useModalState'
 import ViolationNotificationPopup from '../components/ViolationNotificationPopup.vue'
 import SuspensionMessage from '../components/SuspensionMessage.vue'
 import NotificationCenter from '../components/NotificationCenter.vue'
@@ -293,6 +294,7 @@ const route = useRoute()
 const projectStore = useProjectStore()
 const smartMirrorStore = useSmartMirrorStore()
 const notificationCenterStore = useNotificationCenterStore()
+const { openModal, closeModal } = useModalState()
 
 // Initialize swipe navigation
 const {
@@ -750,6 +752,18 @@ watch(
   { immediate: true }
 )
 
+// Watch for modal state changes - iOS fix to hide navigation bars
+watch(
+  showProjectSwitcher,
+  (isOpen) => {
+    if (isOpen) {
+      openModal()
+    } else {
+      closeModal()
+    }
+  }
+)
+
 // Listen for suspension message events from router
 const handleSuspensionMessage = (event) => {
   const { suspensionDetails, attemptedRoute } = event.detail
@@ -929,6 +943,17 @@ onUnmounted(() => {
   right: 0;
   z-index: 1000;
   padding-top: 60px !important;
+  /* iOS Safari fix */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+/* Hide header when modal is open - iOS fix */
+.app-header.hide-for-modal {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .header-content {
@@ -1347,11 +1372,21 @@ onUnmounted(() => {
   right: 0;
   z-index: 1000;
   width: 100%;
-  transition: transform 0.3s ease-in-out;
+  transition: transform 0.3s ease-in-out, opacity 0.2s ease, visibility 0.2s ease;
+  /* iOS Safari fix */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .bottom-navigation.hidden {
   transform: translateY(100%);
+}
+
+/* Hide bottom nav when modal is open - iOS fix */
+.bottom-navigation.hide-for-modal {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .nav-item {
@@ -1438,8 +1473,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 999999;
   backdrop-filter: blur(4px);
+  /* iOS Safari fixes */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .modal-content {
@@ -1682,7 +1722,8 @@ onUnmounted(() => {
   }
   
   .main-content {
-    padding-top: 80px; /* Adjust for smaller header */
+    padding-top: 90px; /* Adjust for smaller header */
+    padding-bottom: 40px;
   }
   
   .header-left {
@@ -2026,6 +2067,7 @@ onUnmounted(() => {
   .main-content {
     padding: 16px;
     padding-top: 90px; /* Adjust for smallest header */
+    padding-bottom: 40px;
   }
   
   .logo-image {

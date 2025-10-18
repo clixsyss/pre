@@ -670,7 +670,7 @@ const goToDevices = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 999999;
   animation: fadeIn 0.3s ease-out;
   width: 100vw;
   height: 100vh;

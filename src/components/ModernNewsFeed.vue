@@ -1401,7 +1401,7 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  z-index: 1000;
+  z-index: 999999;
   padding: 0;
   overflow: hidden; /* Prevent background scrolling */
 }

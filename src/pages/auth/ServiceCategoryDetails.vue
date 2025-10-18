@@ -133,8 +133,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useModalState } from '../../composables/useModalState';
 import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useNotificationStore } from '../../stores/notifications';
@@ -153,6 +154,7 @@ const serviceCategoriesStore = useServiceCategoriesStore();
 const projectStore = useProjectStore();
 const notificationStore = useNotificationStore();
 const serviceBookingStore = useServiceBookingStore();
+const { openModal, closeModal } = useModalState();
 
 // State
 const category = ref(null);
@@ -175,6 +177,18 @@ onMounted(async () => {
   await loadCategory();
   await loadServices();
 });
+
+// Watch for modal state changes - iOS fix to hide navigation bars
+watch(
+  showBookingDialog,
+  (isOpen) => {
+    if (isOpen) {
+      openModal();
+    } else {
+      closeModal();
+    }
+  }
+);
 
 const loadCategory = async () => {
   if (projectStore.selectedProject?.id) {
@@ -288,9 +302,20 @@ const loadTimeSlots = async (date) => {
 };
 
 const confirmBooking = async () => {
-  if (!selectedDate.value || !selectedTime.value || !selectedService.value || !projectStore.selectedProject?.id) return;
+  console.log('🔍 Book Service button clicked!', {
+    selectedDate: selectedDate.value,
+    selectedTime: selectedTime.value,
+    selectedService: selectedService.value,
+    projectId: projectStore.selectedProject?.id
+  });
+  
+  if (!selectedDate.value || !selectedTime.value || !selectedService.value || !projectStore.selectedProject?.id) {
+    console.log('❌ Missing required data for booking');
+    return;
+  }
   
   try {
+    console.log('✅ Creating booking...');
     // Prepare booking data
     const bookingData = {
       serviceId: selectedService.value.id,
@@ -310,25 +335,27 @@ const confirmBooking = async () => {
     // Create the booking
     await serviceBookingStore.createBooking(projectStore.selectedProject.id, bookingData);
     
+    console.log('✅ Service booking created successfully:', bookingData);
+    
     // Show success notification
     notificationStore.showSuccess('Service booked successfully!');
     
-    // Wait a bit to ensure Firestore has committed the write
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Refresh service bookings to show the new one
-    const user = await optimizedAuthService.getCurrentUser();
-    if (user) {
-      await serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid);
-    }
-    
-    // Close dialog after booking
+    // Close dialog immediately after successful booking
     closeBookingDialog();
     
-    console.log('Service booking created:', bookingData);
+    // Refresh service bookings in the background (don't await to avoid blocking)
+    const user = await optimizedAuthService.getCurrentUser();
+    if (user) {
+      serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid).catch(err => {
+        console.error('Error refreshing bookings:', err);
+      });
+    }
+    
   } catch (error) {
-    console.error('Error creating service booking:', error);
+    console.error('❌ Error creating service booking:', error);
     notificationStore.showError('Failed to book service. Please try again.');
+    // Close dialog even on error so user can try again
+    closeBookingDialog();
   }
 };
 
@@ -568,18 +595,25 @@ const confirmBooking = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 999999;
   padding: 20px;
+  /* iOS Safari fixes */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .booking-dialog {
   background: white;
   border-radius: 16px;
-  width: 100%;
-  max-width: 500px;
-  max-height: 80vh;
+  width: 98%;
+  max-height: 75vh;
   overflow-y: auto;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  position: relative;
+  z-index: 10;
 }
 
 .dialog-header {
@@ -615,6 +649,8 @@ const confirmBooking = async () => {
 
 .dialog-content {
   padding: 20px;
+  pointer-events: auto;
+  position: relative;
 }
 
 .dialog-content .service-info {
@@ -669,6 +705,8 @@ const confirmBooking = async () => {
   cursor: pointer;
   transition: all 0.2s ease;
   background: white;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 /* Mobile app - hover effects disabled */
@@ -751,6 +789,8 @@ const confirmBooking = async () => {
   cursor: pointer;
   transition: all 0.2s ease;
   background: white;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 /* Mobile app - hover effects disabled */
@@ -794,6 +834,9 @@ const confirmBooking = async () => {
   justify-content: center;
   padding-top: 16px;
   border-top: 1px solid #e5e7eb;
+  pointer-events: auto;
+  position: relative;
+  z-index: 10;
 }
 
 .book-btn {
@@ -807,6 +850,11 @@ const confirmBooking = async () => {
   cursor: pointer;
   transition: all 0.2s ease;
   min-width: 150px;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  touch-action: manipulation;
+  position: relative;
+  z-index: 10;
 }
 
 /* Mobile app - hover effects disabled */
@@ -815,10 +863,16 @@ const confirmBooking = async () => {
   transform: translateY(-1px);
 } */
 
+.book-btn:active:not(:disabled) {
+  transform: scale(0.98);
+  background: #8B1A1E;
+}
+
 .book-btn:disabled {
   background: #d1d5db;
   cursor: not-allowed;
   transform: none;
+  opacity: 0.6;
 }
 
 /* Responsive Design */
@@ -843,10 +897,6 @@ const confirmBooking = async () => {
   
   .services-list {
     padding: 32px;
-  }
-  
-  .booking-dialog {
-    max-width: 600px;
   }
   
   .calendar-grid {

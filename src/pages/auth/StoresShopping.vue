@@ -2246,7 +2246,7 @@ watch(() => route.query.tab, (newTab) => {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 999999;
   padding: 20px;
   box-sizing: border-box;
 }

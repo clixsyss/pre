@@ -150,6 +150,7 @@
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useModalState } from '../composables/useModalState';
 import { useProjectStore } from '../stores/projectStore';
 import serviceBookingService from '../services/serviceBookingService';
 import ModalHeader from './ModalHeader.vue';
@@ -176,6 +177,7 @@ const emit = defineEmits(['close', 'openChat']);
 
 const router = useRouter();
 const projectStore = useProjectStore();
+const { openModal, closeModal: hideNavigationBars } = useModalState();
 
 // Reactive state
 const realtimeBooking = ref(null);
@@ -243,9 +245,14 @@ watch(() => props.booking?.id, async (newBookingId) => {
 
 // Watch for modal open/close
 watch(() => props.isOpen, async (isOpen) => {
-  if (isOpen && props.booking?.id) {
-    await setupRealtimeListener(props.booking.id);
+  // iOS fix: Hide navigation bars when modal is open
+  if (isOpen) {
+    openModal();
+    if (props.booking?.id) {
+      await setupRealtimeListener(props.booking.id);
+    }
   } else {
+    hideNavigationBars();
     cleanupListener();
   }
 });
@@ -402,9 +409,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 999999;
   backdrop-filter: blur(4px);
   padding: 20px;
+  /* iOS Safari fixes */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .modal-content {
