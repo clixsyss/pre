@@ -14,7 +14,7 @@
       <!-- Bookings List -->
       <div v-else-if="upcomingBookings.length > 0" class="bookings-list">
         <div 
-          v-for="booking in upcomingBookings.slice(0, 3)" 
+          v-for="booking in upcomingBookings.slice(0, 4)" 
           :key="booking.id" 
           class="booking-item"
         >
@@ -27,12 +27,18 @@
             </div>
           </div>
           <div class="booking-status">
-            <span class="status-badge upcoming">Upcoming</span>
+            <span class="status-badge" :class="getStatusClass(booking)">
+              {{ getStatusLabel(booking) }}
+            </span>
           </div>
         </div>
         
-        <div v-if="upcomingBookings.length > 3" class="view-more">
-          +{{ upcomingBookings.length - 3 }} more
+        <div v-if="upcomingBookings.length > 4" class="view-more">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span>{{ upcomingBookings.length - 4 }} more booking{{ upcomingBookings.length - 4 > 1 ? 's' : '' }}</span>
         </div>
       </div>
 
@@ -73,53 +79,142 @@ const loading = ref(true);
 
 // Computed properties
 const upcomingBookings = computed(() => {
-  const allBookings = academiesStore.userBookings;
-  console.log('All bookings from store:', allBookings);
+  // Combine all booking types from different stores
+  const courtAndAcademyBookings = academiesStore.userBookings || [];
+  const serviceBookings = serviceBookingStore.getBookings || [];
   
-  const filtered = allBookings.filter(booking => {
-    console.log('Checking booking:', booking);
-    
+  console.log('Court/Academy bookings:', courtAndAcademyBookings.length);
+  console.log('Service bookings:', serviceBookings.length);
+  
+  // Filter court and academy bookings
+  const upcomingCourtAndAcademy = courtAndAcademyBookings.filter(booking => {
     if (booking.type === 'court' && booking.date) {
       const bookingDate = new Date(booking.date);
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to start of day
-      
-      const isUpcoming = bookingDate >= today;
-      console.log('Court booking date check:', {
-        bookingDate: bookingDate.toISOString(),
-        today: today.toISOString(),
-        isUpcoming
-      });
-      
-      return isUpcoming && booking.status !== 'cancelled';
+      today.setHours(0, 0, 0, 0);
+      return bookingDate >= today && booking.status !== 'cancelled';
     } else if (booking.type === 'academy') {
-      // For academy programs, consider them upcoming if enrolled
-      const isEnrolled = booking.status === 'enrolled';
-      console.log('Academy booking status check:', {
-        status: booking.status,
-        isEnrolled
-      });
-      return isEnrolled;
+      return booking.status === 'enrolled';
     }
     return false;
-  }).sort((a, b) => {
+  });
+  
+  // Filter service bookings (open/processing status = upcoming)
+  // EXCLUDE any request submissions - they're handled separately
+  const upcomingServices = serviceBookings.filter(booking => {
+    // CRITICAL VALIDATION - Service bookings vs Request submissions
+    // Request submissions have different structure and should NOT appear here
+    
+    console.log('🔍 Evaluating booking:', {
+      id: booking.id,
+      serviceName: booking.serviceName,
+      categoryName: booking.categoryName,
+      hasServiceId: !!booking.serviceId,
+      hasCategoryId: !!booking.categoryId,
+      hasFormData: !!booking.formData,
+      hasMediaFiles: !!booking.mediaFiles,
+      hasFieldMetadata: !!booking.fieldMetadata,
+      status: booking.status
+    });
+    
+    // TRIPLE-LAYER VALIDATION:
+    
+    // 1. MUST have serviceId (requests don't have this - they only have categoryId)
+    if (!booking.serviceId) {
+      console.log('❌ REJECTED - No serviceId (this is a REQUEST, not a service booking):', booking.id);
+      return false;
+    }
+    
+    // 2. Must NOT have formData (requests have this, service bookings don't)
+    if (booking.formData) {
+      console.log('❌ REJECTED - Has formData (REQUEST submission detected):', booking.id);
+      return false;
+    }
+    
+    // 3. Must NOT have fieldMetadata (requests have this, service bookings don't)
+    if (booking.fieldMetadata) {
+      console.log('❌ REJECTED - Has fieldMetadata (REQUEST submission detected):', booking.id);
+      return false;
+    }
+    
+    // 4. Must have serviceName (service bookings always have this)
+    if (!booking.serviceName) {
+      console.log('❌ REJECTED - No serviceName (invalid service booking):', booking.id);
+      return false;
+    }
+    
+    console.log('✅ VALID SERVICE BOOKING:', {
+      id: booking.id,
+      serviceName: booking.serviceName,
+      serviceId: booking.serviceId,
+      status: booking.status
+    });
+    
+    // Service bookings that are pending or confirmed are considered upcoming
+    // Support both old status values (open, processing) and new ones (pending, confirmed)
+    const upcomingStatuses = ['open', 'pending', 'processing', 'confirmed'];
+    if (upcomingStatuses.includes(booking.status)) {
+      // Check if the selected date is in the future
+      if (booking.selectedDate) {
+        const bookingDate = new Date(booking.selectedDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return bookingDate >= today;
+      }
+      // If no specific date, still show as upcoming if status is pending/confirmed
+      return true;
+    }
+    return false;
+  }).map(booking => ({
+    ...booking,
+    type: 'service', // Add type identifier
+    date: booking.selectedDate // Normalize date field
+  }));
+  
+  // Combine all bookings
+  const allUpcoming = [...upcomingCourtAndAcademy, ...upcomingServices];
+  
+  // Sort by date (earliest first)
+  const sorted = allUpcoming.sort((a, b) => {
     if (a.date && b.date) {
       return new Date(a.date) - new Date(b.date);
     }
+    // If one has a date and the other doesn't, prioritize the one with a date
+    if (a.date && !b.date) return -1;
+    if (!a.date && b.date) return 1;
     return 0;
   });
   
-  console.log('Filtered upcoming bookings:', filtered);
-  return filtered;
+  console.log('✅ Total upcoming bookings:', sorted.length, {
+    court: upcomingCourtAndAcademy.filter(b => b.type === 'court').length,
+    academy: upcomingCourtAndAcademy.filter(b => b.type === 'academy').length,
+    service: upcomingServices.length
+  });
+  
+  // Log first few items to verify no requests are included
+  if (sorted.length > 0) {
+    console.log('📋 Sample bookings:', sorted.slice(0, 4).map(b => ({
+      type: b.type,
+      title: b.serviceName || b.courtName || b.programName,
+      hasServiceId: !!b.serviceId,
+      hasCategoryId: !!b.categoryId,
+      status: b.status
+    })));
+  }
+  
+  return sorted;
 });
 
 // Methods
 const getBookingTitle = (booking) => {
   if (booking.type === 'court') {
     return `${booking.sport} - ${booking.courtName}`;
-  } else {
-    return booking.programName;
+  } else if (booking.type === 'academy') {
+    return booking.programName || 'Academy Program';
+  } else if (booking.type === 'service') {
+    return booking.serviceName || booking.categoryName || 'Service Request';
   }
+  return 'Booking';
 };
 
 const formatDate = (dateString) => {
@@ -129,6 +224,36 @@ const formatDate = (dateString) => {
     month: "short",
     day: "numeric",
   });
+};
+
+const getStatusLabel = (booking) => {
+  if (booking.type === 'service') {
+    // Support both old and new status values from dashboard
+    if (booking.status === 'open' || booking.status === 'pending') return 'Pending';
+    if (booking.status === 'processing' || booking.status === 'confirmed') return 'In Progress';
+    if (booking.status === 'closed' || booking.status === 'completed') return 'Completed';
+    if (booking.status === 'rejected' || booking.status === 'cancelled') return 'Rejected';
+  } else if (booking.type === 'court') {
+    return 'Upcoming';
+  } else if (booking.type === 'academy') {
+    return 'Enrolled';
+  }
+  return 'Upcoming';
+};
+
+const getStatusClass = (booking) => {
+  if (booking.type === 'service') {
+    // Support both old and new status values from dashboard
+    if (booking.status === 'open' || booking.status === 'pending') return 'pending';
+    if (booking.status === 'processing' || booking.status === 'confirmed') return 'processing';
+    if (booking.status === 'closed' || booking.status === 'completed') return 'completed';
+    if (booking.status === 'rejected' || booking.status === 'cancelled') return 'rejected';
+  } else if (booking.type === 'court') {
+    return 'upcoming';
+  } else if (booking.type === 'academy') {
+    return 'enrolled';
+  }
+  return 'upcoming';
 };
 
 const goToBookings = () => {
@@ -291,12 +416,49 @@ onMounted(async () => {
   color: #155724;
 }
 
+.status-badge.enrolled {
+  background: #cfe2ff;
+  color: #084298;
+}
+
+.status-badge.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.processing {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-badge.completed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
 .view-more {
-  text-align: center;
-  color: #666;
-  font-size: 0.8rem;
-  font-style: italic;
-  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #AF1E23;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 12px 8px 4px;
+  margin-top: 4px;
+}
+
+.view-more svg {
+  flex-shrink: 0;
+}
+
+.view-more span {
+  line-height: 1;
 }
 
 .empty-state {

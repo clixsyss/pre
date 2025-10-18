@@ -283,6 +283,7 @@ import NotificationCenter from '../components/NotificationCenter.vue'
 import { markViolationsAsShown, hasActiveViolations, clearOldNotificationHistory } from '../services/violationNotificationService'
 import { checkUserSuspension, getSuspensionMessage } from '../services/suspensionService'
 import optimizedAuthService from '../services/optimizedAuthService'
+import { useDataPreloader } from '../services/dataPreloader'
 
 // Component name for ESLint
 defineOptions({
@@ -295,6 +296,7 @@ const projectStore = useProjectStore()
 const smartMirrorStore = useSmartMirrorStore()
 const notificationCenterStore = useNotificationCenterStore()
 const { openModal, closeModal } = useModalState()
+const { preloadAppData, reset: resetPreloader } = useDataPreloader()
 
 // Initialize swipe navigation
 const {
@@ -698,6 +700,9 @@ watch(
       // Reset violation notifications when switching projects
       resetViolationNotifications()
       
+      // Reset and restart data preloader for new project
+      resetPreloader()
+      
       // Re-initialize notification center for new project
       setTimeout(async () => {
         try {
@@ -706,6 +711,26 @@ watch(
           console.error('❌ Error initializing notification center after project change:', error)
         }
       }, 500)
+      
+      // Start background data preloading for new project immediately
+      setTimeout(async () => {
+        try {
+          const currentUser = await optimizedAuthService.getUser()
+          if (currentUser && newProject) {
+            console.log('🚀 MainLayout: Preloading data for new project:', newProject.id)
+            await preloadAppData(currentUser.uid, newProject.id)
+          } else {
+            console.warn('⚠️ MainLayout: Cannot preload - missing user or project', { 
+              hasUser: !!currentUser, 
+              hasProject: !!newProject 
+            })
+          }
+        } catch (error) {
+          console.error('❌ Error preloading data for new project:', error)
+          console.error('❌ Error stack:', error.stack)
+          // Don't block the UI if preload fails
+        }
+      }, 800) // Shorter delay for better perceived performance
       
       // Check for violations with a small delay to ensure everything is loaded
       setTimeout(async () => {
@@ -840,6 +865,23 @@ onMounted(async () => {
         console.error('❌ Error initializing notification center during mount:', error)
       }
     }, 500)
+    
+    // Start background data preloading immediately (async, non-blocking)
+    // This runs in parallel with page loads
+    setTimeout(async () => {
+      try {
+        const currentUser = await optimizedAuthService.getUser()
+        if (currentUser && projectStore.selectedProject) {
+          console.log('🚀 MainLayout: Starting background data preload...')
+          await preloadAppData(currentUser.uid, projectStore.selectedProject.id)
+        } else {
+          console.warn('⚠️ MainLayout: Cannot start preload - missing user or project')
+        }
+      } catch (error) {
+        console.error('❌ Error preloading app data:', error)
+        // Don't block the UI if preload fails
+      }
+    }, 1000) // Start after 1 second
   }
   
   // Check for violations with a delay to avoid blocking UI

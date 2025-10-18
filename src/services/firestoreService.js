@@ -453,12 +453,9 @@ class FirestoreService {
           )
         }
 
-        // For fines, complaints, and users collections, use Web SDK directly on iOS to avoid auth issues
-        // Also use Web SDK when filters are present to avoid client-side filtering of large collections
-        const shouldUseWebSDK = collectionPath.includes('/fines') || 
-                                 collectionPath.includes('/complaints') ||
-                                 collectionPath === 'users' ||
-                                 (queryOptions?.filters && queryOptions.filters.length > 0)
+        // For iOS: Skip Web SDK entirely and use Capacitor Firebase for better performance
+        // Web SDK consistently times out on iOS, causing 6-8 second delays
+        const shouldUseWebSDK = false // Disabled for iOS - use Capacitor Firebase instead
         
         if (shouldUseWebSDK) {
           const collectionType = collectionPath.includes('/fines') ? 'fines' : 
@@ -522,12 +519,12 @@ class FirestoreService {
               })),
             )
 
-            // Add timeout for Web SDK query (increased timeout for iOS compatibility)
+            // Add timeout for Web SDK query (reduced for iOS performance)
             const webSDKTimeoutPromise = new Promise((_, reject) => {
               setTimeout(
                 () => reject(new Error('Web SDK query timeout')),
-                Math.min(timeoutMs, 15000),
-              ) // Maximum 15 seconds for iOS
+                2000  // Fast 2-second timeout - quickly fall back to Capacitor on iOS
+              )
             })
 
             console.log('🔍 FirestoreService: Starting Web SDK query execution...')
@@ -976,6 +973,74 @@ class FirestoreService {
       return () => {
         console.log('Unsubscribed from listener (no-op due to error)')
       }
+    }
+  }
+
+  // Subscribe to query with real-time updates
+  subscribeToQuery(collectionPath, queryOptions = {}, onSuccess, onError) {
+    try {
+      console.log('🔔 subscribeToQuery called for:', collectionPath, queryOptions);
+
+      // Import Firebase Web SDK (real-time listeners work better on Web SDK for queries)
+      const { getFirestore } = require('firebase/firestore');
+      const { collection, query, where, orderBy, limit: firestoreLimit, onSnapshot } = require('firebase/firestore');
+
+      const db = getFirestore();
+      let q = collection(db, collectionPath);
+
+      // Build query constraints
+      const constraints = [];
+
+      // Add filters
+      if (queryOptions.filters && Array.isArray(queryOptions.filters)) {
+        queryOptions.filters.forEach(filter => {
+          constraints.push(where(filter.field, filter.operator, filter.value));
+        });
+      }
+
+      // Add orderBy
+      if (queryOptions.orderByField) {
+        const direction = queryOptions.orderDirection || 'asc';
+        constraints.push(orderBy(queryOptions.orderByField, direction));
+      }
+
+      // Add limit
+      if (queryOptions.limit) {
+        constraints.push(firestoreLimit(queryOptions.limit));
+      }
+
+      // Apply constraints if any
+      if (constraints.length > 0) {
+        q = query(q, ...constraints);
+      }
+
+      // Set up real-time listener
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          console.log('📊 Query snapshot updated:', snapshot.docs.length, 'documents');
+          if (onSuccess) {
+            onSuccess(snapshot);
+          }
+        },
+        (error) => {
+          console.error('❌ Query snapshot error:', error);
+          if (onError) {
+            onError(error);
+          }
+        }
+      );
+
+      console.log('✅ Real-time query listener set up successfully');
+      return unsubscribe;
+    } catch (error) {
+      console.error('❌ Error setting up query listener:', error);
+      if (onError) {
+        onError(error);
+      }
+      return () => {
+        console.log('Unsubscribed from query listener (no-op due to error)');
+      };
     }
   }
 }

@@ -7,6 +7,8 @@ export const useRequestCategoriesStore = defineStore('requestCategories', () => 
   const categories = ref([]);
   const loading = ref(false);
   const error = ref(null);
+  const lastFetchedProjectId = ref(null);
+  const lastFetchTime = ref(null);
 
   // Getters
   const getCategories = computed(() => categories.value);
@@ -14,19 +16,39 @@ export const useRequestCategoriesStore = defineStore('requestCategories', () => 
   const getError = computed(() => error.value);
 
   // Actions
-  const fetchCategories = async (projectId) => {
+  const fetchCategories = async (projectId, force = false) => {
+    // Check cache - if data exists for this project and was fetched recently, skip
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+    const now = Date.now();
+    
+    if (
+      !force &&
+      lastFetchedProjectId.value === projectId &&
+      categories.value.length > 0 &&
+      lastFetchTime.value &&
+      (now - lastFetchTime.value) < CACHE_DURATION
+    ) {
+      console.log('✨ Request categories: Using cached data');
+      return categories.value;
+    }
+    
     try {
       loading.value = true;
       error.value = null;
       
+      console.log('📡 Fetching request categories from server...');
       // Only fetch available categories for mobile app
       const categoriesData = await requestCategoriesService.getRequestCategories(projectId, true);
       categories.value = categoriesData;
+      lastFetchedProjectId.value = projectId;
+      lastFetchTime.value = now;
       
-      console.log('Request categories fetched successfully:', categoriesData.length);
+      console.log('✅ Request categories fetched successfully:', categoriesData.length);
+      return categoriesData;
     } catch (err) {
-      console.error('Error fetching request categories:', err);
+      console.error('❌ Error fetching request categories:', err);
       error.value = err.message || 'Failed to fetch request categories';
+      throw err;
     } finally {
       loading.value = false;
     }
@@ -55,6 +77,8 @@ export const useRequestCategoriesStore = defineStore('requestCategories', () => 
 
   const clearCategories = () => {
     categories.value = [];
+    lastFetchedProjectId.value = null;
+    lastFetchTime.value = null;
   };
 
   return {

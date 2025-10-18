@@ -1,39 +1,21 @@
 <template>
   <div class="my-bookings-page">
-    <PageHeader 
-      :title="$t('myBookings')" 
-      :subtitle="projectName ? `${$t('bookingsIn')} ${projectName}` : $t('viewManageBookings')"
-    />
+    <PageHeader :title="$t('myBookings')"
+      :subtitle="projectName ? `${$t('bookingsIn')} ${projectName}` : $t('viewManageBookings')" />
 
     <div class="bookings-content">
       <!-- Filter Tabs -->
       <div class="filter-tabs">
-        <button 
-          class="filter-tab"
-          :class="{ active: activeFilter === 'all' }"
-          @click="setFilter('all')"
-        >
+        <button class="filter-tab" :class="{ active: activeFilter === 'all' }" @click="setFilter('all')">
           {{ $t('allBookings') }}
         </button>
-        <button 
-          class="filter-tab"
-          :class="{ active: activeFilter === 'court' }"
-          @click="setFilter('court')"
-        >
+        <button class="filter-tab" :class="{ active: activeFilter === 'court' }" @click="setFilter('court')">
           {{ $t('courtBookings') }}
         </button>
-        <button 
-          class="filter-tab"
-          :class="{ active: activeFilter === 'academy' }"
-          @click="setFilter('academy')"
-        >
+        <button class="filter-tab" :class="{ active: activeFilter === 'academy' }" @click="setFilter('academy')">
           {{ $t('academyPrograms') }}
         </button>
-        <button 
-          class="filter-tab"
-          :class="{ active: activeFilter === 'service' }"
-          @click="setFilter('service')"
-        >
+        <button class="filter-tab" :class="{ active: activeFilter === 'service' }" @click="setFilter('service')">
           {{ $t('serviceBookings') }}
         </button>
       </div>
@@ -60,8 +42,10 @@
       <div v-else-if="filteredBookings.length === 0" class="empty-state">
         <div class="empty-icon">
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 12L11 14L15 10" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#ccc" stroke-width="2"/>
+            <path d="M9 12L11 14L15 10" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path
+              d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+              stroke="#ccc" stroke-width="2" />
           </svg>
         </div>
         <h3>{{ $t('noBookingsFound') }}</h3>
@@ -74,31 +58,41 @@
 
       <!-- Bookings List -->
       <div v-else class="bookings-list">
-        <div 
-          v-for="booking in filteredBookings" 
-          :key="booking.id"
-          class="booking-card"
-          :class="getStatusClass(booking.status)"
-        >
+        <div v-for="booking in filteredBookings" :key="booking.id" class="booking-card"
+          :class="getStatusClass(booking.status)">
           <!-- Compact Header -->
           <div class="card-header">
             <div class="booking-icon" :class="getTypeClass(booking.type)">
-              <svg v-if="isCourtBooking(booking)" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 3H7V7H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M3 17H7V21H3V17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M17 3H21V7H17V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M17 17H21V21H17V17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M3 9H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M17 9H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M9 3V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M9 17V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M9 9H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M9 15H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <svg v-if="isCourtBooking(booking)" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 3H7V7H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M3 17H7V21H3V17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M17 3H21V7H17V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M17 17H21V21H17V17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M3 9H7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M17 9H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M9 3V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M9 17V21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M9 9H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M9 15H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
               <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
             </div>
             <div class="booking-info">
@@ -117,37 +111,38 @@
             <div class="details-row">
               <div class="detail-item">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
-                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/>
-                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" />
+                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" />
+                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" />
                 </svg>
                 <span class="detail-text">{{ formatBookingDate(booking) }}</span>
               </div>
               <div class="detail-item">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                  <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                  <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" />
                 </svg>
                 <span class="detail-text">{{ getBookingTime(booking) }}</span>
               </div>
               <div class="detail-item price-item">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <line x1="12" y1="1" x2="12" y2="23" stroke="currentColor" stroke-width="2"/>
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="2"/>
+                  <line x1="12" y1="1" x2="12" y2="23" stroke="currentColor" stroke-width="2" />
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="2" />
                 </svg>
-                <span class="detail-text price-text">{{ booking.totalPrice || booking.price }} EGP</span>
+                <span class="detail-text price-text">{{ booking.totalPrice || booking.servicePrice || booking.price || 0 }} EGP</span>
               </div>
-            </div>
-
-            <!-- Additional Info (if any) -->
-            <div v-if="(isAcademyBooking(booking) && booking.studentName) || (isCourtBooking(booking) && booking.courtLocation)" class="additional-info">
-              <span v-if="isAcademyBooking(booking) && booking.studentName" class="info-tag">
-                Student: {{ booking.studentName }}
-              </span>
-              <span v-if="isCourtBooking(booking) && booking.courtLocation" class="info-tag">
-                {{ booking.courtLocation }}
-              </span>
+              <!-- Additional Info (if any) -->
+              <div
+                v-if="(isAcademyBooking(booking) && booking.studentName) || (isCourtBooking(booking) && booking.courtLocation)"
+                class="additional-info">
+                <span v-if="isAcademyBooking(booking) && booking.studentName" class="info-tag">
+                  Student: {{ booking.studentName }}
+                </span>
+                <span v-if="isCourtBooking(booking) && booking.courtLocation" class="info-tag">
+                  {{ booking.courtLocation }}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -155,23 +150,16 @@
           <div class="card-footer">
             <div class="booking-date">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" />
               </svg>
               <span>{{ formatCreationDate(booking) }}</span>
             </div>
             <div class="card-actions">
-              <button 
-                class="action-btn view-btn"
-                @click="viewBookingDetails(booking)"
-              >
+              <button class="action-btn view-btn" @click="viewBookingDetails(booking)">
                 View
               </button>
-              <button 
-                v-if="canCancel(booking)"
-                class="action-btn cancel-btn"
-                @click="cancelBooking(booking)"
-              >
+              <button v-if="canCancel(booking)" class="action-btn cancel-btn" @click="cancelBooking(booking)">
                 Cancel
               </button>
             </div>
@@ -187,8 +175,10 @@
           <h2>Booking Details</h2>
           <button class="close-btn" @click="closeModal">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+              <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </button>
         </div>
@@ -212,16 +202,39 @@
           </div>
 
           <div class="detail-section">
-            <h3>{{ isCourtBooking(selectedBooking) ? 'Court Details' : 'Program Details' }}</h3>
+            <h3>{{ isCourtBooking(selectedBooking) ? 'Court Details' : isServiceBooking(selectedBooking) ? 'Service Details' : 'Program Details' }}</h3>
             <div class="detail-grid">
-              <div class="detail-item">
-                <span class="label">{{ isCourtBooking(selectedBooking) ? 'Sport:' : 'Program:' }}</span>
-                <span class="value">{{ isCourtBooking(selectedBooking) ? (selectedBooking.sport || 'Court Sport') : selectedBooking.programName }}</span>
+              <!-- Court Booking Fields -->
+              <div v-if="isCourtBooking(selectedBooking)" class="detail-item">
+                <span class="label">Sport:</span>
+                <span class="value">{{ selectedBooking.sport || 'Court Sport' }}</span>
               </div>
-              <div class="detail-item">
-                <span class="label">{{ isCourtBooking(selectedBooking) ? 'Court:' : 'Academy:' }}</span>
-                <span class="value">{{ isCourtBooking(selectedBooking) ? (selectedBooking.courtName || `${selectedBooking.courtType} Court`) : selectedBooking.academyName }}</span>
+              <div v-if="isCourtBooking(selectedBooking)" class="detail-item">
+                <span class="label">Court:</span>
+                <span class="value">{{ selectedBooking.courtName || `${selectedBooking.courtType} Court` }}</span>
               </div>
+              
+              <!-- Service Booking Fields -->
+              <div v-if="isServiceBooking(selectedBooking)" class="detail-item">
+                <span class="label">Service:</span>
+                <span class="value">{{ selectedBooking.serviceName }}</span>
+              </div>
+              <div v-if="isServiceBooking(selectedBooking)" class="detail-item">
+                <span class="label">Category:</span>
+                <span class="value">{{ selectedBooking.categoryName }}</span>
+              </div>
+              
+              <!-- Academy Booking Fields -->
+              <div v-if="isAcademyBooking(selectedBooking)" class="detail-item">
+                <span class="label">Program:</span>
+                <span class="value">{{ selectedBooking.programName }}</span>
+              </div>
+              <div v-if="isAcademyBooking(selectedBooking)" class="detail-item">
+                <span class="label">Academy:</span>
+                <span class="value">{{ selectedBooking.academyName }}</span>
+              </div>
+              
+              <!-- Common Fields -->
               <div class="detail-item">
                 <span class="label">Date:</span>
                 <span class="value">{{ formatBookingDate(selectedBooking) }}</span>
@@ -232,7 +245,7 @@
               </div>
               <div class="detail-item">
                 <span class="label">Price:</span>
-                <span class="value">{{ selectedBooking.totalPrice || selectedBooking.price }} EGP</span>
+                <span class="value">{{ selectedBooking.totalPrice || selectedBooking.servicePrice || selectedBooking.price || 0 }} EGP</span>
               </div>
               <!-- Additional academy-specific details -->
               <div v-if="selectedBooking.type === 'academy' && selectedBooking.category" class="detail-item">
@@ -245,7 +258,8 @@
               </div>
               <div v-if="selectedBooking.type === 'academy' && selectedBooking.duration" class="detail-item">
                 <span class="label">Duration:</span>
-                <span class="value">{{ selectedBooking.duration }} {{ getDurationUnit(selectedBooking.pricingType) }}</span>
+                <span class="value">{{ selectedBooking.duration }} {{ getDurationUnit(selectedBooking.pricingType)
+                  }}</span>
               </div>
               <div v-if="selectedBooking.type === 'academy' && selectedBooking.pricingType" class="detail-item">
                 <span class="label">Pricing:</span>
@@ -254,6 +268,7 @@
             </div>
           </div>
 
+          <!-- Academy Student Information -->
           <div v-if="isAcademyBooking(selectedBooking)" class="detail-section">
             <h3>Student Information</h3>
             <div class="detail-grid">
@@ -283,20 +298,17 @@
               </div>
             </div>
           </div>
+
+          <!-- Service Booking Additional Info -->
+          <div v-if="isServiceBooking(selectedBooking) && selectedBooking.notes" class="detail-section">
+            <h3>Additional Notes</h3>
+            <div class="notes-content">
+              {{ selectedBooking.notes }}
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
-          <button 
-            v-if="canComplete(selectedBooking)"
-            class="complete-booking-btn"
-            @click="completeBooking(selectedBooking)"
-          >
-            Complete Booking
-          </button>
-          <button 
-            v-if="canCancel(selectedBooking)"
-            class="cancel-booking-btn"
-            @click="cancelBooking(selectedBooking)"
-          >
+          <button v-if="canCancel(selectedBooking)" class="cancel-booking-btn" @click="cancelBooking(selectedBooking)">
             Cancel Booking
           </button>
           <button class="close-modal-btn" @click="closeModal">
@@ -309,12 +321,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAcademiesStore } from 'src/stores/academyStore';
 import { useProjectStore } from 'src/stores/projectStore';
 import { useNotificationStore } from 'src/stores/notifications';
 import { useServiceBookingStore } from 'src/stores/serviceBookingStore';
+import { useModalState } from 'src/composables/useModalState';
 import bookingService from 'src/services/bookingService';
 import optimizedAuthService from 'src/services/optimizedAuthService';
 import PageHeader from '../../components/PageHeader.vue';
@@ -329,12 +342,15 @@ const academiesStore = useAcademiesStore();
 const projectStore = useProjectStore();
 const notificationStore = useNotificationStore();
 const serviceBookingStore = useServiceBookingStore();
+const { openModal, closeModal: hideNavigationBars } = useModalState();
 
 // Reactive data
 const loading = ref(true);
 const error = ref(null);
 const activeFilter = ref('all');
 const selectedBooking = ref(null);
+const unsubscribeServiceBookings = ref(null);
+const unsubscribeAcademyBookings = ref(null);
 
 
 
@@ -343,8 +359,30 @@ const projectId = computed(() => projectStore.selectedProject?.id);
 const projectName = computed(() => projectStore.selectedProject?.name);
 
 const filteredBookings = computed(() => {
-  const allBookings = [...academiesStore.userBookings, ...serviceBookingStore.getBookings];
+  // Filter out requests from service bookings BEFORE combining
+  const actualServiceBookings = (serviceBookingStore.getBookings || []).filter(booking => {
+    // MUST have serviceId to be a service booking (requests don't have this)
+    if (!booking.serviceId) {
+      console.log('🚫 MyBookings: Excluding item without serviceId (likely a request):', booking.id);
+      return false;
+    }
+    // Must NOT have formData (that's for requests)
+    if (booking.formData) {
+      console.log('🚫 MyBookings: Excluding item with formData (request submission):', booking.id);
+      return false;
+    }
+    return true;
+  });
   
+  const allBookings = [...academiesStore.userBookings, ...actualServiceBookings];
+  
+  console.log('📊 MyBookings: Total bookings after filtering:', {
+    academy: academiesStore.userBookings.length,
+    serviceRaw: serviceBookingStore.getBookings?.length || 0,
+    serviceFiltered: actualServiceBookings.length,
+    total: allBookings.length
+  });
+
   if (activeFilter.value === 'all') {
     return allBookings;
   } else if (activeFilter.value === 'court') {
@@ -378,20 +416,20 @@ const getTypeClass = (type) => {
 
 // Helper function to detect court bookings by their data structure
 const isCourtBooking = (booking) => {
-  return booking.type === 'court' || 
-         (booking.courtType && (booking.courtLocation || booking.bookingTime));
+  return booking.type === 'court' ||
+    (booking.courtType && (booking.courtLocation || booking.bookingTime));
 };
 
 // Helper function to detect academy bookings by their data structure
 const isAcademyBooking = (booking) => {
-  return booking.type === 'academy' || 
-         (booking.programName && (booking.studentName || booking.academyName));
+  return booking.type === 'academy' ||
+    (booking.programName && (booking.studentName || booking.academyName));
 };
 
 // Helper function to detect service bookings by their data structure
 const isServiceBooking = (booking) => {
-  return booking.type === 'service' || 
-         (booking.serviceName && booking.categoryName && booking.selectedDate);
+  return booking.type === 'service' ||
+    (booking.serviceId && booking.serviceName);
 };
 
 const getStatusLabel = (status) => {
@@ -400,7 +438,12 @@ const getStatusLabel = (status) => {
     'pending': 'Pending',
     'cancelled': 'Cancelled',
     'completed': 'Completed',
-    'enrolled': 'Enrolled'
+    'enrolled': 'Enrolled',
+    'rejected': 'Rejected',
+    // Old service booking statuses
+    'open': 'Pending',
+    'processing': 'In Progress',
+    'closed': 'Completed'
   };
   return statusMap[status] || status;
 };
@@ -411,7 +454,12 @@ const getStatusClass = (status) => {
     'pending': 'pending',
     'cancelled': 'cancelled',
     'enrolled': 'enrolled',
-    'completed': 'completed'
+    'completed': 'completed',
+    'rejected': 'cancelled', // Use same styling as cancelled
+    // Old service booking statuses
+    'open': 'pending',
+    'processing': 'processing',
+    'closed': 'completed'
   };
   return statusMap[status] || 'pending';
 };
@@ -423,8 +471,10 @@ const getBookingTitle = (booking) => {
     return `${sport} - ${courtName}`;
   } else if (isAcademyBooking(booking)) {
     return booking.programName || 'Academy Program';
+  } else if (isServiceBooking(booking)) {
+    return booking.serviceName || booking.categoryName || 'Service Booking';
   } else {
-    return 'Service Booking';
+    return 'Booking';
   }
 };
 
@@ -434,8 +484,10 @@ const getBookingSubtitle = (booking) => {
   } else if (isAcademyBooking(booking)) {
     const academy = booking.academyName || 'Academy';
     return `${academy} Program`;
+  } else if (isServiceBooking(booking)) {
+    return booking.categoryName || 'Service Request';
   } else {
-    return 'Service';
+    return 'Booking';
   }
 };
 
@@ -443,19 +495,19 @@ const getBookingSubtitle = (booking) => {
 const formatBookingDate = (booking) => {
   // Try different date fields in order of preference
   const dateFields = [booking.date, booking.bookingDate, booking.createdAt];
-  
+
   for (const dateField of dateFields) {
     if (dateField) {
       try {
         let d;
-        
+
         // Handle Firestore timestamp
         if (dateField && typeof dateField === 'object' && dateField.seconds) {
           d = new Date(dateField.seconds * 1000);
         } else {
           d = new Date(dateField);
         }
-        
+
         // Check if the date is valid
         if (!isNaN(d.getTime())) {
           return d.toLocaleDateString('en-US', {
@@ -471,28 +523,28 @@ const formatBookingDate = (booking) => {
       }
     }
   }
-  
+
   return 'N/A';
 };
 
 const formatCreationDate = (booking) => {
   if (!booking.createdAt) return 'N/A';
-  
+
   try {
     let d;
-    
+
     // Handle Firestore timestamp
     if (booking.createdAt && typeof booking.createdAt === 'object' && booking.createdAt.seconds) {
       d = new Date(booking.createdAt.seconds * 1000);
     } else {
       d = new Date(booking.createdAt);
     }
-    
+
     // Check if the date is valid
     if (isNaN(d.getTime())) {
       return 'N/A';
     }
-    
+
     return d.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -512,6 +564,9 @@ const getBookingTime = (booking) => {
       return booking.bookingTime;
     }
     return 'Time not specified';
+  } else if (isServiceBooking(booking)) {
+    // Service bookings have selectedTime
+    return booking.selectedTime || 'As scheduled';
   } else if (isAcademyBooking(booking)) {
     return 'Program Schedule';
   }
@@ -538,12 +593,11 @@ const getDurationUnit = (pricingType) => {
   return units[pricingType] || 'months';
 };
 
+// Users can only cancel bookings that are still pending/not yet processed
 const canCancel = (booking) => {
-  return ['confirmed', 'pending', 'enrolled'].includes(booking.status);
-};
-
-const canComplete = (booking) => {
-  return ['confirmed', 'pending', 'enrolled', 'open', 'processing'].includes(booking.status);
+  // Allow cancellation for pending statuses only
+  // Support both old and new status values
+  return ['confirmed', 'pending', 'enrolled', 'open'].includes(booking.status);
 };
 
 const viewBookingDetails = (booking) => {
@@ -558,48 +612,20 @@ const cancelBooking = async (booking) => {
   try {
     if (confirm('Are you sure you want to cancel this booking?')) {
       await bookingService.cancelBooking(projectId.value, booking.id);
-      
+
       // Refresh bookings after cancellation
       const user = await optimizedAuthService.getCurrentUser();
       if (user && projectId.value) {
         await academiesStore.fetchUserBookings(user.uid, projectId.value);
         await serviceBookingStore.fetchUserBookings(projectId.value, user.uid);
       }
-      
+
       notificationStore.showSuccess('Booking cancelled successfully');
       closeModal();
     }
   } catch (error) {
     console.error('Error cancelling booking:', error);
     notificationStore.showError('Failed to cancel booking. Please try again.');
-  }
-};
-
-const completeBooking = async (booking) => {
-  try {
-    if (confirm('Are you sure you want to mark this booking as completed?')) {
-      const user = await optimizedAuthService.getCurrentUser();
-      if (!user || !projectId.value) {
-        notificationStore.showError('Unable to complete booking. Please try again.');
-        return;
-      }
-
-      if (isServiceBooking(booking)) {
-        await serviceBookingStore.completeBooking(projectId.value, booking.id);
-      } else {
-        await academiesStore.completeBooking(projectId.value, booking.id);
-      }
-      
-      // Refresh bookings after completion
-      await academiesStore.fetchUserBookings(user.uid, projectId.value);
-      await serviceBookingStore.fetchUserBookings(projectId.value, user.uid);
-      
-      notificationStore.showSuccess('Booking completed successfully');
-      closeModal();
-    }
-  } catch (error) {
-    console.error('Error completing booking:', error);
-    notificationStore.showError('Failed to complete booking. Please try again.');
   }
 };
 
@@ -626,14 +652,38 @@ onMounted(async () => {
 });
 
 // Watch for project changes
-watch(projectId, async (newProjectId) => {
-  if (newProjectId) {
-    await fetchUserBookings();
+watch(projectId, async (newProjectId, oldProjectId) => {
+  if (newProjectId !== oldProjectId) {
+    // Clean up old listeners when project changes
+    if (unsubscribeServiceBookings.value) {
+      console.log('🔌 Cleaning up service bookings listener for old project');
+      unsubscribeServiceBookings.value();
+      unsubscribeServiceBookings.value = null;
+    }
+    if (unsubscribeAcademyBookings.value) {
+      console.log('🔌 Cleaning up academy bookings listener for old project');
+      unsubscribeAcademyBookings.value();
+      unsubscribeAcademyBookings.value = null;
+    }
+    
+    if (newProjectId) {
+      await fetchUserBookings();
+    } else {
+      // Clear bookings when no project is selected
+      academiesStore.clearUserBookings();
+      serviceBookingStore.clearBookings();
+      // Also clear any error state
+      error.value = null;
+    }
+  }
+});
+
+// Watch for modal state changes - iOS fix to hide navigation bars
+watch(selectedBooking, (booking) => {
+  if (booking) {
+    openModal();
   } else {
-    // Clear bookings when no project is selected
-    academiesStore.clearUserBookings();
-    // Also clear any error state
-    error.value = null;
+    hideNavigationBars();
   }
 });
 
@@ -641,34 +691,65 @@ const fetchUserBookings = async () => {
   if (!projectId.value) {
     return;
   }
-  
+
   try {
     loading.value = true;
-    
+
     const user = await optimizedAuthService.getCurrentUser();
-    
+
     if (!user) {
       error.value = 'User not authenticated. Please sign in again.';
       return;
     }
-    
-    console.log('Fetching user bookings for:', {
+
+    console.log('🔄 Setting up real-time bookings for:', {
       userId: user.uid,
       projectId: projectId.value
     });
-    
+
+    // Clean up existing listeners
+    if (unsubscribeServiceBookings.value) {
+      unsubscribeServiceBookings.value();
+      unsubscribeServiceBookings.value = null;
+    }
+    if (unsubscribeAcademyBookings.value) {
+      unsubscribeAcademyBookings.value();
+      unsubscribeAcademyBookings.value = null;
+    }
+
+    // Initial fetch for academy bookings (immediate data)
     await academiesStore.fetchUserBookings(user.uid, projectId.value);
-    
-    // Also fetch service bookings
-    await serviceBookingStore.fetchUserBookings(projectId.value, user.uid);
-    
+
+    // Set up real-time listener for service bookings (instant updates)
+    unsubscribeServiceBookings.value = serviceBookingStore.subscribeToUserBookings(
+      projectId.value,
+      user.uid,
+      (bookingsData) => {
+        console.log('✨ MyBookings: Service bookings updated in real-time:', bookingsData.length);
+      }
+    );
+
+    console.log('✅ Real-time listeners active for MyBookings');
+
   } catch (error) {
-    console.error('Error fetching user bookings:', error);
-    error.value = 'Failed to fetch bookings: ' + error.message;
+    console.error('Error setting up bookings:', error);
+    error.value = 'Failed to load bookings: ' + error.message;
   } finally {
     loading.value = false;
   }
 };
+
+// Clean up listeners on unmount
+onBeforeUnmount(() => {
+  if (unsubscribeServiceBookings.value) {
+    console.log('🔌 MyBookings: Unsubscribing from service bookings listener');
+    unsubscribeServiceBookings.value();
+  }
+  if (unsubscribeAcademyBookings.value) {
+    console.log('🔌 MyBookings: Unsubscribing from academy bookings listener');
+    unsubscribeAcademyBookings.value();
+  }
+});
 </script>
 
 <style scoped>
@@ -734,8 +815,13 @@ const fetchUserBookings = async () => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-state p {
@@ -743,7 +829,8 @@ const fetchUserBookings = async () => {
   margin: 0;
 }
 
-.no-project-state, .empty-state {
+.no-project-state,
+.empty-state {
   text-align: center;
   padding: 60px 20px;
 }
@@ -850,7 +937,15 @@ const fetchUserBookings = async () => {
 }
 
 .booking-card.enrolled {
+  border-left: 3px solid #AF1E23;
+}
+
+.booking-card.processing {
   border-left: 3px solid #17a2b8;
+}
+
+.booking-card.completed {
+  border-left: 3px solid #28a745;
 }
 
 /* Compact Header */
@@ -879,7 +974,7 @@ const fetchUserBookings = async () => {
 
 .booking-icon.academy-type {
   background: #f3e5f5;
-  color: #7b1fa2;
+  color: #AF1E23;
 }
 
 .booking-icon.service-type {
@@ -941,13 +1036,24 @@ const fetchUserBookings = async () => {
   color: #0c5460;
 }
 
+.status-badge.processing {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-badge.completed {
+  background: #d4edda;
+  color: #155724;
+}
+
 /* Compact Content */
 .card-content {
   padding: 16px 20px;
 }
 
 .details-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 20px;
   margin-bottom: 12px;
 }
@@ -966,6 +1072,7 @@ const fetchUserBookings = async () => {
 
 .detail-text {
   font-weight: 500;
+  font-size: 12px;
 }
 
 .detail-text.price-text {
@@ -1057,159 +1164,195 @@ const fetchUserBookings = async () => {
   background: #218838;
 } */
 
-/* Modal Styles */
+/* Modal Styles - Matching App Design System */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 999999;
   padding: 20px;
+  /* iOS Safari fixes */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .modal-content {
   background: white;
-  border-radius: 16px;
+  border-radius: 20px;
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  /* iOS smooth scrolling */
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 24px 0;
-  border-bottom: 1px solid #e1e5e9;
-  padding-bottom: 20px;
+  padding: 24px 24px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
 }
 
 .modal-header h2 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #333;
+  color: #231F20;
   margin: 0;
 }
 
 .close-btn {
-  background: none;
+  background: #f5f5f5;
   border: none;
   color: #666;
   cursor: pointer;
   padding: 8px;
-  border-radius: 8px;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-/* Mobile app - hover effects disabled */
-/* .close-btn:hover {
-  background: #f5f5f5;
-  color: #333;
-} */
+.close-btn:active {
+  background: #e0e0e0;
+  transform: scale(0.95);
+}
 
 .modal-body {
   padding: 24px;
+  padding-bottom: 12px;
 }
 
 .detail-section {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
+}
+
+.detail-section:last-child {
+  margin-bottom: 12px;
 }
 
 .detail-section h3 {
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
-  color: #333;
+  color: #231F20;
   margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #f0f0f0;
 }
 
 .detail-grid {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
 }
 
 .detail-grid .detail-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 0;
+  border-bottom: 1px solid #f8f8f8;
 }
 
 .detail-grid .detail-item:last-child {
   border-bottom: none;
+  padding-bottom: 0;
 }
 
 .detail-grid .label {
   font-weight: 600;
-  color: #333;
+  color: #666;
+  font-size: 0.9rem;
 }
 
 .detail-grid .value {
+  color: #231F20;
+  font-weight: 500;
+  text-align: right;
+}
+
+.notes-content {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 12px;
   color: #666;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  border: 1px solid #e9ecef;
 }
 
 .modal-footer {
   display: flex;
   gap: 12px;
-  padding: 0 24px 24px;
-  border-top: 1px solid #e1e5e9;
-  padding-top: 20px;
+  padding: 20px 24px 24px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+  position: sticky;
+  bottom: 0;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
 }
 
 .cancel-booking-btn {
+  flex: 1;
   background: #dc3545;
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 12px 24px;
-  font-weight: 500;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
-/* Mobile app - hover effects disabled */
-/* .cancel-booking-btn:hover {
+.cancel-booking-btn:active {
   background: #c82333;
-} */
-
-.complete-booking-btn {
-  background: #28a745;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 12px 24px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  transform: scale(0.98);
 }
-
-/* Mobile app - hover effects disabled */
-/* .complete-booking-btn:hover {
-  background: #218838;
-} */
 
 .close-modal-btn {
-  background: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 12px 24px;
-  font-weight: 500;
+  flex: 1;
+  background: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
-/* Mobile app - hover effects disabled */
-/* .close-modal-btn:hover {
-  background: #5a6268;
-} */
+.close-modal-btn:active {
+  background: #e0e0e0;
+  transform: scale(0.98);
+}
 
 
 
@@ -1218,78 +1361,74 @@ const fetchUserBookings = async () => {
   .my-bookings-page {
     padding: 16px 0;
   }
-  
+
   .filter-tabs {
     flex-direction: column;
   }
-  
+
   .details-row {
-    flex-direction: column;
-    gap: 8px;
+    gap: 20px;
   }
-  
+
   .detail-item.price-item {
     margin-left: 0;
   }
-  
+
   .card-footer {
-    flex-direction: column;
     gap: 12px;
-    align-items: flex-start;
+    align-items: center;
   }
-  
+
   .card-actions {
-    width: 100%;
     justify-content: flex-end;
   }
-  
+
   .modal-content {
-    margin: 20px;
     max-height: calc(100vh - 40px);
   }
 }
 
 @media (max-width: 480px) {
   /* Page header responsive styles moved to PageHeader component */
-  
+
   .card-header {
     padding: 12px 16px;
   }
-  
+
   .card-content {
     padding: 12px 16px;
   }
-  
+
   .card-footer {
     padding: 10px 16px;
   }
-  
+
   .booking-icon {
     width: 32px;
     height: 32px;
   }
-  
+
   .booking-title {
     font-size: 0.95rem;
   }
-  
+
   .booking-subtitle {
     font-size: 0.8rem;
   }
-  
+
   .details-row {
-    gap: 6px;
+    gap: 20px;
   }
-  
+
   .detail-item {
     font-size: 0.8rem;
   }
-  
+
   .action-btn {
     padding: 8px 12px;
     font-size: 0.75rem;
   }
-  
+
   .modal-header,
   .modal-body,
   .modal-footer {

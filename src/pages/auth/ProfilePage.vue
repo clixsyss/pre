@@ -1420,25 +1420,44 @@ const loadFamilyMembers = async () => {
     // Check if user is a family member (has parentAccountId) or is a parent (others have their ID as parentAccountId)
     const parentId = userProfile.value.parentAccountId || currentUser.uid
 
-    // Query all users in the database
-    const usersSnapshot = await firestoreService.getDocs('users')
-    const allUsers = usersSnapshot.docs.map(doc => ({
+    // Use filtered query instead of loading all 5003 users!
+    const usersSnapshot = await firestoreService.getDocs('users', {
+      filters: [
+        { field: 'parentAccountId', operator: '==', value: parentId }
+      ],
+      timeoutMs: 6000
+    })
+    
+    const potentialFamilyMembers = usersSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }))
 
-    // Filter family members:
-    // 1. Find users who have the same parentAccountId (siblings) OR users who have current user as parent
-    // 2. Filter by same unit in the same project
-    // 3. Exclude the current user
-    const members = allUsers.filter(user => {
+    // Also get users who have current user as parent (if different from parentId)
+    let childrenOfCurrentUser = []
+    if (parentId !== currentUser.uid) {
+      const childrenSnapshot = await firestoreService.getDocs('users', {
+        filters: [
+          { field: 'parentAccountId', operator: '==', value: currentUser.uid }
+        ],
+        timeoutMs: 6000
+      })
+      childrenOfCurrentUser = childrenSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+    }
+
+    // Combine both arrays and remove duplicates
+    const allPotentialMembers = [...potentialFamilyMembers, ...childrenOfCurrentUser]
+    const uniqueMembers = allPotentialMembers.filter((user, index, self) => 
+      index === self.findIndex(u => u.id === user.id)
+    )
+
+    // Filter by same unit in the same project and exclude self
+    const members = uniqueMembers.filter(user => {
       // Don't include self
       if (user.id === currentUser.uid) return false
-
-      // Check if this user is linked (same parent or is our child)
-      const isLinkedFamily = user.parentAccountId === parentId || user.parentAccountId === currentUser.uid
-
-      if (!isLinkedFamily) return false
 
       // Check if user has access to the same project and same unit
       const userProjectData = user.projects?.find(p => p.projectId === projectStore.selectedProject.id)
