@@ -413,12 +413,6 @@
                   </svg>
                   <span>Send via WhatsApp</span>
                 </div>
-                <input
-                  v-model="newPass.phoneNumber"
-                  type="tel"
-                  class="form-input whatsapp-input"
-                  :placeholder="$t('phoneNumber') || 'Phone Number (optional)'"
-                />
               </div>
             </div>
           </div>
@@ -476,7 +470,7 @@ import { useBluetooth } from '../../composables/useBluetooth'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import QRCode from 'qrcode'
 import PageHeader from '../../components/PageHeader.vue'
-import whatsappService from '../../services/whatsappService'
+import sharingService from '../../services/whatsappService'
 import { checkUserEligibility, createGuestPass, markPassAsSent } from '../../api/guestPassAPI'
 import { auth } from '../../boot/firebase'
 import { useNotificationStore } from '../../stores/notifications'
@@ -528,7 +522,6 @@ const newPass = ref({
   guestName: '',
   purpose: '',
   validUntil: '',
-  phoneNumber: '',
 })
 
 // User blocking state
@@ -766,17 +759,9 @@ const generatePass = async () => {
       return
     }
 
-    if (newPass.value.phoneNumber && newPass.value.phoneNumber.trim()) {
-      const phoneRegex = /^[+]?[1-9][\d]{0,15}$/
-      if (!phoneRegex.test(newPass.value.phoneNumber.replace(/\s/g, ''))) {
-        notificationStore.showError('Please enter a valid phone number')
-        return
-      }
-    }
 
     const sanitizedGuestName = newPass.value.guestName.trim().substring(0, 100)
     const sanitizedPurpose = (newPass.value.purpose || 'Guest Visit').trim().substring(0, 200)
-    const sanitizedPhoneNumber = newPass.value.phoneNumber ? newPass.value.phoneNumber.trim().substring(0, 20) : null
 
     const userName = auth.currentUser?.displayName || auth.currentUser?.email || 'Unknown User'
     const result = await createGuestPass(
@@ -786,7 +771,6 @@ const generatePass = async () => {
       sanitizedGuestName,
       sanitizedPurpose,
       newPass.value.validUntil,
-      sanitizedPhoneNumber,
     )
 
     if (!result.success) {
@@ -801,7 +785,6 @@ const generatePass = async () => {
       status: 'active',
       createdAt: new Date().toISOString(),
       code: result.passId,
-      phoneNumber: sanitizedPhoneNumber,
       firebaseRef: result.passRef,
     }
 
@@ -819,7 +802,6 @@ const generatePass = async () => {
       guestName: '',
       purpose: '',
       validUntil: '',
-      phoneNumber: '',
     }
 
     showGenerateDialog.value = false
@@ -827,36 +809,33 @@ const generatePass = async () => {
     await nextTick()
     await generateQRCode(pass)
 
-    if (pass.phoneNumber && pass.phoneNumber.trim()) {
-      try {
-        const canvas = qrRefs.get(pass.id)
-        if (canvas) {
-          const qrCodeDataUrl = canvas.toDataURL('image/png')
-          const result = await whatsappService.sendGatePassWithImage(pass, pass.phoneNumber, qrCodeDataUrl)
+    // Share pass with QR code using native share
+    try {
+      const canvas = qrRefs.get(pass.id)
+      if (canvas) {
+        const qrCodeDataUrl = canvas.toDataURL('image/png')
+        const result = await sharingService.sharePassWithImage(pass, qrCodeDataUrl)
 
-          if (result.success) {
-            notificationStore.showSuccess(result.message || 'Pass generated and sent via WhatsApp!')
-          } else {
-            throw new Error(result.message || 'WhatsApp sending failed')
-          }
+        if (result.success) {
+          notificationStore.showSuccess(result.message || 'Pass shared successfully!')
         } else {
-          const result = await whatsappService.sendGatePassViaWhatsApp(pass, pass.phoneNumber)
-          if (result.success) {
-            notificationStore.showSuccess('Pass generated and sent via WhatsApp!')
-          } else {
-            throw new Error('WhatsApp sending failed')
-          }
+          throw new Error(result.message || 'Sharing failed')
         }
-
-        if (pass.firebaseRef) {
-          await markPassAsSent(pass.firebaseRef)
+      } else {
+        const result = await sharingService.sharePassText(pass)
+        if (result.success) {
+          notificationStore.showSuccess('Pass shared successfully!')
+        } else {
+          throw new Error('Sharing failed')
         }
-      } catch (whatsappError) {
-        console.warn('⚠️ WhatsApp sending failed:', whatsappError)
-        notificationStore.showWarning(`Pass generated successfully. ${whatsappError.message || 'WhatsApp sending failed - please share manually.'}`)
       }
-    } else {
-      notificationStore.showSuccess('Pass generated successfully')
+
+      if (pass.firebaseRef) {
+        await markPassAsSent(pass.firebaseRef)
+      }
+    } catch (shareError) {
+      console.warn('⚠️ Sharing failed:', shareError)
+      notificationStore.showWarning(`Pass generated successfully. ${shareError.message || 'Sharing failed - please share manually.'}`)
     }
   } catch (error) {
     console.error('Error generating pass:', error)
@@ -872,23 +851,117 @@ const generateQRCode = async (pass) => {
       return
     }
 
+    // Set canvas size to match the gate pass design
+    const canvasWidth = 400
+    const canvasHeight = 500
+    canvas.width = canvasWidth
+    canvas.height = canvasHeight
+
+    const ctx = canvas.getContext('2d')
+    
+    // Clear canvas with white background
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+
+    // Generate QR code data
     const qrData = JSON.stringify({
       code: pass.code,
       guestName: pass.guestName,
       validUntil: pass.validUntil,
     })
 
-    await QRCode.toCanvas(canvas, qrData, {
-      width: 150,
-      margin: 1,
+    // Generate QR code as data URL
+    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+      width: 200,
+      margin: 2,
       color: {
         dark: '#000000',
         light: '#FFFFFF',
       },
     })
+
+    // Create image from QR code data URL
+    const img = new Image()
+    img.onload = () => {
+      // Draw the complete gate pass design
+      drawGatePass(ctx, img, pass, canvasWidth)
+    }
+    img.src = qrCodeDataUrl
   } catch (error) {
     console.error('❌ Error generating QR code:', error)
   }
+}
+
+const drawGatePass = (ctx, qrImg, pass, canvasWidth) => {
+  // Set font properties
+  ctx.fillStyle = '#000000'
+  ctx.textAlign = 'center'
+  
+  // Draw title "Gate Pass"
+  ctx.font = 'bold 24px Arial, sans-serif'
+  ctx.fillText('Gate Pass', canvasWidth / 2, 40)
+  
+  // Draw subtitle "One Time Pass"
+  ctx.font = '16px Arial, sans-serif'
+  ctx.fillText('One Time Pass', canvasWidth / 2, 65)
+  
+  // Draw QR code in center
+  const qrSize = 200
+  const qrX = (canvasWidth - qrSize) / 2
+  const qrY = 100
+  ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize)
+  
+  // Draw information bar at bottom
+  const infoBarY = qrY + qrSize + 20
+  const infoBarHeight = 80
+  const infoBarPadding = 20
+  
+  // Draw grey background for info bar
+  ctx.fillStyle = '#F5F5F5'
+  ctx.fillRect(0, infoBarY, canvasWidth, infoBarHeight)
+  
+  // Draw border for info bar
+  ctx.strokeStyle = '#E0E0E0'
+  ctx.lineWidth = 1
+  ctx.strokeRect(0, infoBarY, canvasWidth, infoBarHeight)
+  
+  // Left side - Unit and Guest info
+  ctx.textAlign = 'left'
+  ctx.fillStyle = '#000000'
+  
+  // Unit info
+  ctx.font = 'bold 12px Arial, sans-serif'
+  ctx.fillText('Unit', infoBarPadding, infoBarY + 20)
+  ctx.font = '12px Arial, sans-serif'
+  const unitInfo = '14 - 3 - 0 - Stella Heights' // This could be dynamic based on user data
+  ctx.fillText(unitInfo, infoBarPadding, infoBarY + 35)
+  
+  // Guest info
+  ctx.font = 'bold 12px Arial, sans-serif'
+  ctx.fillText('Visitor', infoBarPadding, infoBarY + 55)
+  ctx.font = '12px Arial, sans-serif'
+  ctx.fillText(pass.guestName, infoBarPadding, infoBarY + 70)
+  
+  // Right side - Date and Inviter info
+  ctx.textAlign = 'right'
+  
+  // Date info
+  ctx.font = 'bold 12px Arial, sans-serif'
+  ctx.fillText('Date', canvasWidth - infoBarPadding, infoBarY + 20)
+  ctx.font = '12px Arial, sans-serif'
+  const validDate = new Date(pass.validUntil).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  })
+  ctx.fillText(validDate, canvasWidth - infoBarPadding, infoBarY + 35)
+  
+  // Inviter info
+  ctx.font = 'bold 12px Arial, sans-serif'
+  ctx.fillText('Inviter', canvasWidth - infoBarPadding, infoBarY + 55)
+  ctx.font = '12px Arial, sans-serif'
+  const inviterName = auth.currentUser?.displayName || auth.currentUser?.email || 'Unknown User'
+  ctx.fillText(inviterName, canvasWidth - infoBarPadding, infoBarY + 70)
 }
 
 const deletePass = (passId) => {
@@ -934,16 +1007,11 @@ const sharePass = async (pass) => {
 
 const sendPassViaWhatsApp = async (pass) => {
   try {
-    if (!pass.phoneNumber || !pass.phoneNumber.trim()) {
-      notificationStore.showWarning('Phone number is required to send via WhatsApp')
-      return
-    }
-
-    await whatsappService.sendGatePassViaWhatsApp(pass, pass.phoneNumber)
-    notificationStore.showSuccess('Pass sent via WhatsApp!')
+    await sharingService.sharePassText(pass)
+    notificationStore.showSuccess('Pass shared successfully!')
   } catch (error) {
-    console.error('Error sending pass via WhatsApp:', error)
-    notificationStore.showError('Failed to send via WhatsApp. Please try again.')
+    console.error('Error sharing pass:', error)
+    notificationStore.showError('Failed to share pass. Please try again.')
   }
 }
 
@@ -1568,6 +1636,11 @@ onMounted(async () => {
   background: white;
   padding: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  height: 500px;
+  max-width: 100%;
+  display: block;
+  margin: 0 auto;
 }
 
 .pass-details {
