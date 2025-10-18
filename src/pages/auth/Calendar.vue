@@ -146,7 +146,7 @@ import { useRouter } from 'vue-router';
 import { useAcademiesStore } from '../../stores/academyStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useServiceBookingStore } from '../../stores/serviceBookingStore';
-import { auth } from '../../boot/firebase';
+import optimizedAuthService from '../../services/optimizedAuthService';
 import PageHeader from '../../components/PageHeader.vue';
 
 // Component name for ESLint
@@ -487,40 +487,48 @@ const handleTouchEnd = (event) => {
 
 // Lifecycle
 onMounted(async () => {
-  // Get current user from auth service
-  const user = auth.currentUser
-  if (user) {
-    currentUser.value = user;
-    
-    // Check if project is selected, if not redirect to project selection
-    if (!projectStore.hasSelectedProject) {
-      // Try to load the selected project from localStorage
-      projectStore.loadSelectedProject();
+  // Wait for auth state to be established - use optimized auth service instead of direct auth.currentUser
+  try {
+    const user = await optimizedAuthService.getCurrentUser()
+    if (user) {
+      currentUser.value = user;
       
-      // If still no project selected, redirect to project selection
+      // Check if project is selected, if not redirect to project selection
       if (!projectStore.hasSelectedProject) {
-        router.push('/project-selection');
-        return;
+        // Try to load the selected project from localStorage
+        projectStore.loadSelectedProject();
+        
+        // If still no project selected, redirect to project selection
+        if (!projectStore.hasSelectedProject) {
+          router.push('/project-selection');
+          return;
+        }
       }
-    }
-    
-    try {
-      // Fetch user bookings with both user ID and project ID
-      await academiesStore.fetchUserBookings(user.uid, projectStore.selectedProject.id);
-      console.log('User bookings fetched:', academiesStore.userBookings);
       
-      // Fetch service bookings
-      await serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid);
-      console.log('Service bookings fetched:', serviceBookingStore.getBookings);
-      
-      console.log('Current project:', projectStore.selectedProject);
-    } catch (error) {
-      console.error("Error fetching user bookings:", error);
+      try {
+        // Fetch user bookings with both user ID and project ID
+        await academiesStore.fetchUserBookings(user.uid, projectStore.selectedProject.id);
+        console.log('User bookings fetched:', academiesStore.userBookings);
+        
+        // Fetch service bookings
+        await serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid);
+        console.log('Service bookings fetched:', serviceBookingStore.getBookings);
+        
+        console.log('Current project:', projectStore.selectedProject);
+      } catch (error) {
+        console.error("Error fetching user bookings:", error);
+      }
+    } else {
+      // User not authenticated, redirect to sign in
+      console.log('No authenticated user found in Calendar component, redirecting to signin')
+      currentUser.value = null;
+      router.push('/signin');
     }
-  } else {
-    currentUser.value = null;
-    // Redirect to login if no user
-    router.push('/login');
+  } catch (error) {
+    console.error('Error getting current user in Calendar component:', error)
+    // On error, redirect to sign in as fallback
+    currentUser.value = null
+    router.push('/signin')
   }
 });
 </script>

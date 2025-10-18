@@ -331,7 +331,7 @@ onUnmounted(() => {
   transform: translateX(-50%);
   display: flex;
   gap: 8px;
-  z-index: 10;
+  z-index: 1;
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
   padding: 8px 12px;
@@ -497,5 +497,14 @@ onUnmounted(() => {
     background: rgba(0, 0, 0, 0.8);
     color: white;
   }
+}
+
+/* Hide carousel elements when modal is open */
+:global(body.news-modal-open) .carousel-dots,
+:global(body.news-modal-open) .carousel-nav,
+:global(body.news-modal-open) .progress-bar,
+:global(body.news-modal-open) .click-indicator {
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 </style>

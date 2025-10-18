@@ -18,17 +18,23 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 2000,
-      "launchAutoHide": true,
-      "backgroundColor": "#231F20",
+      "launchShowDuration": 0,
+      "launchAutoHide": false,
+      "backgroundColor": "#000000",
       "androidSplashResourceName": "splash",
       "androidScaleType": "CENTER_CROP",
       "showSpinner": false,
       "androidSpinnerStyle": "large",
       "iosSpinnerStyle": "small",
       "spinnerColor": "#AF1E23",
-      "splashFullScreen": true,
-      "splashImmersive": true
+      "splashFullScreen": false,
+      "splashImmersive": false
+    },
+    "StatusBar": {
+      "enabled": true,
+      "style": "auto",
+      "backgroundColor": "#231F20",
+      "overlaysWebView": false
     },
     "Keyboard": {
       "resize": "native",

@@ -823,6 +823,64 @@
                 </div>
               </div>
             </div>
+
+            <!-- Shake Detection Settings -->
+            <div class="settings-group">
+              <div class="settings-header">
+                <div class="settings-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 9L4 4M20 4L15 9M9 15L4 20M20 20L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/>
+                  </svg>
+                </div>
+                <div class="settings-title">
+                  <h4>Shake to Open Gate</h4>
+                  <p>Quick access to gate by shaking your phone</p>
+                </div>
+              </div>
+              
+              <!-- Shake Toggle -->
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <span class="toggle-label">Enable Shake Gesture</span>
+                  <span class="toggle-description">{{ appSettingsStore.shakeEnabled ? 'Enabled' : 'Disabled' }}</span>
+                </div>
+                <button 
+                  class="toggle-switch" 
+                  :class="{ active: appSettingsStore.shakeEnabled }"
+                  @click="appSettingsStore.setShakeEnabled(!appSettingsStore.shakeEnabled)"
+                >
+                  <div class="toggle-slider"></div>
+                </button>
+              </div>
+              
+              <!-- Sensitivity Slider (only show when enabled) -->
+              <div v-if="appSettingsStore.shakeEnabled" class="settings-slider">
+                <div class="slider-header">
+                  <span class="slider-label">Sensitivity</span>
+                  <span class="slider-value">{{ appSettingsStore.getSensitivityLabel(appSettingsStore.shakeSensitivity) }}</span>
+                </div>
+                <div class="slider-container">
+                  <span class="slider-mark">More</span>
+                  <input 
+                    type="range" 
+                    min="5" 
+                    max="25" 
+                    step="5"
+                    :value="appSettingsStore.shakeSensitivity"
+                    @input="appSettingsStore.setShakeSensitivity(parseInt($event.target.value))"
+                    class="slider-input"
+                  />
+                  <span class="slider-mark">Less</span>
+                </div>
+                <div class="slider-ticks">
+                  <span>Very Sensitive</span>
+                  <span>Normal</span>
+                  <span>Less</span>
+                  <span>Least</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1200,6 +1258,7 @@ import { useNotificationStore } from '../../stores/notifications'
 import { useProjectStore } from '../../stores/projectStore'
 import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
 import { useSettingsStore } from '../../stores/settingsStore'
+import { useAppSettingsStore } from '../../stores/appSettings'
 import { useModalState } from '../../composables/useModalState'
 import ProjectGuidelinesDialog from '../../components/ProjectGuidelinesDialog.vue'
 import EditProfileDialog from '../../components/EditProfileDialog.vue'
@@ -1217,6 +1276,7 @@ const notificationStore = useNotificationStore()
 const projectStore = useProjectStore()
 const smartMirrorStore = useSmartMirrorStore()
 const settingsStore = useSettingsStore()
+const appSettingsStore = useAppSettingsStore()
 const { openModal, closeModal } = useModalState()
 
 // Reactive state
@@ -2055,8 +2115,9 @@ const handleSupport = () => {
 
 // Load profile on component mount
 onMounted(() => {
-  // Initialize settings store
+  // Initialize settings stores
   settingsStore.initializeSettings()
+  appSettingsStore.initSettings()
   loadProfile()
   loadViolationStats()
   loadComplaintStats()
@@ -4780,6 +4841,170 @@ input:checked+.toggle-slider:before {
 .option-check svg {
   width: 12px;
   height: 12px;
+}
+
+/* Toggle Switch Styles */
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toggle-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.toggle-description {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 50px;
+  height: 28px;
+  background: #e5e7eb;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.toggle-switch.active {
+  background: #AF1E23;
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  background: white;
+  border-radius: 50%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch.active .toggle-slider {
+  transform: translateX(22px);
+}
+
+/* Slider Styles */
+.settings-slider {
+  margin-top: 16px;
+  padding: 16px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.slider-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.slider-value {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #AF1E23;
+  background: #fef2f2;
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+.slider-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.slider-mark {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+  min-width: 35px;
+  text-align: center;
+}
+
+.slider-input {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #AF1E23;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.slider-input::-webkit-slider-thumb:active {
+  transform: scale(1.2);
+  box-shadow: 0 3px 8px rgba(175, 30, 35, 0.4);
+}
+
+.slider-input::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #AF1E23;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.slider-input::-moz-range-thumb:active {
+  transform: scale(1.2);
+  box-shadow: 0 3px 8px rgba(175, 30, 35, 0.4);
+}
+
+.slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.slider-ticks span {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  font-weight: 500;
 }
 
 /* RTL Support for Settings */

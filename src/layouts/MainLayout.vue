@@ -237,6 +237,9 @@
 
       <!-- Notification Center -->
       <NotificationCenter />
+      
+      <!-- Shake Feedback -->
+      <ShakeFeedback ref="shakeFeedbackRef" />
 
       <!-- Quick Menu Backdrop (must be before dropdown to ensure proper stacking) -->
       <transition name="quick-menu-backdrop">
@@ -275,12 +278,15 @@ import { useRouter, useRoute } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { useSmartMirrorStore } from '../stores/smartMirrorStore'
 import { useNotificationCenterStore } from '../stores/notificationCenter'
+import { useAppSettingsStore } from '../stores/appSettings'
 import { useSwipeNavigation } from '../composables/useSwipeNavigation'
 import { useModalState } from '../composables/useModalState'
 import { useGlobalKeyboard } from '../composables/useGlobalKeyboard'
+import { useShakeDetection } from '../composables/useShakeDetection'
 import ViolationNotificationPopup from '../components/ViolationNotificationPopup.vue'
 import SuspensionMessage from '../components/SuspensionMessage.vue'
 import NotificationCenter from '../components/NotificationCenter.vue'
+import ShakeFeedback from '../components/ShakeFeedback.vue'
 import { markViolationsAsShown, hasActiveViolations, clearOldNotificationHistory } from '../services/violationNotificationService'
 import { checkUserSuspension, getSuspensionMessage } from '../services/suspensionService'
 import optimizedAuthService from '../services/optimizedAuthService'
@@ -296,6 +302,7 @@ const route = useRoute()
 const projectStore = useProjectStore()
 const smartMirrorStore = useSmartMirrorStore()
 const notificationCenterStore = useNotificationCenterStore()
+const appSettingsStore = useAppSettingsStore()
 const { openModal, closeModal } = useModalState()
 const { preloadAppData, reset: resetPreloader } = useDataPreloader()
 
@@ -306,6 +313,50 @@ const { isKeyboardVisible } = useGlobalKeyboard()
 const {
   addDeadZone
 } = useSwipeNavigation()
+
+// Shake feedback component ref
+const shakeFeedbackRef = ref(null)
+
+// Handle shake to open gate access
+const handleShake = () => {
+  // Check if shake is enabled in settings
+  if (!appSettingsStore.shakeEnabled) {
+    return
+  }
+  
+  // Only navigate if not already on gate access page
+  if (route.path !== '/access') {
+    console.log('🚪 Shake detected! Opening gate access...')
+    
+    // Show visual feedback
+    if (shakeFeedbackRef.value) {
+      shakeFeedbackRef.value.show()
+    }
+    
+    // Navigate to gate access with a slight delay for feedback
+    setTimeout(() => {
+      router.push('/access')
+    }, 300)
+  }
+}
+
+// Initialize shake detection with settings from store
+const {
+  enableShake,
+  disableShake
+} = useShakeDetection(handleShake, {
+  threshold: computed(() => appSettingsStore.shakeSensitivity),  // Use settings store
+  timeout: 1000   // Min time between shakes (ms)
+})
+
+// Watch for settings changes
+watch(() => appSettingsStore.shakeEnabled, (enabled) => {
+  if (enabled) {
+    enableShake()
+  } else {
+    disableShake()
+  }
+}, { immediate: true })
 
 // Reactive state
 const showProjectSwitcher = ref(false)
@@ -791,6 +842,9 @@ watch(() => route.path, (newPath, oldPath) => {
 
 // Load user projects when component mounts
 onMounted(async () => {
+  // Initialize app settings
+  appSettingsStore.initSettings()
+  
   // Reset violation notifications when app starts
   resetViolationNotifications()
   
@@ -923,7 +977,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   z-index: 1000;
-  padding-top: 60px !important;
+  /* padding-top: 60px !important; */
   /* iOS Safari fix */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
@@ -1324,7 +1378,7 @@ onUnmounted(() => {
 .main-content {
   flex: 1;
   padding: 20px;
-  padding-top: 100px; /* Account for fixed header */
+  /* padding-top: 100px; */
   width: 100%;
   box-sizing: border-box;
   overflow-x: hidden; /* Prevent horizontal overflow */
@@ -1703,7 +1757,7 @@ onUnmounted(() => {
   }
   
   .main-content {
-    padding-top: 90px; /* Adjust for smaller header */
+    padding-top: 60px; /* Adjust for smaller header */
     padding-bottom: 40px;
   }
   
@@ -2047,7 +2101,7 @@ onUnmounted(() => {
   
   .main-content {
     padding: 16px;
-    padding-top: 90px; /* Adjust for smallest header */
+    padding-top: 60px; /* Adjust for smallest header */
     padding-bottom: 40px;
   }
   

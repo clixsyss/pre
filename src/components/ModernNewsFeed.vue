@@ -48,7 +48,8 @@
     <!-- News Items -->
     <div v-else-if="filteredNews.length > 0" class="news-container">
       <div v-for="item in filteredNews" :key="item.id" class="news-card"
-        :class="{ 'featured': item.featured, 'urgent': item.priority === 'urgent' }">
+        :class="{ 'featured': item.featured, 'urgent': item.priority === 'urgent' }"
+        @click="openNewsDetail(item)">
         <!-- Media Section -->
         <div class="news-media" v-if="item.mediaUrl || item.mediaType">
           <div v-if="item.mediaType === 'video'" class="video-container">
@@ -64,7 +65,7 @@
               @loadstart="handleVideoLoadStart(item.id)"
               @loadeddata="handleVideoLoaded(item.id)"
               @error="handleVideoError(item.id)"
-              @click="handleVideoClick(item)">
+              @click.stop="handleVideoClick(item)">
               Your browser does not support the video tag.
             </video>
             <div v-if="videoLoadingStates[item.id]" class="video-loading">
@@ -96,7 +97,7 @@
           <p class="news-excerpt">{{ item.excerpt || item.message }}</p>
 
           <div class="news-actions">
-            <button class="read-more-btn" @click="openNewsDetail(item)">
+            <button class="read-more-btn" @click.stop="openNewsDetail(item)">
               Read More
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -510,15 +511,66 @@ const handleVideoClick = (item) => {
 const openNewsDetail = (item) => {
   selectedNewsItem.value = item
   showNewsModal.value = true
-  // Prevent background scrolling
+  
+  // Store current scroll position
+  const scrollY = window.scrollY
+  document.body.dataset.scrollY = String(scrollY)
+  
+  // Prevent background scrolling and ensure proper positioning
   document.body.style.overflow = 'hidden'
+  document.body.style.position = 'fixed'
+  document.body.style.top = `-${scrollY}px`
+  document.body.style.left = '0'
+  document.body.style.right = '0'
+  document.body.style.backgroundColor = '#F6F6F6' // Ensure light background
+  document.body.classList.add('news-modal-open')
+  
+  // Hide app header and navigation
+  const header = document.querySelector('.app-header')
+  const bottomNav = document.querySelector('.bottom-navigation')
+  const qHeader = document.querySelector('.q-header')
+  const qFooter = document.querySelector('.q-footer')
+  const qDrawer = document.querySelector('.q-drawer')
+  
+  if (header) header.style.display = 'none'
+  if (bottomNav) bottomNav.style.display = 'none'
+  if (qHeader) qHeader.style.display = 'none'
+  if (qFooter) qFooter.style.display = 'none'
+  if (qDrawer) qDrawer.style.display = 'none'
 }
 
 const closeNewsModal = () => {
   showNewsModal.value = false
   selectedNewsItem.value = null
-  // Restore background scrolling
+  
+  // Restore body styles
   document.body.style.overflow = ''
+  document.body.style.position = ''
+  document.body.style.top = ''
+  document.body.style.left = ''
+  document.body.style.right = ''
+  document.body.style.backgroundColor = ''
+  document.body.classList.remove('news-modal-open')
+  
+  // Restore scroll position
+  const scrollY = document.body.dataset.scrollY
+  if (scrollY) {
+    window.scrollTo(0, parseInt(scrollY))
+    delete document.body.dataset.scrollY
+  }
+  
+  // Restore app header and navigation
+  const header = document.querySelector('.app-header')
+  const bottomNav = document.querySelector('.bottom-navigation')
+  const qHeader = document.querySelector('.q-header')
+  const qFooter = document.querySelector('.q-footer')
+  const qDrawer = document.querySelector('.q-drawer')
+  
+  if (header) header.style.display = ''
+  if (bottomNav) bottomNav.style.display = ''
+  if (qHeader) qHeader.style.display = ''
+  if (qFooter) qFooter.style.display = ''
+  if (qDrawer) qDrawer.style.display = ''
 }
 
 const navigateToAllNews = () => {
@@ -742,8 +794,35 @@ onUnmounted(() => {
   if (videoIntersectionObserver.value) {
     videoIntersectionObserver.value.disconnect()
   }
-  // Restore background scrolling in case component unmounts while modal is open
+  
+  // Restore body styles in case component unmounts while modal is open
   document.body.style.overflow = ''
+  document.body.style.position = ''
+  document.body.style.top = ''
+  document.body.style.left = ''
+  document.body.style.right = ''
+  document.body.style.backgroundColor = ''
+  document.body.classList.remove('news-modal-open')
+  
+  // Restore scroll position if needed
+  const scrollY = document.body.dataset.scrollY
+  if (scrollY) {
+    window.scrollTo(0, parseInt(scrollY))
+    delete document.body.dataset.scrollY
+  }
+  
+  // Restore app header and navigation
+  const header = document.querySelector('.app-header')
+  const bottomNav = document.querySelector('.bottom-navigation')
+  const qHeader = document.querySelector('.q-header')
+  const qFooter = document.querySelector('.q-footer')
+  const qDrawer = document.querySelector('.q-drawer')
+  
+  if (header) header.style.display = ''
+  if (bottomNav) bottomNav.style.display = ''
+  if (qHeader) qHeader.style.display = ''
+  if (qFooter) qFooter.style.display = ''
+  if (qDrawer) qDrawer.style.display = ''
 })
 </script>
 
@@ -1015,15 +1094,16 @@ onUnmounted(() => {
   overflow: hidden;
   width: 100%;
   box-sizing: border-box;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Mobile app - hover effects disabled */
-/* .news-card:hover {
+/* Active state for mobile tap feedback */
+.news-card:active {
+  transform: scale(0.98);
   background: white;
-  border-color: #e0e0e0;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-} */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
 
 .news-card.featured {
   background: linear-gradient(135deg, #fff5f2 0%, #ffffff 100%);
@@ -1398,12 +1478,22 @@ onUnmounted(() => {
   bottom: 0;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
   z-index: 999999;
   padding: 0;
+  margin: 0;
   overflow: hidden; /* Prevent background scrolling */
+  /* iOS safe area support */
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  /* Ensure overlay covers everything */
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
 }
 
 .dialog-container {
@@ -1412,8 +1502,8 @@ onUnmounted(() => {
   box-shadow: 0 -25px 50px -12px rgba(0, 0, 0, 0.25);
   max-width: 100%;
   width: 100%;
-  max-height: 85vh;
-  min-height: 50vh; /* Ensure minimum height */
+  height: 100vh; /* Full viewport height */
+  height: calc(100vh - env(safe-area-inset-top, 0px)); /* Account for iOS safe area */
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2232,6 +2322,49 @@ onUnmounted(() => {
   .interactions-disabled-message p {
     font-size: 0.8rem;
   }
+}
+
+/* iOS-specific fixes for full-screen dialog */
+@supports (-webkit-touch-callout: none) {
+  .dialog-overlay {
+    /* iOS Safari full-screen fix */
+    height: -webkit-fill-available;
+  }
+  
+  .dialog-container {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+}
+
+/* Additional iOS safe area handling for notch/home indicator */
+.dialog-header {
+  padding-top: max(20px, env(safe-area-inset-top, 20px));
+}
+
+.dialog-actions {
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+}
+
+/* Ensure dialog is above all Quasar elements */
+.dialog-overlay {
+  z-index: 9999999 !important;
+}
+
+/* Global body class to hide app navigation when modal is open */
+:global(body.news-modal-open) {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+  height: 100vh !important;
+}
+
+:global(body.news-modal-open .app-header),
+:global(body.news-modal-open .bottom-navigation),
+:global(body.news-modal-open .q-header),
+:global(body.news-modal-open .q-footer),
+:global(body.news-modal-open .q-drawer) {
+  display: none !important;
 }
 
 </style>

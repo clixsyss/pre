@@ -84,6 +84,8 @@
 	<string>This app needs access to your photo library to let you choose images to upload for your service requests and chat messages.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>This app would like to send you notifications about important updates, announcements, and personalized content from your community.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>This app uses motion detection to provide quick access to gate access by shaking your device.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
