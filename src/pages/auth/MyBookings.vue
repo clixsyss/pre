@@ -1052,9 +1052,9 @@ onBeforeUnmount(() => {
 }
 
 .details-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-bottom: 12px;
 }
 
@@ -1367,7 +1367,7 @@ onBeforeUnmount(() => {
   }
 
   .details-row {
-    gap: 20px;
+    gap: 6px;
   }
 
   .detail-item.price-item {
@@ -1417,7 +1417,7 @@ onBeforeUnmount(() => {
   }
 
   .details-row {
-    gap: 20px;
+    gap: 6px;
   }
 
   .detail-item {

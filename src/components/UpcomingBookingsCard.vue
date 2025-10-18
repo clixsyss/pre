@@ -102,56 +102,14 @@ const upcomingBookings = computed(() => {
   // Filter service bookings (open/processing status = upcoming)
   // EXCLUDE any request submissions - they're handled separately
   const upcomingServices = serviceBookings.filter(booking => {
-    // CRITICAL VALIDATION - Service bookings vs Request submissions
-    // Request submissions have different structure and should NOT appear here
+    // Service bookings MUST have serviceId (requests don't have this)
+    if (!booking.serviceId) return false;
+    // Must NOT have formData or fieldMetadata (those are for request submissions)
+    if (booking.formData || booking.fieldMetadata) return false;
+    // Must have serviceName
+    if (!booking.serviceName) return false;
     
-    console.log('🔍 Evaluating booking:', {
-      id: booking.id,
-      serviceName: booking.serviceName,
-      categoryName: booking.categoryName,
-      hasServiceId: !!booking.serviceId,
-      hasCategoryId: !!booking.categoryId,
-      hasFormData: !!booking.formData,
-      hasMediaFiles: !!booking.mediaFiles,
-      hasFieldMetadata: !!booking.fieldMetadata,
-      status: booking.status
-    });
-    
-    // TRIPLE-LAYER VALIDATION:
-    
-    // 1. MUST have serviceId (requests don't have this - they only have categoryId)
-    if (!booking.serviceId) {
-      console.log('❌ REJECTED - No serviceId (this is a REQUEST, not a service booking):', booking.id);
-      return false;
-    }
-    
-    // 2. Must NOT have formData (requests have this, service bookings don't)
-    if (booking.formData) {
-      console.log('❌ REJECTED - Has formData (REQUEST submission detected):', booking.id);
-      return false;
-    }
-    
-    // 3. Must NOT have fieldMetadata (requests have this, service bookings don't)
-    if (booking.fieldMetadata) {
-      console.log('❌ REJECTED - Has fieldMetadata (REQUEST submission detected):', booking.id);
-      return false;
-    }
-    
-    // 4. Must have serviceName (service bookings always have this)
-    if (!booking.serviceName) {
-      console.log('❌ REJECTED - No serviceName (invalid service booking):', booking.id);
-      return false;
-    }
-    
-    console.log('✅ VALID SERVICE BOOKING:', {
-      id: booking.id,
-      serviceName: booking.serviceName,
-      serviceId: booking.serviceId,
-      status: booking.status
-    });
-    
-    // Service bookings that are pending or confirmed are considered upcoming
-    // Support both old status values (open, processing) and new ones (pending, confirmed)
+    // Check if booking is upcoming (status + date)
     const upcomingStatuses = ['open', 'pending', 'processing', 'confirmed'];
     if (upcomingStatuses.includes(booking.status)) {
       // Check if the selected date is in the future
@@ -161,14 +119,14 @@ const upcomingBookings = computed(() => {
         today.setHours(0, 0, 0, 0);
         return bookingDate >= today;
       }
-      // If no specific date, still show as upcoming if status is pending/confirmed
+      // If no specific date, still show as upcoming
       return true;
     }
     return false;
   }).map(booking => ({
     ...booking,
-    type: 'service', // Add type identifier
-    date: booking.selectedDate // Normalize date field
+    type: 'service',
+    date: booking.selectedDate
   }));
   
   // Combine all bookings
@@ -184,23 +142,6 @@ const upcomingBookings = computed(() => {
     if (!a.date && b.date) return 1;
     return 0;
   });
-  
-  console.log('✅ Total upcoming bookings:', sorted.length, {
-    court: upcomingCourtAndAcademy.filter(b => b.type === 'court').length,
-    academy: upcomingCourtAndAcademy.filter(b => b.type === 'academy').length,
-    service: upcomingServices.length
-  });
-  
-  // Log first few items to verify no requests are included
-  if (sorted.length > 0) {
-    console.log('📋 Sample bookings:', sorted.slice(0, 4).map(b => ({
-      type: b.type,
-      title: b.serviceName || b.courtName || b.programName,
-      hasServiceId: !!b.serviceId,
-      hasCategoryId: !!b.categoryId,
-      status: b.status
-    })));
-  }
   
   return sorted;
 });
