@@ -3,21 +3,6 @@ import { Capacitor } from '@capacitor/core'
 /**
  * Input validation and sanitization utilities
  */
-const validatePhoneNumber = (phoneNumber) => {
-  if (!phoneNumber || typeof phoneNumber !== 'string') {
-    throw new Error('Phone number is required')
-  }
-
-  // Remove all non-digit characters for validation
-  const cleaned = phoneNumber.replace(/\D/g, '')
-
-  // Basic validation - should be 10-15 digits
-  if (cleaned.length < 10 || cleaned.length > 15) {
-    throw new Error('Invalid phone number format')
-  }
-
-  return cleaned
-}
 
 const sanitizeString = (str, maxLength = 1000) => {
   if (!str || typeof str !== 'string') {

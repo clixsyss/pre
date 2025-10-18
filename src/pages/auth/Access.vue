@@ -1380,14 +1380,13 @@ const generateQRCode = async (pass) => {
       })
 
       console.log('✅ QR code generated with toCanvas, drawing gate pass...')
-      
+
       // Draw the complete gate pass design
       drawGatePass(ctx, qrCanvas, pass, canvasWidth)
       console.log('✅ Gate pass drawn successfully')
-      
     } catch (toCanvasError) {
       console.warn('⚠️ toCanvas failed, trying dataURL method:', toCanvasError)
-      
+
       // Method 2: Fallback to dataURL method
       const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
         width: 280,
