@@ -134,7 +134,8 @@
               v-for="project in userProjects" 
               :key="project.id" 
               class="project-option"
-              :class="{ 'current': project.id === currentProjectId }"
+              :class="{ 'current': project.id === currentProjectId, 'clickable': project.id !== currentProjectId }"
+              @click="project.id !== currentProjectId && !projectStore.loading && switchToProject(project)"
             >
               <div class="project-info">
                 <h4>{{ project.name }}</h4>
@@ -143,15 +144,10 @@
               
               <div class="project-actions">
                 <span v-if="project.id === currentProjectId" class="current-badge">Current</span>
-                <button 
-                  v-else 
-                  @click="switchToProject(project)" 
-                  class="switch-btn"
-                  :disabled="projectStore.loading"
-                >
+                <div v-else class="switch-indicator">
                   <div v-if="projectStore.loading" class="loading-spinner"></div>
-                  <span v-else>Switch</span>
-                </button>
+                  <span v-else class="switch-text">Tap to switch</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1541,15 +1537,18 @@ onUnmounted(() => {
   background: rgba(175, 30, 35, 0.05);
   border: 2px solid rgba(175, 30, 35, 0.2);
   border-radius: 16px;
-  cursor: pointer;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   backdrop-filter: blur(10px);
 }
 
-.project-option:active {
-  background: rgba(175, 30, 35, 0.1);
-  border-color: rgba(175, 30, 35, 0.4);
-  transform: scale(0.98);
+.project-option.clickable {
+  cursor: pointer;
+}
+
+.project-option.clickable:active {
+  background: rgba(175, 30, 35, 0.15);
+  border-color: rgba(175, 30, 35, 0.5);
+  transform: scale(0.97);
 }
 
 .project-option.current {
@@ -1559,6 +1558,7 @@ onUnmounted(() => {
     0 4px 16px rgba(175, 30, 35, 0.3),
     0 0 0 2px rgba(175, 30, 35, 0.15);
   transform: scale(1.02);
+  cursor: default;
 }
 
 .project-info h4 {
@@ -1599,7 +1599,7 @@ onUnmounted(() => {
   backdrop-filter: blur(10px);
 }
 
-.switch-btn {
+.switch-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1608,24 +1608,23 @@ onUnmounted(() => {
   border-radius: 12px;
   padding: 10px 20px;
   color: #F6F6F6;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
   backdrop-filter: blur(10px);
   min-width: 80px;
+  pointer-events: none;
+  transition: all 0.3s ease;
 }
 
-.switch-btn:active:not(:disabled) {
-  transform: scale(0.95);
+.switch-text {
+  color: rgba(246, 246, 246, 0.9);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.project-option.clickable:active .switch-indicator {
   background: rgba(175, 30, 35, 0.2);
   border-color: rgba(175, 30, 35, 0.4);
-}
-
-.switch-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
 }
 
 .loading-spinner {

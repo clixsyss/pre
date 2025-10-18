@@ -766,7 +766,7 @@ const handleSubmit = async () => {
 .nav-divider {
   display: flex;
   align-items: center;
-  margin: 20px 0;
+  margin: 10px 0;
   color: #666;
   font-size: 0.9rem;
 }
@@ -835,7 +835,7 @@ const handleSubmit = async () => {
 }
 
 .form-group {
-  margin-bottom: 25px;
+  margin-bottom: 20px;
 }
 
 .form-row {

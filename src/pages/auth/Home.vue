@@ -385,15 +385,21 @@ onMounted(async () => {
     if (currentUser) {
       user.value = currentUser
 
-      // Check if project is selected, if not redirect to project selection
+      // Ensure projects are loaded
+      if (projectStore.userProjects.length === 0) {
+        console.log('Home: Projects not loaded yet, fetching...')
+        await projectStore.fetchUserProjects(currentUser.uid)
+      }
+
+      // Check if project is selected, if not try to auto-select
       if (!projectStore.hasSelectedProject) {
         // Try to load the selected project from localStorage
         projectStore.loadSelectedProject()
 
-        // If still no project selected, redirect to project selection
-        if (!projectStore.hasSelectedProject) {
-          router.push('/project-selection')
-          return
+        // If still no project selected, auto-select the first available project
+        if (!projectStore.hasSelectedProject && projectStore.userProjects.length > 0) {
+          console.log('Home: No project selected, auto-selecting first available project')
+          projectStore.selectProject(projectStore.userProjects[0])
         }
       }
 

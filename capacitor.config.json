@@ -31,9 +31,10 @@
       "splashImmersive": true
     },
     "Keyboard": {
-      "resize": "ionic",
+      "resize": "native",
       "style": "dark",
-      "resizeOnFullScreen": true
+      "resizeOnFullScreen": true,
+      "scrollAssist": true
     },
     "FirebaseMessaging": {
       "presentationOptions": [

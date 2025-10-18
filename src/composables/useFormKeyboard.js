@@ -72,6 +72,9 @@ export function useFormKeyboard(options = {}) {
     isKeyboardVisible.value = true
     keyboardHeight.value = info.keyboardHeight || 0
 
+    // Add padding to body to push content up
+    document.body.style.paddingBottom = `${info.keyboardHeight}px`
+
     // Scroll to active input if enabled
     if (activeInput.value && scrollToInput) {
       scrollToInputElement(activeInput.value)
@@ -86,6 +89,9 @@ export function useFormKeyboard(options = {}) {
     isKeyboardVisible.value = false
     keyboardHeight.value = 0
     activeInput.value = null
+
+    // Remove padding from body
+    document.body.style.paddingBottom = '0px'
   }
 
   /**
@@ -143,16 +149,16 @@ export function useFormKeyboard(options = {}) {
       keyboardShowListener = await Keyboard.addListener('keyboardWillShow', handleKeyboardShow)
       keyboardHideListener = await Keyboard.addListener('keyboardWillHide', handleKeyboardHide)
 
-      // Set resize mode to ionic for better handling
-      await Keyboard.setResizeMode({ mode: 'ionic' })
+      // Set resize mode to native - this pushes content up when keyboard appears
+      await Keyboard.setResizeMode({ mode: 'native' })
 
-      // Enable keyboard scrolling
+      // Enable keyboard scrolling - CRITICAL for scrollability
       await Keyboard.setScroll({ isDisabled: false })
 
       // Set keyboard style
       await Keyboard.setStyle({ style: 'dark' })
 
-      console.log('✅ Keyboard listeners set up successfully')
+      console.log('✅ Keyboard listeners set up successfully (native mode)')
     } catch (error) {
       console.log('Keyboard API setup failed (might not be available):', error)
     }

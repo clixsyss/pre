@@ -1021,7 +1021,6 @@ const goToSignIn = () => {
   padding: 40px 20px;
   max-width: 500px;
   margin: 0 auto;
-  margin-top: 20px;
   /* Add extra bottom padding for keyboard */
   padding-bottom: 150px;
 }
@@ -1135,7 +1134,7 @@ const goToSignIn = () => {
 }
 
 .form-group {
-  margin-bottom: 25px;
+  margin-bottom: 20px;
 }
 
 .form-label {
@@ -1276,7 +1275,7 @@ select.form-input:disabled {
 .nav-divider {
   display: flex;
   align-items: center;
-  margin: 20px 0;
+  margin: 10px 0;
   color: #666;
   font-size: 0.9rem;
 }
@@ -1647,7 +1646,7 @@ select.form-input:disabled {
 /* Responsive design */
 @media (max-width: 480px) {
   .step-content {
-    padding: 30px 15px;
+    padding: 20px;
   }
 
   .form-input {
