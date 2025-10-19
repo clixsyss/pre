@@ -603,6 +603,7 @@ padding-top: 40px;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
@@ -637,8 +638,6 @@ padding-top: 40px;
 
 /* Responsive */
 @media (max-width: 768px) {
-  .notification-center-overlay {
-  }
 
   .notification-center-modal {
     width: 95vw;
