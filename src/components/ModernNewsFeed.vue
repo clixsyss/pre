@@ -125,110 +125,110 @@
       <p>Check back later for updates from your community!</p>
     </div>
 
-    <!-- Modern News Dialog -->
-    <Transition name="dialog-slide">
-      <div v-if="showNewsModal && selectedNewsItem" class="dialog-overlay" @click="closeNewsModal">
-        <div class="dialog-container" @click.stop>
-          <!-- Dialog Header -->
-          <div class="dialog-header">
-            <div class="dialog-meta">
-              <span class="dialog-category" :class="getCategoryClass(selectedNewsItem.category)">
+    <!-- News Modal - Matching MyBookings Design -->
+    <div v-if="showNewsModal && selectedNewsItem" class="modal-overlay" @click="closeNewsModal">
+      <div class="modal-content" @click.stop>
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h2>{{ selectedNewsItem.title }}</h2>
+          <button class="close-btn" @click="closeNewsModal">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="modal-body">
+          <!-- Meta Information -->
+          <div class="detail-section">
+            <div class="news-meta-info">
+              <span class="news-category-badge" :class="getCategoryClass(selectedNewsItem.category)">
                 {{ getCategoryLabel(selectedNewsItem.category) }}
               </span>
-              <span class="dialog-time">{{ formatTime(selectedNewsItem.createdAt) }}</span>
+              <span class="news-time-badge">{{ formatTime(selectedNewsItem.createdAt) }}</span>
             </div>
-            <button @click="closeNewsModal" class="dialog-close-btn">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
           </div>
 
-          <!-- Scrollable Dialog Content -->
-          <div class="dialog-content-scrollable">
-            <!-- Media Section -->
-            <div v-if="selectedNewsItem.mediaUrl || selectedNewsItem.mediaType" class="dialog-media">
-              <div v-if="selectedNewsItem.mediaType === 'video'" class="dialog-video-container">
-                <video 
-                  :src="selectedNewsItem.mediaUrl" 
-                  :poster="selectedNewsItem.thumbnailUrl" 
-                  controls 
-                  class="dialog-video"
-                  preload="metadata"
-                  playsinline
-                  webkit-playsinline
-                  @loadstart="handleVideoLoadStart(selectedNewsItem.id)"
-                  @loadeddata="handleVideoLoaded(selectedNewsItem.id)"
-                  @error="handleVideoError(selectedNewsItem.id)">
-                  Your browser does not support the video tag.
-                </video>
-                <div v-if="videoLoadingStates[selectedNewsItem.id]" class="video-loading">
-                  <div class="loading-spinner"></div>
-                </div>
-              </div>
-              <div v-else class="dialog-image-container">
-                <img :src="selectedNewsItem.mediaUrl || defaultLogoUrl" :alt="selectedNewsItem.title" class="dialog-image" 
-                  @error="handleMediaError" loading="lazy" />
+          <!-- Media Section -->
+          <div v-if="selectedNewsItem.mediaUrl || selectedNewsItem.mediaType" class="detail-section media-section">
+            <div v-if="selectedNewsItem.mediaType === 'video'" class="media-container">
+              <video 
+                :src="selectedNewsItem.mediaUrl" 
+                :poster="selectedNewsItem.thumbnailUrl" 
+                controls 
+                class="news-video"
+                preload="metadata"
+                playsinline
+                webkit-playsinline
+                @loadstart="handleVideoLoadStart(selectedNewsItem.id)"
+                @loadeddata="handleVideoLoaded(selectedNewsItem.id)"
+                @error="handleVideoError(selectedNewsItem.id)">
+                Your browser does not support the video tag.
+              </video>
+              <div v-if="videoLoadingStates[selectedNewsItem.id]" class="video-loading">
+                <div class="loading-spinner"></div>
               </div>
             </div>
-
-            <!-- Text Content -->
-            <div class="dialog-text">
-              <h1 class="dialog-title">{{ selectedNewsItem.title }}</h1>
-              <div class="dialog-message" v-html="selectedNewsItem.message || selectedNewsItem.content"></div>
+            <div v-else class="media-container">
+              <img :src="selectedNewsItem.mediaUrl || defaultLogoUrl" :alt="selectedNewsItem.title" class="news-image" 
+                @error="handleMediaError" loading="lazy" />
             </div>
+          </div>
 
+          <!-- Content Section -->
+          <div class="detail-section">
+            <h3>News Content</h3>
+            <div class="news-content-text" v-html="selectedNewsItem.message || selectedNewsItem.content"></div>
+          </div>
 
-            <!-- External Link Section -->
-            <div v-if="selectedNewsItem.linkUrl && selectedNewsItem.linkUrl.trim() !== ''" class="dialog-link-section">
-              <a :href="selectedNewsItem.linkUrl" target="_blank" rel="noopener noreferrer" class="external-link">
-                <div class="link-content">
-                  <div class="link-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M10 13C10.4295 13.5741 10.9774 14.0491 11.6066 14.3929C12.2357 14.7367 12.9315 14.9411 13.6467 14.9923C14.3618 15.0435 15.0796 14.9403 15.7513 14.6897C16.4231 14.4392 17.0331 14.047 17.54 13.54L20.54 10.54C21.4508 9.59695 21.9548 8.33394 21.9434 7.02296C21.932 5.71198 21.4061 4.45791 20.4791 3.53087C19.5521 2.60383 18.298 2.07799 16.987 2.0666C15.676 2.0552 14.413 2.55918 13.47 3.47L11.75 5.18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <path d="M14 11C13.5705 10.4259 13.0226 9.95085 12.3934 9.60705C11.7643 9.26325 11.0685 9.05886 10.3533 9.00766C9.63816 8.95645 8.92037 9.05972 8.24861 9.31028C7.57685 9.56084 6.96684 9.95302 6.46 10.46L3.46 13.46C2.54918 14.403 2.04518 15.666 2.05659 16.977C2.068 18.288 2.59394 19.5421 3.52098 20.4691C4.44802 21.3962 5.70209 21.922 7.01307 21.9334C8.32405 21.9448 9.58706 21.4408 10.53 20.53L12.24 18.82" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </div>
-                  <div class="link-text">
-                    <div class="link-title">{{ selectedNewsItem.linkTitle || 'Read More' }}</div>
-                    <div class="link-url">{{ selectedNewsItem.linkUrl }}</div>
-                  </div>
-                  <div class="link-arrow">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M7 17L17 7M17 7H7M17 7V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </div>
-                </div>
-              </a>
-            </div>
-
-            <!-- Compact Comments Section -->
-            <div v-if="selectedNewsItem.interactionsEnabled" class="dialog-comments-compact">
-              <NewsComments :news-id="selectedNewsItem.id" :interactions-enabled="selectedNewsItem.interactionsEnabled" />
-            </div>
-            <div v-else class="dialog-comments-disabled">
-              <div class="interactions-disabled-message">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- External Link Section -->
+          <div v-if="selectedNewsItem.linkUrl && selectedNewsItem.linkUrl.trim() !== ''" class="detail-section">
+            <h3>Related Link</h3>
+            <a :href="selectedNewsItem.linkUrl" target="_blank" rel="noopener noreferrer" class="external-link-card">
+              <div class="link-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 13C10.4295 13.5741 10.9774 14.0491 11.6066 14.3929C12.2357 14.7367 12.9315 14.9411 13.6467 14.9923C14.3618 15.0435 15.0796 14.9403 15.7513 14.6897C16.4231 14.4392 17.0331 14.047 17.54 13.54L20.54 10.54C21.4508 9.59695 21.9548 8.33394 21.9434 7.02296C21.932 5.71198 21.4061 4.45791 20.4791 3.53087C19.5521 2.60383 18.298 2.07799 16.987 2.0666C15.676 2.0552 14.413 2.55918 13.47 3.47L11.75 5.18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M14 11C13.5705 10.4259 13.0226 9.95085 12.3934 9.60705C11.7643 9.26325 11.0685 9.05886 10.3533 9.00766C9.63816 8.95645 8.92037 9.05972 8.24861 9.31028C7.57685 9.56084 6.96684 9.95302 6.46 10.46L3.46 13.46C2.54918 14.403 2.04518 15.666 2.05659 16.977C2.068 18.288 2.59394 19.5421 3.52098 20.4691C4.44802 21.3962 5.70209 21.922 7.01307 21.9334C8.32405 21.9448 9.58706 21.4408 10.53 20.53L12.24 18.82" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <p>Interactions are disabled for this news item</p>
               </div>
-            </div>
+              <div class="link-text">
+                <div class="link-title">{{ selectedNewsItem.linkTitle || 'Read More' }}</div>
+                <div class="link-url">{{ selectedNewsItem.linkUrl }}</div>
+              </div>
+              <div class="link-arrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M7 17L17 7M17 7H7M17 7V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </a>
           </div>
 
-          <!-- Dialog Actions -->
-          <div class="dialog-actions">
-            <button @click="closeNewsModal" class="dialog-action-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          <!-- Comments Section -->
+          <div v-if="selectedNewsItem.interactionsEnabled" class="detail-section">
+            <h3>Comments & Reactions</h3>
+            <NewsComments :news-id="selectedNewsItem.id" :interactions-enabled="selectedNewsItem.interactionsEnabled" />
+          </div>
+          <div v-else class="detail-section">
+            <div class="interactions-disabled">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              Got it
-            </button>
+              <p>Interactions are disabled for this news item</p>
+            </div>
           </div>
         </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer">
+          <button class="close-modal-btn" @click="closeNewsModal">
+            Close
+          </button>
+        </div>
       </div>
-    </Transition>
+    </div>
   </div>
 </template>
 
@@ -510,26 +510,62 @@ const handleVideoClick = (item) => {
 
 const openNewsDetail = (item) => {
   console.log('📰 openNewsDetail called with item:', item?.title)
+  console.log('📰 Item data:', item)
+  
   selectedNewsItem.value = item
   showNewsModal.value = true
-  console.log('📰 Modal state:', { showNewsModal: showNewsModal.value, hasItem: !!selectedNewsItem.value })
   
-  // Simple overflow hidden - don't use position fixed as it causes white screens on iOS
+  console.log('📰 Modal state updated:', { 
+    showNewsModal: showNewsModal.value, 
+    hasItem: !!selectedNewsItem.value,
+    itemTitle: selectedNewsItem.value?.title 
+  })
+  
+  // Use nextTick to ensure DOM is updated
+  setTimeout(() => {
+    const overlay = document.querySelector('.modal-overlay')
+    const container = document.querySelector('.modal-content')
+    const header = document.querySelector('.modal-header')
+    const body = document.querySelector('.modal-body')
+    
+    console.log('📰 DOM elements:', {
+      overlay: !!overlay,
+      container: !!container,
+      header: !!header,
+      body: !!body
+    })
+    
+    if (container) {
+      const computedStyle = window.getComputedStyle(container)
+      console.log('📰 Modal content computed styles:', {
+        background: computedStyle.background,
+        backgroundColor: computedStyle.backgroundColor,
+        display: computedStyle.display,
+        opacity: computedStyle.opacity,
+        visibility: computedStyle.visibility,
+        zIndex: computedStyle.zIndex,
+        width: computedStyle.width,
+        height: computedStyle.height,
+        maxHeight: computedStyle.maxHeight
+      })
+    }
+  }, 100)
+  
+  // Simple overflow hidden
   document.body.style.overflow = 'hidden'
-  document.body.classList.add('news-modal-open')
   
-  // Hide app header and navigation
+  // Hide app header and navigation using display none (not visibility hidden)
   const header = document.querySelector('.app-header')
   const bottomNav = document.querySelector('.bottom-navigation')
   const qHeader = document.querySelector('.q-header')
   const qFooter = document.querySelector('.q-footer')
   const qDrawer = document.querySelector('.q-drawer')
   
-  if (header) header.style.visibility = 'hidden'
-  if (bottomNav) bottomNav.style.visibility = 'hidden'
-  if (qHeader) qHeader.style.visibility = 'hidden'
-  if (qFooter) qFooter.style.visibility = 'hidden'
-  if (qDrawer) qDrawer.style.visibility = 'hidden'
+  if (header) header.style.display = 'none'
+  if (bottomNav) bottomNav.style.display = 'none'
+  if (qHeader) qHeader.style.display = 'none'
+  if (qFooter) qFooter.style.display = 'none'
+  if (qDrawer) qDrawer.style.display = 'none'
 }
 
 const closeNewsModal = () => {
@@ -538,7 +574,6 @@ const closeNewsModal = () => {
   
   // Restore body overflow
   document.body.style.overflow = ''
-  document.body.classList.remove('news-modal-open')
   
   // Restore app header and navigation visibility
   const header = document.querySelector('.app-header')
@@ -547,11 +582,11 @@ const closeNewsModal = () => {
   const qFooter = document.querySelector('.q-footer')
   const qDrawer = document.querySelector('.q-drawer')
   
-  if (header) header.style.visibility = ''
-  if (bottomNav) bottomNav.style.visibility = ''
-  if (qHeader) qHeader.style.visibility = ''
-  if (qFooter) qFooter.style.visibility = ''
-  if (qDrawer) qDrawer.style.visibility = ''
+  if (header) header.style.display = ''
+  if (bottomNav) bottomNav.style.display = ''
+  if (qHeader) qHeader.style.display = ''
+  if (qFooter) qFooter.style.display = ''
+  if (qDrawer) qDrawer.style.display = ''
 }
 
 const navigateToAllNews = () => {
@@ -778,7 +813,6 @@ onUnmounted(() => {
   
   // Restore body styles in case component unmounts while modal is open
   document.body.style.overflow = ''
-  document.body.classList.remove('news-modal-open')
   
   // Restore app header and navigation visibility
   const header = document.querySelector('.app-header')
@@ -787,15 +821,16 @@ onUnmounted(() => {
   const qFooter = document.querySelector('.q-footer')
   const qDrawer = document.querySelector('.q-drawer')
   
-  if (header) header.style.visibility = ''
-  if (bottomNav) bottomNav.style.visibility = ''
-  if (qHeader) qHeader.style.visibility = ''
-  if (qFooter) qFooter.style.visibility = ''
-  if (qDrawer) qDrawer.style.visibility = ''
+  if (header) header.style.display = ''
+  if (bottomNav) bottomNav.style.display = ''
+  if (qHeader) qHeader.style.display = ''
+  if (qFooter) qFooter.style.display = ''
+  if (qDrawer) qDrawer.style.display = ''
 })
 </script>
 
 <style scoped>
+/* ===== BASE STYLES ===== */
 .modern-news-feed {
   background: white;
   border-radius: 20px;
@@ -804,9 +839,9 @@ onUnmounted(() => {
   border: 1px solid #f0f0f0;
   width: 100%;
   box-sizing: border-box;
-  overflow-x: hidden; /* Prevent horizontal overflow */
 }
 
+/* ===== HEADER ===== */
 .news-header {
   margin-bottom: 16px;
   display: flex;
@@ -828,14 +863,16 @@ onUnmounted(() => {
   gap: 12px;
 }
 
-.news-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0;
-  letter-spacing: -0.02em;
-  margin: 0;
-  line-height: 1.2;
+.back-btn {
+  background: #f3f4f6;
+  border: none;
+  border-radius: 12px;
+  padding: 10px;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .news-count {
@@ -856,126 +893,12 @@ onUnmounted(() => {
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.3);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-/* Mobile app - hover effects disabled */
-/* .view-all-btn:hover {
-  background: #AF1E23;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
-} */
-
-.view-all-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
-}
-
-.back-btn {
-  background: #f3f4f6;
-  border: none;
-  border-radius: 12px;
-  padding: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #6b7280;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-/* Mobile app - hover effects disabled */
-/* .back-btn:hover {
-  background: #e5e7eb;
-  color: #374151;
-  transform: scale(1.05);
-} */
-
-.filter-section {
-  margin-bottom: 20px;
-}
-
-.filter-tabs {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 4px 0;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.filter-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.filter-tab {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  padding: 8px 12px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
-  min-width: fit-content;
-}
-
-/* Mobile app - hover effects disabled */
-/* .filter-tab:hover {
-  color: #374151;
-  background: #e5e7eb;
-  border-color: #d1d5db;
-} */
-
-.filter-tab.active {
-  background: #AF1E23;
-  color: white;
-  border-color: #AF1E23;
-  box-shadow: 0 2px 4px rgba(255, 107, 53, 0.2);
-}
-
-.filter-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-.filter-label {
-  font-weight: 600;
-}
-
-.filter-count {
-  background: rgba(255, 255, 255, 0.3);
-  color: inherit;
-  padding: 1px 6px;
-  border-radius: 8px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  min-width: 16px;
-  text-align: center;
-  line-height: 1.2;
-}
-
-.filter-tab:not(.active) .filter-count {
-  background: #d1d5db;
-  color: #6b7280;
-}
-
-/* Loading States */
+/* ===== LOADING SKELETON ===== */
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -1035,16 +958,11 @@ onUnmounted(() => {
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
-/* News Container */
+/* ===== NEWS CARDS ===== */
 .news-container {
   display: flex;
   flex-direction: column;
@@ -1058,93 +976,45 @@ onUnmounted(() => {
   background: #fafafa;
   border-radius: 16px;
   border: 1px solid #f0f0f0;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
   width: 100%;
   box-sizing: border-box;
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
 }
 
-/* Active state for mobile tap feedback */
 .news-card:active {
   transform: scale(0.98);
   background: white;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
-.news-card.featured {
-  background: linear-gradient(135deg, #fff5f2 0%, #ffffff 100%);
-  border-color: #AF1E23;
-  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.15);
-}
-
-.news-card.urgent {
-  background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
-  border-color: #ef4444;
-  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.15);
-}
-
-/* Media Section */
 .news-media {
   flex-shrink: 0;
   width: 200px;
   height: 120px;
-  position: relative;
   border-radius: 12px;
   overflow: hidden;
+  position: relative;
 }
 
-.image-container {
+.image-container,
+.video-container {
   width: 100%;
   height: 100%;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
 }
 
-.news-image {
-  height: 100%;
-  object-fit: cover;
-  border-radius: 12px;
-}
-
-.video-container {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
+.news-image,
 .news-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: 12px;
-  background: #231F20;
-  /* Performance optimizations */
-  will-change: transform;
-  backface-visibility: hidden;
-  transform: translateZ(0);
 }
 
-.play-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 48px;
-  height: 48px;
-  background: rgba(0, 0, 0, 0.7);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-}
-
+.play-overlay,
 .video-loading {
   position: absolute;
   top: 50%;
@@ -1157,7 +1027,6 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(4px);
 }
 
 .loading-spinner {
@@ -1186,7 +1055,6 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-/* Content Section */
 .news-content {
   flex: 1;
   display: flex;
@@ -1198,7 +1066,6 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 4px;
 }
 
 .news-category {
@@ -1247,7 +1114,6 @@ onUnmounted(() => {
   color: #1a1a1a;
   margin: 0;
   line-height: 1.4;
-  letter-spacing: -0.01em;
 }
 
 .news-excerpt {
@@ -1260,24 +1126,6 @@ onUnmounted(() => {
   line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.news-link-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 8px 0 12px 0;
-  padding: 6px 10px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  color: #3b82f6;
-  font-weight: 500;
-}
-
-.news-link-indicator svg {
-  flex-shrink: 0;
 }
 
 .news-actions {
@@ -1297,18 +1145,10 @@ onUnmounted(() => {
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.3);
 }
-/* 
-/* Mobile app - hover effects disabled */
-/* .read-more-btn:hover {
-  background: #AF1E23;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
-} */
 
-/* Empty State */
+/* ===== EMPTY STATE ===== */
 .empty-state {
   text-align: center;
   padding: 48px 24px;
@@ -1340,354 +1180,204 @@ onUnmounted(() => {
   color: #6b7280;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .modern-news-feed {
-    padding: 20px;
-    border-radius: 16px;
-  }
-
-  .news-title {
-    font-size: 1.125rem;
-  }
-
-  .news-count {
-    font-size: 0.75rem;
-  }
-
-  .view-all-btn {
-    padding: 6px 12px;
-    font-size: 0.75rem;
-  }
-
-  .filter-tab {
-    padding: 6px 10px;
-    font-size: 0.75rem;
-  }
-
-  .filter-icon {
-    width: 12px;
-    height: 12px;
-  }
-
-  .filter-count {
-    font-size: 0.65rem;
-    padding: 1px 4px;
-  }
-
-  .news-card {
-    flex-direction: column;
-    padding: 20px;
-  }
-
-  .news-media {
-    width: 100%;
-    height: 150px;
-  }
-
-  .skeleton-image {
-    width: 40%;
-    height: auto;
-  }
-}
-
-/* Very narrow screens (like mobile simulation) */
-@media (max-width: 480px) {
-  .modern-news-feed {
-    padding: 16px;
-    margin: 0 -4px; /* Compensate for narrow viewport */
-  }
-
-  .news-card {
-    padding: 16px;
-    gap: 16px;
-  }
-
-  .news-title {
-    font-size: 1.25rem;
-  }
-
-  .news-headline {
-    font-size: 1.125rem;
-  }
-
-  .view-all-btn {
-    padding: 6px 10px;
-    font-size: 0.7rem;
-  }
-
-  .filter-tab {
-    padding: 6px 8px;
-    font-size: 0.7rem;
-    gap: 4px;
-  }
-
-  .filter-icon {
-    width: 10px;
-    height: 10px;
-  }
-
-  .filter-label {
-    font-size: 0.7rem;
-  }
-
-  .filter-count {
-    font-size: 0.6rem;
-    padding: 1px 3px;
-    min-width: 14px;
-  }
-}
-
-/* Modern Dialog Styles */
-.dialog-overlay {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  background: rgba(0, 0, 0, 0.7) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  display: flex !important;
-  align-items: flex-end !important;
-  justify-content: center !important;
-  z-index: 9999999 !important;
-  padding: 0;
-  margin: 0;
-  overflow: hidden; /* Prevent background scrolling */
-  /* iOS safe area support */
-  padding-top: env(safe-area-inset-top, 0);
-  padding-bottom: env(safe-area-inset-bottom, 0);
-  /* Ensure overlay covers everything */
-  width: 100vw !important;
-  height: 100vh !important;
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-.dialog-container {
-  background: white !important;
-  border-radius: 24px 24px 0 0;
-  box-shadow: 0 -25px 50px -12px rgba(0, 0, 0, 0.25);
-  max-width: 100%;
-  width: 100% !important;
-  height: 100vh; /* Full viewport height */
-  height: calc(100vh - env(safe-area-inset-top, 0px)); /* Account for iOS safe area */
-  overflow: hidden;
-  display: flex !important;
-  flex-direction: column !important;
-  animation: dialogSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  visibility: visible !important;
-  opacity: 1 !important;
-  position: relative !important;
-  z-index: 1 !important;
-}
-
-@keyframes dialogSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Dialog Styles */
-.dialog-header {
-  padding: 20px 24px 16px 24px;
+/* ===== NEWS MODAL - Matching MyBookings Design ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  border-bottom: 1px solid #f1f5f9;
-  background: #fafbfc;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999999;
+  padding: 20px;
+  /* iOS Safari fixes */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
-.dialog-meta {
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 
-.dialog-category {
-  font-size: 0.8rem;
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+}
+
+.modal-header h2 {
+  font-size: 1.5rem;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 16px;
+  color: #231F20;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.close-btn {
+  background: #f5f5f5;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.close-btn:active {
+  background: #e0e0e0;
+  transform: scale(0.95);
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px;
+  padding-bottom: 12px;
+  /* iOS smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+}
+
+.detail-section {
+  margin-bottom: 28px;
+}
+
+.detail-section:last-child {
+  margin-bottom: 12px;
+}
+
+.detail-section h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #231F20;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+/* News Meta Info */
+.news-meta-info {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.news-category-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.dialog-time {
-  font-size: 0.75rem;
-  color: #64748b;
+.news-time-badge {
+  font-size: 0.85rem;
+  color: #666;
   font-weight: 500;
 }
 
-.dialog-close-btn {
-  background: #f1f5f9;
-  border: none;
+/* Media Section */
+.media-section {
+  margin-bottom: 24px;
+}
+
+.media-container {
+  width: 100%;
+  max-height: 400px;
   border-radius: 12px;
-  padding: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-/* Mobile app - hover effects disabled */
-/* .dialog-close-btn:hover {
-  background: #e2e8f0;
-  color: #334155;
-  transform: scale(1.05);
-} */
-
-.dialog-content {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-.dialog-media {
-  width: 100%;
-  height: auto;
-  min-height: 200px; /* Ensure minimum height for media */
-  max-height: 300px; /* Limit maximum height */
-  border-radius: 0;
   overflow: hidden;
   background: #f8f9fa;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  flex-shrink: 0; /* Prevent shrinking when content is long */
 }
 
-.dialog-image-container,
-.dialog-video-container {
+.news-image {
   width: 100%;
   height: auto;
-  min-height: 200px; /* Ensure minimum height */
-  max-height: 300px; /* Limit maximum height */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0;
-  overflow: hidden;
-  position: relative;
-  padding: 10px;
-  flex-shrink: 0; /* Prevent shrinking */
-}
-
-.dialog-image {
-  width: 100%;
-  height: auto;
-  min-height: 200px; /* Ensure minimum height */
-  max-height: 300px; /* Limit maximum height */
+  max-height: 400px;
   object-fit: contain;
-  border-radius: 0;
-  background: #f8f9fa;
-  flex-shrink: 0; /* Prevent shrinking */
+  display: block;
 }
 
-.dialog-video {
+.news-video {
   width: 100%;
   height: auto;
-  min-height: 200px; /* Ensure minimum height */
-  max-height: 300px; /* Limit maximum height */
+  max-height: 400px;
   object-fit: cover;
-  border-radius: 0;
   background: #231F20;
-  flex-shrink: 0; /* Prevent shrinking */
-  /* Performance optimizations */
-  will-change: transform;
-  backface-visibility: hidden;
-  transform: translateZ(0);
+  display: block;
 }
 
-.dialog-text {
-  padding: 24px;
+.video-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  padding: 16px;
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  justify-content: center;
 }
 
-.dialog-comments {
-  padding: 0 24px 24px 24px;
-  border-top: 1px solid #e2e8f0;
-  margin-top: 16px;
-  background: #f8fafc;
-  border-radius: 0 0 12px 12px;
-}
-
-/* Scrollable Dialog Content */
-.dialog-content-scrollable {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Compact Comments Section */
-.dialog-comments-compact {
-  padding: 12px 16px 16px 16px;
-  border-top: 1px solid #e2e8f0;
-  margin-top: 12px;
-  background: #f8fafc;
-  border-radius: 0 0 12px 12px;
-}
-
-.dialog-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0;
-  line-height: 1.3;
-  letter-spacing: -0.02em;
-}
-
-.dialog-message {
-  font-size: 1rem;
-  line-height: 1.6;
+/* Content Text */
+.news-content-text {
   color: #475569;
-  margin: 0;
+  font-size: 1rem;
+  line-height: 1.7;
 }
 
-/* External Link Section */
-.dialog-link-section {
-  margin: 16px 24px;
+/* External Link Card */
+.external-link-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-}
-
-.external-link {
-  display: block;
   text-decoration: none;
   color: inherit;
   transition: all 0.2s ease;
 }
 
-/* Mobile app - hover effects disabled */
-/* .external-link:hover {
-  transform: translateY(-1px);
-} */
-
-.link-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.external-link-card:active {
+  background: #f1f5f9;
+  transform: scale(0.98);
 }
 
 .link-icon {
@@ -1725,619 +1415,110 @@ onUnmounted(() => {
 .link-arrow {
   flex-shrink: 0;
   color: #64748b;
-  transition: transform 0.2s ease;
 }
 
-/* Mobile app - hover effects disabled */
-/* .external-link:hover .link-arrow {
-  transform: translate(2px, -2px);
-} */
-
-.dialog-actions {
-  padding: 16px 24px 24px 24px;
-  border-top: 1px solid #f1f5f9;
-  background: #fafbfc;
-}
-
-.dialog-action-btn {
-  width: 100%;
-  background: #AF1E23;
-  color: white;
-  border: none;
-  border-radius: 16px;
-  padding: 14px 20px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-}
-
-/* Mobile app - hover effects disabled */
-/* .dialog-action-btn:hover {
-  background: #AF1E23;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
-} */
-
-.dialog-action-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
-}
-
-/* Dialog Transitions */
-.dialog-slide-enter-active,
-.dialog-slide-leave-active {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.dialog-slide-enter-from,
-.dialog-slide-leave-to {
-  opacity: 0;
-}
-
-.dialog-slide-enter-from .dialog-container,
-.dialog-slide-leave-to .dialog-container {
-  transform: translateY(100%);
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 24px 32px 16px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.modal-meta {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.modal-category {
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.modal-time {
-  font-size: 0.875rem;
-  color: #9ca3af;
-  font-weight: 500;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Mobile app - hover effects disabled */
-/* .close-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
-} */
-
-.modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0;
-}
-
-.modal-media {
-  width: 100%;
-  max-height: 300px;
-  overflow: hidden;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-image-container {
-  width: 100%;
-  max-width: 500px;
-  max-height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f8f9fa;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.modal-image {
-  width: 100%;
-  height: 100%;
-  max-width: 500px;
-  max-height: 300px;
-  object-fit: contain;
-  border-radius: 12px;
-}
-
-.modal-video-container {
-  width: 100%;
-  max-width: 500px;
-  max-height: 300px;
-  position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.modal-video {
-  width: 100%;
-  height: 100%;
-  max-width: 500px;
-  max-height: 300px;
-  object-fit: contain;
-  border-radius: 12px;
-}
-
-.modal-content-section {
-  padding: 32px;
-}
-
-.modal-title {
-  font-size: 2rem;
-  font-weight: 800;
-  color: #1a1a1a;
-  margin: 0 0 24px 0;
-  line-height: 1.3;
-  letter-spacing: -0.02em;
-}
-
-.modal-content-text {
-  font-size: 1.125rem;
-  color: #4b5563;
-  line-height: 1.7;
-  margin: 0;
-  text-align: justify;
-}
-
-.modal-content-text h1,
-.modal-content-text h2,
-.modal-content-text h3,
-.modal-content-text h4,
-.modal-content-text h5,
-.modal-content-text h6 {
-  color: #1a1a1a;
-  font-weight: 700;
-  margin: 24px 0 16px 0;
-}
-
-.modal-content-text p {
-  margin: 0 0 16px 0;
-}
-
-.modal-content-text ul,
-.modal-content-text ol {
-  margin: 16px 0;
-  padding-left: 24px;
-}
-
-.modal-content-text li {
-  margin: 8px 0;
-}
-
-.modal-footer {
-  padding: 16px 32px 24px;
-  border-top: 1px solid #f0f0f0;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.close-modal-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: #f3f4f6;
-  color: #374151;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-/* Mobile app - hover effects disabled */
-/* .close-modal-btn:hover {
-  background: #e5e7eb;
-  transform: translateY(-1px);
-} */
-
-/* Modal Transitions */
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-  opacity: 0;
-}
-
-/* Responsive Modal */
-@media (max-width: 768px) {
-  .modal-overlay {
-    padding: 16px;
-  }
-  
-  .modal-content {
-    border-radius: 20px;
-    max-height: 95vh;
-  }
-  
-  .modal-header {
-    padding: 20px 24px 16px;
-  }
-  
-  .modal-media {
-    max-height: 250px;
-  }
-  
-  .modal-image-container,
-  .modal-video-container {
-    max-width: 100%;
-    max-height: 250px;
-  }
-  
-  .modal-image,
-  .modal-video {
-    max-width: 100%;
-    max-height: 250px;
-  }
-  
-  .modal-content-section {
-    padding: 24px;
-  }
-  
-  .modal-title {
-    font-size: 1.5rem;
-  }
-  
-  .modal-content-text {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .modal-overlay {
-    padding: 12px;
-  }
-  
-  .modal-content {
-    border-radius: 16px;
-  }
-  
-  .modal-header {
-    padding: 16px 20px 12px;
-  }
-  
-  .modal-media {
-    max-height: 200px;
-  }
-  
-  .modal-image-container,
-  .modal-video-container {
-    max-width: 100%;
-    max-height: 200px;
-  }
-  
-  .modal-image,
-  .modal-video {
-    max-width: 100%;
-    max-height: 200px;
-  }
-  
-  .modal-content-section {
-    padding: 20px;
-  }
-  
-  .modal-title {
-    font-size: 1.25rem;
-  }
-  
-  .modal-meta {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-}
-
-/* Responsive Dialog */
-@media (max-width: 768px) {
-  .dialog-container {
-    border-radius: 20px 20px 0 0;
-    overflow-y: auto;
-  }
-  
-  .dialog-header {
-    padding: 18px 20px 14px 20px;
-  }
-  
-  .dialog-text {
-    padding: 20px;
-    gap: 14px;
-  }
-  
-  .dialog-comments {
-    padding: 0 20px 20px 20px;
-    background: #f8fafc;
-    border-radius: 0 0 12px 12px;
-  }
-  
-  .dialog-title {
-    font-size: 1.375rem;
-  }
-  
-  .dialog-message {
-    font-size: 0.9rem;
-  }
-  
-  .dialog-link-section {
-    margin: 14px 20px;
-    padding: 14px;
-  }
-  
-  .link-content {
-    gap: 10px;
-  }
-  
-  .link-icon {
-    width: 36px;
-    height: 36px;
-  }
-  
-  .link-title {
-    font-size: 0.9rem;
-  }
-  
-  .link-url {
-    font-size: 0.75rem;
-  }
-  
-  .dialog-actions {
-    padding: 14px 20px 20px 20px;
-  }
-  
-  .dialog-action-btn {
-    padding: 12px 18px;
-    font-size: 0.9rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .dialog-container {
-    border-radius: 16px 16px 0 0;
-    max-height: 95vh;
-  }
-  
-  .dialog-header {
-    padding: 16px 18px 12px 18px;
-  }
-  
-  .dialog-text {
-    padding: 18px;
-    gap: 12px;
-  }
-  
-  .dialog-comments {
-    padding: 0 18px 18px 18px;
-    background: #f8fafc;
-    border-radius: 0 0 12px 12px;
-  }
-  
-  .dialog-title {
-    font-size: 1.25rem;
-  }
-  
-  .dialog-message {
-    font-size: 0.85rem;
-  }
-  
-  .dialog-link-section {
-    margin: 12px 18px;
-    padding: 12px;
-  }
-  
-  .link-content {
-    gap: 8px;
-  }
-  
-  .link-icon {
-    width: 32px;
-    height: 32px;
-  }
-  
-  .link-title {
-    font-size: 0.85rem;
-  }
-  
-  .link-url {
-    font-size: 0.7rem;
-  }
-  
-  .dialog-actions {
-    padding: 12px 18px 18px 18px;
-  }
-  
-  .dialog-action-btn {
-    padding: 12px 16px;
-    font-size: 0.85rem;
-  }
-}
-
-/* Desktop Dialog (larger screens) */
-@media (min-width: 1024px) {
-  .dialog-overlay {
-    align-items: center;
-    padding: 20px;
-  }
-  
-  .dialog-container {
-    border-radius: 24px;
-    max-width: 600px;
-    max-height: 80vh;
-  }
-  
-  .dialog-media {
-    max-height: 400px;
-    border-radius: 16px;
-    margin: 24px 24px 0 24px;
-  }
-  
-  .dialog-image-container,
-  .dialog-video-container {
-    border-radius: 16px;
-    height: auto;
-    max-height: 400px;
-    padding: 10px;
-  }
-  
-  .dialog-image {
-    border-radius: 16px;
-    height: auto;
-    max-height: 400px;
-    object-fit: contain;
-  }
-  
-  .dialog-video {
-    border-radius: 16px;
-    height: auto;
-    max-height: 400px;
-    object-fit: cover;
-  }
-  
-  .dialog-text {
-    padding: 24px;
-  }
-  
-  .dialog-actions {
-    padding: 16px 24px 24px 24px;
-  }
-}
-
-/* Interactions Disabled Styles */
-.dialog-comments-disabled {
-  padding: 20px;
-  background: #f8fafc;
-  border-radius: 0 0 16px 16px;
-  text-align: center;
-}
-
-.interactions-disabled-message {
+/* Interactions Disabled */
+.interactions-disabled {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  padding: 20px;
-  background: #f1f5f9;
+  padding: 24px;
+  background: #f8fafc;
+  border: 2px dashed #e2e8f0;
   border-radius: 12px;
-  border: 2px dashed #cbd5e1;
+  text-align: center;
 }
 
-.interactions-disabled-message svg {
+.interactions-disabled svg {
   color: #94a3b8;
   opacity: 0.7;
 }
 
-.interactions-disabled-message p {
+.interactions-disabled p {
   color: #64748b;
   font-size: 0.9rem;
   font-weight: 500;
   margin: 0;
 }
 
+/* Modal Footer */
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px 24px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+  position: sticky;
+  bottom: 0;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+}
+
+.close-modal-btn {
+  flex: 1;
+  background: #AF1E23;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.close-modal-btn:active {
+  background: #8f1820;
+  transform: scale(0.98);
+}
+
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-  .dialog-comments-disabled {
-    padding: 16px;
+  .modern-news-feed {
+    padding: 20px;
+    border-radius: 16px;
   }
-  
-  .interactions-disabled-message {
-    padding: 16px;
-    gap: 10px;
+
+  .news-card {
+    flex-direction: column;
+    padding: 20px;
   }
-  
-  .interactions-disabled-message p {
-    font-size: 0.85rem;
+
+  .news-media {
+    width: 100%;
+    height: 150px;
+  }
+
+  .modal-content {
+    max-height: calc(100vh - 40px);
   }
 }
 
 @media (max-width: 480px) {
-  .dialog-comments-disabled {
-    padding: 14px;
+  .modern-news-feed {
+    padding: 16px;
+  }
+
+  .news-card {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .modal-overlay {
+    padding: 12px;
   }
   
-  .interactions-disabled-message {
-    padding: 14px;
-    gap: 8px;
+  .modal-content {
+    max-height: calc(100vh - 24px);
   }
-  
-  .interactions-disabled-message svg {
-    width: 20px;
-    height: 20px;
-  }
-  
-  .interactions-disabled-message p {
-    font-size: 0.8rem;
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 20px;
   }
 }
-
-/* iOS-specific fixes for full-screen dialog */
-@supports (-webkit-touch-callout: none) {
-  .dialog-overlay {
-    /* iOS Safari full-screen fix */
-    height: -webkit-fill-available;
-  }
-  
-  .dialog-container {
-    height: 100vh;
-    height: -webkit-fill-available;
-  }
-}
-
-/* Additional iOS safe area handling for notch/home indicator */
-.dialog-header {
-  padding-top: max(20px, env(safe-area-inset-top, 20px));
-}
-
-.dialog-actions {
-  padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
-}
-
-/* Ensure dialog is above all Quasar elements */
-.dialog-overlay {
-  z-index: 9999999 !important;
-}
-
-/* Global body class to hide app navigation when modal is open */
-:global(body.news-modal-open) {
-  overflow: hidden !important;
-}
-
-:global(body.news-modal-open .app-header),
-:global(body.news-modal-open .bottom-navigation),
-:global(body.news-modal-open .q-header),
-:global(body.news-modal-open .q-footer),
-:global(body.news-modal-open .q-drawer) {
-  visibility: hidden !important;
-}
-
 </style>

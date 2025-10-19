@@ -283,23 +283,30 @@ watch(showImageModal, (isOpen) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1100;
+  z-index: 9999999;
   padding: 20px;
+  /* iOS Safari fixes */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .detail-modal {
   background: white;
-  border-radius: 16px;
+  border-radius: 20px;
   width: 100%;
   max-width: 600px;
-  max-height: 90vh;
+  max-height: 80vh;
   overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-  animation: modal-slide-up 0.3s ease-out;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes modal-slide-up {
@@ -358,9 +365,12 @@ watch(showImageModal, (isOpen) => {
 }
 
 .modal-body {
-  max-height: calc(90vh - 100px);
+  flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 24px;
+  /* iOS smooth scrolling */
+  -webkit-overflow-scrolling: touch;
 }
 
 .violation-summary {
