@@ -74,22 +74,27 @@
           
           <div class="availability-section">
             <h4 class="section-title">Select Available Date</h4>
-            <div class="calendar-grid" :class="{ 'time-slots-visible': selectedDate }">
-              <div 
-                v-for="(day, index) in availableDays" 
-                :key="index"
-                class="day-option"
-                :class="{ 
-                  'selected': selectedDate === day.fullDate, 
-                  'unavailable': !day.available,
-                  'faded': selectedDate && selectedDate !== day.fullDate
-                }"
-                @click="day.available && selectDate(day.fullDate)"
+            <div class="dropdown-container">
+              <select 
+                v-model="selectedDate" 
+                @change="onDateChange"
+                class="date-dropdown"
+                :disabled="loadingTimeSlots"
               >
-                <div class="day-name">{{ day.name }}</div>
-                <div class="day-date">{{ day.date }}</div>
-                <div v-if="day.available" class="day-time">{{ day.timeRange }}</div>
-                <div v-else class="day-status">Unavailable</div>
+                <option value="" disabled>Choose a date...</option>
+                <option 
+                  v-for="day in availableDays" 
+                  :key="day.fullDate"
+                  :value="day.fullDate"
+                  :disabled="!day.available"
+                >
+                  {{ day.name }} - {{ day.date }} {{ day.available ? `(${day.timeRange})` : '(Unavailable)' }}
+                </option>
+              </select>
+              <div class="dropdown-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </div>
             </div>
           </div>
@@ -97,26 +102,38 @@
           <!-- Time Slot Selection -->
           <div v-if="selectedDate" class="time-slots-section">
             <h4 class="section-title">Select Time Slot</h4>
+            <div class="dropdown-container">
+              <select 
+                v-model="selectedTime" 
+                @change="onTimeChange"
+                class="time-dropdown"
+                :disabled="loadingTimeSlots || availableTimeSlots.length === 0"
+              >
+                <option value="" disabled>Choose a time...</option>
+                <option 
+                  v-for="slot in availableTimeSlots" 
+                  :key="slot.time"
+                  :value="slot.time"
+                  :disabled="slot.isReserved"
+                >
+                  {{ slot.time }} {{ slot.isReserved ? '(Booked)' : '' }}
+                </option>
+              </select>
+              <div class="dropdown-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+            
+            <!-- Loading State -->
             <div v-if="loadingTimeSlots" class="loading-time-slots">
               <div class="spinner"></div>
               <p>Loading available time slots...</p>
             </div>
-            <div v-else-if="availableTimeSlots.length > 0" class="time-slots-grid">
-              <div 
-                v-for="slot in availableTimeSlots" 
-                :key="slot.time"
-                class="time-slot"
-                :class="{ 
-                  'selected': selectedTime === slot.time, 
-                  'unavailable': slot.isReserved 
-                }"
-                @click="!slot.isReserved && selectTime(slot.time)"
-              >
-                <div class="time-slot-time">{{ slot.time }}</div>
-                <div v-if="slot.isReserved" class="time-slot-status">Booked</div>
-              </div>
-            </div>
-            <div v-else class="no-time-slots">
+            
+            <!-- No Time Slots -->
+            <div v-else-if="availableTimeSlots.length === 0" class="no-time-slots">
               <p>No time slots available for this date.</p>
             </div>
           </div>
@@ -290,6 +307,23 @@ const selectDate = async (date) => {
 
 const selectTime = (time) => {
   selectedTime.value = time;
+};
+
+// Dropdown change handlers
+const onDateChange = async (event) => {
+  const date = event.target.value;
+  if (date) {
+    selectedDate.value = date;
+    selectedTime.value = null; // Reset time when date changes
+    await loadTimeSlots(date);
+  }
+};
+
+const onTimeChange = (event) => {
+  const time = event.target.value;
+  if (time) {
+    selectedTime.value = time;
+  }
 };
 
 // Helper function to get day of week from date
@@ -726,78 +760,73 @@ const confirmBooking = async () => {
   margin: 0 0 16px 0;
 }
 
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 12px;
-  transition: all 0.3s ease;
+/* Dropdown Container */
+.dropdown-container {
+  position: relative;
+  margin-bottom: 16px;
 }
 
-.calendar-grid.time-slots-visible {
-  opacity: 0.7;
-}
-
-.day-option {
+.dropdown-container select {
+  width: 100%;
+  padding: 16px 48px 16px 16px;
   border: 2px solid #e5e7eb;
   border-radius: 12px;
-  padding: 16px 12px;
-  text-align: center;
-  transition: all 0.3s ease;
-  cursor: pointer;
   background: white;
-  pointer-events: auto;
-  touch-action: manipulation;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #111827;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
-/* Mobile app - hover effects disabled */
-/* .day-option:hover:not(.unavailable) {
-  border-color: #AF1E23;
-  background: #fef2f2;
-} */
-
-.day-option.selected {
-  border-color: #AF1E23;
-  background: #fef2f2;
-  color: #AF1E23;
-  transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.15);
+.dropdown-container select:focus {
+  outline: none;
+  border-color: #af1e23;
+  box-shadow: 0 0 0 3px rgba(175, 30, 35, 0.1);
 }
 
-.day-option.faded {
-  opacity: 0.3;
-  transform: scale(0.95);
-  pointer-events: none;
-}
-
-.day-option.unavailable {
-  opacity: 0.5;
-  cursor: not-allowed;
+.dropdown-container select:disabled {
   background: #f9fafb;
   color: #9ca3af;
+  cursor: not-allowed;
+  border-color: #d1d5db;
 }
 
-.day-name {
+.dropdown-container select option {
+  padding: 8px 12px;
   font-size: 0.875rem;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 4px;
 }
 
-.day-date {
-  font-size: 0.75rem;
+.dropdown-container select option:disabled {
+  color: #9ca3af;
+  background: #f9fafb;
+}
+
+.dropdown-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
   color: #6b7280;
-  margin-bottom: 4px;
+  pointer-events: none;
+  transition: all 0.3s ease;
 }
 
-.day-time {
-  font-size: 0.75rem;
-  color: #059669;
-  font-weight: 500;
+.dropdown-container:focus-within .dropdown-icon {
+  color: #af1e23;
+  transform: translateY(-50%) rotate(180deg);
 }
 
-.day-status {
-  font-size: 0.75rem;
-  color: #dc2626;
+/* Date Dropdown Specific */
+.date-dropdown {
+  font-weight: 600;
+}
+
+/* Time Dropdown Specific */
+.time-dropdown {
   font-weight: 500;
 }
 
@@ -837,57 +866,6 @@ const confirmBooking = async () => {
   margin-bottom: 12px;
 }
 
-.time-slots-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 12px;
-}
-
-.time-slot {
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 12px 8px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: white;
-  pointer-events: auto;
-  touch-action: manipulation;
-}
-
-/* Mobile app - hover effects disabled */
-/* .time-slot:hover:not(.unavailable) {
-  border-color: #AF1E23;
-  background: #fef2f2;
-} */
-
-.time-slot.selected {
-  border-color: #AF1E23;
-  background: #fef2f2;
-  color: #AF1E23;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.2);
-}
-
-.time-slot.unavailable {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: #f9fafb;
-  color: #9ca3af;
-}
-
-.time-slot-time {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 4px;
-}
-
-.time-slot-status {
-  font-size: 0.75rem;
-  color: #dc2626;
-  font-weight: 500;
-}
 
 .no-time-slots {
   text-align: center;
@@ -991,9 +969,6 @@ const confirmBooking = async () => {
     padding: 32px;
   }
   
-  .calendar-grid {
-    grid-template-columns: repeat(7, 1fr);
-  }
 }
 
 @media (max-width: 480px) {
@@ -1001,12 +976,6 @@ const confirmBooking = async () => {
     padding: 10px;
   }
   
-  .calendar-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .day-option {
-    padding: 12px 8px;
-  }
 }
 </style>
+
