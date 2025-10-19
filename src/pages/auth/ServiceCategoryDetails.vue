@@ -120,10 +120,18 @@
           <div class="booking-actions">
             <button 
               @click="confirmBooking" 
-              :disabled="!selectedDate || !selectedTime"
+              :disabled="!selectedDate || !selectedTime || isBookingInProgress"
               class="book-btn"
+              :class="{ 'loading': isBookingInProgress }"
             >
-              Book Service
+              <span v-if="!isBookingInProgress">Book Service</span>
+              <span v-else class="booking-loading">
+                <svg class="spinner" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.3"/>
+                  <path d="M12 2C6.48 2 2 6.48 2 12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+                Booking...
+              </span>
             </button>
           </div>
         </div>
@@ -168,6 +176,7 @@ const selectedTime = ref(null);
 const availableDays = ref([]);
 const availableTimeSlots = ref([]);
 const loadingTimeSlots = ref(false);
+const isBookingInProgress = ref(false);
 
 // Computed
 const categoryId = computed(() => route.params.id);
@@ -227,12 +236,17 @@ const openBookingDialog = (service) => {
 };
 
 const closeBookingDialog = () => {
+  console.log('🚪 closeBookingDialog called');
   showBookingDialog.value = false;
   selectedService.value = null;
   selectedDate.value = null;
   selectedTime.value = null;
   availableDays.value = [];
   availableTimeSlots.value = [];
+  isBookingInProgress.value = false;
+  
+  // Ensure modal state is also closed
+  closeModal();
 };
 
 const generateAvailableDays = () => {
@@ -309,10 +323,19 @@ const confirmBooking = async () => {
     projectId: projectStore.selectedProject?.id
   });
   
-  if (!selectedDate.value || !selectedTime.value || !selectedService.value || !projectStore.selectedProject?.id) {
-    console.log('❌ Missing required data for booking');
+  // Prevent double-clicking
+  if (isBookingInProgress.value) {
+    console.log('⏳ Booking already in progress, ignoring click');
     return;
   }
+  
+  if (!selectedDate.value || !selectedTime.value || !selectedService.value || !projectStore.selectedProject?.id) {
+    console.log('❌ Missing required data for booking');
+    notificationStore.showError('Please select both date and time');
+    return;
+  }
+  
+  isBookingInProgress.value = true;
   
   try {
     console.log('✅ Creating booking...');
@@ -333,29 +356,37 @@ const confirmBooking = async () => {
     };
 
     // Create the booking
-    await serviceBookingStore.createBooking(projectStore.selectedProject.id, bookingData);
+    const bookingId = await serviceBookingStore.createBooking(projectStore.selectedProject.id, bookingData);
     
-    console.log('✅ Service booking created successfully:', bookingData);
+    console.log('✅ Service booking created successfully:', { bookingId, bookingData });
     
     // Show success notification
     notificationStore.showSuccess('Service booked successfully!');
     
-    // Close dialog immediately after successful booking
+    // Wait a bit for user to see the success message
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Close dialog
     closeBookingDialog();
     
-    // Refresh service bookings in the background (don't await to avoid blocking)
+    // Refresh service bookings in the background
     const user = await optimizedAuthService.getCurrentUser();
     if (user) {
-      serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid).catch(err => {
+      serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid, true).catch(err => {
         console.error('Error refreshing bookings:', err);
       });
     }
     
   } catch (error) {
     console.error('❌ Error creating service booking:', error);
-    notificationStore.showError('Failed to book service. Please try again.');
-    // Close dialog even on error so user can try again
-    closeBookingDialog();
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      error: error
+    });
+    notificationStore.showError(error.message || 'Failed to book service. Please try again.');
+  } finally {
+    isBookingInProgress.value = false;
   }
 };
 
@@ -873,6 +904,32 @@ const confirmBooking = async () => {
   cursor: not-allowed;
   transform: none;
   opacity: 0.6;
+}
+
+.book-btn.loading {
+  background: #AF1E23;
+  cursor: wait;
+  opacity: 0.8;
+}
+
+.booking-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive Design */
