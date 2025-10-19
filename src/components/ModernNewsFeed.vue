@@ -509,20 +509,13 @@ const handleVideoClick = (item) => {
 }
 
 const openNewsDetail = (item) => {
+  console.log('📰 openNewsDetail called with item:', item?.title)
   selectedNewsItem.value = item
   showNewsModal.value = true
+  console.log('📰 Modal state:', { showNewsModal: showNewsModal.value, hasItem: !!selectedNewsItem.value })
   
-  // Store current scroll position
-  const scrollY = window.scrollY
-  document.body.dataset.scrollY = String(scrollY)
-  
-  // Prevent background scrolling and ensure proper positioning
+  // Simple overflow hidden - don't use position fixed as it causes white screens on iOS
   document.body.style.overflow = 'hidden'
-  document.body.style.position = 'fixed'
-  document.body.style.top = `-${scrollY}px`
-  document.body.style.left = '0'
-  document.body.style.right = '0'
-  document.body.style.backgroundColor = '#F6F6F6' // Ensure light background
   document.body.classList.add('news-modal-open')
   
   // Hide app header and navigation
@@ -532,45 +525,33 @@ const openNewsDetail = (item) => {
   const qFooter = document.querySelector('.q-footer')
   const qDrawer = document.querySelector('.q-drawer')
   
-  if (header) header.style.display = 'none'
-  if (bottomNav) bottomNav.style.display = 'none'
-  if (qHeader) qHeader.style.display = 'none'
-  if (qFooter) qFooter.style.display = 'none'
-  if (qDrawer) qDrawer.style.display = 'none'
+  if (header) header.style.visibility = 'hidden'
+  if (bottomNav) bottomNav.style.visibility = 'hidden'
+  if (qHeader) qHeader.style.visibility = 'hidden'
+  if (qFooter) qFooter.style.visibility = 'hidden'
+  if (qDrawer) qDrawer.style.visibility = 'hidden'
 }
 
 const closeNewsModal = () => {
   showNewsModal.value = false
   selectedNewsItem.value = null
   
-  // Restore body styles
+  // Restore body overflow
   document.body.style.overflow = ''
-  document.body.style.position = ''
-  document.body.style.top = ''
-  document.body.style.left = ''
-  document.body.style.right = ''
-  document.body.style.backgroundColor = ''
   document.body.classList.remove('news-modal-open')
   
-  // Restore scroll position
-  const scrollY = document.body.dataset.scrollY
-  if (scrollY) {
-    window.scrollTo(0, parseInt(scrollY))
-    delete document.body.dataset.scrollY
-  }
-  
-  // Restore app header and navigation
+  // Restore app header and navigation visibility
   const header = document.querySelector('.app-header')
   const bottomNav = document.querySelector('.bottom-navigation')
   const qHeader = document.querySelector('.q-header')
   const qFooter = document.querySelector('.q-footer')
   const qDrawer = document.querySelector('.q-drawer')
   
-  if (header) header.style.display = ''
-  if (bottomNav) bottomNav.style.display = ''
-  if (qHeader) qHeader.style.display = ''
-  if (qFooter) qFooter.style.display = ''
-  if (qDrawer) qDrawer.style.display = ''
+  if (header) header.style.visibility = ''
+  if (bottomNav) bottomNav.style.visibility = ''
+  if (qHeader) qHeader.style.visibility = ''
+  if (qFooter) qFooter.style.visibility = ''
+  if (qDrawer) qDrawer.style.visibility = ''
 }
 
 const navigateToAllNews = () => {
@@ -797,32 +778,20 @@ onUnmounted(() => {
   
   // Restore body styles in case component unmounts while modal is open
   document.body.style.overflow = ''
-  document.body.style.position = ''
-  document.body.style.top = ''
-  document.body.style.left = ''
-  document.body.style.right = ''
-  document.body.style.backgroundColor = ''
   document.body.classList.remove('news-modal-open')
   
-  // Restore scroll position if needed
-  const scrollY = document.body.dataset.scrollY
-  if (scrollY) {
-    window.scrollTo(0, parseInt(scrollY))
-    delete document.body.dataset.scrollY
-  }
-  
-  // Restore app header and navigation
+  // Restore app header and navigation visibility
   const header = document.querySelector('.app-header')
   const bottomNav = document.querySelector('.bottom-navigation')
   const qHeader = document.querySelector('.q-header')
   const qFooter = document.querySelector('.q-footer')
   const qDrawer = document.querySelector('.q-drawer')
   
-  if (header) header.style.display = ''
-  if (bottomNav) bottomNav.style.display = ''
-  if (qHeader) qHeader.style.display = ''
-  if (qFooter) qFooter.style.display = ''
-  if (qDrawer) qDrawer.style.display = ''
+  if (header) header.style.visibility = ''
+  if (bottomNav) bottomNav.style.visibility = ''
+  if (qHeader) qHeader.style.visibility = ''
+  if (qFooter) qFooter.style.visibility = ''
+  if (qDrawer) qDrawer.style.visibility = ''
 })
 </script>
 
@@ -1471,18 +1440,18 @@ onUnmounted(() => {
 
 /* Modern Dialog Styles */
 .dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.7) !important;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  z-index: 999999;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  z-index: 9999999 !important;
   padding: 0;
   margin: 0;
   overflow: hidden; /* Prevent background scrolling */
@@ -1490,24 +1459,31 @@ onUnmounted(() => {
   padding-top: env(safe-area-inset-top, 0);
   padding-bottom: env(safe-area-inset-bottom, 0);
   /* Ensure overlay covers everything */
-  width: 100vw;
-  height: 100vh;
+  width: 100vw !important;
+  height: 100vh !important;
   min-height: 100vh;
   min-height: -webkit-fill-available;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 .dialog-container {
-  background: white;
+  background: white !important;
   border-radius: 24px 24px 0 0;
   box-shadow: 0 -25px 50px -12px rgba(0, 0, 0, 0.25);
   max-width: 100%;
-  width: 100%;
+  width: 100% !important;
   height: 100vh; /* Full viewport height */
   height: calc(100vh - env(safe-area-inset-top, 0px)); /* Account for iOS safe area */
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: flex !important;
+  flex-direction: column !important;
   animation: dialogSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+  z-index: 1 !important;
 }
 
 @keyframes dialogSlideUp {
@@ -2354,9 +2330,6 @@ onUnmounted(() => {
 /* Global body class to hide app navigation when modal is open */
 :global(body.news-modal-open) {
   overflow: hidden !important;
-  position: fixed !important;
-  width: 100% !important;
-  height: 100vh !important;
 }
 
 :global(body.news-modal-open .app-header),
@@ -2364,7 +2337,7 @@ onUnmounted(() => {
 :global(body.news-modal-open .q-header),
 :global(body.news-modal-open .q-footer),
 :global(body.news-modal-open .q-drawer) {
-  display: none !important;
+  visibility: hidden !important;
 }
 
 </style>

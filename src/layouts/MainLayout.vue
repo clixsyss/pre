@@ -341,20 +341,20 @@ const handleShake = () => {
 }
 
 // Initialize shake detection with settings from store
-const {
-  enableShake,
-  disableShake
-} = useShakeDetection(handleShake, {
-  threshold: computed(() => appSettingsStore.shakeSensitivity),  // Use settings store
-  timeout: 1000   // Min time between shakes (ms)
-})
+const shakeDetection = ref(null)
 
-// Watch for settings changes
-watch(() => appSettingsStore.shakeEnabled, (enabled) => {
-  if (enabled) {
-    enableShake()
-  } else {
-    disableShake()
+// Watch for settings changes and update shake detection
+watch(() => [appSettingsStore.shakeEnabled, appSettingsStore.shakeSensitivity], () => {
+  // Recreate shake detection when settings change
+  if (shakeDetection.value) {
+    shakeDetection.value.stopShakeDetection()
+  }
+  
+  if (appSettingsStore.shakeEnabled) {
+    shakeDetection.value = useShakeDetection(handleShake, {
+      threshold: appSettingsStore.shakeSensitivity,
+      timeout: 1000
+    })
   }
 }, { immediate: true })
 
