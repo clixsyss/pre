@@ -74,12 +74,16 @@
           
           <div class="availability-section">
             <h4 class="section-title">Select Available Date</h4>
-            <div class="calendar-grid">
+            <div class="calendar-grid" :class="{ 'time-slots-visible': selectedDate }">
               <div 
                 v-for="(day, index) in availableDays" 
                 :key="index"
                 class="day-option"
-                :class="{ 'selected': selectedDate === day.fullDate, 'unavailable': !day.available }"
+                :class="{ 
+                  'selected': selectedDate === day.fullDate, 
+                  'unavailable': !day.available,
+                  'faded': selectedDate && selectedDate !== day.fullDate
+                }"
                 @click="day.available && selectDate(day.fullDate)"
               >
                 <div class="day-name">{{ day.name }}</div>
@@ -726,6 +730,11 @@ const confirmBooking = async () => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 12px;
+  transition: all 0.3s ease;
+}
+
+.calendar-grid.time-slots-visible {
+  opacity: 0.7;
 }
 
 .day-option {
@@ -733,8 +742,8 @@ const confirmBooking = async () => {
   border-radius: 12px;
   padding: 16px 12px;
   text-align: center;
+  transition: all 0.3s ease;
   cursor: pointer;
-  transition: all 0.2s ease;
   background: white;
   pointer-events: auto;
   touch-action: manipulation;
@@ -749,12 +758,22 @@ const confirmBooking = async () => {
 .day-option.selected {
   border-color: #AF1E23;
   background: #fef2f2;
+  color: #AF1E23;
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.15);
+}
+
+.day-option.faded {
+  opacity: 0.3;
+  transform: scale(0.95);
+  pointer-events: none;
 }
 
 .day-option.unavailable {
   opacity: 0.5;
   cursor: not-allowed;
   background: #f9fafb;
+  color: #9ca3af;
 }
 
 .day-name {
@@ -785,6 +804,18 @@ const confirmBooking = async () => {
 /* Time Slots Section */
 .time-slots-section {
   margin-bottom: 24px;
+  animation: slideInUp 0.4s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .loading-time-slots {
@@ -833,12 +864,16 @@ const confirmBooking = async () => {
 .time-slot.selected {
   border-color: #AF1E23;
   background: #fef2f2;
+  color: #AF1E23;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.2);
 }
 
 .time-slot.unavailable {
   opacity: 0.5;
   cursor: not-allowed;
   background: #f9fafb;
+  color: #9ca3af;
 }
 
 .time-slot-time {
