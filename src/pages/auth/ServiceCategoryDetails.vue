@@ -1,10 +1,8 @@
 <template>
   <div class="service-category-details">
     <!-- Page Header -->
-    <PageHeader 
-      :title="category?.englishTitle || $t('loadingLabel')" 
-      />
-      <!-- :subtitle="category?.arabicTitle || ''"  -->
+    <PageHeader :title="category?.englishTitle || $t('loadingLabel')" />
+    <!-- :subtitle="category?.arabicTitle || ''"  -->
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
@@ -21,9 +19,9 @@
     <!-- Services List -->
     <div v-else-if="services.length > 0" class="services-list">
       <h3 class="section-title">{{ $t('availableServices') }}</h3>
-      <div 
-        v-for="service in services" 
-        :key="service.id" 
+      <div
+        v-for="service in services"
+        :key="service.id"
         class="service-item"
         @click="openBookingDialog(service)"
       >
@@ -33,8 +31,20 @@
           <div class="service-price">EGP {{ service.price }}</div>
         </div>
         <div class="service-arrow">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M9 18L15 12L9 6"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </div>
       </div>
@@ -43,10 +53,34 @@
     <!-- No Services State -->
     <div v-else class="no-services">
       <div class="no-services-icon">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M14.7 6.3C14.7 4.4 13.3 3 11.4 3C9.5 3 8.1 4.4 8.1 6.3C8.1 8.2 9.5 9.6 11.4 9.6C13.3 9.6 14.7 8.2 14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M20 12C20 16.4 16.4 20 12 20C7.6 20 4 16.4 4 12C4 7.6 7.6 4 12 4C16.4 4 20 7.6 20 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M12 8V12L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg
+          width="64"
+          height="64"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M14.7 6.3C14.7 4.4 13.3 3 11.4 3C9.5 3 8.1 4.4 8.1 6.3C8.1 8.2 9.5 9.6 11.4 9.6C13.3 9.6 14.7 8.2 14.7 6.3Z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M20 12C20 16.4 16.4 20 12 20C7.6 20 4 16.4 4 12C4 7.6 7.6 4 12 4C16.4 4 20 7.6 20 12Z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M12 8V12L15 15"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
       </div>
       <h3>No Services Available</h3>
@@ -59,98 +93,249 @@
         <div class="dialog-header">
           <h3 class="dialog-title">Book Service</h3>
           <button @click="closeBookingDialog" class="close-btn">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M18 6L6 18M6 6L18 18"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
           </button>
         </div>
-        
+
         <div class="dialog-content">
-          <div class="service-info">
-            <h4 class="service-name">{{ selectedService?.englishTitle }}</h4>
-            <p class="service-description">{{ selectedService?.englishDescription }}</p>
-            <div class="service-price">EGP {{ selectedService?.price }}</div>
-          </div>
-          
-          <div class="availability-section">
-            <h4 class="section-title">Select Available Date</h4>
-            <div class="dropdown-container">
-              <select 
-                v-model="selectedDate" 
-                @change="onDateChange"
-                class="date-dropdown"
-                :disabled="loadingTimeSlots"
-              >
-                <option value="" disabled>Choose a date...</option>
-                <option 
-                  v-for="day in availableDays" 
-                  :key="day.fullDate"
-                  :value="day.fullDate"
-                  :disabled="!day.available"
+          <!-- Service Info Card -->
+          <div class="service-info-card">
+            <div class="service-header">
+              <div class="service-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
                 >
-                  {{ day.name }} - {{ day.date }} {{ day.available ? `(${day.timeRange})` : '(Unavailable)' }}
-                </option>
-              </select>
-              <div class="dropdown-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M12 2L2 7L12 12L22 7L12 2Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M2 17L12 22L22 17"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M2 12L12 17L22 12"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
+              </div>
+              <div class="service-details">
+                <h4 class="service-name">{{ selectedService?.englishTitle }}</h4>
+                <p class="service-description">{{ selectedService?.englishDescription }}</p>
+              </div>
+              <div class="service-price-badge">
+                <span class="price-amount">EGP {{ selectedService?.price }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Time Slot Selection -->
-          <div v-if="selectedDate" class="time-slots-section">
-            <h4 class="section-title">Select Time Slot</h4>
-            <div class="dropdown-container">
-              <select 
-                v-model="selectedTime" 
-                @change="onTimeChange"
-                class="time-dropdown"
-                :disabled="loadingTimeSlots || availableTimeSlots.length === 0"
-              >
-                <option value="" disabled>Choose a time...</option>
-                <option 
-                  v-for="slot in availableTimeSlots" 
-                  :key="slot.time"
-                  :value="slot.time"
-                  :disabled="slot.isReserved"
-                >
-                  {{ slot.time }} {{ slot.isReserved ? '(Booked)' : '' }}
-                </option>
-              </select>
-              <div class="dropdown-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+          <!-- Booking Steps -->
+          <div class="booking-steps">
+            <!-- Step 1: Date Selection -->
+            <div class="booking-step" :class="{ active: !selectedDate, completed: selectedDate }">
+              <div class="step-indicator">
+                <div class="step-number">1</div>
+                <div class="step-line"></div>
+              </div>
+              <div class="step-content">
+                <h4 class="step-title">Select Date</h4>
+                <p class="step-subtitle">Choose your preferred date</p>
+                <div class="dropdown-container">
+                  <select
+                    v-model="selectedDate"
+                    @change="onDateChange"
+                    class="modern-dropdown"
+                    :disabled="loadingTimeSlots"
+                  >
+                    <option value="" disabled>Choose a date...</option>
+                    <option
+                      v-for="day in availableDays"
+                      :key="day.fullDate"
+                      :value="day.fullDate"
+                      :disabled="!day.available"
+                    >
+                      {{ day.name }} - {{ day.date }}
+                      {{ day.available ? `(${day.timeRange})` : '(Unavailable)' }}
+                    </option>
+                  </select>
+                  <div class="dropdown-icon">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M6 9L12 15L18 9"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <!-- Loading State -->
-            <div v-if="loadingTimeSlots" class="loading-time-slots">
-              <div class="spinner"></div>
-              <p>Loading available time slots...</p>
-            </div>
-            
-            <!-- No Time Slots -->
-            <div v-else-if="availableTimeSlots.length === 0" class="no-time-slots">
-              <p>No time slots available for this date.</p>
+
+            <!-- Step 2: Time Selection -->
+            <div
+              v-if="selectedDate"
+              class="booking-step"
+              :class="{ active: selectedDate && !selectedTime, completed: selectedTime }"
+            >
+              <div class="step-indicator">
+                <div class="step-number">2</div>
+                <div class="step-line"></div>
+              </div>
+              <div class="step-content">
+                <h4 class="step-title">Select Time</h4>
+                <p class="step-subtitle">Pick your preferred time slot</p>
+                <div class="dropdown-container">
+                  <select
+                    v-model="selectedTime"
+                    @change="onTimeChange"
+                    class="modern-dropdown"
+                    :disabled="loadingTimeSlots || availableTimeSlots.length === 0"
+                  >
+                    <option value="" disabled>Choose a time...</option>
+                    <option
+                      v-for="slot in availableTimeSlots"
+                      :key="slot.time"
+                      :value="slot.time"
+                      :disabled="slot.isReserved"
+                    >
+                      {{ slot.time }} {{ slot.isReserved ? '(Booked)' : '' }}
+                    </option>
+                  </select>
+                  <div class="dropdown-icon">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M6 9L12 15L18 9"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Loading State -->
+                <div v-if="loadingTimeSlots" class="loading-state">
+                  <div class="loading-spinner"></div>
+                  <p>Loading available time slots...</p>
+                </div>
+
+                <!-- No Time Slots -->
+                <div v-else-if="availableTimeSlots.length === 0" class="no-slots-state">
+                  <div class="no-slots-icon">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                      <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" />
+                      <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                  </div>
+                  <p>No time slots available for this date</p>
+                </div>
+              </div>
             </div>
           </div>
-          
+
+          <!-- Booking Summary -->
+          <div v-if="selectedDate && selectedTime" class="booking-summary">
+            <div class="summary-header">
+              <h4>Booking Summary</h4>
+            </div>
+            <div class="summary-content">
+              <div class="summary-item">
+                <span class="summary-label">Service:</span>
+                <span class="summary-value">{{ selectedService?.englishTitle }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Date:</span>
+                <span class="summary-value">{{ formatSelectedDate(selectedDate) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Time:</span>
+                <span class="summary-value">{{ selectedTime }}</span>
+              </div>
+              <div class="summary-item total">
+                <span class="summary-label">Total:</span>
+                <span class="summary-value">EGP {{ selectedService?.price }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
           <div class="booking-actions">
-            <button 
-              @click="confirmBooking" 
+            <button @click="closeBookingDialog" class="cancel-btn">Cancel</button>
+            <button
+              @click="confirmBooking"
               :disabled="!selectedDate || !selectedTime || isBookingInProgress"
               class="book-btn"
-              :class="{ 'loading': isBookingInProgress }"
+              :class="{ loading: isBookingInProgress }"
             >
-              <span v-if="!isBookingInProgress">Book Service</span>
-              <span v-else class="booking-loading">
-                <svg class="spinner" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.3"/>
-                  <path d="M12 2C6.48 2 2 6.48 2 12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              <span v-if="!isBookingInProgress" class="btn-content">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M9 12L11 14L15 10"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
+                Confirm Booking
+              </span>
+              <span v-else class="btn-content">
+                <div class="btn-spinner"></div>
                 Booking...
               </span>
             </button>
@@ -162,221 +347,227 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
-import { useRoute } from 'vue-router';
-import { useModalState } from '../../composables/useModalState';
-import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore';
-import { useProjectStore } from '../../stores/projectStore';
-import { useNotificationStore } from '../../stores/notifications';
-import { useServiceBookingStore } from '../../stores/serviceBookingStore';
-import serviceTimeSlotService from '../../services/serviceTimeSlotService';
-import optimizedAuthService from '../../services/optimizedAuthService';
-import PageHeader from '../../components/PageHeader.vue';
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useModalState } from '../../composables/useModalState'
+import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore'
+import { useProjectStore } from '../../stores/projectStore'
+import { useNotificationStore } from '../../stores/notifications'
+import { useServiceBookingStore } from '../../stores/serviceBookingStore'
+import serviceTimeSlotService from '../../services/serviceTimeSlotService'
+import optimizedAuthService from '../../services/optimizedAuthService'
+import PageHeader from '../../components/PageHeader.vue'
 
 // Component name for ESLint
 defineOptions({
-  name: 'ServiceCategoryDetails'
-});
+  name: 'ServiceCategoryDetails',
+})
 
-const route = useRoute();
-const serviceCategoriesStore = useServiceCategoriesStore();
-const projectStore = useProjectStore();
-const notificationStore = useNotificationStore();
-const serviceBookingStore = useServiceBookingStore();
-const { openModal, closeModal } = useModalState();
+const route = useRoute()
+const serviceCategoriesStore = useServiceCategoriesStore()
+const projectStore = useProjectStore()
+const notificationStore = useNotificationStore()
+const serviceBookingStore = useServiceBookingStore()
+const { openModal, closeModal } = useModalState()
 
 // State
-const category = ref(null);
-const services = ref([]);
-const loading = ref(false);
-const error = ref(null);
-const showBookingDialog = ref(false);
-const selectedService = ref(null);
-const selectedDate = ref(null);
-const selectedTime = ref(null);
-const availableDays = ref([]);
-const availableTimeSlots = ref([]);
-const loadingTimeSlots = ref(false);
-const isBookingInProgress = ref(false);
+const category = ref(null)
+const services = ref([])
+const loading = ref(false)
+const error = ref(null)
+const showBookingDialog = ref(false)
+const selectedService = ref(null)
+const selectedDate = ref(null)
+const selectedTime = ref(null)
+const availableDays = ref([])
+const availableTimeSlots = ref([])
+const loadingTimeSlots = ref(false)
+const isBookingInProgress = ref(false)
 
 // Computed
-const categoryId = computed(() => route.params.id);
+const categoryId = computed(() => route.params.id)
 
 // Load category and services
 onMounted(async () => {
-  await loadCategory();
-  await loadServices();
-});
+  await loadCategory()
+  await loadServices()
+})
 
 // Watch for modal state changes - iOS fix to hide navigation bars
-watch(
-  showBookingDialog,
-  (isOpen) => {
-    if (isOpen) {
-      openModal();
-    } else {
-      closeModal();
-    }
+watch(showBookingDialog, (isOpen) => {
+  if (isOpen) {
+    openModal()
+  } else {
+    closeModal()
   }
-);
+})
 
 const loadCategory = async () => {
   if (projectStore.selectedProject?.id) {
-    await serviceCategoriesStore.fetchCategories(projectStore.selectedProject.id);
-    category.value = serviceCategoriesStore.getCategories.find(cat => cat.id === categoryId.value);
+    await serviceCategoriesStore.fetchCategories(projectStore.selectedProject.id)
+    category.value = serviceCategoriesStore.getCategories.find((cat) => cat.id === categoryId.value)
   }
-};
+}
 
 const loadServices = async () => {
-  if (!projectStore.selectedProject?.id || !categoryId.value) return;
-  
+  if (!projectStore.selectedProject?.id || !categoryId.value) return
+
   try {
-    loading.value = true;
-    error.value = null;
-    
+    loading.value = true
+    error.value = null
+
     const servicesData = await serviceCategoriesStore.getServicesByCategory(
-      projectStore.selectedProject.id, 
-      categoryId.value
-    );
-    services.value = servicesData;
+      projectStore.selectedProject.id,
+      categoryId.value,
+    )
+    services.value = servicesData
   } catch (err) {
-    console.error('Error loading services:', err);
-    error.value = err.message || 'Failed to load services';
+    console.error('Error loading services:', err)
+    error.value = err.message || 'Failed to load services'
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const openBookingDialog = (service) => {
-  selectedService.value = service;
-  selectedDate.value = null;
-  selectedTime.value = null;
-  availableTimeSlots.value = [];
-  generateAvailableDays();
-  showBookingDialog.value = true;
-};
+  selectedService.value = service
+  selectedDate.value = null
+  selectedTime.value = null
+  availableTimeSlots.value = []
+  generateAvailableDays()
+  showBookingDialog.value = true
+}
 
 const closeBookingDialog = () => {
-  console.log('🚪 closeBookingDialog called');
-  showBookingDialog.value = false;
-  selectedService.value = null;
-  selectedDate.value = null;
-  selectedTime.value = null;
-  availableDays.value = [];
-  availableTimeSlots.value = [];
-  isBookingInProgress.value = false;
-  
+  console.log('🚪 closeBookingDialog called')
+  showBookingDialog.value = false
+  selectedService.value = null
+  selectedDate.value = null
+  selectedTime.value = null
+  availableDays.value = []
+  availableTimeSlots.value = []
+  isBookingInProgress.value = false
+
   // Ensure modal state is also closed
-  closeModal();
-};
+  closeModal()
+}
 
 const generateAvailableDays = () => {
-  if (!category.value?.availability) return;
-  
-  const days = [];
-  const today = new Date();
-  
+  if (!category.value?.availability) return
+
+  const days = []
+  const today = new Date()
+
   // Generate next 14 days
   for (let i = 0; i < 14; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    
-    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
-    const dayKey = dayName.toLowerCase();
-    const availability = category.value.availability[dayKey];
-    
+    const date = new Date(today)
+    date.setDate(today.getDate() + i)
+
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' })
+    const dayKey = dayName.toLowerCase()
+    const availability = category.value.availability[dayKey]
+
     const dayInfo = {
       name: dayName,
       date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       fullDate: date.toISOString().split('T')[0],
       available: availability?.available || false,
-      timeRange: availability?.available ? `${availability.startTime} - ${availability.endTime}` : null
-    };
-    
-    days.push(dayInfo);
+      timeRange: availability?.available
+        ? `${availability.startTime} - ${availability.endTime}`
+        : null,
+    }
+
+    days.push(dayInfo)
   }
-  
-  availableDays.value = days;
-};
 
-const selectDate = async (date) => {
-  selectedDate.value = date;
-  selectedTime.value = null; // Reset time when date changes
-  await loadTimeSlots(date);
-};
-
-const selectTime = (time) => {
-  selectedTime.value = time;
-};
+  availableDays.value = days
+}
 
 // Dropdown change handlers
 const onDateChange = async (event) => {
-  const date = event.target.value;
+  const date = event.target.value
   if (date) {
-    selectedDate.value = date;
-    selectedTime.value = null; // Reset time when date changes
-    await loadTimeSlots(date);
+    selectedDate.value = date
+    selectedTime.value = null // Reset time when date changes
+    await loadTimeSlots(date)
   }
-};
+}
 
 const onTimeChange = (event) => {
-  const time = event.target.value;
+  const time = event.target.value
   if (time) {
-    selectedTime.value = time;
+    selectedTime.value = time
   }
-};
+}
+
+// Format selected date for display
+const formatSelectedDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
 
 // Helper function to get day of week from date
 const getDayOfWeek = (dateString) => {
-  const date = new Date(dateString);
-  const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-  return dayOfWeek;
-};
+  const date = new Date(dateString)
+  const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+  return dayOfWeek
+}
 
 const loadTimeSlots = async (date) => {
-  if (!selectedService.value || !projectStore.selectedProject?.id || !category.value?.id) return;
-  
+  if (!selectedService.value || !projectStore.selectedProject?.id || !category.value?.id) return
+
   try {
-    loadingTimeSlots.value = true;
+    loadingTimeSlots.value = true
     const slots = await serviceTimeSlotService.getAvailableTimeSlots(
       projectStore.selectedProject.id,
       selectedService.value.id,
       category.value.id,
-      date
-    );
-    availableTimeSlots.value = slots;
+      date,
+    )
+    availableTimeSlots.value = slots
   } catch (error) {
-    console.error('Error loading time slots:', error);
-    availableTimeSlots.value = [];
+    console.error('Error loading time slots:', error)
+    availableTimeSlots.value = []
   } finally {
-    loadingTimeSlots.value = false;
+    loadingTimeSlots.value = false
   }
-};
+}
 
 const confirmBooking = async () => {
   console.log('🔍 Book Service button clicked!', {
     selectedDate: selectedDate.value,
     selectedTime: selectedTime.value,
     selectedService: selectedService.value,
-    projectId: projectStore.selectedProject?.id
-  });
-  
+    projectId: projectStore.selectedProject?.id,
+  })
+
   // Prevent double-clicking
   if (isBookingInProgress.value) {
-    console.log('⏳ Booking already in progress, ignoring click');
-    return;
+    console.log('⏳ Booking already in progress, ignoring click')
+    return
   }
-  
-  if (!selectedDate.value || !selectedTime.value || !selectedService.value || !projectStore.selectedProject?.id) {
-    console.log('❌ Missing required data for booking');
-    notificationStore.showError('Please select both date and time');
-    return;
+
+  if (
+    !selectedDate.value ||
+    !selectedTime.value ||
+    !selectedService.value ||
+    !projectStore.selectedProject?.id
+  ) {
+    console.log('❌ Missing required data for booking')
+    notificationStore.showError('Please select both date and time')
+    return
   }
-  
-  isBookingInProgress.value = true;
-  
+
+  isBookingInProgress.value = true
+
   try {
-    console.log('✅ Creating booking...');
+    console.log('✅ Creating booking...')
     // Prepare booking data
     const bookingData = {
       serviceId: selectedService.value.id,
@@ -389,45 +580,50 @@ const confirmBooking = async () => {
       notes: '',
       // Include category-level time slot configuration
       categoryTimeSlotInterval: category.value?.timeSlotInterval || 30,
-      categoryStartTime: category.value?.availability?.[getDayOfWeek(selectedDate.value)]?.startTime || '09:00',
-      categoryEndTime: category.value?.availability?.[getDayOfWeek(selectedDate.value)]?.endTime || '17:00'
-    };
+      categoryStartTime:
+        category.value?.availability?.[getDayOfWeek(selectedDate.value)]?.startTime || '09:00',
+      categoryEndTime:
+        category.value?.availability?.[getDayOfWeek(selectedDate.value)]?.endTime || '17:00',
+    }
 
     // Create the booking
-    const bookingId = await serviceBookingStore.createBooking(projectStore.selectedProject.id, bookingData);
-    
-    console.log('✅ Service booking created successfully:', { bookingId, bookingData });
-    
+    const bookingId = await serviceBookingStore.createBooking(
+      projectStore.selectedProject.id,
+      bookingData,
+    )
+
+    console.log('✅ Service booking created successfully:', { bookingId, bookingData })
+
     // Show success notification
-    notificationStore.showSuccess('Service booked successfully!');
-    
+    notificationStore.showSuccess('Service booked successfully!')
+
     // Wait a bit for user to see the success message
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
     // Close dialog
-    closeBookingDialog();
-    
+    closeBookingDialog()
+
     // Refresh service bookings in the background
-    const user = await optimizedAuthService.getCurrentUser();
+    const user = await optimizedAuthService.getCurrentUser()
     if (user) {
-      serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid, true).catch(err => {
-        console.error('Error refreshing bookings:', err);
-      });
+      serviceBookingStore
+        .fetchUserBookings(projectStore.selectedProject.id, user.uid, true)
+        .catch((err) => {
+          console.error('Error refreshing bookings:', err)
+        })
     }
-    
   } catch (error) {
-    console.error('❌ Error creating service booking:', error);
+    console.error('❌ Error creating service booking:', error)
     console.error('❌ Error details:', {
       message: error.message,
       stack: error.stack,
-      error: error
-    });
-    notificationStore.showError(error.message || 'Failed to book service. Please try again.');
+      error: error,
+    })
+    notificationStore.showError(error.message || 'Failed to book service. Please try again.')
   } finally {
-    isBookingInProgress.value = false;
+    isBookingInProgress.value = false
   }
-};
-
+}
 </script>
 
 <style scoped>
@@ -436,7 +632,6 @@ const confirmBooking = async () => {
   background: #fafafa;
   min-height: 100%;
 }
-
 
 /* Category Info */
 .category-info {
@@ -503,15 +698,19 @@ const confirmBooking = async () => {
   width: 40px;
   height: 40px;
   border: 4px solid #f3f4f6;
-  border-top: 4px solid #AF1E23;
+  border-top: 4px solid #af1e23;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .error-container {
@@ -528,7 +727,7 @@ const confirmBooking = async () => {
 }
 
 .retry-btn {
-  background: #AF1E23;
+  background: #af1e23;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -603,7 +802,7 @@ const confirmBooking = async () => {
 .service-price {
   font-size: 1rem;
   font-weight: 600;
-  color: #AF1E23;
+  color: #af1e23;
 }
 
 .service-arrow {
@@ -746,7 +945,7 @@ const confirmBooking = async () => {
 .dialog-content .service-price {
   font-size: 1rem;
   font-weight: 600;
-  color: #AF1E23;
+  color: #af1e23;
 }
 
 .availability-section {
@@ -760,49 +959,208 @@ const confirmBooking = async () => {
   margin: 0 0 16px 0;
 }
 
-/* Dropdown Container */
+/* Service Info Card */
+.service-info-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.service-info-card:hover {
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.15);
+}
+
+.service-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.service-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #af1e23 0%, #dc2626 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.service-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.service-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+}
+
+.service-description {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.service-price-badge {
+  background: linear-gradient(135deg, #af1e23 0%, #dc2626 100%);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1.125rem;
+  box-shadow: 0 4px 8px rgba(175, 30, 35, 0.3);
+}
+
+/* Booking Steps */
+.booking-steps {
+  margin-bottom: 32px;
+}
+
+.booking-step {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 32px;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.booking-step.active {
+  opacity: 1;
+}
+
+.booking-step.completed {
+  opacity: 1;
+}
+
+.step-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.booking-step.active .step-number {
+  background: linear-gradient(135deg, #af1e23 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
+  transform: scale(1.1);
+}
+
+.booking-step.completed .step-number {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.booking-step.completed .step-number::after {
+  content: '✓';
+  font-size: 1.2rem;
+}
+
+.step-line {
+  width: 2px;
+  height: 60px;
+  background: #e2e8f0;
+  margin-top: 8px;
+  transition: all 0.3s ease;
+}
+
+.booking-step.completed .step-line {
+  background: linear-gradient(180deg, #10b981 0%, #e2e8f0 100%);
+}
+
+.step-content {
+  flex: 1;
+  padding-top: 8px;
+}
+
+.step-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+}
+
+.step-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0 0 16px 0;
+}
+
+/* Modern Dropdown */
 .dropdown-container {
   position: relative;
   margin-bottom: 16px;
 }
 
-.dropdown-container select {
+.modern-dropdown {
   width: 100%;
   padding: 16px 48px 16px 16px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid #e2e8f0;
   border-radius: 12px;
   background: white;
   font-size: 1rem;
   font-weight: 500;
-  color: #111827;
+  color: #1e293b;
   cursor: pointer;
   transition: all 0.3s ease;
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.dropdown-container select:focus {
+.modern-dropdown:focus {
   outline: none;
   border-color: #af1e23;
-  box-shadow: 0 0 0 3px rgba(175, 30, 35, 0.1);
+  box-shadow:
+    0 0 0 3px rgba(175, 30, 35, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
 }
 
-.dropdown-container select:disabled {
-  background: #f9fafb;
-  color: #9ca3af;
+.modern-dropdown:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
   cursor: not-allowed;
-  border-color: #d1d5db;
+  border-color: #e2e8f0;
 }
 
-.dropdown-container select option {
-  padding: 8px 12px;
+.modern-dropdown option {
+  padding: 12px 16px;
   font-size: 0.875rem;
 }
 
-.dropdown-container select option:disabled {
-  color: #9ca3af;
-  background: #f9fafb;
+.modern-dropdown option:disabled {
+  color: #94a3b8;
+  background: #f8fafc;
 }
 
 .dropdown-icon {
@@ -810,7 +1168,7 @@ const confirmBooking = async () => {
   right: 16px;
   top: 50%;
   transform: translateY(-50%);
-  color: #6b7280;
+  color: #64748b;
   pointer-events: none;
   transition: all 0.3s ease;
 }
@@ -820,31 +1178,107 @@ const confirmBooking = async () => {
   transform: translateY(-50%) rotate(180deg);
 }
 
-/* Date Dropdown Specific */
-.date-dropdown {
-  font-weight: 600;
+/* Loading and No Slots States */
+.loading-state,
+.no-slots-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-top: 16px;
 }
 
-/* Time Dropdown Specific */
-.time-dropdown {
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e2e8f0;
+  border-top: 3px solid #af1e23;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+.no-slots-icon {
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+
+.loading-state p,
+.no-slots-state p {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Booking Summary */
+.booking-summary {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.booking-summary:hover {
+  box-shadow: 0 8px 25px -5px rgba(11, 78, 110, 0.15);
+}
+
+.summary-header h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #0c4a6e;
+  margin: 0 0 16px 0;
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #bae6fd;
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+}
+
+.summary-item.total {
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: #0c4a6e;
+  padding-top: 12px;
+  border-top: 2px solid #bae6fd;
+  border-bottom: none;
+}
+
+.summary-label {
+  font-size: 0.875rem;
+  color: #0369a1;
   font-weight: 500;
+}
+
+.summary-value {
+  font-size: 0.875rem;
+  color: #0c4a6e;
+  font-weight: 600;
 }
 
 /* Time Slots Section */
 .time-slots-section {
   margin-bottom: 24px;
-  animation: slideInUp 0.4s ease-out;
-}
-
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .loading-time-slots {
@@ -860,12 +1294,11 @@ const confirmBooking = async () => {
   width: 24px;
   height: 24px;
   border: 3px solid #f3f4f6;
-  border-top: 3px solid #AF1E23;
+  border-top: 3px solid #af1e23;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 12px;
 }
-
 
 .no-time-slots {
   text-align: center;
@@ -873,66 +1306,89 @@ const confirmBooking = async () => {
   color: #6b7280;
 }
 
+/* Booking Actions */
 .booking-actions {
   display: flex;
-  justify-content: center;
-  padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  gap: 16px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
   pointer-events: auto;
   position: relative;
   z-index: 10;
 }
 
+.cancel-btn {
+  flex: 1;
+  background: #f8fafc;
+  color: #64748b;
+  border: 2px solid #e2e8f0;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  touch-action: manipulation;
+}
+
+.cancel-btn:active {
+  transform: scale(0.98);
+  background: #f1f5f9;
+}
+
 .book-btn {
-  background: #AF1E23;
+  flex: 2;
+  background: linear-gradient(135deg, #af1e23 0%, #dc2626 100%);
   color: white;
   border: none;
-  padding: 12px 32px;
+  padding: 16px 24px;
   border-radius: 12px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 150px;
-  pointer-events: auto;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
   touch-action: manipulation;
   position: relative;
-  z-index: 10;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
 }
-
-/* Mobile app - hover effects disabled */
-/* .book-btn:hover:not(:disabled) {
-  background: #8B1A1E;
-  transform: translateY(-1px);
-} */
 
 .book-btn:active:not(:disabled) {
   transform: scale(0.98);
-  background: #8B1A1E;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.4);
+}
+
+.book-btn:not(:disabled):hover {
+  box-shadow: 0 6px 20px rgba(175, 30, 35, 0.4);
 }
 
 .book-btn:disabled {
-  background: #d1d5db;
+  background: #e2e8f0;
+  color: #94a3b8;
   cursor: not-allowed;
   transform: none;
-  opacity: 0.6;
+  box-shadow: none;
 }
 
 .book-btn.loading {
-  background: #AF1E23;
-  cursor: wait;
-  opacity: 0.8;
+  pointer-events: none;
 }
 
-.booking-loading {
+.btn-content {
   display: flex;
   align-items: center;
-  gap: 8px;
   justify-content: center;
+  gap: 8px;
 }
 
-.spinner {
+.btn-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
@@ -945,37 +1401,105 @@ const confirmBooking = async () => {
   }
 }
 
+/* Mobile Touch Optimizations */
+.service-item {
+  -webkit-tap-highlight-color: rgba(175, 30, 35, 0.1);
+  touch-action: manipulation;
+}
+
+.service-item:active {
+  background: #f8fafc;
+}
+
+.modern-dropdown {
+  -webkit-tap-highlight-color: rgba(175, 30, 35, 0.1);
+  touch-action: manipulation;
+}
+
+/* Enhanced Mobile Experience */
+@media (max-width: 768px) {
+  .booking-dialog {
+    width: 95%;
+    max-height: 85vh;
+    margin: 10px;
+  }
+
+  .service-info-card {
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+
+  .booking-steps {
+    margin-bottom: 24px;
+  }
+
+  .booking-step {
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .step-number {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+  }
+
+  .step-line {
+    height: 50px;
+  }
+
+  .booking-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .cancel-btn,
+  .book-btn {
+    flex: none;
+    width: 100%;
+  }
+}
+
 /* Responsive Design */
 @media (min-width: 768px) {
   .service-category-details {
     padding: 32px 24px;
   }
-  
+
   .category-info {
     padding: 32px;
   }
-  
+
   .category-img,
   .default-image {
     width: 100px;
     height: 100px;
   }
-  
+
   .category-title {
     font-size: 1.75rem;
   }
-  
+
   .services-list {
     padding: 32px;
   }
-  
 }
 
 @media (max-width: 480px) {
   .booking-dialog-overlay {
-    padding: 10px;
+    padding: 5px;
   }
-  
+
+  .dialog-content {
+    padding: 16px;
+  }
+
+  .service-info-card {
+    padding: 16px;
+  }
+
+  .booking-summary {
+    padding: 16px;
+  }
 }
 </style>
-
