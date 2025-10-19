@@ -460,10 +460,9 @@
               />
             </svg>
             <div class="alert-content">
-              <strong>Access Restricted</strong>
+              <strong>{{ userBlockingStatus.blockingDetails?.global ? 'Temporarily Disabled' : 'Access Restricted' }}</strong>
               <p>
-                You are currently blocked from generating passes. Please contact support for
-                assistance.
+                {{ userBlockingStatus.blockingDetails?.reason || 'You are currently blocked from generating passes. Please contact support for assistance.' }}
               </p>
             </div>
           </div>
@@ -472,7 +471,7 @@
             <!-- Generate Pass Button -->
             <button
               class="generate-pass-button"
-              :disabled="passes.length >= passLimits.monthlyLimit || userBlockingStatus.isBlocked"
+              :disabled="currentMonthPassCount >= passLimits.monthlyLimit || userBlockingStatus.isBlocked"
               @click="showGenerateDialog = true"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -497,7 +496,7 @@
                 />
               </svg>
               <span
-                >{{ $t('generatePass') || 'Generate Pass' }} ({{ passes.length }}/{{
+                >{{ $t('generatePass') || 'Generate Pass' }} ({{ currentMonthPassCount }}/{{
                   passLimits.monthlyLimit
                 }})</span
               >
@@ -519,143 +518,54 @@
             </div>
 
             <!-- Passes Grid -->
-            <div v-if="passes.length > 0" class="passes-grid">
-              <div v-for="pass in passes" :key="pass.id" class="pass-card">
-                <div class="pass-header">
-                  <div class="pass-info-section">
-                    <h3 class="pass-name">{{ pass.guestName }}</h3>
-                    <span class="pass-status" :class="pass.status">{{ pass.status }}</span>
-                  </div>
-
-                  <div class="pass-qr-container">
-                    <canvas :ref="(el) => setQRRef(el, pass.id)" class="qr-code"></canvas>
-                  </div>
-                </div>
-
-                <div class="pass-details">
-                  <div class="pass-detail">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <rect
-                        x="3"
-                        y="4"
-                        width="18"
-                        height="18"
-                        rx="2"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      />
-                      <line
-                        x1="16"
-                        y1="2"
-                        x2="16"
-                        y2="6"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                      />
-                      <line
-                        x1="8"
-                        y1="2"
-                        x2="8"
-                        y2="6"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                      />
-                      <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" />
-                    </svg>
-                    <span>{{ formatDate(pass.validUntil) }}</span>
-                  </div>
-                  <div class="pass-detail">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
+            <div v-if="currentProjectPasses.length > 0" class="passes-grid">
+              <div v-for="pass in currentProjectPasses" :key="pass.id" class="pass-card">
+                <!-- Hidden canvas for QR code generation -->
+                <canvas :ref="(el) => setQRRef(el, pass.id)" class="qr-code-hidden"></canvas>
+                
+                <!-- Professional Pass Card Design -->
+                <div class="pass-card-header">
+                  <div class="pass-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                       <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
                     </svg>
-                    <span>{{ pass.purpose }}</span>
+                  </div>
+                  <h3 class="pass-guest-name">{{ pass.guestName }}</h3>
+                </div>
+
+                <div class="pass-card-body">
+                  <div class="pass-info-row">
+                    <div class="pass-info-label">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" />
+                      </svg>
+                      <span>Valid Until</span>
+                    </div>
+                    <span class="pass-info-value">{{ formatDate(pass.validUntil) }}</span>
                   </div>
                 </div>
 
-                <div class="pass-actions">
-                  <button class="pass-action-button" @click="sharePass(pass)">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <div class="pass-card-footer">
+                  <button class="pass-share-button" @click="sharePass(pass)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                       <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2" />
                       <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2" />
                       <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2" />
-                      <line
-                        x1="8.59"
-                        y1="13.51"
-                        x2="15.42"
-                        y2="17.49"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      />
-                      <line
-                        x1="15.41"
-                        y1="6.51"
-                        x2="8.59"
-                        y2="10.49"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      />
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2" />
+                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2" />
                     </svg>
-                    <span>{{ $t('share') || 'Share' }}</span>
+                    <span>{{ $t('share') || 'Share Guest Pass' }}</span>
                   </button>
 
-                  <button
-                    v-if="pass.phoneNumber"
-                    class="pass-action-button whatsapp"
-                    @click="sendPassViaWhatsApp(pass)"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                      <path
-                        d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"
-                      />
-                    </svg>
-                    <span>{{ $t('whatsapp') || 'WhatsApp' }}</span>
-                  </button>
-
-                  <button class="pass-action-button danger" @click="deletePass(pass.id)">
+                  <button class="pass-delete-button" @click="deletePass(pass.id)">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <polyline
-                        points="3 6 5 6 21 6"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <path
-                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <line
-                        x1="10"
-                        y1="11"
-                        x2="10"
-                        y2="17"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                      />
-                      <line
-                        x1="14"
-                        y1="11"
-                        x2="14"
-                        y2="17"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                      />
+                      <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
-                    <span>{{ $t('delete') || 'Delete' }}</span>
                   </button>
                 </div>
               </div>
@@ -709,162 +619,100 @@
       </transition>
     </div>
 
-    <!-- Generate Pass Modal -->
+    <!-- Generate Pass Modal - Professional Design -->
     <transition name="modal">
       <div v-if="showGenerateDialog" class="modal-overlay" @click="showGenerateDialog = false">
-        <div class="modal-container" @click.stop>
+        <div class="modal-container-pro" @click.stop>
           <!-- Modal Header -->
-          <div class="modal-header">
-            <h2>{{ $t('generateNewPass') || 'Generate New Pass' }}</h2>
-            <button class="modal-close" @click="showGenerateDialog = false">
+          <div class="modal-header-pro">
+            <div class="modal-header-content">
+              <div class="modal-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="2" rx="2"/>
+                  <rect x="5" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
+                  <rect x="13" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
+                  <rect x="5" y="13" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+              </div>
+              <div>
+                <h2 class="modal-title-pro">{{ $t('generateNewPass') || 'New Guest Pass' }}</h2>
+                <p class="modal-subtitle-pro">Generate QR code for gate access</p>
+              </div>
+            </div>
+            <button class="modal-close-pro" @click="showGenerateDialog = false">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <line
-                  x1="18"
-                  y1="6"
-                  x2="6"
-                  y2="18"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-                <line
-                  x1="6"
-                  y1="6"
-                  x2="18"
-                  y2="18"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
+                <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
             </button>
           </div>
 
           <!-- Modal Body -->
-          <div class="modal-body">
-            <p class="modal-description">
-              Fill in the guest details to generate a QR code access pass
-            </p>
-
-            <div class="form-fields">
+          <div class="modal-body-pro">
+            <div class="form-group-pro">
+              <label class="form-label-pro">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <span>Guest Name</span>
+                <span class="required-star">*</span>
+              </label>
               <input
                 v-model="newPass.guestName"
                 type="text"
-                class="form-input"
-                :placeholder="$t('guestName') || 'Guest Name *'"
+                class="form-input-pro"
+                placeholder="Enter guest's full name"
                 required
               />
+            </div>
 
-              <input
-                v-model="newPass.purpose"
-                type="text"
-                class="form-input"
-                :placeholder="$t('purpose') || 'Purpose of Visit (optional)'"
-              />
-
-              <div class="datetime-wrapper">
-                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <rect
-                    x="3"
-                    y="4"
-                    width="18"
-                    height="18"
-                    rx="2"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <line
-                    x1="16"
-                    y1="2"
-                    x2="16"
-                    y2="6"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                  <line
-                    x1="8"
-                    y1="2"
-                    x2="8"
-                    y2="6"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" />
+            <div class="form-group-pro">
+              <label class="form-label-pro">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
                 </svg>
-                <input
-                  v-model="newPass.validUntil"
-                  type="datetime-local"
-                  class="form-input with-icon"
-                  required
-                />
-              </div>
+                <span>Valid Until</span>
+                <span class="required-star">*</span>
+              </label>
+              <input
+                v-model="newPass.validUntil"
+                type="datetime-local"
+                class="form-input-pro"
+                required
+              />
+            </div>
 
-              <div class="whatsapp-section">
-                <div class="whatsapp-header">
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    style="color: #25d366"
-                  >
-                    <path
-                      d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"
-                    />
-                  </svg>
-                  <span>Send via WhatsApp</span>
-                </div>
-              </div>
+            <div class="info-box-pro">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <path d="M12 16V12M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <p>The QR code will be generated and ready to share via WhatsApp, Messages, or any app of your choice.</p>
             </div>
           </div>
 
           <!-- Modal Footer -->
-          <div class="modal-footer">
-            <button class="modal-button secondary" @click="showGenerateDialog = false">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <line
-                  x1="18"
-                  y1="6"
-                  x2="6"
-                  y2="18"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-                <line
-                  x1="6"
-                  y1="6"
-                  x2="18"
-                  y2="18"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-              </svg>
+          <div class="modal-footer-pro">
+            <button class="modal-btn-cancel" @click="showGenerateDialog = false">
               {{ $t('cancel') || 'Cancel' }}
             </button>
             <button
-              class="modal-button primary"
+              class="modal-btn-generate"
               :disabled="!newPass.guestName || !newPass.validUntil"
               @click="generatePass"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <rect
-                  x="3"
-                  y="3"
-                  width="18"
-                  height="18"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  rx="2"
-                />
-                <rect x="5" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5" />
-                <rect x="13" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5" />
-                <rect x="5" y="13" width="6" height="6" stroke="currentColor" stroke-width="1.5" />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
+                <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
               </svg>
-              {{ $t('generate') || 'Generate Pass' }}
+              {{ $t('generate') || 'Generate & Share' }}
             </button>
           </div>
         </div>
@@ -902,17 +750,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { Capacitor } from '@capacitor/core'
-import { Share } from '@capacitor/share'
 import { useBluetooth } from '../../composables/useBluetooth'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
+import { useModalState } from '../../composables/useModalState'
 import QRCode from 'qrcode'
 import PageHeader from '../../components/PageHeader.vue'
 import sharingService from '../../services/whatsappService'
-import { checkUserEligibility, createGuestPass, markPassAsSent } from '../../api/guestPassAPI'
+import { createGuestPass, markPassAsSent, checkUserEligibility } from '../../api/guestPassAPI'
 import { auth, db } from '../../boot/firebase'
+import firestoreService from '../../services/firestoreService'
+import optimizedAuthService from '../../services/optimizedAuthService'
 import { useNotificationStore } from '../../stores/notifications'
+import { useProjectStore } from '../../stores/projectStore'
 
 defineOptions({
   name: 'AccessPage',
@@ -925,6 +776,8 @@ useFormKeyboard({
 })
 
 const notificationStore = useNotificationStore()
+const projectStore = useProjectStore()
+const { openModal, closeModal } = useModalState()
 
 // Tab state
 const activeTab = ref('ble')
@@ -957,6 +810,16 @@ const lastConnectedDevice = ref(null)
 // Passes state
 const passes = ref([])
 const showGenerateDialog = ref(false)
+
+// Watch for modal state to hide bottom navigation
+watch(showGenerateDialog, (isOpen) => {
+  if (isOpen) {
+    openModal()
+  } else {
+    closeModal()
+  }
+})
+
 const newPass = ref({
   guestName: '',
   purpose: '',
@@ -975,6 +838,20 @@ const passLimits = ref({
   monthlyLimit: 10,
   usedThisMonth: 0,
   remainingQuota: 10,
+})
+
+// Computed: Filter passes by current project
+const currentProjectPasses = computed(() => {
+  const projectId = projectStore.selectedProject?.id
+  if (!projectId) return []
+  
+  // Filter passes to only show those for the current project
+  return passes.value.filter(pass => pass.projectId === projectId)
+})
+
+// Computed: Current month pass count for display
+const currentMonthPassCount = computed(() => {
+  return passLimits.value.usedThisMonth || 0
 })
 
 // User unit information
@@ -1145,13 +1022,188 @@ const getUserUnitInfo = () => {
 }
 
 /**
- * User Blocking Functions
+ * Load passes from Firebase AND calculate limits
+ * 
+ * Limit Hierarchy:
+ * 1. Fetch global limit from guestPassSettings/{projectId} (set by admin in dashboard)
+ * 2. Check if user has custom limit in users/{uid}/guestPassData.monthlyLimit (set by admin)
+ * 3. Use user-specific limit if exists, otherwise use global limit
+ * 4. Fallback to 10 if both fail
+ * 
+ * Note: Handles both string and number types for backward compatibility
+ */
+const loadPassesFromFirebase = async () => {
+  try {
+    const user = await optimizedAuthService.getCurrentUser()
+    const projectId = projectStore.selectedProject?.id
+    
+    if (!user || !projectId) {
+      console.log('👤 No user or project, skipping pass load')
+      passes.value = []
+      passLimits.value = {
+        monthlyLimit: 10,
+        usedThisMonth: 0,
+        remainingQuota: 10,
+      }
+      return
+    }
+
+    console.log('📥 Loading passes from Firebase for project:', projectId)
+    console.log('👤 User ID:', user.uid)
+
+    // Get user's guest pass limits from their user document
+    const userDoc = await firestoreService.getDoc(`users/${user.uid}`)
+    const userData = userDoc.data ? userDoc.data() : userDoc
+    const guestPassData = userData?.guestPassData || {}
+    
+    // Check for global settings first
+    let globalMonthlyLimit = 10
+    let globalBlockAllUsers = false
+    let globalSettingsDoc = null
+    
+    try {
+      const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
+      globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
+      
+      if (globalSettingsDoc?.monthlyLimit) {
+        // Handle both string and number values
+        globalMonthlyLimit = typeof globalSettingsDoc.monthlyLimit === 'string' 
+          ? parseInt(globalSettingsDoc.monthlyLimit, 10) 
+          : globalSettingsDoc.monthlyLimit
+        console.log('🌐 Global monthly limit from settings:', globalMonthlyLimit, '(type:', typeof globalSettingsDoc.monthlyLimit, ')')
+      }
+      globalBlockAllUsers = globalSettingsDoc?.blockAllUsers || false
+    } catch (settingsError) {
+      console.warn('⚠️ Could not fetch global settings, using defaults:', settingsError)
+    }
+    
+    // Use user-specific limit if set, otherwise use global limit
+    let monthlyLimit = globalMonthlyLimit
+    if (guestPassData.monthlyLimit !== undefined && guestPassData.monthlyLimit !== null) {
+      // Handle both string and number values for user-specific limit
+      monthlyLimit = typeof guestPassData.monthlyLimit === 'string'
+        ? parseInt(guestPassData.monthlyLimit, 10)
+        : guestPassData.monthlyLimit
+    }
+    
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('📊 GUEST PASS LIMIT CALCULATION')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('📊 User guestPassData:', guestPassData)
+    console.log('📊 Global settings limit:', globalMonthlyLimit)
+    console.log('📊 User-specific limit:', guestPassData.monthlyLimit || 'NOT SET (will use global)')
+    console.log('📊 Final monthly limit:', monthlyLimit)
+    console.log('📊 Limit source:', guestPassData.monthlyLimit !== undefined && guestPassData.monthlyLimit !== null ? '🎯 USER-SPECIFIC OVERRIDE (won\'t change when global changes)' : '🌐 GLOBAL DEFAULT (will change when admin updates global)')
+    console.log('🔒 Global block all users:', globalBlockAllUsers)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    
+    // Update user blocking status based on global and individual settings
+    userBlockingStatus.value = {
+      isBlocked: guestPassData.blocked || globalBlockAllUsers,
+      blockingDetails: globalBlockAllUsers 
+        ? { reason: 'Guest pass generation has been temporarily disabled by administration', global: true }
+        : (guestPassData.blocked ? { reason: 'Your account is blocked from generating guest passes', individual: true } : null),
+      loading: false,
+    }
+
+    // Query ALL passes for this user in this project
+    console.log('⏳ Loading ALL guest passes...')
+    const allPassesResult = await firestoreService.getDocs(
+      `projects/${projectId}/guestPasses`,
+      {
+        filters: [
+          { field: 'userId', operator: '==', value: user.uid }
+        ],
+        orderBy: [
+          { field: 'createdAt', direction: 'desc' }
+        ]
+      }
+    )
+    
+    const allPasses = (allPassesResult?.docs || [])
+    console.log('✅ Total passes found:', allPasses.length)
+    
+    // Count passes created this month
+    const now = new Date()
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    
+    const passesThisMonth = allPasses.filter(doc => {
+      const createdAt = doc.createdAt
+      if (!createdAt) return false
+      
+      const passDate = typeof createdAt === 'string' ? new Date(createdAt) : createdAt
+      return passDate >= firstDayOfMonth
+    })
+    
+    const usedThisMonth = passesThisMonth.length
+    
+    console.log(`📊 Passes this month: ${usedThisMonth}/${monthlyLimit}`)
+    console.log(`📅 Month start: ${firstDayOfMonth}`)
+    
+    // Update limits
+    passLimits.value = {
+      monthlyLimit: monthlyLimit,
+      usedThisMonth: usedThisMonth,
+      remainingQuota: Math.max(0, monthlyLimit - usedThisMonth),
+    }
+    
+    console.log('✅ Pass limits set:', passLimits.value)
+    
+    // Map passes for display
+    passes.value = allPasses.map(doc => {
+      return {
+        id: doc.id,
+        projectId: projectId,
+        userName: doc.userName || 'Unknown User',
+        guestName: doc.guestName,
+        purpose: doc.purpose || 'Guest Visit',
+        validUntil: doc.validUntil,
+        status: 'active',
+        createdAt: doc.createdAt,
+        code: doc.id,
+        firebaseRef: doc.id,
+      }
+    })
+
+    console.log(`✅ Loaded ${passes.value.length} total passes (${usedThisMonth} this month)`)
+
+    // Generate QR codes for all passes
+    if (passes.value.length > 0) {
+      await nextTick()
+      setTimeout(async () => {
+        for (const pass of passes.value) {
+          try {
+            await generateQRCode(pass)
+          } catch (qrError) {
+            console.error('❌ Error generating QR for pass:', pass.id, qrError)
+          }
+        }
+      }, 200)
+    }
+  } catch (error) {
+    console.error('❌ Error loading passes from Firebase:', error)
+    console.error('❌ Error code:', error?.code)
+    console.error('❌ Error message:', error?.message)
+    passes.value = []
+    passLimits.value = {
+      monthlyLimit: 10,
+      usedThisMonth: 0,
+      remainingQuota: 10,
+    }
+  }
+}
+
+/**
+ * Check if user is blocked from generating passes
  */
 const checkUserBlockingStatus = async () => {
   try {
     userBlockingStatus.value.loading = true
 
-    if (!auth.currentUser) {
+    const user = await optimizedAuthService.getCurrentUser()
+    const projectId = projectStore.selectedProject?.id
+    
+    if (!user || !projectId) {
       userBlockingStatus.value = {
         isBlocked: false,
         blockingDetails: null,
@@ -1160,45 +1212,53 @@ const checkUserBlockingStatus = async () => {
       return
     }
 
-    const result = await checkUserEligibility('project123', auth.currentUser.uid)
+    // Get user's blocking status from their user document
+    const userDoc = await firestoreService.getDoc(`users/${user.uid}`)
+    const userData = userDoc.data ? userDoc.data() : userDoc
+    const guestPassData = userData?.guestPassData || {}
+    
+    // Check global settings for block all users
+    const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
+    const globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
+    const globalBlockAllUsers = globalSettingsDoc?.blockAllUsers || false
+    
+    console.log('🔍 Guest pass data:', guestPassData)
+    console.log('🔒 Global block all users:', globalBlockAllUsers)
 
-    if (result.success && result.data.canGenerate) {
+    // Check if user is blocked globally or individually
+    if (globalBlockAllUsers) {
+      userBlockingStatus.value = {
+        isBlocked: true,
+        blockingDetails: {
+          reason: 'Guest pass generation has been temporarily disabled by administration',
+          blockedBy: 'system',
+          global: true,
+        },
+        loading: false,
+      }
+      console.log('🚫 All users blocked from generating passes (global setting)')
+    } else if (guestPassData.blocked === true) {
+      userBlockingStatus.value = {
+        isBlocked: true,
+        blockingDetails: {
+          reason: guestPassData.blockedReason || 'Your account is blocked from generating guest passes',
+          blockedBy: guestPassData.blockedBy || 'admin',
+          blockedUntil: guestPassData.blockedUntil || null,
+          individual: true,
+        },
+        loading: false,
+      }
+      console.log('⛔ User is individually blocked from generating passes')
+    } else {
       userBlockingStatus.value = {
         isBlocked: false,
         blockingDetails: null,
         loading: false,
       }
-
-      passLimits.value = {
-        monthlyLimit: result.data.monthlyLimit || 10,
-        usedThisMonth: result.data.usedThisMonth || 0,
-        remainingQuota:
-          result.data.remainingQuota || result.data.monthlyLimit - result.data.usedThisMonth || 10,
-      }
-    } else {
-      userBlockingStatus.value = {
-        isBlocked: true,
-        blockingDetails: result.data.blockingDetails || {
-          reason: result.message,
-          blockedBy: 'admin',
-          blockedUntil: null,
-        },
-        loading: false,
-      }
-
-      if (result.data.monthlyLimit !== undefined) {
-        passLimits.value = {
-          monthlyLimit: result.data.monthlyLimit || 10,
-          usedThisMonth: result.data.usedThisMonth || 0,
-          remainingQuota:
-            result.data.remainingQuota ||
-            result.data.monthlyLimit - result.data.usedThisMonth ||
-            10,
-        }
-      }
+      console.log('✅ User is NOT blocked')
     }
   } catch (error) {
-    console.error('❌ Error checking user eligibility:', error)
+    console.error('❌ Error checking user blocking status:', error)
     userBlockingStatus.value = {
       isBlocked: false,
       blockingDetails: null,
@@ -1219,13 +1279,23 @@ const setQRRef = (el, passId) => {
 
 const switchToPassesTab = async () => {
   activeTab.value = 'passes'
-  await checkUserBlockingStatus()
+  // Load passes (this also calculates limits) and check blocking status
+  await Promise.all([
+    loadPassesFromFirebase(),
+    checkUserBlockingStatus()
+  ])
 }
 
 const generatePass = async () => {
   try {
-    await checkUserBlockingStatus()
+    // Check if user is authenticated first
+    const user = await optimizedAuthService.getCurrentUser()
+    if (!user) {
+      notificationStore.showError('You must be logged in to generate a pass.')
+      return
+    }
 
+    // Check blocking status
     if (userBlockingStatus.value.isBlocked) {
       notificationStore.showWarning(
         'You are currently blocked from generating passes. Please contact support for assistance.',
@@ -1233,7 +1303,8 @@ const generatePass = async () => {
       return
     }
 
-    if (passes.value.length >= passLimits.value.monthlyLimit) {
+    // Check if user has reached their limit
+    if (currentMonthPassCount.value >= passLimits.value.monthlyLimit) {
       notificationStore.showWarning(
         `You have reached your monthly limit of ${passLimits.value.monthlyLimit} passes.`,
       )
@@ -1253,10 +1324,34 @@ const generatePass = async () => {
     const sanitizedGuestName = newPass.value.guestName.trim().substring(0, 100)
     const sanitizedPurpose = (newPass.value.purpose || 'Guest Visit').trim().substring(0, 200)
 
-    const userName = auth.currentUser?.displayName || auth.currentUser?.email || 'Unknown User'
+    // Get the actual project ID from the project store
+    const projectId = projectStore.selectedProject?.id
+    if (!projectId) {
+      notificationStore.showError('No project selected. Please select a project first.')
+      return
+    }
+
+    // Double-check eligibility via API before creating pass
+    console.log('🔍 Checking eligibility via API before generating pass...')
+    const eligibilityResult = await checkUserEligibility(projectId, user.uid)
+    
+    if (!eligibilityResult.success || !eligibilityResult.data?.canGenerate) {
+      console.error('❌ User not eligible:', eligibilityResult)
+      notificationStore.showWarning(
+        eligibilityResult.message || 'You are not eligible to generate passes at this time.'
+      )
+      
+      // Refresh limits from server
+      await loadPassesFromFirebase()
+      return
+    }
+    
+    console.log('✅ Eligibility check passed:', eligibilityResult.data)
+
+    const userName = user.displayName || user.email || 'Unknown User'
     const result = await createGuestPass(
-      'project123',
-      auth.currentUser.uid,
+      projectId,
+      user.uid,
       userName,
       sanitizedGuestName,
       sanitizedPurpose,
@@ -1269,6 +1364,8 @@ const generatePass = async () => {
 
     const pass = {
       id: result.passId,
+      projectId: projectId, // Add project ID to the pass
+      userName: userName, // Add user name for QR code
       guestName: sanitizedGuestName,
       purpose: sanitizedPurpose,
       validUntil: new Date(newPass.value.validUntil).toISOString(),
@@ -1278,15 +1375,14 @@ const generatePass = async () => {
       firebaseRef: result.passRef,
     }
 
-    passes.value.push(pass)
+    // Add pass to beginning for immediate UI feedback
+    passes.value.unshift(pass)
 
+    // Update limits locally for immediate feedback
     passLimits.value.usedThisMonth = (passLimits.value.usedThisMonth || 0) + 1
-    passLimits.value.remainingQuota = passLimits.value.monthlyLimit - passLimits.value.usedThisMonth
+    passLimits.value.remainingQuota = Math.max(0, passLimits.value.monthlyLimit - passLimits.value.usedThisMonth)
 
-    if (auth.currentUser?.uid) {
-      const userPassesKey = `gatePasses_${auth.currentUser.uid}`
-      localStorage.setItem(userPassesKey, JSON.stringify(passes.value))
-    }
+    console.log('✅ Pass added, new count:', passLimits.value)
 
     newPass.value = {
       guestName: '',
@@ -1324,16 +1420,19 @@ const generatePass = async () => {
       }
 
       if (pass.firebaseRef) {
-        await markPassAsSent(pass.firebaseRef)
+        const projectId = projectStore.selectedProject?.id
+        if (projectId) {
+          await markPassAsSent(pass.firebaseRef, projectId)
+        }
       }
     } catch (shareError) {
-      console.warn('⚠️ Sharing failed:', shareError)
+      console.warn('⚠️ Sharing failed:', shareError?.message || JSON.stringify(shareError) || shareError)
       notificationStore.showWarning(
         `Pass generated successfully. ${shareError.message || 'Sharing failed - please share manually.'}`,
       )
     }
   } catch (error) {
-    console.error('Error generating pass:', error)
+    console.error('Error generating pass:', error?.message || JSON.stringify(error) || error)
     notificationStore.showError(error.message || 'Failed to generate pass')
   }
 }
@@ -1489,17 +1588,19 @@ const drawGatePass = (ctx, qrImg, pass, canvasWidth) => {
   ctx.font = 'bold 13px Arial, sans-serif'
   ctx.fillText('Inviter', canvasWidth - infoBarPadding, infoBarY + 62)
   ctx.font = '13px Arial, sans-serif'
-  const inviterName = auth.currentUser?.displayName || auth.currentUser?.email || 'Unknown User'
+  // Get inviter name from pass data or fallback
+  const inviterName = pass.userName || 'Unknown User'
   ctx.fillText(inviterName, canvasWidth - infoBarPadding, infoBarY + 79)
 }
 
 const deletePass = (passId) => {
   passes.value = passes.value.filter((p) => p.id !== passId)
-  if (auth.currentUser?.uid) {
-    const userPassesKey = `gatePasses_${auth.currentUser.uid}`
-    localStorage.setItem(userPassesKey, JSON.stringify(passes.value))
-  }
   qrRefs.delete(passId)
+  
+  // Update the count since we deleted a pass
+  passLimits.value.usedThisMonth = Math.max(0, (passLimits.value.usedThisMonth || 0) - 1)
+  passLimits.value.remainingQuota = Math.max(0, passLimits.value.monthlyLimit - passLimits.value.usedThisMonth)
+  
   notificationStore.showInfo('Pass deleted')
 }
 
@@ -1511,36 +1612,33 @@ const sharePass = async (pass) => {
   }
 
   try {
-    if (Capacitor.isNativePlatform()) {
-      const dataUrl = canvas.toDataURL('image/png')
-      try {
-        await Share.share({
-          title: `Gate Pass for ${pass.guestName}`,
-          text: `Gate Pass Code: ${pass.code}\nValid until: ${formatDate(pass.validUntil)}`,
-          url: dataUrl,
-          dialogTitle: 'Share Gate Pass',
-        })
-        notificationStore.showSuccess('Pass shared successfully')
-      } catch {
-        // Share failed, fallback to download
-        downloadQRCode(canvas, pass.guestName)
+    const qrCodeDataUrl = canvas.toDataURL('image/png')
+    const result = await sharingService.sharePassWithImage(pass, qrCodeDataUrl)
+
+    if (result.success) {
+      notificationStore.showSuccess(result.message || 'Pass shared successfully!')
+      
+      // Mark pass as sent if it has a Firebase reference
+      if (pass.firebaseRef) {
+        const projectId = projectStore.selectedProject?.id
+        if (projectId) {
+          await markPassAsSent(pass.firebaseRef, projectId)
+        }
       }
     } else {
-      downloadQRCode(canvas, pass.guestName)
+      throw new Error(result.message || 'Sharing failed')
     }
   } catch (error) {
     console.error('Error sharing pass:', error)
-    notificationStore.showError('Failed to share pass. Please try again.')
-  }
-}
-
-const sendPassViaWhatsApp = async (pass) => {
-  try {
-    await sharingService.sharePassText(pass)
-    notificationStore.showSuccess('Pass shared successfully!')
-  } catch (error) {
-    console.error('Error sharing pass:', error)
-    notificationStore.showError('Failed to share pass. Please try again.')
+    // Fallback to download if sharing fails
+    if (!Capacitor.isNativePlatform()) {
+      const canvas = qrRefs.get(pass.id)
+      if (canvas) {
+        downloadQRCode(canvas, pass.guestName)
+      }
+    } else {
+      notificationStore.showError('Failed to share pass. Please try again.')
+    }
   }
 }
 
@@ -1602,12 +1700,6 @@ onMounted(async () => {
   }
 
   try {
-    await checkUserBlockingStatus()
-  } catch (error) {
-    console.error('❌ Error checking user blocking status:', error)
-  }
-
-  try {
     await fetchUserUnitInfo()
   } catch (error) {
     console.error('❌ Error fetching user unit info:', error)
@@ -1623,34 +1715,14 @@ onMounted(async () => {
     lastConnectedDevice.value = null
   }
 
+  // Load passes and check blocking status  
   try {
-    if (auth.currentUser?.uid) {
-      const userPassesKey = `gatePasses_${auth.currentUser.uid}`
-      const savedPasses = localStorage.getItem(userPassesKey)
-      if (savedPasses) {
-        passes.value = JSON.parse(savedPasses)
-      } else {
-        passes.value = []
-      }
-    } else {
-      passes.value = []
-    }
-
-    if (passes.value.length > 0) {
-      await nextTick()
-      // Add a small delay to ensure canvas elements are properly mounted
-      setTimeout(async () => {
-        for (const pass of passes.value) {
-          try {
-            await generateQRCode(pass)
-          } catch (qrError) {
-            console.error('❌ Error generating QR for pass:', pass.id, qrError)
-          }
-        }
-      }, 200)
-    }
+    await Promise.all([
+      loadPassesFromFirebase(), // This also sets passLimits
+      checkUserBlockingStatus()
+    ])
   } catch (error) {
-    console.error('❌ Error loading passes:', error)
+    console.error('❌ Error loading passes or checking status:', error)
     passes.value = []
   }
 })
@@ -1661,7 +1733,29 @@ onMounted(async () => {
 .access-page {
   min-height: calc(100vh - 200px);
   background: #fafafa;
+  padding: 20px;
   padding-bottom: 100px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* Ensure proper box sizing */
+.access-page * {
+  box-sizing: border-box;
+}
+
+/* Reset some default styles */
+.access-page button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.access-page input {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 /* Modern Tabs */
@@ -1733,6 +1827,10 @@ onMounted(async () => {
 /* Content Panel */
 .content-panel {
   animation: fadeSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
 }
 
 @keyframes fadeSlideIn {
@@ -1751,6 +1849,85 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+/* Actions Container */
+.actions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+/* Action Buttons */
+.action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-button.primary-action {
+  background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(175, 30, 35, 0.3);
+}
+
+.action-button.primary-action:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(175, 30, 35, 0.4);
+}
+
+.action-button.primary-action:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 16px rgba(175, 30, 35, 0.3);
+}
+
+.action-button.success {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3);
+}
+
+.action-button.success:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(76, 175, 80, 0.4);
+}
+
+.action-button:disabled {
+  background: #cbd5e1;
+  color: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.action-button.loading {
+  cursor: not-allowed;
+}
+
+/* Quick Open Button */
+.quick-open {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(255, 152, 0, 0.3);
+}
+
+.quick-open:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 152, 0, 0.4);
 }
 
 .status-card {
@@ -1762,6 +1939,107 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   gap: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Status Info */
+.status-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+/* Status Badge */
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.connected {
+  background: linear-gradient(135deg, #c8e6c9 0%, #81c784 100%);
+  color: #2e7d32;
+}
+
+.status-badge.connecting {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffcc02 100%);
+  color: #f57c00;
+}
+
+.status-badge.disconnected {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  color: #c62828;
+}
+
+/* Device Info */
+.device-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.device-info svg {
+  color: #AF1E23;
+}
+
+/* Last Device */
+.last-device {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #e3f2fd;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  color: #1976d2;
+}
+
+.last-device svg {
+  color: #1976d2;
+}
+
+/* Warning Banner */
+.warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  background: #fff3cd;
+  border: 2px solid #ffeaa7;
+  border-radius: 16px;
+  color: #856404;
+  margin-top: 20px;
+}
+
+.warning-banner svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.warning-content strong {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 8px;
+  font-size: 1.1rem;
+}
+
+.warning-content p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 .bluetooth-icon-wrapper {
@@ -2044,80 +2322,46 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 24px;
-}
-
-.blocking-alert {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 20px;
-  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-  color: white;
-  border-radius: 16px;
-  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.3);
-  animation: slideDown 0.4s ease-out;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.alert-content strong {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 1.1rem;
-}
-
-.alert-content p {
+  background: transparent;
+  padding: 0;
   margin: 0;
-  font-size: 0.95rem;
-  opacity: 0.95;
 }
 
+/* Generate Pass Button */
 .generate-pass-button {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 18px 32px;
-  border: none;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #af1e23 0%, #8b161a 100%);
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
   color: white;
+  border: none;
+  border-radius: 16px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 6px 20px rgba(175, 30, 35, 0.3);
+  box-shadow: 0 4px 16px rgba(175, 30, 35, 0.3);
+  margin-bottom: 20px;
 }
 
-.generate-pass-button:not(:disabled):active {
-  transform: translateY(2px);
+.generate-pass-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(175, 30, 35, 0.4);
+}
+
+.generate-pass-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 16px rgba(175, 30, 35, 0.3);
 }
 
 .generate-pass-button:disabled {
-  opacity: 0.6;
+  background: #cbd5e1;
+  color: #94a3b8;
+  box-shadow: none;
   cursor: not-allowed;
-}
-
-.blocked-hint {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: #ffebee;
-  color: #c62828;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  font-weight: 500;
+  transform: none;
 }
 
 /* Passes Grid */
@@ -2125,124 +2369,198 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 20px;
+  margin-top: 20px;
 }
 
-.pass-card {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: fadeIn 0.4s ease;
-}
-
-.pass-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  transform: translateY(-4px);
-}
-
-.pass-header {
+/* Blocking Alert */
+.blocking-alert {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #f5f5f5;
+  padding: 20px;
+  background: #fef2f2;
+  border: 2px solid #fecaca;
+  border-radius: 16px;
+  color: #dc2626;
+  margin-bottom: 20px;
 }
 
-.pass-info-section {
-  flex: 1;
+.blocking-alert svg {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
-.pass-name {
-  margin: 0 0 8px 0;
-  font-size: 1.2rem;
+.alert-content strong {
+  display: block;
   font-weight: 700;
-  color: #333;
+  margin-bottom: 8px;
+  font-size: 1.1rem;
 }
 
-.pass-status {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.alert-content p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
-.pass-status.active {
-  background: #c8e6c9;
-  color: #2e7d32;
+/* Blocked Hint */
+.blocked-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  color: #92400e;
+  font-size: 0.9rem;
+  margin-top: 12px;
 }
 
-.pass-qr-container {
+.blocked-hint svg {
   flex-shrink: 0;
 }
 
-.qr-code {
-  border-radius: 10px;
+
+/* Guest Pass Card - Professional Design */
+.pass-card {
   background: white;
-  padding: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  padding: 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeIn 0.4s ease;
+  border: 1px solid rgba(175, 30, 35, 0.1);
+}
+
+.pass-card:active {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(175, 30, 35, 0.15);
+}
+
+/* Hidden QR Code Canvas (only used for sharing) */
+.qr-code-hidden {
+  display: none;
   width: 400px;
   height: 450px;
-  max-width: 100%;
-  display: block;
-  margin: 0 auto;
 }
 
-.pass-details {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.pass-detail {
+/* Pass Card Header */
+.pass-card-header {
+  background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
+  padding: 24px 20px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #666;
-  font-size: 0.9rem;
+  gap: 16px;
 }
 
-.pass-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.pass-action-button {
+.pass-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  border: 2px solid #e1e5e9;
-  border-radius: 10px;
+  justify-content: center;
+  color: #F6F6F6;
+  flex-shrink: 0;
+}
+
+.pass-guest-name {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #F6F6F6;
+  letter-spacing: -0.01em;
+  flex: 1;
+}
+
+/* Pass Card Body */
+.pass-card-body {
+  padding: 20px;
+  background: #fafafa;
+}
+
+.pass-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
   background: white;
+  border-radius: 12px;
+  border: 1px solid #e8e8e8;
+}
+
+.pass-info-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: #666;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.pass-info-label svg {
+  color: #AF1E23;
+}
+
+.pass-info-value {
+  color: #333;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+/* Pass Card Footer */
+.pass-card-footer {
+  padding: 16px 20px;
+  background: white;
+  display: flex;
+  gap: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.pass-share-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  background: #AF1E23;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  flex: 1;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
+}
+
+.pass-share-button:active {
+  transform: scale(0.98);
+  background: #8A1820;
+}
+
+.pass-delete-button {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  background: #fff5f5;
+  color: #dc2626;
+  border: 1px solid #fee2e2;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-.pass-action-button:active {
+.pass-delete-button:active {
   transform: scale(0.95);
-}
-
-.pass-action-button.whatsapp {
-  border-color: #25d366;
-  color: #25d366;
-}
-
-.pass-action-button.danger {
-  border-color: #ffcdd2;
-  color: #c62828;
+  background: #fee2e2;
 }
 
 /* Empty State */
@@ -2272,7 +2590,7 @@ onMounted(async () => {
   font-size: 0.95rem;
 }
 
-/* Modal - Matching EditProfileDialog Style */
+/* Professional Generate Pass Modal */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -2281,8 +2599,8 @@ onMounted(async () => {
   bottom: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
   z-index: 999999;
   display: flex;
   align-items: center;
@@ -2291,6 +2609,228 @@ onMounted(async () => {
   margin: 0;
   box-sizing: border-box;
 }
+
+.modal-container-pro {
+  background: white;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideUp 0.3s ease-out;
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header-pro {
+  background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
+  color: white;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-header-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.modal-icon {
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.modal-title-pro {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: white;
+  letter-spacing: -0.01em;
+}
+
+.modal-subtitle-pro {
+  font-size: 0.875rem;
+  margin: 4px 0 0 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 400;
+}
+
+.modal-close-pro {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 12px;
+  padding: 10px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.modal-close-pro:active {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(0.95);
+}
+
+.modal-body-pro {
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-group-pro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-label-pro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #333;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.form-label-pro svg {
+  color: #AF1E23;
+  flex-shrink: 0;
+}
+
+.required-star {
+  color: #ef4444;
+  font-weight: 700;
+  margin-left: auto;
+}
+
+.form-input-pro {
+  padding: 14px 16px;
+  border: 2px solid #e8e8e8;
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  background: #fafafa;
+  color: #333;
+}
+
+.form-input-pro:focus {
+  outline: none;
+  border-color: #AF1E23;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(175, 30, 35, 0.1);
+}
+
+.form-input-pro::placeholder {
+  color: #999;
+}
+
+.info-box-pro {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  color: #0369a1;
+}
+
+.info-box-pro svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.info-box-pro p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.modal-footer-pro {
+  padding: 20px 24px;
+  background: #fafafa;
+  display: flex;
+  gap: 12px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.modal-btn-cancel {
+  flex: 1;
+  padding: 14px 20px;
+  background: white;
+  color: #666;
+  border: 2px solid #e8e8e8;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-btn-cancel:active {
+  transform: scale(0.98);
+  background: #f5f5f5;
+}
+
+.modal-btn-generate {
+  flex: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 24px;
+  background: #AF1E23;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
+}
+
+.modal-btn-generate:active {
+  transform: scale(0.98);
+  background: #8A1820;
+}
+
+.modal-btn-generate:disabled {
+  background: #cbd5e1;
+  color: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.modal-btn-generate:disabled:active {
+  transform: none;
+}
+
+/* Old Modal Styles (Legacy - can be removed later) */
 
 .modal-container {
   background: white;
@@ -2632,6 +3172,44 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 
+  .modal-container-pro {
+    max-width: 95%;
+    border-radius: 20px;
+  }
+
+  .modal-header-pro {
+    padding: 20px 16px;
+  }
+
+  .modal-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .modal-title-pro {
+    font-size: 1.25rem;
+  }
+
+  .modal-subtitle-pro {
+    font-size: 0.8125rem;
+  }
+
+  .modal-body-pro {
+    padding: 20px 16px;
+    gap: 20px;
+  }
+
+  .modal-footer-pro {
+    padding: 16px;
+    flex-direction: column;
+  }
+
+  .modal-btn-cancel,
+  .modal-btn-generate {
+    width: 100%;
+    flex: none;
+  }
+
   .modal-container {
     margin: 0 10px;
     max-width: 95%;
@@ -2680,12 +3258,30 @@ onMounted(async () => {
     height: 24px;
   }
 
-  .pass-actions {
-    flex-direction: column;
+  .pass-card-header {
+    padding: 20px 16px;
   }
 
-  .pass-action-button {
-    width: 100%;
+  .pass-guest-name {
+    font-size: 1.125rem;
+  }
+
+  .pass-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .pass-card-body {
+    padding: 16px;
+  }
+
+  .pass-card-footer {
+    padding: 12px 16px;
+  }
+
+  .pass-share-button {
+    padding: 12px 16px;
+    font-size: 0.875rem;
   }
 }
 </style>

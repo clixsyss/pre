@@ -1,6 +1,7 @@
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
 import firestoreService from './firestoreService'
+import optimizedAuthService from './optimizedAuthService'
 
 /**
  * News Comments Service
@@ -57,7 +58,7 @@ class NewsCommentsService {
       
       return commentId;
       } catch (error) {
-        console.error('❌ Error adding comment:', error);
+        console.error('❌ Error adding comment:', error?.message || JSON.stringify(error) || error);
         errorHandlingService.handleFirestoreError(error, 'addComment')
         throw error;
       }
@@ -74,23 +75,26 @@ class NewsCommentsService {
   async getComments(projectId, newsId, options = {}) {
     try {
       const queryOptions = {
-        orderBy: [['createdAt', 'desc']],
+        orderBy: [{ field: 'createdAt', direction: 'desc' }],
         limit: options.limit
       };
       
-      const comments = await firestoreService.getCollection(
+      const result = await firestoreService.getDocs(
         `projects/${projectId}/news/${newsId}/comments`,
         queryOptions
       );
       
+      const comments = result.docs || [];
+      
       return comments.map(comment => ({
         ...comment,
         createdAt: comment.createdAt?.toDate?.() || comment.createdAt,
+        
         updatedAt: comment.updatedAt?.toDate?.() || comment.updatedAt,
         deletedAt: comment.deletedAt?.toDate?.() || comment.deletedAt,
       }));
     } catch (error) {
-      console.error('Error fetching comments:', error);
+      console.error('Error fetching comments:', error?.message || JSON.stringify(error) || error);
       throw error;
     }
   }
@@ -102,27 +106,61 @@ class NewsCommentsService {
    * @param {Function} callback - Callback function
    * @returns {Function} - Unsubscribe function
    */
-  subscribeToComments(projectId, newsId, callback) {
+  async subscribeToComments(projectId, newsId, callback) {
     try {
-      // Use firestoreService for real-time updates
-      return firestoreService.onSnapshot(
-        `projects/${projectId}/news/${newsId}/comments`,
-        (docSnapshot) => {
-          if (docSnapshot && docSnapshot.exists()) {
-            const data = docSnapshot.data();
-            const comment = {
-              id: docSnapshot.id,
-              ...data,
-              createdAt: data.createdAt?.toDate?.() || data.createdAt,
-              updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-              deletedAt: data.deletedAt?.toDate?.() || data.deletedAt,
-            };
-            callback([comment]);
-          } else {
+      // Check if iOS to use polling instead of real-time listeners
+      const { Capacitor } = await import('@capacitor/core');
+      const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform();
+      
+      if (isIOS) {
+        // Use polling for iOS since collection listeners don't work reliably
+        let intervalId;
+        
+        const pollComments = async () => {
+          try {
+            const comments = await this.getComments(projectId, newsId);
+            callback(comments);
+          } catch (error) {
+            console.error('Error polling comments:', error?.message || JSON.stringify(error) || error);
+          }
+        };
+        
+        // Initial fetch
+        await pollComments();
+        
+        // Poll every 5 seconds
+        intervalId = setInterval(pollComments, 5000);
+        
+        // Return unsubscribe function
+        return () => {
+          if (intervalId) {
+            clearInterval(intervalId);
+          }
+        };
+      } else {
+        // Use real-time listeners for web
+        return firestoreService.subscribeToQuery(
+          `projects/${projectId}/news/${newsId}/comments`,
+          { orderByField: 'createdAt', orderDirection: 'desc' },
+          (snapshot) => {
+            const comments = snapshot.docs.map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate?.() || data.createdAt,
+                updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+                deletedAt: data.deletedAt?.toDate?.() || data.deletedAt,
+              };
+            });
+            callback(comments);
+          },
+          (error) => {
+            console.error('Error in comments subscription:', error?.message || error);
             callback([]);
           }
-        }
-      );
+        );
+      }
     } catch (error) {
       console.error('Error setting up comments subscription:', error);
       throw error;
@@ -294,8 +332,7 @@ class NewsCommentsService {
    */
   async addNewsReaction(projectId, newsId, emoji) {
     try {
-      // Get current user from optimized auth service
-      const { optimizedAuthService } = await import('./optimizedAuthService')
+      // Get current user from optimizedAuthService
       const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) throw new Error('User not authenticated');
@@ -324,26 +361,27 @@ class NewsCommentsService {
    */
   async removeNewsReaction(projectId, newsId, emoji) {
     try {
-      // Get current user from optimized auth service
-      const { optimizedAuthService } = await import('./optimizedAuthService')
+      // Get current user from optimizedAuthService
       const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) throw new Error('User not authenticated');
       
       // Find and delete the user's reaction with this emoji
-      const reactions = await firestoreService.getCollection(`projects/${projectId}/news/${newsId}/reactions`, {
-        where: [
-          ['userId', '==', user.uid],
-          ['emoji', '==', emoji]
+      const result = await firestoreService.getDocs(`projects/${projectId}/news/${newsId}/reactions`, {
+        filters: [
+          { field: 'userId', operator: '==', value: user.uid },
+          { field: 'emoji', operator: '==', value: emoji }
         ]
       });
+      
+      const reactions = result.docs || [];
       
       const deletePromises = reactions.map(reaction => 
         firestoreService.deleteDoc(`projects/${projectId}/news/${newsId}/reactions/${reaction.id}`)
       );
       await Promise.all(deletePromises);
     } catch (error) {
-      console.error('Error removing news reaction:', error);
+      console.error('Error removing news reaction:', error?.message || error);
       throw error;
     }
   }
@@ -356,16 +394,18 @@ class NewsCommentsService {
    */
   async getNewsReactions(projectId, newsId) {
     try {
-      const reactions = await firestoreService.getCollection(`projects/${projectId}/news/${newsId}/reactions`, {
-        orderBy: [['createdAt', 'desc']]
+      const result = await firestoreService.getDocs(`projects/${projectId}/news/${newsId}/reactions`, {
+        orderBy: [{ field: 'createdAt', direction: 'desc' }]
       });
+      
+      const reactions = result.docs || [];
       
       return reactions.map(reaction => ({
         id: reaction.id,
         ...reaction
       }));
     } catch (error) {
-      console.error('Error fetching news reactions:', error);
+      console.error('Error fetching news reactions:', error?.message || JSON.stringify(error) || error);
       throw error;
     }
   }
@@ -377,24 +417,55 @@ class NewsCommentsService {
    * @param {Function} callback - Callback function to handle reactions
    * @returns {Function} Unsubscribe function
    */
-  subscribeToNewsReactions(projectId, newsId, callback) {
+  async subscribeToNewsReactions(projectId, newsId, callback) {
     try {
-      // Use firestoreService for real-time updates
-      return firestoreService.onSnapshot(
-        `projects/${projectId}/news/${newsId}/reactions`,
-        (docSnapshot) => {
-          if (docSnapshot && docSnapshot.exists()) {
-            const data = docSnapshot.data();
-            const reaction = {
-              id: docSnapshot.id,
-              ...data
-            };
-            callback([reaction]);
-          } else {
+      // Check if iOS to use polling instead of real-time listeners
+      const { Capacitor } = await import('@capacitor/core');
+      const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform();
+      
+      if (isIOS) {
+        // Use polling for iOS since collection listeners don't work reliably
+        let intervalId;
+        
+        const pollReactions = async () => {
+          try {
+            const reactions = await this.getNewsReactions(projectId, newsId);
+            callback(reactions);
+          } catch (error) {
+            console.error('Error polling reactions:', error?.message || JSON.stringify(error) || error);
+          }
+        };
+        
+        // Initial fetch
+        await pollReactions();
+        
+        // Poll every 5 seconds
+        intervalId = setInterval(pollReactions, 5000);
+        
+        // Return unsubscribe function
+        return () => {
+          if (intervalId) {
+            clearInterval(intervalId);
+          }
+        };
+      } else {
+        // Use real-time listeners for web
+        return firestoreService.subscribeToQuery(
+          `projects/${projectId}/news/${newsId}/reactions`,
+          { orderByField: 'createdAt', orderDirection: 'desc' },
+          (snapshot) => {
+            const reactions = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+            callback(reactions);
+          },
+          (error) => {
+            console.error('Error in reactions subscription:', error?.message || error);
             callback([]);
           }
-        }
-      );
+        );
+      }
     } catch (error) {
       console.error('Error subscribing to news reactions:', error);
       throw error;
@@ -410,19 +481,20 @@ class NewsCommentsService {
    */
   async toggleNewsReaction(projectId, newsId, emoji) {
     try {
-      // Get current user from optimized auth service
-      const { optimizedAuthService } = await import('./optimizedAuthService')
+      // Get current user from optimizedAuthService
       const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) throw new Error('User not authenticated');
       
       // Check if user already has this reaction
-      const reactions = await firestoreService.getCollection(`projects/${projectId}/news/${newsId}/reactions`, {
-        where: [
-          ['userId', '==', user.uid],
-          ['emoji', '==', emoji]
+      const result = await firestoreService.getDocs(`projects/${projectId}/news/${newsId}/reactions`, {
+        filters: [
+          { field: 'userId', operator: '==', value: user.uid },
+          { field: 'emoji', operator: '==', value: emoji }
         ]
       });
+      
+      const reactions = result.docs || [];
       
       if (reactions.length === 0) {
         // Add reaction
@@ -432,7 +504,7 @@ class NewsCommentsService {
         await this.removeNewsReaction(projectId, newsId, emoji);
       }
     } catch (error) {
-      console.error('Error toggling news reaction:', error);
+      console.error('Error toggling news reaction:', error?.message || error);
       throw error;
     }
   }
@@ -447,7 +519,8 @@ class NewsCommentsService {
   async deleteCommentWithReplies(projectId, newsId, commentId) {
     try {
       // Get all comments to find replies
-      const allComments = await firestoreService.getCollection(`projects/${projectId}/news/${newsId}/comments`);
+      const result = await firestoreService.getDocs(`projects/${projectId}/news/${newsId}/comments`);
+      const allComments = result.docs || [];
       
       // Find all replies to this comment (recursively)
       const repliesToDelete = [];

@@ -1493,7 +1493,7 @@ onUnmounted(() => {
   }
 
   .modal-content {
-    max-height: calc(100vh - 40px);
+    max-height: calc(100vh - 80px);
   }
 }
 
@@ -1512,7 +1512,7 @@ onUnmounted(() => {
   }
   
   .modal-content {
-    max-height: calc(100vh - 24px);
+    max-height: calc(100vh - 80px);
   }
 
   .modal-header,

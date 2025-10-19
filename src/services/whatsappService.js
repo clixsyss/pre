@@ -45,19 +45,36 @@ class SharingService {
    * @returns {string} - Formatted message
    */
   createGatePassMessage(pass) {
-    const validUntil = new Date(pass.validUntil).toLocaleString()
+    const validDate = new Date(pass.validUntil).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
 
     // Sanitize all user inputs to prevent XSS
     const guestName = sanitizeString(pass.guestName, 100)
     const purpose = sanitizeString(pass.purpose, 200)
 
-    return `This is a guest for ${guestName}
+    return `🏘️ *PRE Group - Guest Pass*
 
-Pass Details:
-Valid Until: ${validUntil}
-Purpose: ${purpose}
+Dear ${guestName},
 
-Please show the QR code image at the gate for entry.`
+You have been invited as a guest to PRE Group community.
+
+📋 *Pass Details:*
+👤 Guest: ${guestName}
+📅 Valid Until: ${validDate}
+🎯 Purpose: ${purpose}
+
+✅ *Instructions:*
+Please present the attached QR code at the main gate for entry. The security team will scan it for verification.
+
+Thank you for visiting PRE Group! 🌟
+
+_This is an automated message from PRE Group Management System._`
   }
 
 
@@ -82,40 +99,97 @@ Please show the QR code image at the gate for entry.`
       console.log('📱 Sharing pass with QR code image')
 
       if (Capacitor.isNativePlatform()) {
-        // For native platforms, use the Share plugin
+        // For native platforms, use Filesystem + Share plugin
         const { Share } = await import('@capacitor/share')
-        
-        // Convert data URL to blob for sharing
-        const response = await fetch(qrCodeDataUrl)
-        const blob = await response.blob()
-        
-        // Create a temporary file URL for the image
-        const imageUrl = URL.createObjectURL(blob)
+        const { Filesystem, Directory } = await import('@capacitor/filesystem')
         
         try {
-          await Share.share({
-            title: `Gate Pass for ${validatedPass.guestName}`,
-            text: message,
-            url: imageUrl,
-            dialogTitle: 'Share Gate Pass',
-          })
-
-          return {
-            success: true,
-            message: 'Pass shared successfully!',
+          // Extract base64 data from data URL
+          const base64Data = qrCodeDataUrl.split(',')[1]
+          if (!base64Data) {
+            throw new Error('Invalid QR code data URL')
           }
-        } catch (shareError) {
-          console.warn('Share failed, falling back to text only:', shareError)
-          // Fallback to text only
-          await Share.share({
-            title: `Gate Pass for ${validatedPass.guestName}`,
-            text: message,
-            dialogTitle: 'Share Gate Pass',
+          
+          // Create a unique filename
+          const fileName = `PRE-GuestPass-${validatedPass.guestName.replace(/\s+/g, '-')}-${Date.now()}.png`
+          
+          console.log('📝 Writing QR code to filesystem:', fileName)
+          
+          // Write the file to the cache directory
+          const writeResult = await Filesystem.writeFile({
+            path: fileName,
+            data: base64Data,
+            directory: Directory.Cache,
           })
+          
+          console.log('✅ File written successfully:', writeResult.uri)
+          
+          // Share using the file URI
+          try {
+            await Share.share({
+              title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
+              text: message,
+              url: writeResult.uri,
+              dialogTitle: 'Share PRE Group Guest Pass',
+            })
 
-          return {
-            success: true,
-            message: 'Pass shared successfully (text only)!',
+            // Clean up the temporary file after sharing
+            try {
+              await Filesystem.deleteFile({
+                path: fileName,
+                directory: Directory.Cache,
+              })
+              console.log('🗑️ Temporary file cleaned up')
+            } catch (deleteError) {
+              console.warn('⚠️ Could not delete temporary file:', deleteError)
+            }
+
+            return {
+              success: true,
+              message: 'Pass shared successfully!',
+            }
+          } catch (shareError) {
+            console.warn('Share with image failed, falling back to text only:', shareError)
+            
+            // Clean up the file if sharing failed
+            try {
+              await Filesystem.deleteFile({
+                path: fileName,
+                directory: Directory.Cache,
+              })
+            } catch (deleteError) {
+              console.warn('⚠️ Could not delete temporary file:', deleteError)
+            }
+            
+            // Fallback to text only
+            await Share.share({
+              title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
+              text: message,
+              dialogTitle: 'Share PRE Group Guest Pass',
+            })
+
+            return {
+              success: true,
+              message: 'Pass shared successfully (text only)!',
+            }
+          }
+        } catch (filesystemError) {
+          console.error('❌ Filesystem error:', filesystemError)
+          
+          // Final fallback to text only
+          try {
+            await Share.share({
+              title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
+              text: message,
+              dialogTitle: 'Share PRE Group Guest Pass',
+            })
+
+            return {
+              success: true,
+              message: 'Pass shared successfully (text only)!',
+            }
+          } catch (finalError) {
+            throw new Error('Failed to share pass: ' + finalError.message)
           }
         }
       } else {
@@ -124,26 +198,26 @@ Please show the QR code image at the gate for entry.`
           // Download the QR code image
           const link = document.createElement('a')
           link.href = qrCodeDataUrl
-          link.download = `gate-pass-${validatedPass.guestName.replace(/\s+/g, '-')}.png`
+          link.download = `PRE-Group-GuestPass-${validatedPass.guestName.replace(/\s+/g, '-')}.png`
           document.body.appendChild(link)
           link.click()
           document.body.removeChild(link)
 
           return {
             success: true,
-            message: 'QR code downloaded. You can now share it via any app on your device.',
+            message: 'PRE Group Guest Pass downloaded. You can now share it via any app.',
           }
         } catch (webError) {
           console.warn('Web sharing failed:', webError)
           return {
             success: true,
-            message: 'Pass generated. Please use the share button to share manually.',
+            message: 'Pass generated successfully. Please use the share button.',
           }
         }
       }
     } catch (error) {
       console.error('❌ Error sharing pass with image:', error)
-      throw new Error('Failed to share pass')
+      throw new Error('Failed to share pass: ' + (error.message || 'Unknown error'))
     }
   }
 
@@ -167,9 +241,9 @@ Please show the QR code image at the gate for entry.`
         const { Share } = await import('@capacitor/share')
         
         await Share.share({
-          title: `Gate Pass for ${validatedPass.guestName}`,
+          title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
           text: message,
-          dialogTitle: 'Share Gate Pass',
+          dialogTitle: 'Share PRE Group Guest Pass',
         })
 
         return {

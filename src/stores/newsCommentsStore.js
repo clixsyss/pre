@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import newsCommentsService from '../services/newsCommentsService';
-import { getAuth } from 'firebase/auth';
+import optimizedAuthService from '../services/optimizedAuthService';
 import { useProjectStore } from './projectStore';
 
 export const useNewsCommentsStore = defineStore('newsComments', () => {
@@ -66,13 +66,13 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
       comments.value[newsId] = fetchedComments;
     } catch (err) {
       error.value = err.message;
-      console.error('Error fetching comments:', err);
+      console.error('Error fetching comments:', err?.message || JSON.stringify(err) || err);
     } finally {
       loading.value = false;
     }
   };
 
-  const subscribeToComments = (newsId) => {
+  const subscribeToComments = async (newsId) => {
     if (!newsId || subscriptions.value[newsId]) return;
     
     try {
@@ -83,7 +83,7 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
         throw new Error('No project selected');
       }
       
-      const unsubscribe = newsCommentsService.subscribeToComments(projectId, newsId, (fetchedComments) => {
+      const unsubscribe = await newsCommentsService.subscribeToComments(projectId, newsId, (fetchedComments) => {
         comments.value[newsId] = fetchedComments;
       });
       
@@ -108,8 +108,7 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
     error.value = null;
     
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
+      const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) {
         throw new Error('User not authenticated');
@@ -142,7 +141,7 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
       return commentId;
     } catch (err) {
       error.value = err.message;
-      console.error('Error adding comment:', err);
+      console.error('Error adding comment:', err?.message || JSON.stringify(err) || err);
       throw err;
     } finally {
       loading.value = false;
@@ -153,8 +152,7 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
     if (!newsId || !commentId || !emoji) return;
     
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
+      const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) {
         throw new Error('User not authenticated');
@@ -210,8 +208,7 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
       // Process reactions to group by emoji
       const reactionGroups = {};
       const userReactions = [];
-      const auth = getAuth();
-      const user = auth.currentUser;
+      const user = await optimizedAuthService.getCurrentUser();
       
       reactions.forEach(reaction => {
         const emoji = reaction.emoji;
@@ -235,11 +232,11 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
       userNewsReactions.value[newsId] = userReactions;
     } catch (err) {
       error.value = err.message;
-      console.error('Error fetching news reactions:', err);
+      console.error('Error fetching news reactions:', err?.message || JSON.stringify(err) || err);
     }
   };
 
-  const subscribeToNewsReactions = (newsId) => {
+  const subscribeToNewsReactions = async (newsId) => {
     if (!newsId || reactionSubscriptions.value[newsId]) return;
     
     try {
@@ -250,12 +247,13 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
         throw new Error('No project selected');
       }
       
-      const unsubscribe = newsCommentsService.subscribeToNewsReactions(projectId, newsId, (reactions) => {
+      // Get user once before subscription
+      const currentUser = await optimizedAuthService.getCurrentUser();
+      
+      const unsubscribe = await newsCommentsService.subscribeToNewsReactions(projectId, newsId, (reactions) => {
         // Process reactions to group by emoji
         const reactionGroups = {};
         const userReactions = [];
-        const auth = getAuth();
-        const user = auth.currentUser;
         
         reactions.forEach(reaction => {
           const emoji = reaction.emoji;
@@ -270,7 +268,7 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
           });
           
           // Track user's own reactions
-          if (user && reaction.userId === user.uid) {
+          if (currentUser && reaction.userId === currentUser.uid) {
             userReactions.push(emoji);
           }
         });
@@ -297,8 +295,7 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
     if (!newsId || !emoji) return;
     
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
+      const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) {
         throw new Error('User not authenticated');
@@ -317,7 +314,7 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
       await fetchNewsReactions(newsId);
     } catch (err) {
       error.value = err.message;
-      console.error('Error toggling news reaction:', err);
+      console.error('Error toggling news reaction:', err?.message || JSON.stringify(err) || err);
     }
   };
 
@@ -325,8 +322,7 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
     if (!newsId || !commentId) return;
     
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
+      const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) {
         throw new Error('User not authenticated');

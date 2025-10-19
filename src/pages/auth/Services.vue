@@ -280,7 +280,7 @@
             <div class="booking-header">
               <h3 class="booking-title">{{ booking.serviceName }}</h3>
               <div class="header-right">
-                <span class="booking-status open">{{ booking.status }}</span>
+                <span :class="['booking-status', booking.status]">{{ formatStatus(booking.status) }}</span>
                 <div v-if="getUnreadCount(booking) > 0" class="unread-badge">
                   {{ getUnreadCount(booking) }}
                 </div>
@@ -324,7 +324,7 @@
             <div class="booking-header">
               <h3 class="booking-title">{{ booking.serviceName }}</h3>
               <div class="header-right">
-                <span class="booking-status closed">{{ booking.status }}</span>
+                <span :class="['booking-status', booking.status]">{{ formatStatus(booking.status) }}</span>
                 <div v-if="getUnreadCount(booking) > 0" class="unread-badge">
                   {{ getUnreadCount(booking) }}
                 </div>
@@ -465,15 +465,28 @@ const loadBookings = async () => {
       return;
     }
 
-    // Load open bookings (including processing)
-    const [openResults, processingResults, closedResults] = await Promise.all([
+    // Load open bookings (pending and in-progress)
+    // Load closed bookings (completed and cancelled)
+    const [openResults, processingResults, completedResults, cancelledResults] = await Promise.all([
       serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'open'),
       serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'processing'),
-      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'closed')
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'completed'),
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'cancelled')
     ]);
 
-    openBookings.value = [...openResults, ...processingResults];
-    closedBookings.value = closedResults;
+    // Open tab: show pending (open) and in-progress (processing) bookings
+    openBookings.value = [...openResults, ...processingResults].sort((a, b) => {
+      const aTime = a.lastMessageAt?.seconds || a.lastMessageAt || 0;
+      const bTime = b.lastMessageAt?.seconds || b.lastMessageAt || 0;
+      return bTime - aTime;
+    });
+    
+    // Closed tab: show completed and cancelled bookings
+    closedBookings.value = [...completedResults, ...cancelledResults].sort((a, b) => {
+      const aTime = a.lastMessageAt?.seconds || a.lastMessageAt || 0;
+      const bTime = b.lastMessageAt?.seconds || b.lastMessageAt || 0;
+      return bTime - aTime;
+    });
   } catch (error) {
     console.error('Error loading bookings:', error);
   } finally {
@@ -506,6 +519,18 @@ const closeBookingModal = () => {
 // Open booking chat (called from modal)
 const openBookingChat = (booking) => {
   router.push(`/service-booking-chat/${booking.id}`);
+};
+
+// Format status for display
+const formatStatus = (status) => {
+  const statusMap = {
+    'open': 'Pending',
+    'processing': 'In Progress',
+    'completed': 'Completed',
+    'cancelled': 'Cancelled',
+    'closed': 'Closed'
+  };
+  return statusMap[status] || status;
 };
 
 // Format date
@@ -997,13 +1022,23 @@ const getLastMessagePreview = (booking) => {
 }
 
 .booking-status.open {
-  background: #dcfce7;
-  color: #166534;
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .booking-status.processing {
-  background: #fef3c7;
-  color: #92400e;
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.booking-status.completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.booking-status.cancelled {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .booking-status.closed {

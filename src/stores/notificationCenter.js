@@ -29,7 +29,42 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   const sortedNotifications = computed(() => 
     [...notifications.value].sort((a, b) => {
       // Sort by timestamp, most recent first
-      return b.createdAt?.toMillis() - a.createdAt?.toMillis()
+      // Handle different timestamp formats (Firestore web SDK vs Capacitor Firebase)
+      const aTime = a.createdAt || a.scheduledAt || 0
+      const bTime = b.createdAt || b.scheduledAt || 0
+      
+      // Convert to milliseconds if needed
+      let aMs, bMs
+      
+      // Handle Firestore Timestamp objects (web SDK)
+      if (aTime && typeof aTime.toMillis === 'function') {
+        aMs = aTime.toMillis()
+      }
+      // Handle plain objects with seconds property (Capacitor Firebase)
+      else if (aTime && typeof aTime === 'object' && aTime.seconds) {
+        aMs = aTime.seconds * 1000
+      }
+      // Handle plain numbers
+      else if (typeof aTime === 'number') {
+        aMs = aTime
+      } else {
+        aMs = 0
+      }
+      
+      // Same for bTime
+      if (bTime && typeof bTime.toMillis === 'function') {
+        bMs = bTime.toMillis()
+      }
+      else if (bTime && typeof bTime === 'object' && bTime.seconds) {
+        bMs = bTime.seconds * 1000
+      }
+      else if (typeof bTime === 'number') {
+        bMs = bTime
+      } else {
+        bMs = 0
+      }
+      
+      return bMs - aMs // Newest first
     })
   )
 

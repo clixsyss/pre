@@ -238,12 +238,23 @@ const loadMyRequests = async () => {
       myRequests.value = requests;
       
       // Separate requests by status
-      openRequests.value = requests.filter(req => 
-        req.status === 'pending' || req.status === 'in_progress'
-      );
-      closedRequests.value = requests.filter(req => 
-        req.status === 'completed' || req.status === 'rejected'
-      );
+      // Open tab: show pending and in-progress requests
+      openRequests.value = requests
+        .filter(req => req.status === 'pending' || req.status === 'in_progress')
+        .sort((a, b) => {
+          const aTime = a.createdAt?.seconds || (a.createdAt ? new Date(a.createdAt).getTime() / 1000 : 0);
+          const bTime = b.createdAt?.seconds || (b.createdAt ? new Date(b.createdAt).getTime() / 1000 : 0);
+          return bTime - aTime; // Most recent first
+        });
+      
+      // Closed tab: show completed and rejected requests
+      closedRequests.value = requests
+        .filter(req => req.status === 'completed' || req.status === 'rejected')
+        .sort((a, b) => {
+          const aTime = a.createdAt?.seconds || (a.createdAt ? new Date(a.createdAt).getTime() / 1000 : 0);
+          const bTime = b.createdAt?.seconds || (b.createdAt ? new Date(b.createdAt).getTime() / 1000 : 0);
+          return bTime - aTime; // Most recent first
+        });
     }
   } catch (error) {
     console.error('Error loading my requests:', error);

@@ -1,5 +1,6 @@
 import { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from 'src/boot/firebase'
+import firestoreService from '../services/firestoreService'
 
 /**
  * Centralized Guest Pass API
@@ -61,9 +62,75 @@ export const checkUserEligibility = async (projectId, userId) => {
       }
     }
 
-    // Check monthly limit
-    const monthlyLimit = guestPassData.monthlyLimit || 10
-    const usedThisMonth = guestPassData.usedThisMonth || 0
+    // Get monthly limit - IMPORTANT: Hierarchy explanation
+    // 1. If user has custom limit set → use that (won't change when global changes)
+    // 2. If user has NO custom limit → use global (will auto-update when admin changes global)
+    // This allows VIP users to have higher limits while normal users follow global policy
+    
+    let monthlyLimit = 10 // Final fallback
+    
+    if (projectId) {
+      try {
+        const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
+        const globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
+        
+        if (globalSettingsDoc?.monthlyLimit) {
+          // Handle both string and number values
+          monthlyLimit = typeof globalSettingsDoc.monthlyLimit === 'string'
+            ? parseInt(globalSettingsDoc.monthlyLimit, 10)
+            : globalSettingsDoc.monthlyLimit
+          console.log('🌐 Global limit from settings:', monthlyLimit, '(type:', typeof globalSettingsDoc.monthlyLimit, ')')
+        }
+      } catch (settingsError) {
+        console.warn('⚠️ Could not fetch global settings:', settingsError)
+      }
+    }
+    
+    // Override with user-specific limit if set (this takes precedence)
+    if (guestPassData.monthlyLimit !== undefined && guestPassData.monthlyLimit !== null) {
+      // Handle both string and number values
+      monthlyLimit = typeof guestPassData.monthlyLimit === 'string'
+        ? parseInt(guestPassData.monthlyLimit, 10)
+        : guestPassData.monthlyLimit
+      console.log('🎯 User has CUSTOM limit:', monthlyLimit, '(type:', typeof guestPassData.monthlyLimit, ')')
+      console.log('   ℹ️  This user will NOT be affected by global limit changes')
+    } else {
+      console.log('🌐 User using GLOBAL limit:', monthlyLimit)
+      console.log('   ℹ️  This user WILL be affected by global limit changes')
+    }
+    
+    // Count actual passes for this month from the project-specific subcollection
+    let usedThisMonth = 0
+    
+    if (projectId) {
+      try {
+        const now = new Date()
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+        
+        console.log(`📊 Counting passes for user ${userId} in project ${projectId} since ${firstDayOfMonth}`)
+        
+        // Query passes created this month for this user in this project using firestoreService
+        const result = await firestoreService.getDocs(
+          `projects/${projectId}/guestPasses`,
+          {
+            filters: [
+              { field: 'userId', operator: '==', value: userId },
+              { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
+            ]
+          }
+        )
+        
+        usedThisMonth = result?.docs?.length || 0
+        
+        console.log(`📊 Counted ${usedThisMonth} passes this month for user ${userId} in project ${projectId}`)
+        console.log(`📊 Query result:`, result)
+      } catch (error) {
+        console.error('❌ Error counting monthly passes:', error)
+        console.error('❌ Error details:', error?.message, error?.code)
+        // If counting fails, fall back to 0
+        usedThisMonth = 0
+      }
+    }
 
     if (usedThisMonth >= monthlyLimit) {
       return {
@@ -76,6 +143,7 @@ export const checkUserEligibility = async (projectId, userId) => {
           user: userData,
           usedThisMonth,
           monthlyLimit,
+          remainingQuota: 0,
         },
       }
     }
@@ -140,8 +208,8 @@ export const createGuestPass = async (
     // Generate unique pass ID
     const passId = `GP-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`.toUpperCase()
 
-    // Create pass record in Firebase
-    const passRef = await addDoc(collection(db, 'guestPasses'), {
+    // Create pass record in Firebase - per project subcollection
+    const passRef = await addDoc(collection(db, `projects/${projectId}/guestPasses`), {
       id: passId,
       projectId: projectId,
       userId: userId,
@@ -157,22 +225,25 @@ export const createGuestPass = async (
       updatedAt: serverTimestamp(),
     })
 
-    // Update user's usage count
+    // Update user's usage count and remaining quota
     const userDocRef = doc(db, 'users', userId)
     const userDoc = await getDoc(userDocRef)
 
     if (userDoc.exists()) {
       const userData = userDoc.data()
       const guestPassData = userData.guestPassData || {}
+      const monthlyLimit = guestPassData.monthlyLimit || 10
+      const newUsed = (guestPassData.usedThisMonth || 0) + 1
+      const remainingQuota = Math.max(0, monthlyLimit - newUsed)
 
       await updateDoc(userDocRef, {
-        guestPassData: {
-          ...guestPassData,
-          usedThisMonth: (guestPassData.usedThisMonth || 0) + 1,
-          updatedAt: serverTimestamp(),
-        },
+        'guestPassData.usedThisMonth': newUsed,
+        'guestPassData.remainingQuota': remainingQuota,
+        'guestPassData.lastPassCreated': serverTimestamp(),
         updatedAt: serverTimestamp(),
       })
+      
+      console.log(`✅ Updated user guestPassData: used=${newUsed}, remaining=${remainingQuota}, limit=${monthlyLimit}`)
     }
 
     console.log('✅ Guest pass created successfully:', passId)
@@ -202,11 +273,16 @@ export const createGuestPass = async (
 /**
  * Mark a pass as sent (after WhatsApp delivery)
  * @param {string} passRefId - Firebase document ID of the pass
+ * @param {string} projectId - Project ID (required for project-specific collection)
  * @returns {Promise<boolean>} Success status
  */
-export const markPassAsSent = async (passRefId) => {
+export const markPassAsSent = async (passRefId, projectId) => {
   try {
-    const passRef = doc(db, 'guestPasses', passRefId)
+    if (!projectId) {
+      throw new Error('Project ID is required to mark pass as sent')
+    }
+
+    const passRef = doc(db, `projects/${projectId}/guestPasses`, passRefId)
 
     await updateDoc(passRef, {
       sentStatus: true,
@@ -225,9 +301,10 @@ export const markPassAsSent = async (passRefId) => {
 /**
  * Get user status and limits
  * @param {string} userId - User ID
+ * @param {string} projectId - Project ID (optional, for global settings)
  * @returns {Promise<Object>} User status
  */
-export const getUserStatus = async (userId) => {
+export const getUserStatus = async (userId, projectId = null) => {
   try {
     const userDocRef = doc(db, 'users', userId)
     const userDoc = await getDoc(userDocRef)
@@ -239,6 +316,32 @@ export const getUserStatus = async (userId) => {
     const userData = userDoc.data()
     const guestPassData = userData.guestPassData || {}
 
+    // Get monthly limit - check global settings first, then user-specific
+    let monthlyLimit = 10
+    if (projectId) {
+      try {
+        const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
+        const globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
+        
+        if (globalSettingsDoc?.monthlyLimit) {
+          // Handle both string and number values
+          monthlyLimit = typeof globalSettingsDoc.monthlyLimit === 'string'
+            ? parseInt(globalSettingsDoc.monthlyLimit, 10)
+            : globalSettingsDoc.monthlyLimit
+        }
+      } catch (settingsError) {
+        console.warn('⚠️ Could not fetch global settings:', settingsError)
+      }
+    }
+    
+    // Override with user-specific limit if set
+    if (guestPassData.monthlyLimit !== undefined && guestPassData.monthlyLimit !== null) {
+      // Handle both string and number values
+      monthlyLimit = typeof guestPassData.monthlyLimit === 'string'
+        ? parseInt(guestPassData.monthlyLimit, 10)
+        : guestPassData.monthlyLimit
+    }
+
     return {
       success: true,
       data: {
@@ -246,9 +349,9 @@ export const getUserStatus = async (userId) => {
         name: userData.fullName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
         email: userData.email,
         blocked: guestPassData.blocked || false,
-        monthlyLimit: guestPassData.monthlyLimit || 10,
+        monthlyLimit: monthlyLimit,
         usedThisMonth: guestPassData.usedThisMonth || 0,
-        remainingQuota: (guestPassData.monthlyLimit || 10) - (guestPassData.usedThisMonth || 0),
+        remainingQuota: monthlyLimit - (guestPassData.usedThisMonth || 0),
       },
     }
   } catch (error) {
