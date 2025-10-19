@@ -638,7 +638,6 @@ padding-top: 40px;
 /* Responsive */
 @media (max-width: 768px) {
   .notification-center-overlay {
-    padding-top: 60px;
   }
 
   .notification-center-modal {
@@ -648,8 +647,7 @@ padding-top: 40px;
   }
 
   .notification-header {
-    padding: 20px 20px 12px;
-    padding-top: 60px;
+    padding: 12px 20px 12px;
   }
 
   .header-title h3 {

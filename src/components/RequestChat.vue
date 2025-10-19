@@ -100,7 +100,7 @@ const loadMessages = async () => {
       return;
     }
     
-    // Load messages using firestoreService
+    // Load initial messages using firestoreService
     const messagesPath = `projects/${projectId.value}/requestSubmissions/${requestId.value}/messages`;
     const queryOptions = {
       orderBy: { field: 'createdAt', direction: 'asc' },
@@ -119,15 +119,26 @@ const loadMessages = async () => {
       };
     });
     
-    // Set up polling for real-time updates (since firestoreService doesn't support onSnapshot)
+    console.log('✅ RequestChat: Initial messages loaded:', messages.value.length);
+    
+    // Set up real-time listener for instant message updates on iOS/Android
+    console.log('🔍 RequestChat: Setting up real-time listener for messages collection');
+    
+    // Clean up any existing listener
     if (unsubscribe.value) {
       unsubscribe.value();
     }
     
-    unsubscribe.value = setInterval(async () => {
-      try {
-        const newResult = await firestoreService.getDocs(messagesPath, queryOptions);
-        const newMessages = newResult.docs.map(doc => {
+    // Use subscribeToQuery for collection-level real-time updates
+    unsubscribe.value = firestoreService.subscribeToQuery(
+      messagesPath,
+      {
+        orderByField: 'createdAt',
+        orderDirection: 'asc'
+      },
+      (snapshot) => {
+        // Handle real-time updates
+        const newMessages = snapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
@@ -136,14 +147,15 @@ const loadMessages = async () => {
           };
         });
         
-        // Only update if messages have changed
-        if (JSON.stringify(newMessages) !== JSON.stringify(messages.value)) {
-          messages.value = newMessages;
-        }
-      } catch (error) {
-        console.error('Error polling messages:', error);
+        console.log('🔍 RequestChat: Real-time messages update received:', newMessages.length);
+        messages.value = newMessages;
+      },
+      (error) => {
+        console.error('❌ RequestChat: Real-time listener error:', error);
       }
-    }, 5000); // Poll every 5 seconds
+    );
+    
+    console.log('✅ RequestChat: Real-time listener setup successfully');
     
   } catch (error) {
     console.error('Error loading messages:', error);
@@ -162,6 +174,22 @@ const handleSendMessage = async (messageText) => {
       throw new Error('Missing projectId or requestId');
     }
 
+    // Create temporary message for instant display (optimistic UI like WhatsApp)
+    const tempMessage = {
+      id: `temp_${Date.now()}`,
+      text: messageText,
+      senderType: 'user',
+      senderId: user.uid,
+      senderName: user.displayName || 'User',
+      timestamp: new Date(),
+      createdAt: new Date(),
+      isTemporary: true
+    };
+
+    // Add temporary message to local state INSTANTLY
+    messages.value.push(tempMessage);
+    console.log('⚡ RequestChat: Message displayed instantly (optimistic UI)');
+
     const messageData = {
       text: messageText,
       senderType: 'user',
@@ -172,8 +200,17 @@ const handleSendMessage = async (messageText) => {
 
     const messagesPath = `projects/${projectId.value}/requestSubmissions/${requestId.value}/messages`;
     await firestoreService.addDoc(messagesPath, messageData);
+    
+    console.log('✅ RequestChat: Message sent to server, real-time listener will update');
   } catch (error) {
     console.error('Error sending message:', error);
+    
+    // Remove temporary message on error
+    const tempIndex = messages.value.findIndex(msg => msg.isTemporary && msg.text === messageText);
+    if (tempIndex !== -1) {
+      messages.value.splice(tempIndex, 1);
+    }
+    
     throw error;
   }
 };
@@ -238,8 +275,11 @@ const onImageUploaded = () => {
 
 // Cleanup on unmount
 onUnmounted(() => {
+  // Clean up real-time listener
   if (unsubscribe.value) {
+    console.log('🧹 RequestChat: Cleaning up real-time listener');
     unsubscribe.value();
+    unsubscribe.value = null;
   }
 });
 </script>

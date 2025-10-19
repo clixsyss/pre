@@ -18,7 +18,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useSupportStore } from '../stores/supportStore';
 import { useNotificationStore } from '../stores/notifications';
@@ -36,6 +36,7 @@ const supportChatId = computed(() => route.params.id);
 
 // Reactive data
 const supportChat = computed(() => supportStore.currentSupportChat);
+const unsubscribe = ref(null);
 
 // Computed properties
 const messages = computed(() => {
@@ -46,9 +47,14 @@ const messages = computed(() => {
 onMounted(async () => {
   if (supportChatId.value) {
     try {
-      // Load support chat data (real-time listeners are temporarily disabled)
+      // Load support chat data
       await supportStore.fetchSupportChat(supportChatId.value);
       console.log('✅ Support chat loaded successfully');
+      
+      // Set up real-time listener for instant message updates on iOS/Android
+      console.log('🔍 SupportChat: Setting up real-time listener for chat:', supportChatId.value);
+      unsubscribe.value = supportStore.listenToSupportChat(supportChatId.value);
+      console.log('✅ SupportChat: Real-time listener setup successfully');
     } catch (error) {
       console.error('Error loading support chat:', error);
       notificationStore.addNotification({
@@ -59,9 +65,37 @@ onMounted(async () => {
   }
 });
 
+onUnmounted(() => {
+  // Clean up real-time listener
+  if (unsubscribe.value) {
+    console.log('🧹 SupportChat: Cleaning up real-time listener');
+    unsubscribe.value();
+    unsubscribe.value = null;
+  }
+});
+
 // Message handling functions
 const handleSendMessage = async (messageText) => {
   if (!supportChat.value) return;
+
+  // Create temporary message for instant display (optimistic UI like WhatsApp)
+  const tempMessage = {
+    id: `temp_${Date.now()}`,
+    text: messageText,
+    senderType: 'user',
+    senderId: 'current_user',
+    senderName: 'You',
+    timestamp: new Date(),
+    type: 'text',
+    isTemporary: true
+  };
+
+  // Add temporary message to local state INSTANTLY
+  if (!supportChat.value.messages) {
+    supportChat.value.messages = [];
+  }
+  supportChat.value.messages.push(tempMessage);
+  console.log('⚡ SupportChat: Message displayed instantly (optimistic UI)');
 
   try {
     await supportStore.addMessage(supportChatId.value, {
@@ -69,10 +103,17 @@ const handleSendMessage = async (messageText) => {
       type: 'text'
     });
 
-    // Refresh the chat to get the updated messages since real-time listeners are disabled
-    await supportStore.fetchSupportChat(supportChatId.value);
+    // Real-time listener will replace temporary message with real one
+    console.log('✅ SupportChat: Message sent to server, waiting for real-time update');
   } catch (error) {
     console.error('Error sending message:', error);
+    
+    // Remove temporary message on error
+    const tempIndex = supportChat.value.messages.findIndex(msg => msg.id === tempMessage.id);
+    if (tempIndex !== -1) {
+      supportChat.value.messages.splice(tempIndex, 1);
+    }
+    
     notificationStore.addNotification({
       type: 'error',
       message: 'Failed to send message. Please try again.'
@@ -109,10 +150,8 @@ const handleImageUpload = async (file) => {
       imageUrl: imageUrl
     });
 
-    // Refresh the chat to get the updated messages since real-time listeners are disabled
-    await supportStore.fetchSupportChat(supportChatId.value);
-    
-    console.log('✅ SupportChat: Image message sent successfully');
+    // Real-time listener will update the messages automatically
+    console.log('✅ SupportChat: Image message sent, real-time listener will update UI');
   } catch (error) {
     console.error('❌ SupportChat: Error uploading image:', error);
     notificationStore.addNotification({

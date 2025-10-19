@@ -84,19 +84,48 @@ onUnmounted(() => {
 const handleSendMessage = async (messageText) => {
   if (!violation.value) return;
 
+  // Create temporary message for instant display (optimistic UI like WhatsApp)
+  const tempMessage = {
+    id: `temp_${Date.now()}`,
+    text: messageText,
+    senderType: 'user',
+    senderId: '',
+    timestamp: new Date(),
+    isTemporary: true
+  };
+
   try {
     const user = await optimizedAuthService.getCurrentUser();
     if (!user) {
       throw new Error('You must be logged in to send messages.');
     }
 
+    // Update tempMessage with user ID
+    tempMessage.senderId = user.uid;
+
+    // Add temporary message to local state INSTANTLY
+    if (!violation.value.messages) {
+      violation.value.messages = [];
+    }
+    violation.value.messages.push(tempMessage);
+    console.log('⚡ ViolationChat: Message displayed instantly (optimistic UI)');
+
     await addMessage(projectStore.selectedProject.id, violationId.value, {
       senderType: 'user',
       senderId: user.uid,
       text: messageText
     });
+    
+    console.log('✅ ViolationChat: Message sent to server, real-time listener will update');
   } catch (error) {
     console.error('Error sending message:', error);
+    
+    // Remove temporary message on error
+    const tempIndex = violation.value.messages?.findIndex(msg => msg.id === tempMessage.id);
+    if (tempIndex !== -1) {
+      violation.value.messages.splice(tempIndex, 1);
+    }
+    
     throw error;
   }
 };

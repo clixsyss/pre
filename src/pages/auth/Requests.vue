@@ -297,7 +297,6 @@ const getRequestPreview = (request) => {
 <style scoped>
 .services-page {
   background: #fafafa;
-  min-height: 100vh;
 }
 
 /* Hero Section */

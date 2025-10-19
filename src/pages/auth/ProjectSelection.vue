@@ -71,10 +71,10 @@
         <div class="projects-grid">
           <transition-group name="project-card" tag="div" class="projects-list">
             <div 
-              v-for="(project, index) in userProjects" 
-              :key="project.id" 
-              @click="selectProject(project)"
-              :class="['project-card', { 'selected': selectedProject?.id === project.id }]"
+              v-for="(projectUnit, index) in userProjects" 
+              :key="`${projectUnit.id}-${projectUnit.userUnit}`" 
+              @click="selectProjectUnit(projectUnit)"
+              :class="['project-card', { 'selected': isSelected(projectUnit) }]"
               :style="{ '--delay': `${index * 0.1}s` }"
             >
               <div class="project-header">
@@ -83,7 +83,7 @@
                     <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </div>
-                <h3 class="project-name">{{ project.name || 'Unnamed Project' }}</h3>
+                <h3 class="project-name">{{ projectUnit.name || 'Unnamed Project' }}</h3>
                
               </div>
 
@@ -94,20 +94,20 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" stroke-width="2" />
                     </svg>
-                    <span>{{ project.location || 'Location not set' }}</span>
+                    <span>{{ projectUnit.location || 'Location not set' }}</span>
                   </div>
-                  <div class="detail-item">
+                  <div class="detail-item unit-highlight">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <span>Unit {{ project.userUnit || 'N/A' }}</span>
+                    <span class="unit-badge">Unit {{ projectUnit.userUnit || 'N/A' }}</span>
                   </div>
                   <div class="detail-item">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15C10.9391 15 9.92172 15.4214 9.17157 16.1716C8.42143 16.9217 8 17.9391 8 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                       <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <span>{{ project.userRole || 'Member' }}</span>
+                    <span>{{ projectUnit.userRole || 'Member' }}</span>
                   </div>
                 </div>
               </div>
@@ -184,6 +184,7 @@ const currentUser = ref(null)
 // Computed properties
 const userProjects = computed(() => projectStore.userProjects)
 const selectedProject = computed(() => projectStore.selectedProject)
+const selectedUnit = computed(() => projectStore.selectedUnit)
 
 // Computed property for user's display name with fallbacks
 const userDisplayName = computed(() => {
@@ -204,13 +205,18 @@ const userDisplayName = computed(() => {
 })
 
 // Methods
-const selectProject = async (project) => {
-  projectStore.selectProject(project)
+const selectProjectUnit = async (projectUnit) => {
+  projectStore.selectProject(projectUnit)
 
   // Add a small delay for smooth UX, then redirect
   setTimeout(() => {
     router.push('/home')
   }, 300)
+}
+
+const isSelected = (projectUnit) => {
+  return selectedProject.value?.id === projectUnit.id && 
+         selectedUnit.value === projectUnit.userUnit
 }
 
 
@@ -695,6 +701,21 @@ onMounted(async () => {
 .detail-item svg {
   color: #AF1E23;
   flex-shrink: 0;
+}
+
+.detail-item.unit-highlight {
+  font-weight: 600;
+}
+
+.unit-badge {
+  background: linear-gradient(135deg, #AF1E23 0%, #d32f2f 100%);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(175, 30, 35, 0.25);
 }
 
 /* Project Action */

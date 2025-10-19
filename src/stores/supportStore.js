@@ -218,12 +218,40 @@ export const useSupportStore = defineStore('support', () => {
     }
 
     return supportService.listenToSupportChat(projectId, chatId, (chat) => {
-      currentSupportChat.value = chat;
+      if (chat) {
+        // Preserve temporary messages that haven't been confirmed yet
+        const currentMessages = currentSupportChat.value?.messages || [];
+        const tempMessages = currentMessages.filter(msg => msg.isTemporary);
+        
+        // Update with real-time data
+        currentSupportChat.value = chat;
+        
+        // Remove temporary messages that now have real versions
+        if (tempMessages.length > 0 && chat.messages) {
+          const validTempMessages = tempMessages.filter(tempMsg => {
+            // Keep temp message only if no real message with same text exists
+            return !chat.messages.some(realMsg => 
+              !realMsg.isTemporary && 
+              realMsg.text === tempMsg.text &&
+              realMsg.senderType === 'user'
+            );
+          });
+          
+          // Add back remaining temp messages
+          if (validTempMessages.length > 0) {
+            currentSupportChat.value.messages = [...chat.messages, ...validTempMessages];
+          }
+        }
+        
+        console.log('⚡ SupportStore: Real-time chat update with', currentSupportChat.value.messages?.length, 'messages');
+      } else {
+        currentSupportChat.value = chat;
+      }
       
       // Update in chats list
       const index = supportChats.value.findIndex(c => c.id === chatId);
       if (index !== -1) {
-        supportChats.value[index] = chat;
+        supportChats.value[index] = currentSupportChat.value || chat;
       } else if (chat) {
         supportChats.value.unshift(chat);
       }

@@ -528,10 +528,22 @@ const cleanupKeyboardListeners = async () => {
   }
 };
 
-// Watch for new messages to auto-scroll
-watch(() => props.messages?.length, () => {
-  scrollToBottom();
-});
+// Watch for new messages to auto-scroll instantly (WhatsApp-like behavior)
+watch(() => props.messages?.length, (newCount, oldCount) => {
+  if (newCount > oldCount) {
+    console.log('⚡ UnifiedChat: New message detected, auto-scrolling instantly');
+    nextTick(() => {
+      scrollToBottom();
+    });
+  }
+}, { immediate: false });
+
+// Also watch for message content changes (for real-time updates replacing temp messages)
+watch(() => props.messages, () => {
+  nextTick(() => {
+    scrollToBottom();
+  });
+}, { deep: true });
 
 // Lifecycle
 onMounted(async () => {

@@ -346,6 +346,8 @@ const handleImageSelect = async (event) => {
 const sendMessage = async () => {
   if (!newMessage.value.trim() || complaintStore.loading || isComplaintClosed.value) return;
 
+  const messageText = newMessage.value.trim();
+  
   try {
     const user = await optimizedAuthService.getCurrentUser();
     if (!user) {
@@ -353,16 +355,46 @@ const sendMessage = async () => {
       return;
     }
 
+    // Create temporary message for instant display (optimistic UI like WhatsApp)
+    const tempMessage = {
+      id: `temp_${Date.now()}`,
+      text: messageText,
+      senderType: 'user',
+      senderId: user.uid,
+      timestamp: new Date(),
+      isTemporary: true
+    };
+
+    // Add temporary message to local state INSTANTLY
+    if (!complaint.value.messages) {
+      complaint.value.messages = [];
+    }
+    complaint.value.messages.push(tempMessage);
+    console.log('⚡ ComplaintChat: Message displayed instantly (optimistic UI)');
+
+    // Clear input immediately for instant feedback
+    newMessage.value = '';
+    scrollToBottom();
+
     await complaintStore.addMessage(complaintId.value, {
       senderType: 'user',
       senderId: user.uid,
-      text: newMessage.value.trim()
+      text: messageText
     });
 
-    newMessage.value = '';
-    scrollToBottom();
+    console.log('✅ ComplaintChat: Message sent to server, real-time listener will update');
   } catch (error) {
     console.error('Error sending message:', error);
+    
+    // Remove temporary message on error
+    const tempIndex = complaint.value.messages?.findIndex(msg => msg.isTemporary && msg.text === messageText);
+    if (tempIndex !== -1) {
+      complaint.value.messages.splice(tempIndex, 1);
+    }
+    
+    // Restore message text for retry
+    newMessage.value = messageText;
+    
     notificationStore.showError('Failed to send message. Please try again.');
   }
 };
@@ -479,13 +511,13 @@ onUnmounted(() => {
 .complaint-chat {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 100px - 80px); /* Full height minus header and bottom nav */
+  height: calc(100vh - 100px - 60px); /* Full height minus header and bottom nav */
   background: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   position: fixed;
   left: 0;
   right: 0;
-  top: 114px; /* Start below app header */
+  top: 77px; /* Start below app header */
   bottom: 80px; /* Bottom nav height */
   z-index: 100;
   transition: bottom 0.3s ease-in-out;
@@ -864,7 +896,7 @@ onUnmounted(() => {
   background: #f8fafc;
   border: 2px solid #e5e7eb;
   border-radius: 24px;
-  padding: 0.75rem 1rem;
+  padding: 12px;
   transition: all 0.2s ease;
   max-width: 800px;
   margin: 0 auto;
@@ -893,8 +925,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
 }
 

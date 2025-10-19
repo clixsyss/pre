@@ -4,8 +4,9 @@ import firestoreService from '../services/firestoreService'
 
 export const useProjectStore = defineStore('project', () => {
   // State
-  const userProjects = ref([])
+  const userProjects = ref([]) // Array of project-unit combinations
   const selectedProject = ref(null)
+  const selectedUnit = ref(null) // New: Track selected unit
   const availableProjects = ref([])
   const loading = ref(false)
   const error = ref(null)
@@ -16,7 +17,37 @@ export const useProjectStore = defineStore('project', () => {
 
   // Getters
   const hasMultipleProjects = computed(() => userProjects.value.length > 1)
-  const hasSelectedProject = computed(() => selectedProject.value !== null)
+  const hasSelectedProject = computed(() => selectedProject.value !== null && selectedUnit.value !== null)
+  
+  // New: Get unique project-unit combinations grouped by project
+  const projectsByGroup = computed(() => {
+    const grouped = {}
+    userProjects.value.forEach(proj => {
+      if (!grouped[proj.id]) {
+        grouped[proj.id] = {
+          id: proj.id,
+          name: proj.name,
+          description: proj.description,
+          location: proj.location,
+          status: proj.status,
+          type: proj.type,
+          units: []
+        }
+      }
+      grouped[proj.id].units.push({
+        unit: proj.userUnit,
+        role: proj.userRole,
+        registrationStatus: proj.registrationStatus,
+        registrationStep: proj.registrationStep,
+        updatedAt: proj.updatedAt
+      })
+    })
+    return Object.values(grouped)
+  })
+  
+  // New: Check if user has multiple units across all projects
+  const hasMultipleUnits = computed(() => userProjects.value.length > 1)
+  
   const currentProjectServices = computed(() => {
     if (!selectedProject.value) return []
     return selectedProject.value.services || []
@@ -54,65 +85,72 @@ export const useProjectStore = defineStore('project', () => {
         return
       }
       
-      // Fetch all projects at once for better performance
+      // Fetch all projects - iterate over userProjectsArray directly to handle duplicates
       const projectsData = []
       
       if (userProjectsArray.length > 0) {
         try {
-          // Get all project IDs
-          const projectIds = userProjectsArray.map(up => up.projectId || up.id).filter(Boolean)
+          console.log('ProjectStore: Fetching projects using REST API...')
           
-          if (projectIds.length > 0) {
-            console.log('ProjectStore: Fetching projects using REST API...')
+          // Create a cache for fetched project data to avoid duplicate API calls
+          const projectCache = new Map()
+          
+          // Iterate over each user project entry (including duplicates with different units)
+          const projectPromises = userProjectsArray.map(async (userProject) => {
+            const projectId = userProject.projectId || userProject.id
+            if (!projectId) return null
             
-            // Fetch projects one by one using the unified firestoreService
-            const projectPromises = projectIds.map(async (projectId) => {
-              try {
+            try {
+              // Check cache first
+              let projectData
+              if (projectCache.has(projectId)) {
+                projectData = projectCache.get(projectId)
+              } else {
                 const projectDoc = await firestoreService.getDoc(`projects/${projectId}`)
                 if (projectDoc.exists()) {
-                  const projectData = projectDoc.data()
-                  const userProject = userProjectsArray.find(up => (up.projectId || up.id) === projectId)
-                  
-                  return {
-                    id: projectId,
-                    name: projectData.name || 'Unnamed Project',
-                    description: projectData.description || 'No description available',
-                    location: projectData.location || 'Location not set',
-                    status: projectData.status || 'active',
-                    type: projectData.type || 'residential',
-                    // User-specific project data
-                    userRole: userProject?.role || 'member',
-                    userUnit: userProject?.unit || 'N/A',
-                    registrationStatus: userProject?.registrationStatus || 'unknown',
-                    registrationStep: userProject?.registrationStep || 'unknown',
-                    updatedAt: userProject?.updatedAt || null
-                  }
-                }
-                return null
-              } catch (err) {
-                console.error(`Failed to fetch project ${projectId}:`, err)
-                // Return fallback project data
-                const userProject = userProjectsArray.find(up => (up.projectId || up.id) === projectId)
-                return {
-                  id: projectId,
-                  name: `Project ${projectId.slice(-6)}`,
-                  description: 'Project details not available',
-                  location: 'Location not set',
-                  status: 'unknown',
-                  type: 'unknown',
-                  userRole: userProject?.role || 'member',
-                  userUnit: userProject?.unit || 'N/A',
-                  registrationStatus: userProject?.registrationStatus || 'unknown',
-                  registrationStep: userProject?.registrationStep || 'unknown',
-                  updatedAt: userProject?.updatedAt || null
+                  projectData = projectDoc.data()
+                  projectCache.set(projectId, projectData)
+                } else {
+                  return null
                 }
               }
-            })
-            
-            // Wait for all projects to be fetched and filter out nulls
-            const projectResults = await Promise.all(projectPromises)
-            projectsData.push(...projectResults.filter(Boolean))
-          }
+              
+              return {
+                id: projectId,
+                name: projectData.name || 'Unnamed Project',
+                description: projectData.description || 'No description available',
+                location: projectData.location || 'Location not set',
+                status: projectData.status || 'active',
+                type: projectData.type || 'residential',
+                // User-specific project data (unique per entry)
+                userRole: userProject.role || 'member',
+                userUnit: userProject.unit || 'N/A',
+                registrationStatus: userProject.registrationStatus || 'unknown',
+                registrationStep: userProject.registrationStep || 'unknown',
+                updatedAt: userProject.updatedAt || null
+              }
+            } catch (err) {
+              console.error(`Failed to fetch project ${projectId}:`, err)
+              // Return fallback project data with the specific user data
+              return {
+                id: projectId,
+                name: `Project ${projectId.slice(-6)}`,
+                description: 'Project details not available',
+                location: 'Location not set',
+                status: 'unknown',
+                type: 'unknown',
+                userRole: userProject.role || 'member',
+                userUnit: userProject.unit || 'N/A',
+                registrationStatus: userProject.registrationStatus || 'unknown',
+                registrationStep: userProject.registrationStep || 'unknown',
+                updatedAt: userProject.updatedAt || null
+              }
+            }
+          })
+          
+          // Wait for all projects to be fetched and filter out nulls
+          const projectResults = await Promise.all(projectPromises)
+          projectsData.push(...projectResults.filter(Boolean))
         } catch (err) {
           console.error('Error fetching projects in batch:', err)
         }
@@ -159,15 +197,26 @@ export const useProjectStore = defineStore('project', () => {
 
   // Removed unused fetchProjectsByIds method
 
-  const selectProject = (project) => {
-    selectedProject.value = project
-    // Store selection in localStorage for persistence
-    localStorage.setItem('selectedProjectId', project.id)
+  const selectProject = (projectWithUnit) => {
+    // projectWithUnit should have both project data and unit info
+    selectedProject.value = {
+      id: projectWithUnit.id,
+      name: projectWithUnit.name,
+      description: projectWithUnit.description,
+      location: projectWithUnit.location,
+      status: projectWithUnit.status,
+      type: projectWithUnit.type
+    }
+    selectedUnit.value = projectWithUnit.userUnit
+    
+    // Store selection in localStorage for persistence (project + unit)
+    localStorage.setItem('selectedProjectId', projectWithUnit.id)
+    localStorage.setItem('selectedUnit', projectWithUnit.userUnit)
     localStorage.setItem('selectedProjectTimestamp', Date.now().toString())
-    console.log('Project selected and saved to localStorage:', project.name)
+    console.log('Project and unit selected:', projectWithUnit.name, '- Unit:', projectWithUnit.userUnit)
     
     // Trigger data refresh for the new project
-    console.log('Project changed, triggering data refresh...')
+    console.log('Project/Unit changed, triggering data refresh...')
   }
 
   const validateSavedProject = (savedProjectId) => {
@@ -188,23 +237,24 @@ export const useProjectStore = defineStore('project', () => {
 
   const loadSelectedProject = () => {
     const savedProjectId = localStorage.getItem('selectedProjectId')
+    const savedUnit = localStorage.getItem('selectedUnit')
     const savedTimestamp = localStorage.getItem('selectedProjectTimestamp')
     
-    console.log('ProjectStore: Attempting to load saved project:', {
+    console.log('ProjectStore: Attempting to load saved project and unit:', {
       savedProjectId,
+      savedUnit,
       savedTimestamp,
-      availableProjects: userProjects.value.map(p => p.id),
-      availableProjectNames: userProjects.value.map(p => p.name)
+      availableProjects: userProjects.value.map(p => `${p.id} - Unit ${p.userUnit}`)
     })
     
-    if (savedProjectId && userProjects.value.length > 0) {
+    if (savedProjectId && savedUnit && userProjects.value.length > 0) {
       // Check if the saved selection is not too old (24 hours)
       const now = Date.now()
       const savedTime = parseInt(savedTimestamp || '0')
       const maxAge = 24 * 60 * 60 * 1000 // 24 hours
       
       if (now - savedTime > maxAge) {
-        console.log('Saved project selection is too old, clearing...')
+        console.log('Saved project/unit selection is too old, clearing...')
         clearSelectedProject()
         return false
       }
@@ -215,16 +265,28 @@ export const useProjectStore = defineStore('project', () => {
         return false
       }
       
-      const project = userProjects.value.find(p => p.id === savedProjectId)
-      if (project) {
-        selectedProject.value = project
-        console.log('ProjectStore: Restored selected project from localStorage:', project.name)
+      // Find the exact project-unit combination
+      const projectWithUnit = userProjects.value.find(
+        p => p.id === savedProjectId && p.userUnit === savedUnit
+      )
+      
+      if (projectWithUnit) {
+        selectedProject.value = {
+          id: projectWithUnit.id,
+          name: projectWithUnit.name,
+          description: projectWithUnit.description,
+          location: projectWithUnit.location,
+          status: projectWithUnit.status,
+          type: projectWithUnit.type
+        }
+        selectedUnit.value = projectWithUnit.userUnit
+        console.log('ProjectStore: Restored selected project and unit:', projectWithUnit.name, '- Unit:', savedUnit)
         return true
       } else {
-        console.log('ProjectStore: Saved project not found in available projects:', savedProjectId)
+        console.log('ProjectStore: Saved project-unit combination not found:', savedProjectId, savedUnit)
       }
     } else {
-      console.log('ProjectStore: No saved project ID or no projects available')
+      console.log('ProjectStore: No saved project/unit or no projects available')
     }
     return false
   }
@@ -279,17 +341,21 @@ export const useProjectStore = defineStore('project', () => {
 
   const clearSelectedProject = () => {
     selectedProject.value = null
+    selectedUnit.value = null
     localStorage.removeItem('selectedProjectId')
+    localStorage.removeItem('selectedUnit')
     localStorage.removeItem('selectedProjectTimestamp')
   }
 
   const resetStore = () => {
     userProjects.value = []
     selectedProject.value = null
+    selectedUnit.value = null
     availableProjects.value = []
     loading.value = false
     error.value = null
     localStorage.removeItem('selectedProjectId')
+    localStorage.removeItem('selectedUnit')
     localStorage.removeItem('selectedProjectTimestamp')
   }
 
@@ -312,13 +378,16 @@ export const useProjectStore = defineStore('project', () => {
     // State
     userProjects,
     selectedProject,
+    selectedUnit, // New: Export selected unit
     availableProjects,
     loading,
     error,
     
     // Getters
     hasMultipleProjects,
+    hasMultipleUnits, // New: Export multiple units check
     hasSelectedProject,
+    projectsByGroup, // New: Export grouped projects
     currentProjectServices,
     
     // Actions

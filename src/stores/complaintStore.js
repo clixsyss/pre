@@ -335,12 +335,36 @@ export const useComplaintStore = defineStore('complaint', () => {
 
     return complaintService.subscribeToComplaint(projectId, complaintId, (updatedComplaint) => {
       if (updatedComplaint) {
+        // Preserve temporary messages that haven't been confirmed yet
+        const currentMessages = currentComplaint.value?.messages || [];
+        const tempMessages = currentMessages.filter(msg => msg.isTemporary);
+        
+        // Update with real-time data
         currentComplaint.value = updatedComplaint;
+        
+        // Remove temporary messages that now have real versions
+        if (tempMessages.length > 0 && updatedComplaint.messages) {
+          const validTempMessages = tempMessages.filter(tempMsg => {
+            // Keep temp message only if no real message with same text exists
+            return !updatedComplaint.messages.some(realMsg => 
+              !realMsg.isTemporary && 
+              realMsg.text === tempMsg.text &&
+              realMsg.senderType === 'user'
+            );
+          });
+          
+          // Add back remaining temp messages
+          if (validTempMessages.length > 0) {
+            currentComplaint.value.messages = [...updatedComplaint.messages, ...validTempMessages];
+          }
+        }
+        
+        console.log('⚡ ComplaintStore: Real-time complaint update with', currentComplaint.value.messages?.length, 'messages');
         
         // Update in complaints list
         const complaintIndex = complaints.value.findIndex(c => c.id === complaintId);
         if (complaintIndex !== -1) {
-          complaints.value[complaintIndex] = updatedComplaint;
+          complaints.value[complaintIndex] = currentComplaint.value;
         }
       }
     });

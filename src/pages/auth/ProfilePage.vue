@@ -2392,7 +2392,7 @@ watch(showDeviceManagementModal, (isOpen) => {
 }
 
 .accordion-content.active {
-  max-height: 2000px;
+  max-height: max-content;
   padding: 24px 24px 24px 24px;
 }
 

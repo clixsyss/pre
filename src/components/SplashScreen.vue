@@ -35,7 +35,7 @@
         <!-- Logo -->
         <div class="logo-container">
           <img 
-            src="../assets/logo02.png" 
+            src="../assets/logo.png" 
             alt="PRE GROUP Logo" 
             class="logo" 
             @error="handleLogoError"
@@ -144,7 +144,7 @@ onMounted(() => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: #000000;
+  background: #231F20;
   z-index: 1;
 }
 
