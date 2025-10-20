@@ -553,7 +553,15 @@ const fetchAvailableProjects = async () => {
     const projectsRef = collection(db, 'projects')
     console.log('[Register] Created collection reference')
     
-    const snapshot = await getDocs(projectsRef)
+    // Add timeout to prevent indefinite hanging on iOS
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Firestore query timeout after 8 seconds')), 8000)
+    })
+    
+    const getDocsPromise = getDocs(projectsRef)
+    console.log('[Register] Waiting for getDocs (with 8s timeout)...')
+    
+    const snapshot = await Promise.race([getDocsPromise, timeoutPromise])
     console.log('[Register] Got snapshot, docs count:', snapshot.docs.length)
     console.log('[Register] Snapshot empty?', snapshot.empty)
     
@@ -567,7 +575,18 @@ const fetchAvailableProjects = async () => {
     console.error('[Register] ❌ Error fetching projects:', error)
     console.error('[Register] Error code:', error?.code)
     console.error('[Register] Error message:', error?.message)
-    notificationStore.showError('Failed to load projects. Please try again later.')
+    console.error('[Register] Error name:', error?.name)
+    
+    // If it's a timeout or permission error, show specific message
+    if (error?.message?.includes('timeout')) {
+      console.error('[Register] TIMEOUT - Firestore query took too long')
+      notificationStore.showError('Loading projects is taking longer than expected. Please check your connection.')
+    } else if (error?.code === 'permission-denied') {
+      console.error('[Register] PERMISSION DENIED - User needs to be authenticated')
+      notificationStore.showError('Unable to load projects. Please try refreshing the page.')
+    } else {
+      notificationStore.showError('Failed to load projects. Please try again later.')
+    }
   }
 }
 
