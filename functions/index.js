@@ -402,8 +402,8 @@ async function sendNotification(projectId, notificationId, notification) {
     
     console.log('[sendNotification] Sending to', tokens.length, 'tokens')
     
-    // Build FCM messages
-    const messages = buildMessages(notification, tokens)
+    // Build FCM messages with proper badge counts
+    const messages = await buildMessages(notification, tokens, projectId)
     
     // Send in batches of 500 (FCM limit)
     const batchSize = 500
@@ -623,12 +623,74 @@ async function collectTokens(projectId, audience) {
 }
 
 /**
+ * Get unread notification count for a user in a project
+ */
+async function getUserUnreadCount(projectId, userId) {
+  try {
+    const notificationsRef = admin.firestore()
+      .collection('projects')
+      .doc(projectId)
+      .collection('notifications')
+    
+    // Query for unread notifications for this user
+    const unreadQuery = notificationsRef.where('status', '==', 'sent')
+    const snapshot = await unreadQuery.get()
+    
+    let unreadCount = 0
+    
+    snapshot.forEach(doc => {
+      const data = doc.data()
+      
+      // Check if this notification is for the user
+      let isForUser = false
+      if (data.audience) {
+        if (data.audience.all) {
+          isForUser = true
+        } else if (data.audience.uids && data.audience.uids.includes(userId)) {
+          isForUser = true
+        }
+      } else if (data.userId === userId) {
+        isForUser = true
+      }
+      
+      // Check if user has read this notification
+      if (isForUser && !data.read) {
+        unreadCount++
+      }
+    })
+    
+    // Add 1 for the new notification being sent
+    return unreadCount + 1
+  } catch (error) {
+    console.error('[getUserUnreadCount] Error:', error)
+    return 1 // Default to 1 if error
+  }
+}
+
+/**
  * Build FCM messages for each token
  */
-function buildMessages(notification, tokens) {
+async function buildMessages(notification, tokens, projectId) {
   console.log('[buildMessages] Building messages for', tokens.length, 'tokens')
   
+  // Group tokens by user to calculate badge count per user
+  const tokensByUser = {}
+  tokens.forEach(tokenData => {
+    if (!tokensByUser[tokenData.userId]) {
+      tokensByUser[tokenData.userId] = []
+    }
+    tokensByUser[tokenData.userId].push(tokenData)
+  })
+  
+  // Calculate unread count for each user
+  const badgeCounts = {}
+  for (const userId of Object.keys(tokensByUser)) {
+    badgeCounts[userId] = await getUserUnreadCount(projectId, userId)
+  }
+  
   const messages = tokens.map(tokenData => {
+    const badgeCount = badgeCounts[tokenData.userId] || 1
+    
     // Build notification payload with default language (English)
     const message = {
       token: tokenData.token,
@@ -660,7 +722,7 @@ function buildMessages(notification, tokens) {
               body: notification.body_en
             },
             sound: 'default',
-            badge: 1
+            badge: badgeCount
           }
         }
       }
