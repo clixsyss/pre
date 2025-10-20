@@ -548,16 +548,36 @@ const fetchAvailableProjects = async () => {
   try {
     console.log('[Register] Fetching projects...')
     
-    // Use Web SDK for all platforms - more reliable and consistent
-    const projectsRef = collection(db, 'projects')
-    const snapshot = await getDocs(projectsRef)
-    availableProjects.value = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }))
-    console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects')
+    const { Capacitor } = await import('@capacitor/core')
+    
+    if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
+      // Use Capacitor Firebase plugin for iOS
+      console.log('[Register] Using Capacitor Firestore for iOS...')
+      const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
+      
+      const result = await FirebaseFirestore.getCollection({
+        reference: 'projects'
+      })
+      
+      availableProjects.value = result.documents.map(doc => ({
+        id: doc.id,
+        ...doc.data
+      }))
+      console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects via Capacitor')
+    } else {
+      // Use Web SDK for web/Android
+      console.log('[Register] Using Web SDK Firestore...')
+      const projectsRef = collection(db, 'projects')
+      const snapshot = await getDocs(projectsRef)
+      availableProjects.value = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects via Web SDK')
+    }
   } catch (error) {
     console.error('[Register] Error fetching projects:', error)
+    console.error('[Register] Error details:', error?.message, error?.code)
     notificationStore.showError('Failed to load projects. Please try again later.')
   }
 }
