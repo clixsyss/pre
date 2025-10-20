@@ -10,7 +10,7 @@ import { smartMirrorService } from '../services/smartMirrorService'
 // Your web app's Firebase configuration - PRE Group project
 // Uses environment variables with fallback to hardcoded values
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyB9kD9dw5DzEAys-kss-aSBqRGEuaT9A-0",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDpYVhP_uLDecqds0VD7g409N_AMj-OMF8",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "pre-group.firebaseapp.com",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "pre-group",
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "pre-group.firebasestorage.app",
