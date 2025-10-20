@@ -261,4 +261,9 @@ const isAuthenticatedPage = computed(() => {
   min-height: 100vh;
   background-color: #F6F6F6;
 }
+
+/* Override dark background for auth pages only after app loads */
+body:has(.auth-layout) {
+  background-color: #F6F6F6 !important;
+}
 </style>
