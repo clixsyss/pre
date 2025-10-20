@@ -8,13 +8,14 @@ import { Capacitor } from '@capacitor/core'
 import { smartMirrorService } from '../services/smartMirrorService'
 
 // Your web app's Firebase configuration - PRE Group project
+// Uses environment variables with fallback to hardcoded values
 const firebaseConfig = {
-  apiKey: "AIzaSyB9kD9dw5DzEAys-kss-aSBqRGEuaT9A-0",
-  authDomain: "pre-group.firebaseapp.com",
-  projectId: "pre-group",
-  storageBucket: "pre-group.firebasestorage.app",
-  messagingSenderId: "871778209250",
-  appId: "1:871778209250:web:79e726a4f5b5579bfc7dbb"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyB9kD9dw5DzEAys-kss-aSBqRGEuaT9A-0",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "pre-group.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "pre-group",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "pre-group.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "871778209250",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:871778209250:web:79e726a4f5b5579bfc7dbb"
 }
 
 // Platform detection

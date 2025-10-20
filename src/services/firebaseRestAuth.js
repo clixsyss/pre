@@ -5,8 +5,8 @@
 
 import { CapacitorHttp } from '@capacitor/core'
 
-// Firebase API key from the main config
-const API_KEY = 'AIzaSyB9kD9dw5DzEAys-kss-aSBqRGEuaT9A-0'
+// Firebase API key - uses environment variable with fallback
+const API_KEY = import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyB9kD9dw5DzEAys-kss-aSBqRGEuaT9A-0'
 
 class FirebaseRestAuth {
   /**

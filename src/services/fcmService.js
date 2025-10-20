@@ -37,8 +37,8 @@ class FCMService {
     this.isInitialized = false; // Track if FCM has been initialized
     this.hasTokenUpdateInterval = false; // Track if token update interval is set
     
-    // VAPID key for web push
-    this.vapidKey = 'BDL03mUP_fsEjpZLMLwj-EW0XGFUPXDu8alAQgAKrlcGrHe39yxSF8DH1yn75Y93vOYc-5nNcRctEhMoBPvQatQ';
+    // VAPID key for web push - uses environment variable with fallback
+    this.vapidKey = import.meta.env.VITE_FCM_VAPID_KEY || 'BDL03mUP_fsEjpZLMLwj-EW0XGFUPXDu8alAQgAKrlcGrHe39yxSF8DH1yn75Y93vOYc-5nNcRctEhMoBPvQatQ';
     
     console.log('FCMService: Initialized', { isNative: this.isNative, platform: this.platform });
   }
