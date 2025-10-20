@@ -547,26 +547,26 @@ const additionalPropertyForm = reactive({
 const fetchAvailableProjects = async () => {
   try {
     console.log('[Register] Fetching projects...')
+    console.log('[Register] Database instance:', db ? 'READY' : 'NULL')
     
     // Use Web SDK for all platforms - more reliable and consistent
     const projectsRef = collection(db, 'projects')
+    console.log('[Register] Created collection reference')
     
-    // Add timeout to prevent hanging
-    const getDocsPromise = getDocs(projectsRef)
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Fetch projects timeout after 10 seconds')), 10000)
-    )
-    
-    const snapshot = await Promise.race([getDocsPromise, timeoutPromise])
+    const snapshot = await getDocs(projectsRef)
+    console.log('[Register] Got snapshot, docs count:', snapshot.docs.length)
+    console.log('[Register] Snapshot empty?', snapshot.empty)
     
     availableProjects.value = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }))
     console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects')
+    console.log('[Register] Projects:', availableProjects.value)
   } catch (error) {
     console.error('[Register] ❌ Error fetching projects:', error)
-    console.error('[Register] Error details:', error?.message, error?.code)
+    console.error('[Register] Error code:', error?.code)
+    console.error('[Register] Error message:', error?.message)
     notificationStore.showError('Failed to load projects. Please try again later.')
   }
 }
@@ -650,7 +650,7 @@ const canAddAdditionalProperty = computed(() => {
 
 // Firestore writes are now handled by iosRegistrationService for better iOS compatibility
 
-onMounted(async () => {
+onMounted(() => {
   // Load existing data from store if available
   if (registrationStore.personalData.email) {
     personalForm.email = registrationStore.personalData.email
@@ -681,13 +681,6 @@ onMounted(async () => {
 
     // Hide the personal step content since it's already completed
     // The user should only see the property step
-  }
-
-  // Wait for Firebase to be ready on iOS
-  const { Capacitor } = await import('@capacitor/core')
-  if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
-    console.log('[Register] iOS detected - waiting for Firebase to stabilize...')
-    await new Promise(resolve => setTimeout(resolve, 1500))
   }
 
   // Fetch available projects on mount
