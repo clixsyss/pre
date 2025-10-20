@@ -5,7 +5,8 @@
 
 import { CapacitorHttp } from '@capacitor/core'
 
-const API_KEY = import.meta.env.VITE_FIREBASE_API_KEY
+// Firebase API key from the main config
+const API_KEY = 'AIzaSyB9kD9dw5DzEAys-kss-aSBqRGEuaT9A-0'
 
 class FirebaseRestAuth {
   /**
@@ -13,6 +14,7 @@ class FirebaseRestAuth {
    */
   async createAccount(email, password) {
     console.log('[RestAuth] Creating account via REST...')
+    console.log('[RestAuth] Using API key:', API_KEY ? 'KEY PRESENT' : 'KEY MISSING')
     
     try {
       const response = await CapacitorHttp.post({
@@ -22,8 +24,9 @@ class FirebaseRestAuth {
       })
 
       console.log('[RestAuth] Create account response:', response.status)
+      console.log('[RestAuth] Response data:', JSON.stringify(response.data))
       
-      if (response.status === 200) {
+      if (response.status === 200 && response.data.idToken) {
         console.log('[RestAuth] ✅ Account created')
         return {
           success: true,
@@ -33,13 +36,17 @@ class FirebaseRestAuth {
         }
       } else {
         const errorMsg = response.data?.error?.message || 'Unknown error'
+        console.error('[RestAuth] ❌ Create account error:', errorMsg)
+        console.error('[RestAuth] Full error details:', JSON.stringify(response.data))
+        
         if (errorMsg === 'EMAIL_EXISTS') {
           return { success: false, alreadyExists: true }
         }
         return { success: false, error: errorMsg }
       }
     } catch (error) {
-      console.error('[RestAuth] Create account failed:', error)
+      console.error('[RestAuth] Create account exception:', error)
+      console.error('[RestAuth] Error message:', error?.message)
       throw error
     }
   }
