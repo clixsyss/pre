@@ -72,13 +72,29 @@ echo ""
 
 # Step 1: Install npm dependencies
 echo "📦 Step 1/4: Installing npm dependencies..."
-npm ci --prefer-offline --no-audit
+if ! npm ci --prefer-offline --no-audit; then
+  echo "❌ ERROR: npm ci failed!"
+  echo "Trying npm install as fallback..."
+  if ! npm install --no-audit; then
+    echo "❌ ERROR: npm install also failed!"
+    exit 1
+  fi
+fi
 echo "✅ npm dependencies installed"
 echo ""
 
 # Step 2: Build Quasar app
 echo "🏗️  Step 2/4: Building Quasar app..."
-npm run build
+if ! npm run build; then
+  echo "❌ ERROR: npm run build failed!"
+  echo "Checking quasar.config.js..."
+  if [ -f "quasar.config.js" ]; then
+    echo "✅ quasar.config.js exists"
+  else
+    echo "❌ ERROR: quasar.config.js not found!"
+  fi
+  exit 1
+fi
 echo "✅ Quasar build completed"
 echo ""
 
@@ -92,7 +108,17 @@ echo ""
 
 # Step 3: Copy Capacitor files ONLY (no pod install)
 echo "🔄 Step 3/4: Copying Capacitor files to iOS..."
-npx cap copy ios
+if ! npx cap copy ios; then
+  echo "❌ ERROR: cap copy ios failed!"
+  echo "Checking capacitor.config.json..."
+  if [ -f "capacitor.config.json" ]; then
+    echo "✅ capacitor.config.json exists"
+    cat capacitor.config.json | head -20
+  else
+    echo "❌ ERROR: capacitor.config.json not found!"
+  fi
+  exit 1
+fi
 echo "✅ Capacitor files copied"
 echo ""
 
