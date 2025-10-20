@@ -547,46 +547,18 @@ const additionalPropertyForm = reactive({
 const fetchAvailableProjects = async () => {
   try {
     console.log('[Register] Fetching projects...')
-    console.log('[Register] Database instance:', db ? 'READY' : 'NULL')
     
     // Use Web SDK for all platforms - more reliable and consistent
     const projectsRef = collection(db, 'projects')
-    console.log('[Register] Created collection reference')
-    
-    // Add timeout to prevent indefinite hanging on iOS
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Firestore query timeout after 8 seconds')), 8000)
-    })
-    
-    const getDocsPromise = getDocs(projectsRef)
-    console.log('[Register] Waiting for getDocs (with 8s timeout)...')
-    
-    const snapshot = await Promise.race([getDocsPromise, timeoutPromise])
-    console.log('[Register] Got snapshot, docs count:', snapshot.docs.length)
-    console.log('[Register] Snapshot empty?', snapshot.empty)
-    
+    const snapshot = await getDocs(projectsRef)
     availableProjects.value = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }))
     console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects')
-    console.log('[Register] Projects:', availableProjects.value)
   } catch (error) {
-    console.error('[Register] ❌ Error fetching projects:', error)
-    console.error('[Register] Error code:', error?.code)
-    console.error('[Register] Error message:', error?.message)
-    console.error('[Register] Error name:', error?.name)
-    
-    // If it's a timeout or permission error, show specific message
-    if (error?.message?.includes('timeout')) {
-      console.error('[Register] TIMEOUT - Firestore query took too long')
-      notificationStore.showError('Loading projects is taking longer than expected. Please check your connection.')
-    } else if (error?.code === 'permission-denied') {
-      console.error('[Register] PERMISSION DENIED - User needs to be authenticated')
-      notificationStore.showError('Unable to load projects. Please try refreshing the page.')
-    } else {
-      notificationStore.showError('Failed to load projects. Please try again later.')
-    }
+    console.error('[Register] Error fetching projects:', error)
+    notificationStore.showError('Failed to load projects. Please try again later.')
   }
 }
 
@@ -669,7 +641,7 @@ const canAddAdditionalProperty = computed(() => {
 
 // Firestore writes are now handled by iosRegistrationService for better iOS compatibility
 
-onMounted(async () => {
+onMounted(() => {
   // Load existing data from store if available
   if (registrationStore.personalData.email) {
     personalForm.email = registrationStore.personalData.email
@@ -700,14 +672,6 @@ onMounted(async () => {
 
     // Hide the personal step content since it's already completed
     // The user should only see the property step
-  }
-
-  // Wait for Firebase to be fully ready on iOS before making Firestore queries
-  const { Capacitor } = await import('@capacitor/core')
-  if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
-    console.log('[Register] iOS detected - waiting 2s for Firestore to be ready...')
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    console.log('[Register] iOS wait complete, Firestore should be ready')
   }
 
   // Fetch available projects on mount

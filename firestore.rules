@@ -55,9 +55,13 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/admins/$(request.auth.uid)); // Only admins can modify
     }
     
-    // Allow listing projects collection (needed for registration, admin dashboard and guard authentication)
+    // Allow listing projects collection (needed for admin dashboard and guard authentication)
     match /projects {
-      allow list: if true; // Allow anyone to list projects (needed for registration before authentication)
+      allow list: if request.auth != null && 
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || // Admins can list
+         // Guards can list projects to find their own guard account
+         // We'll check if they're a guard in any project by allowing this for all authenticated users
+         request.auth != null);
     }
     
     // PROJECT-SPECIFIC COLLECTIONS - New Architecture
@@ -790,6 +794,27 @@ service cloud.firestore {
     // Allow listing user notification read status
     match /users/{userId}/notificationReadStatus {
       allow list: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // PUSH NOTIFICATIONS QUEUE - Allow admins to create notification records
+    // Cloud Functions will process the queue and actually send the notifications
+    match /pushNotifications/{notificationId} {
+      // Allow admins to create notification records for the queue
+      allow create: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      
+      // Allow reading for debugging (admins only)
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      
+      // Only Cloud Functions can update/delete (no client write access for security)
+      allow update, delete: if false;
+    }
+    
+    // Allow listing push notifications (admins only, for debugging)
+    match /pushNotifications {
+      allow list: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
   }
 }
