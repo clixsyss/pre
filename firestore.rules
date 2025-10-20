@@ -795,6 +795,27 @@ service cloud.firestore {
     match /users/{userId}/notificationReadStatus {
       allow list: if request.auth != null && request.auth.uid == userId;
     }
+    
+    // PUSH NOTIFICATIONS QUEUE - Allow admins to create notification records
+    // Cloud Functions will process the queue and actually send the notifications
+    match /pushNotifications/{notificationId} {
+      // Allow admins to create notification records for the queue
+      allow create: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      
+      // Allow reading for debugging (admins only)
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      
+      // Only Cloud Functions can update/delete (no client write access for security)
+      allow update, delete: if false;
+    }
+    
+    // Allow listing push notifications (admins only, for debugging)
+    match /pushNotifications {
+      allow list: if request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
   }
 }
 

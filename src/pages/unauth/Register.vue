@@ -932,7 +932,6 @@ const toggleConfirmPassword = () => {
   background-color: #231F20;
   color: white;
   margin-bottom: 0;
-  padding-top: 60px;
 }
 
 .page-title {

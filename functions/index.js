@@ -811,3 +811,380 @@ exports.unsubscribeFromTopic = functions.https.onCall(async (data, context) => {
   }
 })
 
+/**
+ * Process push notification queue
+ * This function processes pending push notifications and sends them via FCM
+ */
+exports.processPushNotifications = functions.pubsub
+  .schedule('every 1 minutes')
+  .onRun(async (context) => {
+    console.log('Processing push notification queue...');
+    
+    try {
+      const db = admin.firestore();
+      
+      // Get pending and retry push notifications
+      const pendingNotifications = await db
+        .collection('pushNotifications')
+        .where('status', 'in', ['pending', 'retry'])
+        .limit(100)
+        .get();
+
+      if (pendingNotifications.empty) {
+        console.log('No pending notifications to process');
+        return null;
+      }
+
+      console.log(`Processing ${pendingNotifications.size} pending notifications`);
+
+      const batch = db.batch();
+      const results = [];
+
+      for (const doc of pendingNotifications.docs) {
+        const notification = doc.data();
+        
+        try {
+          // Get user's FCM tokens (including those without isActive field for backward compatibility)
+          const tokensSnapshot = await db
+            .collection(`users/${notification.userId}/tokens`)
+            .get();
+
+          if (tokensSnapshot.empty) {
+            console.log(`No active FCM tokens found for user ${notification.userId}`);
+            
+            // Mark notification as failed - no tokens available
+            batch.update(doc.ref, {
+              status: 'failed',
+              failedAt: admin.firestore.FieldValue.serverTimestamp(),
+              error: 'No active FCM tokens found for user',
+              retryCount: admin.firestore.FieldValue.increment(1)
+            });
+
+            results.push({
+              id: doc.id,
+              status: 'failed',
+              error: 'No active FCM tokens found'
+            });
+            
+            continue; // Skip to next notification
+          }
+
+          // Send to all user's tokens
+          let successCount = 0;
+          let failCount = 0;
+          const tokenResults = [];
+
+          for (const tokenDoc of tokensSnapshot.docs) {
+            const tokenData = tokenDoc.data();
+            
+            // Skip inactive tokens (but treat missing isActive as active for backward compatibility)
+            if (tokenData.isActive === false) {
+              console.log(`Skipping inactive token ${tokenData.token.substring(0, 20)}...`);
+              continue;
+            }
+            
+            try {
+              // Send FCM message
+              const message = {
+                token: tokenData.token,
+                notification: {
+                  title: notification.title,
+                  body: notification.message,
+                  icon: '/favicon.ico',
+                  badge: '/favicon.ico',
+                  image: notification.imageUrl || undefined,
+                  click_action: notification.actionUrl || undefined
+                },
+                data: {
+                  actionType: notification.actionType || 'general',
+                  projectId: notification.projectId || '',
+                  userId: notification.userId || '',
+                  category: notification.category || 'general',
+                  priority: notification.priority || 'normal',
+                  requiresAction: notification.requiresAction ? 'true' : 'false',
+                  actionUrl: notification.actionUrl || '',
+                  actionText: notification.actionText || '',
+                  ...notification.metadata
+                },
+                android: {
+                  priority: 'high',
+                  notification: {
+                    sound: 'default',
+                    click_action: notification.actionUrl || undefined
+                  }
+                },
+                apns: {
+                  payload: {
+                    aps: {
+                      sound: 'default',
+                      badge: 1,
+                      'content-available': 1
+                    }
+                  }
+                }
+              };
+
+              // Send the message
+              const response = await admin.messaging().send(message);
+              
+              console.log(`Successfully sent message to token ${tokenData.token.substring(0, 20)}...`, response);
+              successCount++;
+              
+              tokenResults.push({
+                token: tokenData.token.substring(0, 20) + '...',
+                success: true,
+                fcmMessageId: response
+              });
+
+            } catch (tokenError) {
+              console.error(`Error sending to token ${tokenData.token.substring(0, 20)}...:`, tokenError);
+              failCount++;
+              
+              tokenResults.push({
+                token: tokenData.token.substring(0, 20) + '...',
+                success: false,
+                error: tokenError.message
+              });
+
+              // If token is invalid, mark it as inactive
+              if (tokenError.code === 'messaging/invalid-registration-token' || 
+                  tokenError.code === 'messaging/registration-token-not-registered') {
+                await tokenDoc.ref.update({
+                  isActive: false,
+                  deactivatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                  deactivationReason: tokenError.message
+                });
+                console.log(`Marked token as inactive: ${tokenData.token.substring(0, 20)}...`);
+              }
+            }
+          }
+
+          // Update notification status based on results
+          if (successCount > 0) {
+            // At least one token received the notification
+            batch.update(doc.ref, {
+              status: 'sent',
+              sentAt: admin.firestore.FieldValue.serverTimestamp(),
+              tokensAttempted: tokensSnapshot.size,
+              tokensSucceeded: successCount,
+              tokensFailed: failCount,
+              tokenResults: tokenResults,
+              retryCount: admin.firestore.FieldValue.increment(1)
+            });
+
+            results.push({
+              id: doc.id,
+              status: 'sent',
+              tokensSucceeded: successCount,
+              tokensFailed: failCount
+            });
+          } else {
+            // All tokens failed
+            throw new Error(`Failed to send to all ${tokensSnapshot.size} tokens`);
+          }
+
+        } catch (error) {
+          console.error(`Error sending notification ${doc.id}:`, error);
+          
+          const retryCount = (notification.retryCount || 0) + 1;
+          const maxRetries = notification.maxRetries || 3;
+          
+          if (retryCount >= maxRetries) {
+            // Mark as failed after max retries
+            batch.update(doc.ref, {
+              status: 'failed',
+              failedAt: admin.firestore.FieldValue.serverTimestamp(),
+              error: error.message,
+              retryCount: retryCount
+            });
+            
+            results.push({
+              id: doc.id,
+              status: 'failed',
+              error: error.message
+            });
+          } else {
+            // Schedule for retry
+            batch.update(doc.ref, {
+              status: 'retry',
+              scheduledFor: admin.firestore.FieldValue.serverTimestamp(),
+              retryCount: retryCount,
+              lastError: error.message
+            });
+            
+            results.push({
+              id: doc.id,
+              status: 'retry',
+              retryCount: retryCount
+            });
+          }
+        }
+      }
+
+      // Commit all updates
+      await batch.commit();
+      
+      console.log('Push notification processing completed:', results);
+      return results;
+
+    } catch (error) {
+      console.error('Error processing push notifications:', error);
+      throw error;
+    }
+  });
+
+/**
+ * Send immediate push notification
+ * This function can be called directly to send a push notification immediately
+ */
+exports.sendImmediatePushNotification = functions.https.onCall(async (data, context) => {
+  // Verify authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const { userId, projectId, title, message, actionType, actionUrl, actionText } = data;
+
+  if (!userId || !projectId || !title || !message) {
+    throw new functions.https.HttpsError('invalid-argument', 'Missing required parameters');
+  }
+
+  try {
+    const db = admin.firestore();
+    
+    // Get user's FCM tokens (including those without isActive field for backward compatibility)
+    const tokensSnapshot = await db
+      .collection(`users/${userId}/tokens`)
+      .get();
+
+    if (tokensSnapshot.empty) {
+      return {
+        success: false,
+        message: 'No FCM tokens found for user',
+        tokensFound: 0
+      };
+    }
+
+    const results = [];
+    
+    for (const tokenDoc of tokensSnapshot.docs) {
+      const tokenData = tokenDoc.data();
+      
+      // Skip inactive tokens (but treat missing isActive as active for backward compatibility)
+      if (tokenData.isActive === false) {
+        console.log(`Skipping inactive token ${tokenData.token.substring(0, 20)}...`);
+        continue;
+      }
+      
+      try{
+        const messagePayload = {
+          token: tokenData.token,
+          notification: {
+            title: title,
+            body: message,
+            icon: '/favicon.ico',
+            badge: '/favicon.ico',
+            click_action: actionUrl || undefined
+          },
+          data: {
+            actionType: actionType || 'general',
+            projectId: projectId,
+            userId: userId,
+            actionUrl: actionUrl || '',
+            actionText: actionText || ''
+          },
+          android: {
+            priority: 'high',
+            notification: {
+              sound: 'default',
+              click_action: actionUrl || undefined
+            }
+          },
+          apns: {
+            payload: {
+              aps: {
+                sound: 'default',
+                badge: 1,
+                'content-available': 1
+              }
+            }
+          }
+        };
+
+        const response = await admin.messaging().send(messagePayload);
+        
+        results.push({
+          token: tokenData.token,
+          success: true,
+          fcmMessageId: response
+        });
+
+      } catch (error) {
+        console.error(`Error sending to token ${tokenData.token}:`, error);
+        results.push({
+          token: tokenData.token,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    const successfulSends = results.filter(r => r.success).length;
+    
+    return {
+      success: successfulSends > 0,
+      results,
+      totalTokens: tokensSnapshot.size,
+      successfulSends,
+      message: `Sent to ${successfulSends}/${tokensSnapshot.size} devices`
+    };
+
+  } catch (error) {
+    console.error('Error sending immediate push notification:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to send push notification');
+  }
+});
+
+/**
+ * Clean up old push notification records
+ * This function runs daily to clean up old notification records
+ */
+exports.cleanupPushNotifications = functions.pubsub
+  .schedule('every 24 hours')
+  .onRun(async (context) => {
+    console.log('Cleaning up old push notification records...');
+    
+    try {
+      const db = admin.firestore();
+      
+      // Delete notifications older than 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const oldNotifications = await db
+        .collection('pushNotifications')
+        .where('createdAt', '<', thirtyDaysAgo)
+        .limit(500)
+        .get();
+
+      if (oldNotifications.empty) {
+        console.log('No old notifications to clean up');
+        return null;
+      }
+
+      const batch = db.batch();
+      oldNotifications.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+      
+      console.log(`Cleaned up ${oldNotifications.size} old notification records`);
+      return { cleaned: oldNotifications.size };
+
+    } catch (error) {
+      console.error('Error cleaning up push notifications:', error);
+      throw error;
+    }
+  });
+

@@ -470,6 +470,7 @@ class FCMService {
         const tokenData = {
           token,
           platform,
+          isActive: true,
           createdAt: new Date().toISOString(), // Capacitor plugin uses ISO strings
           lastSeenAt: new Date().toISOString(),
           deviceInfo: {
@@ -506,6 +507,7 @@ class FCMService {
         await setDoc(tokenRef, {
           token,
           platform,
+          isActive: true,
           createdAt: serverTimestamp(),
           lastSeenAt: serverTimestamp(),
           deviceInfo: {

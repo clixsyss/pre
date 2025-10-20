@@ -580,7 +580,6 @@ const goToSignUp = () => {
   padding: 20px;
   background-color: #222222;
   color: white;
-  padding-top: 60px;
 }
 
 .back-btn {
