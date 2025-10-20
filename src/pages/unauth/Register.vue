@@ -669,7 +669,7 @@ const canAddAdditionalProperty = computed(() => {
 
 // Firestore writes are now handled by iosRegistrationService for better iOS compatibility
 
-onMounted(() => {
+onMounted(async () => {
   // Load existing data from store if available
   if (registrationStore.personalData.email) {
     personalForm.email = registrationStore.personalData.email
@@ -700,6 +700,14 @@ onMounted(() => {
 
     // Hide the personal step content since it's already completed
     // The user should only see the property step
+  }
+
+  // Wait for Firebase to be fully ready on iOS before making Firestore queries
+  const { Capacitor } = await import('@capacitor/core')
+  if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
+    console.log('[Register] iOS detected - waiting 2s for Firestore to be ready...')
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    console.log('[Register] iOS wait complete, Firestore should be ready')
   }
 
   // Fetch available projects on mount
