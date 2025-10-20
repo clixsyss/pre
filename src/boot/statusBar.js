@@ -43,7 +43,7 @@ export default async () => {
         try {
           await SplashScreen.hide()
           console.log('⚠️ Native splash hidden via fallback timeout')
-        } catch (e) {
+        } catch {
           // Ignore if already hidden
         }
       }, 5000)
