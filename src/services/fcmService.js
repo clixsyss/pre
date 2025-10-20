@@ -360,8 +360,8 @@ class FCMService {
         {
           label: userLang === 'ar' ? 'عرض' : 'View',
           color: 'white',
-          handler: () => {
-            this.handleNotificationAction(data);
+          handler: async () => {
+            await this.handleNotificationAction(data);
           }
         },
         {
@@ -384,23 +384,78 @@ class FCMService {
   /**
    * Handle notification tap
    */
-  handleNotificationTap(event) {
+  async handleNotificationTap(event) {
     console.log('FCMService: Handling notification tap:', event);
     
     // Extract data
     const data = event.notification?.data || {};
     
-    this.handleNotificationAction(data);
+    await this.handleNotificationAction(data);
+  }
+
+  /**
+   * Wait for authentication state to be ready
+   * This is critical when app opens from a notification tap
+   */
+  async waitForAuthenticationState() {
+    const maxWaitTime = 5000; // 5 seconds max wait
+    const checkInterval = 100; // Check every 100ms
+    let elapsed = 0;
+    
+    console.log('FCMService: Waiting for authentication state before navigation...');
+    
+    while (elapsed < maxWaitTime) {
+      try {
+        let currentUser = null;
+        
+        if (this.isNative) {
+          // Use Capacitor Firebase Authentication on native
+          const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+          const { user } = await FirebaseAuthentication.getCurrentUser();
+          currentUser = user;
+        } else {
+          // Use Web SDK
+          currentUser = auth.currentUser;
+        }
+        
+        if (currentUser && currentUser.uid) {
+          console.log('FCMService: Authentication state ready, user:', currentUser.uid);
+          return true;
+        }
+      } catch (error) {
+        console.warn('FCMService: Error checking auth state:', error);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      elapsed += checkInterval;
+    }
+    
+    console.warn('FCMService: Authentication state not ready after timeout');
+    return false;
   }
 
   /**
    * Handle notification action (routing/navigation)
    */
-  handleNotificationAction(data) {
+  async handleNotificationAction(data) {
     console.log('FCMService: Handling notification action:', data);
+    
+    // CRITICAL: Wait for authentication state to be ready before navigating
+    // This prevents the "logout" issue when opening app from notification
+    const isAuthReady = await this.waitForAuthenticationState();
+    
+    if (!isAuthReady) {
+      console.error('FCMService: Authentication not ready, cannot navigate from notification');
+      // Still allow navigation, router guards will handle redirect if needed
+    }
+    
+    // Small additional delay to ensure everything is initialized
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Import router dynamically to avoid circular dependencies
     import('src/router').then(({ default: router }) => {
+      console.log('FCMService: Router loaded, navigating to:', data.type);
+      
       // Handle different notification types
       switch (data.type) {
         case 'booking':
@@ -417,6 +472,7 @@ class FCMService {
           }
           break;
         case 'announcement':
+        case 'alert':
           router.push('/notifications');
           break;
         case 'promo':
@@ -426,6 +482,8 @@ class FCMService {
         default:
           router.push('/notifications');
       }
+    }).catch(error => {
+      console.error('FCMService: Error loading router:', error);
     });
   }
 
