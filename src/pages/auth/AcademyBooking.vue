@@ -215,8 +215,17 @@
             <span class="value">{{ selectedProgram.price }} EGP</span>
           </div>
         </div>
-        <button class="confirm-enrollment-btn" @click="confirmEnrollment">
-          Confirm Enrollment
+        <button 
+          class="confirm-enrollment-btn" 
+          :class="{ loading: isSubmitting }"
+          :disabled="isSubmitting"
+          @click="confirmEnrollment"
+        >
+          <span v-if="!isSubmitting">Confirm Enrollment</span>
+          <span v-else class="btn-loading">
+            <div class="btn-spinner"></div>
+            Enrolling...
+          </span>
         </button>
       </div>
     </div>
@@ -251,6 +260,7 @@ useFormKeyboard({
 // Reactive data
 const selectedAcademy = ref(null);
 const selectedProgram = ref(null);
+const isSubmitting = ref(false);
 const participantData = ref({
   fullName: '',
   email: '',
@@ -297,11 +307,18 @@ const formatDuration = (program) => {
 };
 
 const confirmEnrollment = async () => {
+  if (isSubmitting.value) {
+    console.log('⏳ Enrollment already in progress, ignoring click');
+    return;
+  }
+
   try {
     if (!canConfirmBooking.value) {
       notificationStore.showWarning('Please complete all required fields before confirming enrollment');
       return;
     }
+
+    isSubmitting.value = true;
 
     const enrollmentData = {
       userId: 'current-user-id', // This should come from auth store
@@ -319,11 +336,19 @@ const confirmEnrollment = async () => {
     
     if (result.success) {
       notificationStore.showSuccess('Enrollment confirmed successfully!');
+      
+      // Wait a bit for user to see the success message
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       router.push('/my-bookings');
+    } else {
+      notificationStore.showError('Failed to confirm enrollment. Please try again.');
     }
   } catch (error) {
-    console.error('Error confirming enrollment:', error);
+    console.error('❌ Error confirming enrollment:', error);
     notificationStore.showError('Failed to confirm enrollment. Please try again.');
+  } finally {
+    isSubmitting.value = false;
   }
 };
 
@@ -758,6 +783,41 @@ onMounted(async () => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.confirm-enrollment-btn:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.confirm-enrollment-btn.loading {
+  pointer-events: none;
+}
+
+.btn-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin-enrollment 1s linear infinite;
+}
+
+@keyframes spin-enrollment {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Mobile app - hover effects disabled */

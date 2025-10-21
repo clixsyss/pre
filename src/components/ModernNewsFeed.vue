@@ -233,12 +233,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { getDownloadURL, ref as storageRef } from 'firebase/storage'
 import { storage, isNative } from '../boot/firebase'
 import NewsComments from './NewsComments.vue'
+import { useModalState } from '../composables/useModalState'
 
 // Component name for ESLint
 defineOptions({
@@ -267,6 +268,7 @@ const emit = defineEmits(['newsCountUpdate', 'goBack'])
 
 const router = useRouter()
 const projectStore = useProjectStore()
+const { openModal, closeModal } = useModalState()
 const loading = ref(false)
 const newsItems = ref([])
 const activeTab = ref('all')
@@ -515,78 +517,38 @@ const openNewsDetail = (item) => {
   selectedNewsItem.value = item
   showNewsModal.value = true
   
+  // Use the modal state composable to properly manage navbar visibility
+  openModal()
+  
   console.log('📰 Modal state updated:', { 
     showNewsModal: showNewsModal.value, 
     hasItem: !!selectedNewsItem.value,
     itemTitle: selectedNewsItem.value?.title 
   })
-  
-  // Use nextTick to ensure DOM is updated
-  setTimeout(() => {
-    const overlay = document.querySelector('.modal-overlay')
-    const container = document.querySelector('.modal-content')
-    const header = document.querySelector('.modal-header')
-    const body = document.querySelector('.modal-body')
-    
-    console.log('📰 DOM elements:', {
-      overlay: !!overlay,
-      container: !!container,
-      header: !!header,
-      body: !!body
-    })
-    
-    if (container) {
-      const computedStyle = window.getComputedStyle(container)
-      console.log('📰 Modal content computed styles:', {
-        background: computedStyle.background,
-        backgroundColor: computedStyle.backgroundColor,
-        display: computedStyle.display,
-        opacity: computedStyle.opacity,
-        visibility: computedStyle.visibility,
-        zIndex: computedStyle.zIndex,
-        width: computedStyle.width,
-        height: computedStyle.height,
-        maxHeight: computedStyle.maxHeight
-      })
-    }
-  }, 100)
-  
-  // Simple overflow hidden
-  document.body.style.overflow = 'hidden'
-  
-  // Hide app header and navigation using display none (not visibility hidden)
-  const header = document.querySelector('.app-header')
-  const bottomNav = document.querySelector('.bottom-navigation')
-  const qHeader = document.querySelector('.q-header')
-  const qFooter = document.querySelector('.q-footer')
-  const qDrawer = document.querySelector('.q-drawer')
-  
-  if (header) header.style.display = 'none'
-  if (bottomNav) bottomNav.style.display = 'none'
-  if (qHeader) qHeader.style.display = 'none'
-  if (qFooter) qFooter.style.display = 'none'
-  if (qDrawer) qDrawer.style.display = 'none'
 }
 
 const closeNewsModal = () => {
   showNewsModal.value = false
   selectedNewsItem.value = null
   
-  // Restore body overflow
-  document.body.style.overflow = ''
+  // Use the modal state composable to properly restore navbar visibility
+  closeModal()
   
-  // Restore app header and navigation visibility
-  const header = document.querySelector('.app-header')
-  const bottomNav = document.querySelector('.bottom-navigation')
-  const qHeader = document.querySelector('.q-header')
-  const qFooter = document.querySelector('.q-footer')
-  const qDrawer = document.querySelector('.q-drawer')
-  
-  if (header) header.style.display = ''
-  if (bottomNav) bottomNav.style.display = ''
-  if (qHeader) qHeader.style.display = ''
-  if (qFooter) qFooter.style.display = ''
-  if (qDrawer) qDrawer.style.display = ''
+  // Use nextTick to ensure modal state is updated before restoring any manual styles
+  nextTick(() => {
+    // Remove any manual style overrides to let CSS take control
+    const header = document.querySelector('.app-header')
+    const bottomNav = document.querySelector('.bottom-navigation')
+    const qHeader = document.querySelector('.q-header')
+    const qFooter = document.querySelector('.q-footer')
+    const qDrawer = document.querySelector('.q-drawer')
+    
+    if (header) header.style.display = ''
+    if (bottomNav) bottomNav.style.display = ''
+    if (qHeader) qHeader.style.display = ''
+    if (qFooter) qFooter.style.display = ''
+    if (qDrawer) qDrawer.style.display = ''
+  })
 }
 
 const navigateToAllNews = () => {

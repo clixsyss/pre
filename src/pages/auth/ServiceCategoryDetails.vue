@@ -600,18 +600,19 @@ const confirmBooking = async () => {
     // Wait a bit for user to see the success message
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    // Close dialog
+    // Close dialog and reset loading state
     closeBookingDialog()
-
-    // Refresh service bookings in the background
-    const user = await optimizedAuthService.getCurrentUser()
-    if (user) {
-      serviceBookingStore
-        .fetchUserBookings(projectStore.selectedProject.id, user.uid, true)
-        .catch((err) => {
-          console.error('Error refreshing bookings:', err)
-        })
-    }
+    
+    // Refresh service bookings in the background (don't await to prevent blocking)
+    optimizedAuthService.getCurrentUser()
+      .then((user) => {
+        if (user) {
+          return serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid, true)
+        }
+      })
+      .catch((err) => {
+        console.error('Error refreshing bookings:', err)
+      })
   } catch (error) {
     console.error('❌ Error creating service booking:', error)
     console.error('❌ Error details:', {

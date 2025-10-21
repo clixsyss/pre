@@ -1,8 +1,14 @@
 // app global css in SCSS form
 
-/* Prevent white screen flash on app startup */
+/* Prevent white screen flash on app startup - keep black during splash */
 html, body, #q-app {
-  background-color: #231F20 !important;
+  background-color: #000 !important;
+  transition: background-color 0.5s ease;
+}
+
+/* After app loads, allow background color changes */
+body.app-loaded {
+  background-color: var(--background-color) !important;
 }
 
 /* Disable text selection and double-tap zoom */

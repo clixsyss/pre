@@ -1,12 +1,12 @@
 <template>
-  <div>
+  <div id="app-root">
     <SplashScreen />
     
     <!-- Network Status Banner - Shows when offline or slow connection -->
     <NetworkStatusBanner />
     
     <!-- Show MainLayout only for authenticated pages -->
-    <MainLayout v-if="isAuthenticatedPage && !isRouterLoading">
+    <MainLayout v-if="isAuthenticatedPage && !isRouterLoading" class="main-layout">
       <router-view />
     </MainLayout>
     
@@ -29,6 +29,7 @@ import NotificationPopup from './components/NotificationPopup.vue'
 import NetworkStatusBanner from './components/NetworkStatusBanner.vue'
 import MainLayout from './layouts/MainLayout.vue'
 import { useNetworkStatus } from './composables/useNetworkStatus'
+import { useSplashStore } from './stores/splash'
 
 // Component name for ESLint
 defineOptions({
@@ -37,6 +38,7 @@ defineOptions({
 
 const route = useRoute()
 const isRouterLoading = ref(true)
+const splashStore = useSplashStore()
 
 // Initialize network monitoring
 const { initNetworkMonitoring, stopNetworkMonitoring } = useNetworkStatus()
@@ -71,6 +73,11 @@ try {
 onMounted(async () => {
   try {
     console.log('🚀 App.vue: Starting app initialization...')
+    
+    // Show splash screen and set loading state
+    splashStore.showSplash()
+    splashStore.setLoading(true)
+    splashStore.setLoadingMessage('Loading...')
     
     // Initialize network monitoring first
     console.log('🌐 App.vue: Initializing network monitoring...')
@@ -125,27 +132,46 @@ onMounted(async () => {
     
     console.log('🚀 App.vue: Services initialization completed')
     
-    // Wait a bit more to ensure everything is properly initialized
+    // Wait for smooth initialization
     await new Promise(resolve => setTimeout(resolve, 500))
     
-    // Hide splash screen and show app content
+    // Show app content
     console.log('🔍 App.vue: Setting isRouterLoading to false...')
     isRouterLoading.value = false
     
-    // Emit app ready event for splash screen
-    window.dispatchEvent(new CustomEvent('appReady'))
-    console.log('🚀 App.vue: App ready, splash hidden')
+    // Wait for Vue to render the content
+    await nextTick()
+    
+    // Wait additional time for the DOM to paint
+    // This prevents white screen flash on iOS
+    await new Promise(resolve => setTimeout(resolve, 800))
+    
+    console.log('🔍 App.vue: Checking if content is rendered...')
+    const mainContent = document.querySelector('.main-layout, .auth-layout')
+    if (mainContent) {
+      console.log('✅ App.vue: Main content found in DOM')
+    } else {
+      console.warn('⚠️ App.vue: Main content not yet rendered, waiting...')
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    
+    // Notify splash store that app is initialized
+    // The splash will hide when both video AND app are ready
+    console.log('🚀 App.vue: Notifying splash that app is initialized')
+    splashStore.setAppInitialized()
     
   } catch (error) {
     console.error('❌ App.vue: Critical error during initialization:', error)
     console.error('❌ Error stack:', error.stack)
     
-    // Hide splash even if there's an error, but with a delay
+    // Hide splash even if there's an error
     setTimeout(() => {
       console.log('🔍 App.vue: Force hiding splash due to critical error...')
       isRouterLoading.value = false
-      window.dispatchEvent(new CustomEvent('appReady'))
-    }, 1000)
+      // Force both flags to hide splash immediately on error
+      splashStore.setVideoCompleted()
+      splashStore.setAppInitialized()
+    }, 2000)
   }
 })
 
@@ -256,14 +282,37 @@ const isAuthenticatedPage = computed(() => {
 </script>
 
 <style>
+/* App root - prevent white background flash */
+#app-root {
+  min-height: 100vh;
+  background-color: #000;
+  transition: background-color 0.3s ease;
+}
+
 /* Clean layout for authentication pages */
 .auth-layout {
   min-height: 100vh;
   background-color: #F6F6F6;
 }
 
+/* Main layout */
+.main-layout {
+  min-height: 100vh;
+}
+
 /* Override dark background for auth pages only after app loads */
 body:has(.auth-layout) {
+  background-color: #F6F6F6 !important;
+}
+
+/* Keep body black during app load to prevent white flash */
+body {
+  background-color: #000 !important;
+  transition: background-color 0.3s ease;
+}
+
+/* Update body background after main layout is visible */
+body:has(.main-layout) {
   background-color: #F6F6F6 !important;
 }
 </style>

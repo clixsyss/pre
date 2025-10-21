@@ -6,190 +6,265 @@
     />
 
     <!-- Loading State -->
-    <div v-if="loading" class="loading-state">
+    <div v-if="loading && sportsOptions.length === 0" class="loading-container">
       <div class="loading-spinner"></div>
       <p>{{ $t('loadingAvailableCourts') }}</p>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="error-state">
-      <div class="error-icon">⚠️</div>
+    <div v-else-if="error" class="error-container">
       <p>{{ error }}</p>
       <button @click="retryFetch" class="retry-btn">{{ $t('tryAgain') }}</button>
     </div>
 
     <!-- No Project Selected -->
-    <div v-else-if="!projectId" class="no-project-state">
-      <div class="no-project-icon">🏗️</div>
+    <div v-else-if="!projectId" class="no-services">
+      <div class="no-services-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <h3>{{ $t('noProjectSelected') }}</h3>
       <p>{{ $t('selectProjectToBookCourts') }}</p>
-      <button @click="$router.push('/project-selection')" class="select-project-btn">
-        {{ $t('switchProject') }}
-      </button>
     </div>
 
     <!-- No Sports Available -->
-    <div v-else-if="sportsOptions.length === 0" class="no-sports-state">
-      <div class="no-sports-icon">🏟️</div>
+    <div v-else-if="sportsOptions.length === 0" class="no-services">
+      <div class="no-services-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
       <h3>{{ $t('noSportsAvailable') }}</h3>
-      <p>{{ $t('noSportsMessage') }}</p>
       <p>{{ $t('contactAdminForCourts') }}</p>
-      
-      <!-- Debug button for development -->
-      <button @click="debugSportsData" class="debug-btn" v-if="projectId">
-        {{ $t('debugSportsData') }}
-      </button>
     </div>
 
-    <!-- Booking Content -->
-    <div v-else class="booking-content">
-      <!-- Sport Selection -->
-      <div class="booking-section">
-        <h2 class="section-title">{{ $t('selectSport') }}</h2>
-        <p class="section-subtitle">{{ $t('chooseSportDesc') }}</p>
-        <div class="sport-options">
-          <div 
-            v-for="sport in sportsOptions" 
-            :key="sport"
-            class="sport-option"
-            :class="{ active: selectedSport === sport }"
-            @click="selectSport(sport)"
-          >
-            <div class="sport-info">
-              <span class="sport-name">{{ sport }}</span>
-              <span class="court-count">{{ sportsStore.getCourtsForSport(sport).length }} court(s)</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Court Selection -->
-      <div v-if="selectedSport" class="booking-section">
-        <h2 class="section-title">Select Court</h2>
-        <p class="section-subtitle">Available courts for {{ selectedSport }}</p>
-        <div class="court-options">
-          <div 
-            v-for="court in availableCourts" 
-            :key="court.id"
-            class="court-option"
-            :class="{ active: selectedCourt?.id === court.id }"
-            @click="selectCourt(court)"
-          >
-            <!-- Court Image -->
-            <div class="court-image" v-if="court.imageUrl">
-              <img :src="court.imageUrl" :alt="court.name" />
-            </div>
-            <div class="court-image-placeholder" v-else>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 16L8.586 11.414C9.367 10.633 10.633 10.633 11.414 11.414L16 16M14 14L15.586 12.414C16.367 11.633 17.633 11.633 18.414 12.414L20 14M14 8H14.01M6 20H18C19.105 20 20 19.105 20 18V6C20 4.895 19.105 4 18 4H6C4.895 4 4 4.895 4 6V18C4 19.105 4.895 20 6 20Z" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Booking Dialog (Main Content) -->
+    <div v-else class="booking-dialog">
+      <div class="dialog-content">
+        <!-- Court Info Card (appears when court is selected) -->
+        <div v-if="selectedCourt" class="service-info-card">
+          <div class="service-header">
+            <div class="service-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            
-            <div class="court-info">
-              <h3>{{ court.name }}</h3>
-              <p class="court-location">{{ court.location }}</p>
-              <p class="court-details">
-                <span class="court-type">{{ court.type }}</span>
-                <span class="court-surface">{{ formatSurface(court.surface) }}</span>
-                <span class="court-capacity">{{ court.capacity }} people</span>
-              </p>
+            <div class="service-details">
+              <h4 class="service-name">{{ selectedCourt.name }}</h4>
+              <p class="service-description">{{ selectedCourt.location }} • {{ selectedSport }}</p>
             </div>
-            <div class="court-pricing">
-              <span class="price">{{ court.hourlyRate }} EGP/hour</span>
-              <span class="status-badge available">Available</span>
+            <div class="service-price-badge">
+              <span class="price-amount">{{ selectedCourt.hourlyRate }} EGP/hr</span>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Date Selection -->
-      <div v-if="selectedCourt" class="booking-section">
-        <h2 class="section-title">Select Date</h2>
-        <p class="section-subtitle">Choose from the next 7 days</p>
-        <div class="date-options">
-          <div 
-            v-for="dayObj in availableDays" 
-            :key="dayObj.date.toISOString()"
-            class="date-option"
-            :class="{ 
-              active: selectedDay?.toDateString() === dayObj.date.toDateString(),
-              disabled: !dayObj.enabled
-            }"
-            @click="dayObj.enabled ? selectDay(dayObj.date) : null"
+        <!-- Booking Steps -->
+        <div class="booking-steps">
+          <!-- Step 1: Sport Selection -->
+          <div class="booking-step" :class="{ active: !selectedSport, completed: selectedSport }">
+            <div class="step-indicator">
+              <div class="step-number">1</div>
+              <div class="step-line"></div>
+            </div>
+            <div class="step-content">
+              <h4 class="step-title">Select Sport</h4>
+              <p class="step-subtitle">Choose the sport you want to play</p>
+              <div class="dropdown-container">
+                <select
+                  v-model="selectedSport"
+                  @change="onSportChange"
+                  class="modern-dropdown"
+                >
+                  <option value="" disabled>Choose a sport...</option>
+                  <option
+                    v-for="sport in sportsOptions"
+                    :key="sport"
+                    :value="sport"
+                  >
+                    {{ sport }} ({{ sportsStore.getCourtsForSport(sport).length }} court{{ sportsStore.getCourtsForSport(sport).length > 1 ? 's' : '' }})
+                  </option>
+                </select>
+                <div class="dropdown-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Court Selection -->
+          <div v-if="selectedSport" class="booking-step" :class="{ active: selectedSport && !selectedCourt, completed: selectedCourt }">
+            <div class="step-indicator">
+              <div class="step-number">2</div>
+              <div class="step-line"></div>
+            </div>
+            <div class="step-content">
+              <h4 class="step-title">Select Court</h4>
+              <p class="step-subtitle">Choose from available courts</p>
+              <div class="dropdown-container">
+                <select
+                  v-model="selectedCourtId"
+                  @change="onCourtChange"
+                  class="modern-dropdown"
+                >
+                  <option value="" disabled>Choose a court...</option>
+                  <option
+                    v-for="court in availableCourts"
+                    :key="court.id"
+                    :value="court.id"
+                  >
+                    {{ court.name }} - {{ court.hourlyRate }} EGP/hr ({{ court.location }})
+                  </option>
+                </select>
+                <div class="dropdown-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Date Selection -->
+          <div v-if="selectedCourt" class="booking-step" :class="{ active: selectedCourt && !selectedDay, completed: selectedDay }">
+            <div class="step-indicator">
+              <div class="step-number">3</div>
+              <div class="step-line"></div>
+            </div>
+            <div class="step-content">
+              <h4 class="step-title">Select Date</h4>
+              <p class="step-subtitle">Choose your preferred date</p>
+              <div class="dropdown-container">
+                <select
+                  v-model="selectedDayStr"
+                  @change="onDateChange"
+                  class="modern-dropdown"
+                >
+                  <option value="" disabled>Choose a date...</option>
+                  <option
+                    v-for="dayObj in availableDays"
+                    :key="dayObj.date.toISOString()"
+                    :value="dayObj.date.toISOString()"
+                    :disabled="!dayObj.enabled"
+                  >
+                    {{ formatDateForDropdown(dayObj.date) }} {{ !dayObj.enabled ? '(Closed)' : '' }}
+                  </option>
+                </select>
+                <div class="dropdown-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4: Time Slots Selection -->
+          <div v-if="selectedDay" class="booking-step" :class="{ active: selectedDay && selectedSlots.length === 0, completed: selectedSlots.length > 0 }">
+            <div class="step-indicator">
+              <div class="step-number">4</div>
+              <div class="step-line"></div>
+            </div>
+            <div class="step-content">
+              <h4 class="step-title">Select Time Slots</h4>
+              <p class="step-subtitle">Pick one or more time slots</p>
+              
+              <!-- Loading State -->
+              <div v-if="loadingTimeSlots" class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Loading available time slots...</p>
+              </div>
+
+              <!-- No Time Slots -->
+              <div v-else-if="availableTimeSlots.length === 0" class="no-slots-state">
+                <div class="no-slots-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
+                    <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                </div>
+                <p>No time slots available for this date</p>
+              </div>
+
+              <!-- Time Slots Grid -->
+              <div v-else class="time-slots-grid">
+                <div
+                  v-for="slot in availableTimeSlots"
+                  :key="slot.time"
+                  class="time-slot-chip"
+                  :class="{ 
+                    selected: selectedSlots.includes(slot.time),
+                    reserved: slot.isReserved 
+                  }"
+                  @click="!slot.isReserved && toggleSlotSelection(slot.time)"
+                >
+                  {{ slot.time }}
+                  <span v-if="slot.isReserved" class="reserved-badge">Booked</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Booking Summary -->
+        <div v-if="selectedSlots.length > 0" class="booking-summary">
+          <div class="summary-header">
+            <h4>Booking Summary</h4>
+          </div>
+          <div class="summary-content">
+            <div class="summary-item">
+              <span class="summary-label">Sport:</span>
+              <span class="summary-value">{{ selectedSport }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Court:</span>
+              <span class="summary-value">{{ selectedCourt?.name }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Date:</span>
+              <span class="summary-value">{{ formatSelectedDate(selectedDay) }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Time Slots:</span>
+              <span class="summary-value">{{ selectedSlots.join(', ') }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Duration:</span>
+              <span class="summary-value">{{ selectedSlots.length }} hour(s)</span>
+            </div>
+            <div class="summary-item total">
+              <span class="summary-label">Total:</span>
+              <span class="summary-value">EGP {{ totalPrice }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="booking-actions">
+          <button @click="resetBooking" class="cancel-btn">Reset</button>
+          <button
+            @click="confirmBooking"
+            :disabled="!selectedSport || !selectedCourt || !selectedDay || selectedSlots.length === 0 || isSubmitting"
+            class="book-btn"
+            :class="{ loading: isSubmitting }"
           >
-            <div class="date-day">{{ formatDate(dayObj.date).split(' ')[0] }}</div>
-            <div class="date-number">{{ formatDate(dayObj.date).split(' ')[1] }}</div>
-            <div class="date-month">{{ formatDate(dayObj.date).split(' ')[2] }}</div>
-            <div v-if="!dayObj.enabled" class="closed-badge">Closed</div>
-          </div>
+            <span v-if="!isSubmitting" class="btn-content">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Confirm Booking
+            </span>
+            <span v-else class="btn-content">
+              <div class="btn-spinner"></div>
+              Booking...
+            </span>
+          </button>
         </div>
-      </div>
-
-      <!-- Time Selection -->
-      <div v-if="selectedDay && selectedCourt" class="booking-section">
-        <h2 class="section-title">Select Time Slots</h2>
-        <p class="section-subtitle">Available time slots for {{ formatDate(selectedDay) }}</p>
-        
-        <!-- Loading State -->
-        <div v-if="loading" class="time-slots-loading">
-          <div class="loading-spinner"></div>
-          <span>Loading available slots...</span>
-        </div>
-        
-        <!-- Time Slots Grid -->
-        <div v-else class="time-options">
-          <div 
-            v-for="slot in availableTimeSlots" 
-            :key="slot.time"
-            class="time-slot"
-            :class="{ 
-              active: selectedSlots.includes(slot.time),
-              reserved: slot.isReserved 
-            }"
-            @click="toggleSlotSelection(slot.time)"
-            :style="{ pointerEvents: slot.isReserved ? 'none' : 'auto' }"
-          >
-            {{ slot.time }}
-            <span v-if="slot.isReserved" class="reserved-label">Booked</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Booking Summary -->
-      <div v-if="selectedSlots.length > 0" class="booking-summary">
-        <div class="summary-header">
-          <h2>Booking Summary</h2>
-        </div>
-        <div class="summary-content">
-          <div class="summary-item">
-            <span class="label">Sport:</span>
-            <span class="value">{{ selectedSport }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="label">Court:</span>
-            <span class="value">{{ selectedCourt?.name }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="label">Date:</span>
-            <span class="value">{{ selectedDay ? formatDate(selectedDay) : '' }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="label">Time:</span>
-            <span class="value">{{ selectedSlots.join(', ') }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="label">Duration:</span>
-            <span class="value">{{ selectedSlots.length }} hour(s)</span>
-          </div>
-          <div class="summary-item total">
-            <span class="label">Total Price:</span>
-            <span class="value">{{ totalPrice }} EGP</span>
-          </div>
-        </div>
-        <button class="confirm-booking-btn" @click="confirmBooking" :disabled="isSubmitting">
-          <span v-if="isSubmitting">Processing...</span>
-          <span v-else>Confirm Booking</span>
-        </button>
       </div>
     </div>
   </div>
@@ -218,11 +293,14 @@ const notificationStore = useNotificationStore();
 const academiesStore = useAcademiesStore();
 
 // Reactive data
-const selectedSport = ref(null);
+const selectedSport = ref('');
 const selectedCourt = ref(null);
+const selectedCourtId = ref('');
 const selectedDay = ref(null);
+const selectedDayStr = ref('');
 const selectedSlots = ref([]);
 const loading = ref(false);
+const loadingTimeSlots = ref(false);
 const error = ref(null);
 const isSubmitting = ref(false);
 const timeSlotsData = ref([]);
@@ -256,7 +334,7 @@ const availableDays = computed(() => {
 
 const availableTimeSlots = computed(() => {
   if (!selectedDay.value || !selectedCourt.value || !projectId.value) return [];
-  return timeSlotsData.value.length > 0 ? timeSlotsData.value : bookingService.generateTimeSlots();
+  return timeSlotsData.value.length > 0 ? timeSlotsData.value : [];
 });
 
 const totalPrice = computed(() => {
@@ -273,31 +351,44 @@ const availableCourts = computed(() => {
 });
 
 // Methods
-const selectSport = (sport) => {
+const onSportChange = (event) => {
+  const sport = event.target.value;
   console.log('🏀 Sport selected:', sport);
   selectedSport.value = sport;
   selectedCourt.value = null;
+  selectedCourtId.value = '';
   selectedDay.value = null;
-  selectedSlots.value = [];
-  // Force reactivity by triggering a re-fetch if needed
-  console.log('Available courts after sport selection:', availableCourts.value);
-};
-
-const selectCourt = (court) => {
-  selectedCourt.value = court;
-  selectedDay.value = null;
+  selectedDayStr.value = '';
   selectedSlots.value = [];
   timeSlotsData.value = [];
 };
 
-const selectDay = async (day) => {
+const onCourtChange = (event) => {
+  const courtId = event.target.value;
+  console.log('🏟️ Court selected:', courtId);
+  const court = availableCourts.value.find(c => c.id === courtId);
+  selectedCourt.value = court;
+  selectedCourtId.value = courtId;
+  selectedDay.value = null;
+  selectedDayStr.value = '';
+  selectedSlots.value = [];
+  timeSlotsData.value = [];
+};
+
+const onDateChange = async (event) => {
+  const dateStr = event.target.value;
+  if (!dateStr) return;
+  
+  const day = new Date(dateStr);
+  console.log('📅 Date selected:', day);
   selectedDay.value = day;
+  selectedDayStr.value = dateStr;
   selectedSlots.value = [];
   
   // Fetch available time slots for the selected court and date
   if (selectedCourt.value && projectId.value) {
     try {
-      loading.value = true;
+      loadingTimeSlots.value = true;
       
       // OPTIMIZED: Pass court data directly to avoid re-fetching
       const slots = await bookingService.getAvailableTimeSlotsOptimized(
@@ -311,9 +402,9 @@ const selectDay = async (day) => {
     } catch (error) {
       console.error('Error fetching available time slots:', error);
       // Fallback to basic time slots if there's an error
-      timeSlotsData.value = bookingService.generateTimeSlots();
+      timeSlotsData.value = [];
     } finally {
-      loading.value = false;
+      loadingTimeSlots.value = false;
     }
   }
 };
@@ -327,13 +418,33 @@ const toggleSlotSelection = (time) => {
   }
 };
 
-const formatDate = (date) => {
-  return bookingService.formatDate(date);
+const formatDateForDropdown = (date) => {
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
 };
 
-const formatSurface = (surface) => {
-  if (!surface) return 'Unknown';
-  return surface.charAt(0).toUpperCase() + surface.slice(1).replace(/([A-Z])/g, ' $1');
+const formatSelectedDate = (date) => {
+  if (!date) return '';
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
+const resetBooking = () => {
+  selectedSport.value = '';
+  selectedCourt.value = null;
+  selectedCourtId.value = '';
+  selectedDay.value = null;
+  selectedDayStr.value = '';
+  selectedSlots.value = [];
+  timeSlotsData.value = [];
 };
 
 const retryFetch = async () => {
@@ -377,32 +488,34 @@ const confirmBooking = async () => {
     };
 
     console.log('Creating booking with data:', bookingData);
-    console.log('User ID:', user.uid);
-    console.log('Project ID:', projectId.value);
 
     const result = await bookingService.createCourtBooking(projectId.value, bookingData);
     
     console.log('🔍 Court booking result:', result);
     
     if (result.success && result.bookingId) {
-      notificationStore.showSuccess(`Booking request submitted! Awaiting admin confirmation. Booking ID: ${result.bookingId}`);
+      notificationStore.showSuccess(`Booking request submitted! Awaiting admin confirmation.`);
       
       // Wait a bit to ensure Firestore has committed the write
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Refresh the academy store to show the new booking
-      await academiesStore.fetchUserBookings(user.uid, projectId.value);
+      // Refresh the academy store in the background (don't await to prevent blocking)
+      academiesStore.fetchUserBookings(user.uid, projectId.value)
+        .catch((err) => {
+          console.error('Error refreshing bookings:', err);
+        });
       
       // Show success for 2 more seconds before redirecting
-      setTimeout(() => {
-        router.push('/my-bookings');
-      }, 2000);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Navigate to bookings page
+      router.push('/my-bookings');
     } else {
       console.error('❌ Court booking failed:', result);
       notificationStore.showError('Failed to create booking. Please try again.');
     }
   } catch (error) {
-    console.error('Error confirming booking:', error);
+    console.error('❌ Error confirming booking:', error);
     notificationStore.showError(`Failed to confirm booking: ${error.message || 'Please try again.'}`);
   } finally {
     isSubmitting.value = false;
@@ -427,31 +540,11 @@ const fetchSports = async () => {
   }
 };
 
-const debugSportsData = () => {
-  console.log('=== COURT BOOKING DEBUG ===');
-  console.log('Current Sports Options:', sportsStore.sportsOptions);
-  console.log('Current Project ID:', projectId.value);
-  console.log('Current Selected Sport:', selectedSport.value);
-  console.log('Current Selected Court:', selectedCourt.value);
-  console.log('Current Selected Day:', selectedDay.value);
-  console.log('Current Selected Slots:', selectedSlots.value);
-  
-  // Also call the store's debug method
-  sportsStore.debugSportsData();
-  
-  // Try to fetch sports again
-  console.log('Attempting to fetch sports again...');
-  fetchSports();
-};
-
 // Watch for project changes
 watch(projectId, (newProjectId) => {
   if (newProjectId) {
     // Clear previous selections when project changes
-    selectedSport.value = null;
-    selectedCourt.value = null;
-    selectedDay.value = null;
-    selectedSlots.value = [];
+    resetBooking();
     
     // Fetch sports for the new project
     fetchSports();
@@ -473,388 +566,434 @@ onMounted(async () => {
 
 <style scoped>
 .court-booking-page {
-  padding: 20px 0;
-  max-width: 800px;
-  margin: 0 auto;
+  padding: 0;
+  background: #fafafa;
+  min-height: 100%;
 }
 
-/* Page header styles moved to PageHeader component */
-
-.booking-content {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
-
-.booking-section {
-  background: white;
-  border: 1px solid #e1e5e9;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.section-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 20px 0;
-}
-
-.section-subtitle {
-  font-size: 0.9rem;
-  color: #666;
-  margin: 0 0 16px 0;
-}
-
-.sport-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 16px;
-}
-
-.sport-option {
-  background: #f8f9fa;
-  border: 2px solid #e1e5e9;
-  border-radius: 12px;
-  padding: 16px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: 500;
-  color: #666;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Mobile app - hover effects disabled */
-/* .sport-option:hover {
-  border-color: #AF1E23;
-  background: #fff5f2;
-} */
-
-.sport-option.active {
-  background: #fff5f2;
-  border-color: #AF1E23;
-  color: white;
-}
-
-.sport-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.sport-name {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.court-count {
-  font-size: 0.8rem;
-  color: #666;
-  margin-top: 4px;
-}
-
-.court-options {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-}
-
-.court-option {
-  background: #f8f9fa;
-  border: 2px solid #e1e5e9;
-  border-radius: 12px;
-  padding: 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-}
-
-/* Mobile app - hover effects disabled */
-/* .court-option:hover {
-  border-color: #AF1E23;
-  background: #fff5f2;
-} */
-
-.court-option.active {
-  background: #fff5f2;
-  border-color: #AF1E23;
-  color: #AF1E23;
-}
-
-.court-image {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.court-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.court-image-placeholder {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
-  background: #f3f4f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.court-info h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0 0 4px 0;
-}
-
-.court-info p {
-  margin: 0;
-  font-size: 0.9rem;
-  opacity: 0.8;
-}
-
-.court-location {
-  font-size: 0.8rem;
-  color: #666;
-  margin-bottom: 4px;
-}
-
-.court-details {
-  font-size: 0.8rem;
-  color: #666;
-  margin-top: 4px;
-}
-
-.court-type {
-  font-weight: 500;
-}
-
-.court-surface {
-  margin-left: 8px;
-}
-
-.court-capacity {
-  margin-left: 8px;
-}
-
-.court-pricing {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.price {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #AF1E23;
-}
-
-.status-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.status-badge.available {
-  background: #d4edda;
-  color: #155724;
-}
-
-.date-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  gap: 16px;
-}
-
-.date-option {
-  background: #f8f9fa;
-  border: 2px solid #e1e5e9;
-  border-radius: 12px;
-  padding: 16px 12px 24px 12px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  min-height: 100px;
-}
-
-/* Mobile app - hover effects disabled */
-/* .date-option:hover {
-  border-color: #AF1E23;
-  background: #fff5f2;
-} */
-
-.date-option.active {
-  background: #AF1E23;
-  border-color: #AF1E23;
-  color: white;
-}
-
-.date-option.disabled {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-  opacity: 0.6;
-  cursor: not-allowed;
-  position: relative;
-}
-
-/* Mobile app - hover effects disabled */
-/* .date-option.disabled:hover {
-  border-color: #d1d5db;
-  background: #f3f4f6;
-} */
-
-.date-option.disabled .date-day,
-.date-option.disabled .date-number,
-.date-option.disabled .date-month {
-  color: #9ca3af;
-}
-
-.closed-badge {
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #ef4444;
-  color: white;
-  font-size: 0.65rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.date-day {
-  font-size: 0.75rem;
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.date-number {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin-bottom: 2px;
-}
-
-.date-month {
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.time-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  gap: 12px;
-}
-
-.time-slot {
-  background: #f8f9fa;
-  border: 2px solid #e1e5e9;
-  border-radius: 8px;
-  padding: 12px 8px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: 500;
-  color: #666;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-/* Mobile app - hover effects disabled */
-/* .time-slot:hover:not(.reserved) {
-  border-color: #AF1E23;
-  background: #fff5f2;
-} */
-
-.time-slot.active {
-  background: #AF1E23;
-  border-color: #AF1E23;
-  color: white;
-}
-
-.time-slot.reserved {
-  background: #f8f9fa;
-  border-color: #dee2e6;
-  color: #6c757d;
-  cursor: not-allowed;
-  opacity: 0.5;
-  position: relative;
-  text-decoration: line-through;
-}
-
-.reserved-label {
-  font-size: 0.7rem;
-  color: #6c757d;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.time-slots-loading {
+/* Loading and Error States */
+.loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  gap: 16px;
-  color: #666;
+  text-align: center;
 }
 
 .loading-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #AF1E23;
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #af1e23;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  margin-bottom: 16px;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
-.booking-summary {
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+.retry-btn {
+  background: #af1e23;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* No Services State */
+.no-services {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  margin: 0 16px;
+  text-align: center;
   background: white;
-  border: 2px solid #AF1E23;
   border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.summary-header h2 {
+.no-services-icon {
+  color: #d1d5db;
+  margin-bottom: 20px;
+}
+
+.no-services h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #333;
-  margin: 0 0 20px 0;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.no-services p {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Booking Dialog */
+.booking-dialog {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.dialog-content {
+  padding: 20px;
+}
+
+/* Service Info Card */
+.service-info-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.service-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.service-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #af1e23 0%, #dc2626 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.service-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.service-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+}
+
+.service-description {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.service-price-badge {
+  background: linear-gradient(135deg, #af1e23 0%, #dc2626 100%);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1.125rem;
+  box-shadow: 0 4px 8px rgba(175, 30, 35, 0.3);
+}
+
+/* Booking Steps */
+.booking-steps {
+  margin-bottom: 32px;
+}
+
+.booking-step {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 32px;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.booking-step.active {
+  opacity: 1;
+}
+
+.booking-step.completed {
+  opacity: 1;
+}
+
+.step-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.booking-step.active .step-number {
+  background: linear-gradient(135deg, #af1e23 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
+  transform: scale(1.1);
+}
+
+.booking-step.completed .step-number {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.booking-step.completed .step-number::after {
+  content: '✓';
+  font-size: 1.2rem;
+}
+
+.step-line {
+  width: 2px;
+  height: 60px;
+  background: #e2e8f0;
+  margin-top: 8px;
+  transition: all 0.3s ease;
+}
+
+.booking-step.completed .step-line {
+  background: linear-gradient(180deg, #10b981 0%, #e2e8f0 100%);
+}
+
+.step-content {
+  flex: 1;
+  padding-top: 8px;
+}
+
+.step-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+}
+
+.step-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0 0 16px 0;
+}
+
+/* Modern Dropdown */
+.dropdown-container {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.modern-dropdown {
+  width: 100%;
+  padding: 16px 48px 16px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: white;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.modern-dropdown:focus {
+  outline: none;
+  border-color: #af1e23;
+  box-shadow:
+    0 0 0 3px rgba(175, 30, 35, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.modern-dropdown:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+  border-color: #e2e8f0;
+}
+
+.modern-dropdown option {
+  padding: 12px 16px;
+  font-size: 0.875rem;
+}
+
+.modern-dropdown option:disabled {
+  color: #94a3b8;
+  background: #f8fafc;
+}
+
+.dropdown-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.dropdown-container:focus-within .dropdown-icon {
+  color: #af1e23;
+  transform: translateY(-50%) rotate(180deg);
+}
+
+/* Time Slots Grid */
+.time-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.time-slot-chip {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
   text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  color: #1e293b;
+  position: relative;
+}
+
+.time-slot-chip:active {
+  transform: scale(0.95);
+}
+
+.time-slot-chip.selected {
+  background: linear-gradient(135deg, #af1e23 0%, #dc2626 100%);
+  border-color: #af1e23;
+  color: white;
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
+}
+
+.time-slot-chip.reserved {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #94a3b8;
+  cursor: not-allowed;
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.reserved-badge {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* Loading and No Slots States */
+.loading-state,
+.no-slots-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-top: 16px;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e2e8f0;
+  border-top: 3px solid #af1e23;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+.no-slots-icon {
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+
+.loading-state p,
+.no-slots-state p {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Booking Summary */
+.booking-summary {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.summary-header h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #0c4a6e;
+  margin: 0 0 16px 0;
 }
 
 .summary-content {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-bottom: 24px;
 }
 
 .summary-item {
@@ -862,7 +1001,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #bae6fd;
 }
 
 .summary-item:last-child {
@@ -870,206 +1009,181 @@ onMounted(async () => {
 }
 
 .summary-item.total {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1.125rem;
-  color: #AF1E23;
-  border-top: 2px solid #f0f0f0;
-  padding-top: 16px;
-  margin-top: 8px;
+  color: #0c4a6e;
+  padding-top: 12px;
+  border-top: 2px solid #bae6fd;
+  border-bottom: none;
 }
 
-.label {
-  color: #666;
+.summary-label {
+  font-size: 0.875rem;
+  color: #0369a1;
   font-weight: 500;
 }
 
-.value {
-  color: #333;
+.summary-value {
+  font-size: 0.875rem;
+  color: #0c4a6e;
   font-weight: 600;
 }
 
-.confirm-booking-btn {
-  width: 100%;
-  background: #AF1E23;
+/* Action Buttons */
+.booking-actions {
+  display: flex;
+  gap: 16px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.cancel-btn {
+  flex: 1;
+  background: #f8fafc;
+  color: #64748b;
+  border: 2px solid #e2e8f0;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  touch-action: manipulation;
+}
+
+.cancel-btn:active {
+  transform: scale(0.98);
+  background: #f1f5f9;
+}
+
+.book-btn {
+  flex: 2;
+  background: linear-gradient(135deg, #af1e23 0%, #dc2626 100%);
   color: white;
   border: none;
+  padding: 16px 24px;
   border-radius: 12px;
-  padding: 16px;
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  touch-action: manipulation;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
 }
 
-/* Mobile app - hover effects disabled */
-/* .confirm-booking-btn:hover {
-  background: #AF1E23;
-  transform: translateY(-1px);
-} */
+.book-btn:active:not(:disabled) {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.4);
+}
 
-.confirm-booking-btn:disabled {
-  background: #ccc;
+.book-btn:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
   cursor: not-allowed;
-  color: #888;
+  transform: none;
+  box-shadow: none;
 }
 
-.loading-state, .error-state, .no-sports-state {
-  text-align: center;
-  padding: 40px 20px;
-  background: #f8f9fa;
-  border-radius: 16px;
-  border: 1px solid #e1e5e9;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+.book-btn.loading {
+  pointer-events: none;
 }
 
-.loading-spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #AF1E23;
+.btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
   animation: spin 1s linear infinite;
-  margin: 0 auto 16px;
 }
-
-.error-icon {
-  font-size: 4rem;
-  color: #dc3545;
-  margin-bottom: 16px;
-}
-
-.retry-btn {
-  background: #AF1E23;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  padding: 12px 24px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-/* Mobile app - hover effects disabled */
-/* .retry-btn:hover {
-  background: #AF1E23;
-} */
-
-.no-sports-icon {
-  font-size: 4rem;
-  color: #AF1E23;
-  margin-bottom: 16px;
-}
-
-.no-project-state, .no-sports-state {
-  text-align: center;
-  padding: 40px 20px;
-  background: #f8f9fa;
-  border-radius: 16px;
-  border: 1px solid #e1e5e9;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.no-project-icon, .no-sports-icon {
-  font-size: 4rem;
-  color: #AF1E23;
-  margin-bottom: 16px;
-}
-
-.no-project-state h3, .no-sports-state h3 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #333;
-  margin-bottom: 8px;
-}
-
-.no-project-state p, .no-sports-state p {
-  font-size: 1rem;
-  color: #666;
-  margin-bottom: 12px;
-}
-
-.select-project-btn {
-  background: #AF1E23;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  padding: 12px 24px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: 16px;
-}
-
-/* Mobile app - hover effects disabled */
-/* .select-project-btn:hover {
-  background: #AF1E23;
-  transform: translateY(-2px);
-} */
-
-.debug-btn {
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  padding: 12px 24px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: 16px;
-}
-
-/* Mobile app - hover effects disabled */
-/* .debug-btn:hover {
-  background: #0056b3;
-  transform: translateY(-2px);
-} */
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .court-booking-page {
-    padding: 16px 0;
+  .booking-dialog {
+    border-radius: 12px;
+    margin: 0 16px;
   }
-  
-  .booking-section {
+
+  .dialog-content {
+    padding: 16px;
+  }
+
+  .service-info-card {
     padding: 20px;
+    margin-bottom: 24px;
   }
-  
-  .sport-options {
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+
+  .service-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
-  
-  .date-options {
-    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+
+  .service-price-badge {
+    align-self: flex-end;
   }
-  
-  .time-options {
-    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+
+  .booking-steps {
+    margin-bottom: 24px;
+  }
+
+  .booking-step {
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .step-number {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+  }
+
+  .step-line {
+    height: 50px;
+  }
+
+  .time-slots-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  }
+
+  .booking-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .cancel-btn,
+  .book-btn {
+    flex: none;
+    width: 100%;
   }
 }
 
 @media (max-width: 480px) {
-  /* Page header responsive styles moved to PageHeader component */
-  
-  .booking-section {
+  .booking-dialog {
+    margin: 0 8px;
+  }
+
+  .dialog-content {
+    padding: 12px;
+  }
+
+  .service-info-card {
     padding: 16px;
   }
-  
-  .sport-options {
-    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  }
-  
-  .court-option {
-    flex-direction: column;
-    gap: 12px;
-    text-align: center;
-  }
-}
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  .booking-summary {
+    padding: 16px;
+  }
 }
 </style>

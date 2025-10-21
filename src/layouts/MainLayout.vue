@@ -175,10 +175,7 @@
     <nav class="bottom-navigation" :class="{ 'hidden': shouldHideBottomNav, 'hide-for-modal': showProjectSwitcher }">
       <router-link to="/home" class="nav-item" :class="{ active: isActiveTab('home') }">
         <div class="nav-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <img src="../assets/ic_round-home.svg" alt="Home" width="24" height="24" />
         </div>
         <span class="nav-label">Home</span>
       </router-link>
@@ -186,21 +183,14 @@
 
       <router-link to="/services" class="nav-item" :class="{ active: isActiveTab('services') }">
         <div class="nav-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <img src="../assets/Services.svg" alt="Services" width="24" height="24" />
         </div>
         <span class="nav-label">Services</span>
       </router-link>
 
       <router-link to="/facilities" class="nav-item" :class="{ active: isActiveTab('facilities') }">
         <div class="nav-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <img src="../assets/request.svg" alt="Requests" width="24" height="24" />
         </div>
         <span class="nav-label">Requests</span>
       </router-link>
@@ -208,10 +198,7 @@
 
       <router-link to="/profile" class="nav-item" :class="{ active: isActiveTab('profile') }">
         <div class="nav-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <img src="../assets/profile.svg" alt="Profile" width="24" height="24" />
         </div>
         <span class="nav-label">Profile</span>
       </router-link>
@@ -366,6 +353,9 @@ const violationCount = ref(0)
 const showQuickMenu = ref(false)
 const showLogoHint = ref(false)
 const hasSeenLogoHint = ref(false)
+
+// Track if violation notification has been shown in this session
+const hasShownViolationInSession = ref(false)
 
 // Suspension state
 const showSuspensionMessage = ref(false)
@@ -537,9 +527,16 @@ const initializeNotificationCenter = async () => {
 }
 
 // Violation notification methods
-const checkForViolations = async () => {
-  console.log('🔍 checkForViolations called')
+const checkForViolations = async (forceShow = false) => {
+  console.log('🔍 checkForViolations called, forceShow:', forceShow)
   console.log('🔍 Current project:', currentProject.value)
+  console.log('🔍 Has shown in session:', hasShownViolationInSession.value)
+  
+  // Skip if already shown in this session and not forced
+  if (hasShownViolationInSession.value && !forceShow) {
+    console.log('⏭️ Violation notification already shown in this session, skipping')
+    return
+  }
   
   try {
     const currentUser = await optimizedAuthService.getCurrentUser()
@@ -561,6 +558,7 @@ const checkForViolations = async () => {
       console.log('⚠️ Active violations found:', result.violationCount)
       violationCount.value = result.violationCount
       showViolationNotification.value = true
+      hasShownViolationInSession.value = true
       
       // Mark violations as shown to prevent repeated notifications in same session
       const violationIds = result.violations.map(v => v.id)
@@ -628,6 +626,7 @@ const resetViolationNotifications = () => {
   clearOldNotificationHistory()
   showViolationNotification.value = false
   violationCount.value = 0
+  hasShownViolationInSession.value = false
 }
 
 // Method to determine which tab should be active
@@ -723,19 +722,15 @@ watch(
         }
       }, 800) // Shorter delay for better perceived performance
       
-      // Check for violations with a small delay to ensure everything is loaded
-      setTimeout(async () => {
-        try {
-          await checkForViolations()
-        } catch (error) {
-          console.error('❌ Error checking violations after project change:', error)
-        }
-      }, 800) // Small delay to ensure project data is loaded
+      // Violation check removed - only show once on initial app load on home page
       
       // Emit a custom event that child components can listen to
       window.dispatchEvent(new CustomEvent('projectChanged', {
         detail: { newProject, oldProject }
       }))
+      
+      // Emit app ready event for splash screen
+      window.dispatchEvent(new CustomEvent('appReady'))
       
       // Check user suspension status when switching projects
       setTimeout(() => {
@@ -746,24 +741,12 @@ watch(
   { deep: true }
 )
 
-// Watch for route changes to detect chat pages and check violations
+// Watch for route changes to detect chat pages
 watch(
   () => route.path,
-  (newPath) => {
+  () => {
     checkIfChatPage()
-    
-    // Check for violations when navigating to main app pages (not on every page to avoid spam)
-    const mainPages = ['/home', '/profile']
-    if (mainPages.includes(newPath) && projectStore.hasSelectedProject) {
-      console.log('📍 Navigated to main page, checking violations...')
-      setTimeout(async () => {
-        try {
-          await checkForViolations()
-        } catch (error) {
-          console.error('❌ Error checking violations on navigation:', error)
-        }
-      }, 500)
-    }
+    // Violation check removed - only show once on app load, not on every navigation
   },
   { immediate: true }
 )
@@ -878,11 +861,12 @@ onMounted(async () => {
     }, 1000) // Start after 1 second
   }
   
-  // Check for violations with a delay to avoid blocking UI
+  // Check for violations once when app first loads (will only show once due to session flag)
   if (projectStore.hasSelectedProject) {
     setTimeout(async () => {
       try {
         await checkForViolations()
+        console.log('✅ Initial violation check completed')
       } catch (error) {
         console.error('❌ Error in checkForViolations during mount:', error)
         // Don't block the UI if violation check fails
@@ -894,6 +878,11 @@ onMounted(async () => {
   setTimeout(() => {
     checkUserSuspensionStatus()
   }, 1500) // Check after violations check
+  
+  // Emit app ready event after initial load
+  setTimeout(() => {
+    window.dispatchEvent(new CustomEvent('appReady'))
+  }, 2000) // Give time for app to fully initialize
   
   window.addEventListener('showSuspensionMessage', handleSuspensionMessage)
   
@@ -1457,6 +1446,14 @@ onUnmounted(() => {
   margin-bottom: -18px;
 }
 
+.nav-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: brightness(0) invert(1); /* Makes the icons white */
+  transition: all 0.3s ease;
+}
+
 .nav-item.active .nav-icon {
   background-color: #AF1E23;
   color: #F6F6F6;
@@ -1466,18 +1463,18 @@ onUnmounted(() => {
   height: 64px;
 }
 
-.nav-item.active .nav-icon svg {
-  stroke: white;
-  stroke-width: 2;
+.nav-item.active .nav-icon img {
+  filter: brightness(0) invert(1); /* Keep icons white when active */
+  width: 28px;
+  height: 28px;
 }
 
 .nav-item:not(.active) .nav-icon {
   background: none;
 }
 
-.nav-item:not(.active) .nav-icon svg {
-  stroke: white;
-  stroke-width: 2;
+.nav-item:not(.active) .nav-icon img {
+  filter: brightness(0) invert(1); /* Keep icons white when inactive */
 }
 
 .nav-item .nav-label {
