@@ -12,7 +12,7 @@ export default defineConfig((ctx) => {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
-    boot: ['i18n', 'axios', 'firebase', 'smartMirrorFirebase', 'projectStore', 'fcm', 'statusBar'],
+    boot: ['i18n', 'axios', 'firebase', 'smartMirrorFirebase', 'projectStore', 'fcm'],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
     css: ['app.scss'],
@@ -54,7 +54,24 @@ export default defineConfig((ctx) => {
       // polyfillModulePreload: true,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      extendViteConf(viteConf) {
+        // Configure Vite to handle Capacitor modules properly
+        if (ctx.modeName === 'spa') {
+          // Use stub modules for Capacitor in web builds
+          viteConf.resolve.alias = {
+            ...viteConf.resolve.alias,
+            '@capacitor/core': fileURLToPath(
+              new URL('./src/stubs/capacitor-core.js', import.meta.url),
+            ),
+            '@capacitor/status-bar': fileURLToPath(
+              new URL('./src/stubs/capacitor-status-bar.js', import.meta.url),
+            ),
+            '@capacitor/splash-screen': fileURLToPath(
+              new URL('./src/stubs/capacitor-splash-screen.js', import.meta.url),
+            ),
+          }
+        }
+      },
       // viteVuePluginOptions: {},
 
       vitePlugins: [
