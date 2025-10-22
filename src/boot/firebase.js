@@ -1,6 +1,6 @@
 import { defineBoot } from '#q-app/wrappers'
 import { initializeApp } from 'firebase/app'
-import { initializeAuth, browserLocalPersistence, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth'
+import { initializeAuth, getAuth, browserLocalPersistence, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 import { getFunctions } from 'firebase/functions'
@@ -82,10 +82,18 @@ console.log('Firebase Boot: Firebase app initialized successfully ✅')
 // Initialize Firebase services - same for all platforms
 console.log('Firebase Boot: Initializing Firebase services...')
 
-// Initialize auth with persistence (like orange-app)
-const auth = initializeAuth(app, {
-  persistence: browserLocalPersistence
-})
+// Initialize auth with persistence - handle already initialized case
+let auth
+try {
+  auth = initializeAuth(app, {
+    persistence: browserLocalPersistence
+  })
+  console.log('Firebase Boot: Auth initialized with persistence')
+} catch (initError) {
+  // If already initialized, just get the existing instance
+  console.log('Firebase Boot: Auth already initialized, using existing instance:', initError.message)
+  auth = getAuth(app)
+}
 
 const db = getFirestore(app)
 const storage = getStorage(app)
@@ -109,7 +117,10 @@ if (auth.currentUser) {
 // Set up listener for future auth state changes
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    console.log('Firebase Boot: PRE user logged in, syncing with Smart Mirror service:', user.uid)
+    console.log('🔐 Firebase Boot: PRE user logged in:', user.uid)
+    console.log('🔐 User email:', user.email)
+    console.log('🔐 Auth instance:', auth ? 'Valid' : 'Invalid')
+    console.log('🔐 Current user accessible:', auth.currentUser ? 'Yes' : 'No')
     smartMirrorService.setPreUserId(user.uid)
   } else {
     console.log('Firebase Boot: PRE user logged out, clearing Smart Mirror service')
@@ -118,6 +129,18 @@ onAuthStateChanged(auth, (user) => {
 })
 
 export default defineBoot(async ({ app }) => {
+  // Verify auth is properly initialized
+  if (!auth) {
+    console.error('🚨 CRITICAL: Auth is not initialized!')
+    throw new Error('Firebase Auth failed to initialize')
+  }
+  
+  console.log('🔐 Firebase Boot: Auth verification:', {
+    authExists: !!auth,
+    currentUser: auth.currentUser?.uid || 'none',
+    authApp: auth.app?.name
+  })
+  
   // Make Firebase services available globally
   app.config.globalProperties.$firebase = app
   app.config.globalProperties.$auth = auth

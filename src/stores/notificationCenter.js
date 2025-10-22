@@ -8,10 +8,11 @@ import {
   onSnapshot,
   doc,
   setDoc,
+  getDocs,
   writeBatch,
   Timestamp
 } from 'firebase/firestore'
-import { db } from '../boot/firebase'
+import { db, detectPlatformFromUrl } from '../boot/firebase'
 
 export const useNotificationCenterStore = defineStore('notificationCenter', () => {
   // State
@@ -20,6 +21,7 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   const isLoading = ref(false)
   const unsubscribe = ref(null)
   const isModalOpen = ref(false)
+  const readStatusMap = ref(new Map()) // Store read status for persistence
 
   // Computed
   const unreadNotifications = computed(() => 
@@ -110,83 +112,32 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
       
       console.log('NotificationCenter: Query created, setting up listener...')
 
-      // For iOS, use a simpler approach - just fetch once instead of real-time listener
-      // The real-time listener doesn't work properly with Capacitor Firebase on iOS
-      const { Capacitor } = await import('@capacitor/core')
-      const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+      // Use Web SDK for all platforms - simpler and more reliable
+      // Fetch read status once, then use real-time listener
+      console.log('NotificationCenter: Using Web SDK with real-time listener (all platforms)')
       
-      if (isIOS) {
-        console.log('NotificationCenter: iOS detected - using Capacitor Firebase instead of listener')
-        
-        // Use Capacitor Firebase Firestore for iOS
-        const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
-        
-        try {
-          // Fetch using Capacitor plugin - fetch all notifications and filter client-side
-          // The compositeFilter format is complex and unreliable, so we fetch all recent ones
-          console.log('NotificationCenter: Fetching notifications via Capacitor Firebase...')
+      // First, fetch user's read status from subcollection
+      console.log('NotificationCenter: Fetching read status for user:', userId)
+      const readStatusRef = collection(db, `users/${userId}/notificationReadStatus`)
+      const readStatusSnapshot = await getDocs(readStatusRef).catch(err => {
+        console.log('NotificationCenter: Error fetching read status, assuming all unread:', err)
+        return { docs: [] }
+      })
+      
+      // Store in reactive ref for updates
+      readStatusMap.value = new Map()
+      readStatusSnapshot.docs.forEach(doc => {
+        readStatusMap.value.set(doc.id, doc.data())
+      })
+      console.log('NotificationCenter: Fetched read status for', readStatusMap.value.size, 'notifications')
+      
+      // Now set up listener
+      unsubscribe.value = onSnapshot(q, 
+        (snapshot) => {
+          console.log('NotificationCenter: Snapshot received!', { size: snapshot.size, empty: snapshot.empty })
           
-          const getDocsPromise = FirebaseFirestore.getCollection({
-            reference: `projects/${projectId}/notifications`
-          })
-          
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Notification fetch timeout')), 10000)
-          )
-          
-          const result = await Promise.race([getDocsPromise, timeoutPromise])
-          const allSnapshots = result.snapshots || []
-          
-          console.log('NotificationCenter: Raw snapshots received:', allSnapshots.length)
-          
-          // Log first notification to see structure
-          if (allSnapshots.length > 0) {
-            console.log('NotificationCenter: First notification sample:', {
-              id: allSnapshots[0].id,
-              hasData: !!allSnapshots[0].data,
-              hasCreatedAt: !!allSnapshots[0].data?.createdAt,
-              createdAtValue: allSnapshots[0].data?.createdAt,
-              createdAtType: typeof allSnapshots[0].data?.createdAt,
-              allFields: Object.keys(allSnapshots[0].data || {})
-            })
-          }
-          
-          // Filter by date client-side (last 30 days)
-          const oneMonthAgoMs = oneMonthAgoTimestamp.toMillis()
-          const snapshots = allSnapshots.filter(snap => {
-            const createdAt = snap.data?.createdAt
-            
-            // If no createdAt field, include it (dashboard notifications may not have this)
-            if (!createdAt) {
-              console.log('NotificationCenter: No createdAt field, including notification:', snap.id)
-              return true
-            }
-            
-            // Handle different timestamp formats
-            let timestampMs
-            if (typeof createdAt === 'number') {
-              timestampMs = createdAt
-            } else if (createdAt.seconds) {
-              timestampMs = createdAt.seconds * 1000
-            } else if (createdAt.toMillis) {
-              timestampMs = createdAt.toMillis()
-            } else {
-              console.log('NotificationCenter: Unknown timestamp format, including notification:', snap.id, createdAt)
-              return true // Include if we can't determine age
-            }
-            
-            const isRecent = timestampMs >= oneMonthAgoMs
-            if (!isRecent) {
-              console.log('NotificationCenter: Notification too old:', snap.id, new Date(timestampMs).toISOString())
-            }
-            return isRecent
-          })
-          
-          console.log('NotificationCenter: After date filter:', snapshots.length, 'of', allSnapshots.length)
-          
-          console.log('NotificationCenter: Snapshot received (iOS)!', { size: snapshots.length, empty: snapshots.length === 0 })
-          
-          if (snapshots.length === 0) {
+          // If empty, set loading to false immediately
+          if (snapshot.empty) {
             notifications.value = []
             unreadCount.value = 0
             isLoading.value = false
@@ -194,29 +145,12 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
             return
           }
           
-          // Fetch user's read status for all notifications
-          console.log('NotificationCenter: Fetching read status for user:', userId)
-          const readStatusResult = await FirebaseFirestore.getCollection({
-            reference: `users/${userId}/notificationReadStatus`
-          }).catch(err => {
-            console.log('NotificationCenter: Error fetching read status, assuming all unread:', err)
-            return { snapshots: [] }
-          })
-          
-          const readStatusMap = new Map()
-          if (readStatusResult?.snapshots) {
-            readStatusResult.snapshots.forEach(snap => {
-              readStatusMap.set(snap.id, snap.data)
-            })
-            console.log('NotificationCenter: Fetched read status for', readStatusMap.size, 'notifications')
-          }
-          
           const notificationsList = []
           let unreadCounter = 0
 
-          snapshots.forEach((doc) => {
-            const data = doc.data
-            const readStatus = readStatusMap.get(doc.id)
+          snapshot.forEach((doc) => {
+            const data = doc.data()
+            const readStatus = readStatusMap.value.get(doc.id)
             const isRead = readStatus?.read || false
             
             // Filter notifications based on audience targeting
@@ -244,91 +178,10 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
               notificationsList.push({
                 id: doc.id,
                 ...data,
-                read: isRead
+                read: isRead // Use read status from user subcollection
               })
               
               if (!isRead) {
-                unreadCounter++
-              }
-            }
-          })
-
-          // Sort notifications by newest first (if they have createdAt)
-          notificationsList.sort((a, b) => {
-            const aTime = a.createdAt || a.scheduledAt || 0
-            const bTime = b.createdAt || b.scheduledAt || 0
-            
-            // Convert to milliseconds if needed
-            const aMs = typeof aTime === 'number' ? aTime : (aTime.seconds ? aTime.seconds * 1000 : 0)
-            const bMs = typeof bTime === 'number' ? bTime : (bTime.seconds ? bTime.seconds * 1000 : 0)
-            
-            return bMs - aMs // Newest first
-          })
-
-          notifications.value = notificationsList
-          unreadCount.value = unreadCounter
-          isLoading.value = false
-
-          console.log(`NotificationCenter: ✅ Loaded ${notificationsList.length} notifications (${snapshots.length} total, filtered by audience), ${unreadCounter} unread`)
-        } catch (error) {
-          console.error('NotificationCenter: ❌ getDocs error:', error)
-          notifications.value = []
-          unreadCount.value = 0
-          isLoading.value = false
-        }
-        
-        return
-      }
-
-      // For web, use real-time listener
-      console.log('NotificationCenter: Web detected - using real-time listener')
-      unsubscribe.value = onSnapshot(q, 
-        (snapshot) => {
-          console.log('NotificationCenter: Snapshot received!', { size: snapshot.size, empty: snapshot.empty })
-          
-          // If empty, set loading to false immediately
-          if (snapshot.empty) {
-            notifications.value = []
-            unreadCount.value = 0
-            isLoading.value = false
-            console.log('NotificationCenter: No notifications found (empty collection)')
-            return
-          }
-          
-          const notificationsList = []
-          let unreadCounter = 0
-
-          snapshot.forEach((doc) => {
-            const data = doc.data()
-            
-            // Filter notifications based on audience targeting
-            let isForCurrentUser = false
-            
-            // Check if this is a dashboard notification (has audience field)
-            if (data.audience) {
-              // Check if sent to all users
-              if (data.audience.all) {
-                isForCurrentUser = true
-              }
-              // Check if sent to specific users
-              else if (data.audience.uids && Array.isArray(data.audience.uids)) {
-                isForCurrentUser = data.audience.uids.includes(userId)
-              }
-            }
-            // Check if this is an in-app notification (has userId field)
-            else if (data.userId === userId) {
-              isForCurrentUser = true
-            }
-            
-            // Only include notifications meant for this user
-            if (isForCurrentUser) {
-              console.log('NotificationCenter: Processing notification:', { id: doc.id, read: data.read, title: data.title_en || data.title })
-              notificationsList.push({
-                id: doc.id,
-                ...data
-              })
-              
-              if (!data.read) {
                 unreadCounter++
               }
             }
@@ -371,6 +224,8 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         return
       }
       
+      console.log(`NotificationCenter: Marking notification ${notificationId} as read for user ${userId}`)
+      
       // Check if iOS to use Capacitor Firebase
       const { Capacitor } = await import('@capacitor/core')
       const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
@@ -378,35 +233,58 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
       if (isIOS) {
         // Use Capacitor Firebase for iOS - store read status in user subcollection
         const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
-        await FirebaseFirestore.setDocument({
-          reference: `users/${userId}/notificationReadStatus/${notificationId}`,
-          data: {
-            read: true,
-            readAt: Date.now()
-          },
-          merge: false
-        })
         
-        console.log(`NotificationCenter: ✅ Marked notification ${notificationId} as read in user collection`)
+        try {
+          await FirebaseFirestore.setDocument({
+            reference: `users/${userId}/notificationReadStatus/${notificationId}`,
+            data: {
+              read: true,
+              readAt: Date.now()
+            },
+            merge: true // Changed to true to properly merge/create document
+          })
+          
+          console.log(`NotificationCenter: ✅ iOS - Notification ${notificationId} marked as read (verified)`)
+        } catch (iosError) {
+          console.error('NotificationCenter: ❌ iOS - Failed to mark as read:', iosError)
+          throw iosError
+        }
       } else {
         // Use Web SDK for web - store read status in user subcollection
         const readStatusRef = doc(db, `users/${userId}/notificationReadStatus`, notificationId)
-        await setDoc(readStatusRef, {
-          read: true,
-          readAt: Timestamp.now()
-        })
         
-        console.log(`NotificationCenter: ✅ Marked notification ${notificationId} as read in user collection`)
+        try {
+          await setDoc(readStatusRef, {
+            read: true,
+            readAt: Timestamp.now()
+          }, { merge: true }) // Explicitly set merge option
+          
+          console.log(`NotificationCenter: ✅ Web - Notification ${notificationId} marked as read (verified)`)
+        } catch (webError) {
+          console.error('NotificationCenter: ❌ Web - Failed to mark as read:', webError)
+          throw webError
+        }
       }
       
-      // Update local state
+      // Update read status map so listener uses correct status
+      readStatusMap.value.set(notificationId, { read: true, readAt: Date.now() })
+      
+      // Update local state only after successful database write
       const notif = notifications.value.find(n => n.id === notificationId)
       if (notif) {
         notif.read = true
         unreadCount.value = Math.max(0, unreadCount.value - 1)
+        console.log(`NotificationCenter: Local state updated - ${unreadCount.value} unread remaining`)
       }
     } catch (error) {
-      console.error('NotificationCenter: Error marking notification as read:', { code: error?.code, errorMessage: error?.message })
+      console.error('NotificationCenter: ❌ Error marking notification as read:', { 
+        notificationId,
+        code: error?.code, 
+        message: error?.message,
+        stack: error?.stack
+      })
+      // Re-throw to let caller know it failed
+      throw error
     }
   }
 
@@ -428,13 +306,17 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         return
       }
 
-      // Check if iOS to use Capacitor Firebase
-      const { Capacitor } = await import('@capacitor/core')
-      const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+      // Check if iOS to use Capacitor Firebase (use reliable platform detection)
+      const platformInfo = detectPlatformFromUrl()
+      const isIOS = platformInfo.platform === 'ios' && platformInfo.isNative
+      
+      console.log('NotificationCenter: Mark all as read - Platform:', platformInfo)
       
       if (isIOS) {
         // Use Capacitor Firebase for iOS - create read status for each notification
         const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
+        
+        console.log(`NotificationCenter: iOS - Marking ${unreadNotifs.length} notifications as read...`)
         
         await Promise.all(unreadNotifs.map(notification =>
           FirebaseFirestore.setDocument({
@@ -443,11 +325,16 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
               read: true,
               readAt: Date.now()
             },
-            merge: false
+            merge: true // Changed to true for consistency
           })
         ))
         
         console.log(`NotificationCenter: ✅ Marked ${unreadNotifs.length} notifications as read in user collection`)
+        
+        // Update read status map
+        unreadNotifs.forEach(notification => {
+          readStatusMap.value.set(notification.id, { read: true, readAt: Date.now() })
+        })
       } else {
         // Use Web SDK batch for web - create read status for all notifications
         const batch = writeBatch(db)
@@ -463,6 +350,11 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         await batch.commit()
         
         console.log(`NotificationCenter: ✅ Marked ${unreadNotifs.length} notifications as read in user collection`)
+        
+        // Update read status map
+        unreadNotifs.forEach(notification => {
+          readStatusMap.value.set(notification.id, { read: true, readAt: Date.now() })
+        })
       }
       
       // Update local state

@@ -863,16 +863,49 @@ class FirestoreService {
           return emptyResult
         }
       } else {
-        // Web SDK - use regular collection query
-        const { getDocs, collection } = await import('firebase/firestore')
-        const collectionRef = collection(this.db, collectionPath)
-        const result = await getDocs(collectionRef)
+        // Web SDK - use regular collection query with filters
+        const { getDocs, collection, query, where, orderBy: firestoreOrderBy, limit: firestoreLimit } = await import('firebase/firestore')
+        let q = collection(this.db, collectionPath)
+        
+        // Build query with filters
+        const constraints = []
+        
+        if (queryOptions.filters && Array.isArray(queryOptions.filters)) {
+          console.log('FirestoreService (Web SDK): Applying filters:', queryOptions.filters)
+          queryOptions.filters.forEach(filter => {
+            constraints.push(where(filter.field, filter.operator, filter.value))
+          })
+        }
+        
+        if (queryOptions.orderBy) {
+          if (Array.isArray(queryOptions.orderBy)) {
+            queryOptions.orderBy.forEach(order => {
+              constraints.push(firestoreOrderBy(order.field, order.direction || 'asc'))
+            })
+          } else {
+            constraints.push(firestoreOrderBy(queryOptions.orderBy.field, queryOptions.orderBy.direction || 'asc'))
+          }
+        }
+        
+        if (queryOptions.limit) {
+          constraints.push(firestoreLimit(queryOptions.limit))
+        }
+        
+        // Create query with constraints
+        if (constraints.length > 0) {
+          q = query(q, ...constraints)
+          console.log('FirestoreService (Web SDK): Query created with', constraints.length, 'constraints')
+        }
+        
+        const result = await getDocs(q)
 
         const collectionData = {
           docs: result.docs,
           empty: result.empty,
           size: result.size,
         }
+        
+        console.log('FirestoreService (Web SDK): Retrieved', collectionData.size, 'documents')
 
         // Cache the result
         cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache

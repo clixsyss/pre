@@ -190,8 +190,14 @@ const handleNotificationClick = async (notification) => {
   
   // Mark as read
   if (!notification.read && userId) {
-    console.log('NotificationCenter: Marking notification as read:', notification.id)
-    await notificationStore.markAsRead(notification.id, userId)
+    try {
+      console.log('NotificationCenter: Marking notification as read:', notification.id)
+      await notificationStore.markAsRead(notification.id, userId)
+      console.log('NotificationCenter: Successfully marked as read')
+    } catch (error) {
+      console.error('NotificationCenter: Failed to mark notification as read:', error)
+      // Still show the notification even if marking as read fails
+    }
   }
 
   // Show details modal instead of navigating
