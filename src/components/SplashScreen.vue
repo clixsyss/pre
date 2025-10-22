@@ -23,8 +23,8 @@
       <!-- Always show overlay on iOS or if video has issues -->
       <div class="video-overlay" :class="{ 'overlay-visible': showOverlay }">
         <div class="loading-content">
-          <!-- Logo -->
-          <div class="logo-container">
+          <!-- Logo - only show if video hasn't completed -->
+          <div class="logo-container" v-if="!videoCompleted">
             <img 
               src="../assets/logo.png" 
               alt="PRE GROUP Logo" 
@@ -55,6 +55,7 @@ const splashVideo = ref(null)
 const showOverlay = ref(false)
 const videoPaused = ref(false)
 const videoLoaded = ref(false)
+const videoCompleted = ref(false)
 
 const isIOS = Capacitor.getPlatform() === 'ios'
 
@@ -78,8 +79,9 @@ const onVideoLoaded = () => {
 
 const onVideoError = (error) => {
   console.error('📹 Video error:', error)
-  // Show overlay immediately on error
+  // Show overlay immediately on error (with logo since video didn't complete)
   showOverlay.value = true
+  videoCompleted.value = false // Keep logo visible on error
   splashStore.setVideoCompleted()
 }
 
@@ -96,9 +98,12 @@ const onVideoEnded = () => {
     console.log(`📹 Video paused at ${video.currentTime.toFixed(2)}s of ${video.duration.toFixed(2)}s`)
   }
   
-  // Show overlay after video ends
+  // Mark video as completed (this will hide the logo)
+  videoCompleted.value = true
+  
+  // Show overlay after video ends (only loading spinner, no logo)
   showOverlay.value = true
-  console.log('🎭 Overlay displayed with loading state')
+  console.log('🎭 Overlay displayed with loading state (no logo)')
   
   // Notify the splash store that video is completed
   splashStore.setVideoCompleted()
@@ -205,7 +210,7 @@ onMounted(() => {
 }
 
 .video-overlay.overlay-visible {
-  background: rgba(35, 31, 32, 0.85); /* Semi-transparent overlay */
+  background: rgba(35, 31, 32, 0.3); /* Light overlay - video still visible */
   opacity: 1;
   animation: overlayFadeIn 0.5s ease-out;
   pointer-events: auto;
