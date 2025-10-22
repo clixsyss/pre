@@ -334,24 +334,13 @@ const handleSignIn = async () => {
   try {
     console.log('[SignIn] Starting sign in...')
 
-    // Use Web SDK for authentication (works on all platforms reliably)
-    console.log('[SignIn] Using Web SDK for authentication...')
+    // Use optimized auth service (works on all platforms)
+    console.log('[SignIn] Starting authentication...')
     
-    // Add timeout to prevent infinite hang
-    const authPromise = optimizedAuthService.signInWithEmailAndPassword(
+    const userCredential = await optimizedAuthService.signInWithEmailAndPassword(
       formData.email,
       formData.password,
     )
-    
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => {
-        console.error('[SignIn] ❌ Authentication timeout after 15 seconds')
-        reject(new Error('Authentication timeout. Please check your internet connection and try again.'))
-      }, 15000)
-    )
-    
-    console.log('[SignIn] Waiting for authentication (15s timeout)...')
-    const userCredential = await Promise.race([authPromise, timeoutPromise])
     const userId = userCredential.user.uid
     console.log('[SignIn] ✅ Authentication successful:', userId)
 

@@ -1,6 +1,6 @@
 import { defineBoot } from '#q-app/wrappers'
 import { initializeApp } from 'firebase/app'
-import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, onAuthStateChanged } from 'firebase/auth'
+import { initializeAuth, browserLocalPersistence, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 import { getFunctions } from 'firebase/functions'
@@ -18,9 +18,56 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:871778209250:web:79e726a4f5b5579bfc7dbb"
 }
 
-// Platform detection
-const isNative = Capacitor.isNativePlatform()
-const platform = Capacitor.getPlatform()
+// Platform detection using URL scheme and native bridge detection
+const detectPlatformFromUrl = () => {
+  const protocol = window.location.protocol
+  const hostname = window.location.hostname
+  const href = window.location.href
+  
+  console.log('🔍 Platform Detection Debug:', {
+    protocol,
+    hostname,
+    href,
+    hasCapacitor: window.Capacitor !== undefined,
+    hasWebkit: window.webkit !== undefined,
+    hasNativeBridge: window.webkit?.messageHandlers !== undefined
+  })
+  
+  // Check for iOS native bridge (most reliable)
+  const hasIOSBridge = window.webkit?.messageHandlers !== undefined
+  
+  // Capacitor iOS uses capacitor:// scheme
+  if (protocol === 'capacitor:' || hasIOSBridge) {
+    console.log('✅ iOS detected via', protocol === 'capacitor:' ? 'URL scheme' : 'WebKit bridge')
+    return { isNative: true, platform: 'ios' }
+  }
+  
+  // Capacitor Android uses https://localhost
+  if ((protocol === 'https:' || protocol === 'http:') && hostname === 'localhost') {
+    // Could be Android or local dev server
+    try {
+      const cap = Capacitor.getPlatform()
+      if (cap === 'android') {
+        return { isNative: true, platform: 'android' }
+      }
+    } catch {
+      // Capacitor not available
+    }
+  }
+  
+  // Fallback to Capacitor API
+  try {
+    return {
+      isNative: Capacitor.isNativePlatform(),
+      platform: Capacitor.getPlatform()
+    }
+  } catch {
+    return { isNative: false, platform: 'web' }
+  }
+}
+
+// Get platform info from URL (immediately accurate)
+let { isNative, platform } = detectPlatformFromUrl()
 
 console.log('Firebase Boot: Platform detected:', platform, 'Native:', isNative)
 console.log('Firebase Boot: Initializing Firebase app with config:', {
@@ -32,119 +79,45 @@ console.log('Firebase Boot: Initializing Firebase app with config:', {
 const app = initializeApp(firebaseConfig)
 console.log('Firebase Boot: Firebase app initialized successfully ✅')
 
-// Initialize Firebase services based on platform
-let auth, db, storage, functions, googleProvider
+// Initialize Firebase services - same for all platforms
+console.log('Firebase Boot: Initializing Firebase services...')
+
+// Initialize auth with persistence (like orange-app)
+const auth = initializeAuth(app, {
+  persistence: browserLocalPersistence
+})
+
+const db = getFirestore(app)
+const storage = getStorage(app)
+const functions = getFunctions(app)
 
 // Initialize Google Auth Provider
-googleProvider = new GoogleAuthProvider()
+const googleProvider = new GoogleAuthProvider()
 googleProvider.setCustomParameters({
   prompt: 'select_account'
 })
 
-if (isNative) {
-  // Use Capacitor Firebase plugins for native platforms
-  console.log('Firebase Boot: Using Capacitor Firebase plugins for native platform')
-  
-  // For native platforms, we still need Web SDK instances for compatibility
-  // This ensures authentication persistence works properly
-  auth = getAuth(app)
-  db = getFirestore(app)
-  storage = getStorage(app)
-  functions = getFunctions(app)
-  
-  console.log('Firebase Boot: Web SDK instances created for native platform compatibility')
-} else {
-  // Use Web SDK for web/PWA
-  console.log('Firebase Boot: Using Firebase Web SDK for web platform')
-  
-  auth = getAuth(app)
-  db = getFirestore(app)
-  storage = getStorage(app)
-  functions = getFunctions(app)
-}
-
-// Set up authentication persistence
-if (auth) {
-  try {
-    setPersistence(auth, browserLocalPersistence)
-    console.log('Firebase Boot: Authentication persistence set to local storage')
-  } catch (error) {
-    console.error('Firebase Boot: Failed to set auth persistence:', error)
-  }
-}
+console.log('Firebase Boot: Services initialized successfully')
 
 // Set up auth state listener to sync PRE user with Smart Mirror service
-if (auth) {
-  // Check if user is already logged in (from persistence)
-  if (auth.currentUser) {
-    console.log('Firebase Boot: PRE user already logged in (from persistence), syncing with Smart Mirror service:', auth.currentUser.uid)
-    smartMirrorService.setPreUserId(auth.currentUser.uid)
-  }
-  
-  // Set up listener for future auth state changes
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      console.log('Firebase Boot: PRE user logged in, syncing with Smart Mirror service:', user.uid)
-      smartMirrorService.setPreUserId(user.uid)
-    } else {
-      console.log('Firebase Boot: PRE user logged out, clearing Smart Mirror service')
-      smartMirrorService.clearPreUserId()
-    }
-  })
+// Check if user is already logged in (from persistence)
+if (auth.currentUser) {
+  console.log('Firebase Boot: PRE user already logged in (from persistence), syncing with Smart Mirror service:', auth.currentUser.uid)
+  smartMirrorService.setPreUserId(auth.currentUser.uid)
 }
 
-export default defineBoot(async ({ app }) => {
-  console.log('Firebase Boot: Starting initialization...', { isNative, platform })
-  
-  // Skip Capacitor Firebase plugins - use Web SDK exclusively for reliability
-  console.log('Firebase Boot: Using Firebase Web SDK for all platforms (no Capacitor plugins)')
-  
-  // Simple iOS-specific initialization
-  if (platform === 'ios' && isNative) {
-    try {
-      console.log('Firebase Boot: iOS - Waiting for services to stabilize...')
-      await new Promise(resolve => setTimeout(resolve, 300))
-      
-      // Check if user is already logged in on iOS (via Capacitor)
-      if (auth.currentUser) {
-        console.log('Firebase Boot: iOS - User already logged in, syncing with Smart Mirror:', auth.currentUser.uid)
-        smartMirrorService.setPreUserId(auth.currentUser.uid)
-      }
-      
-      console.log('Firebase Boot: iOS - Services ready', {
-        auth: !!auth,
-        db: !!db,
-        storage: !!storage,
-        currentUser: auth.currentUser?.uid || 'none'
-      })
-    } catch (iosError) {
-      console.error('Firebase Boot: iOS initialization error:', iosError)
-    }
+// Set up listener for future auth state changes
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    console.log('Firebase Boot: PRE user logged in, syncing with Smart Mirror service:', user.uid)
+    smartMirrorService.setPreUserId(user.uid)
+  } else {
+    console.log('Firebase Boot: PRE user logged out, clearing Smart Mirror service')
+    smartMirrorService.clearPreUserId()
   }
-  
-  // Android-specific initialization
-  if (platform === 'android' && isNative) {
-    try {
-      console.log('Firebase Boot: Android - Waiting for services to stabilize...')
-      await new Promise(resolve => setTimeout(resolve, 300))
-      
-      // Check if user is already logged in on Android
-      if (auth.currentUser) {
-        console.log('Firebase Boot: Android - User already logged in, syncing with Smart Mirror:', auth.currentUser.uid)
-        smartMirrorService.setPreUserId(auth.currentUser.uid)
-      }
-      
-      console.log('Firebase Boot: Android - Services ready', {
-        auth: !!auth,
-        db: !!db,
-        storage: !!storage,
-        currentUser: auth.currentUser?.uid || 'none'
-      })
-    } catch (androidError) {
-      console.error('Firebase Boot: Android initialization error:', androidError)
-    }
-  }
+})
 
+export default defineBoot(async ({ app }) => {
   // Make Firebase services available globally
   app.config.globalProperties.$firebase = app
   app.config.globalProperties.$auth = auth
@@ -155,8 +128,9 @@ export default defineBoot(async ({ app }) => {
   app.config.globalProperties.$isNative = isNative
   app.config.globalProperties.$platform = platform
   
-  console.log('Firebase Boot: Complete - Web SDK ready')
+  console.log('Firebase Boot: Complete ✅')
 })
 
-// Export Firebase services for use in components
-export { app, auth, db, storage, functions, googleProvider, isNative, platform }
+// Export Firebase services and platform info for use in components
+// Note: isNative and platform may be updated during boot, use detectPlatformFromUrl() for current values
+export { app, auth, db, storage, functions, googleProvider, isNative, platform, detectPlatformFromUrl }

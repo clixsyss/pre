@@ -155,7 +155,7 @@ class DataPreloader {
   async _loadUserProfile() {
     try {
       console.log('👤 DataPreloader: Loading user profile...')
-      const user = await optimizedAuthService.getUser()
+      const user = await optimizedAuthService.getCurrentUser()
       if (!user) {
         console.warn('⚠️ DataPreloader: No user found')
       } else {

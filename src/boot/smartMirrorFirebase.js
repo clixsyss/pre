@@ -15,9 +15,42 @@ const smartMirrorFirebaseConfig = {
   measurementId: "G-XZX0B7TMSR"
 }
 
-// Platform detection
-const isNative = Capacitor.isNativePlatform()
-const platform = Capacitor.getPlatform()
+// Platform detection using URL scheme and native bridge detection (more reliable)
+const detectPlatformFromUrl = () => {
+  const protocol = window.location.protocol
+  const hostname = window.location.hostname
+  const hasIOSBridge = window.webkit?.messageHandlers !== undefined
+  
+  // Capacitor iOS uses capacitor:// scheme or has WebKit bridge
+  if (protocol === 'capacitor:' || hasIOSBridge) {
+    return { isNative: true, platform: 'ios' }
+  }
+  
+  // Capacitor Android uses https://localhost
+  if ((protocol === 'https:' || protocol === 'http:') && hostname === 'localhost') {
+    try {
+      const cap = Capacitor.getPlatform()
+      if (cap === 'android') {
+        return { isNative: true, platform: 'android' }
+      }
+    } catch {
+      // Capacitor not available
+    }
+  }
+  
+  // Fallback to Capacitor API
+  try {
+    return {
+      isNative: Capacitor.isNativePlatform(),
+      platform: Capacitor.getPlatform()
+    }
+  } catch {
+    return { isNative: false, platform: 'web' }
+  }
+}
+
+// Get platform info from URL (immediately accurate)
+let { isNative, platform } = detectPlatformFromUrl()
 
 // For iOS: Always use Web SDK with unique name (native config is incomplete)
 // For Web: Use smartMirrorApp
@@ -83,6 +116,14 @@ smartMirrorAuth = auth
 smartMirrorDb = db
 
 export default defineBoot(async ({ app }) => {
+  // Re-check platform using the same reliable method
+  await new Promise(resolve => setTimeout(resolve, 100))
+  const platformInfo = detectPlatformFromUrl()
+  isNative = platformInfo.isNative
+  platform = platformInfo.platform
+  
+  console.log('Smart Mirror Firebase Boot: Platform re-checked:', platform, 'Native:', isNative)
+  
   // For native platforms (iOS/Android), wait briefly for services to stabilize
   if (isNative) {
     console.log(`Smart Mirror Firebase Boot: ${platform} detected - stabilizing services...`)

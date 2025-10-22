@@ -2,7 +2,7 @@
  * Optimized Auth Service - Cached authentication with reduced Firebase calls
  */
 
-import { auth, isNative } from '../boot/firebase'
+import { auth, isNative, detectPlatformFromUrl } from '../boot/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth'
 import cacheService from './cacheService'
 
@@ -27,9 +27,12 @@ class OptimizedAuthService {
       // Skip Capacitor Firebase - use Web SDK exclusively
       console.log('OptimizedAuthService: Using Web SDK for all platforms')
       
+      // Use reliable platform detection
+      const platformInfo = detectPlatformFromUrl()
+      console.log('OptimizedAuthService: Platform info:', platformInfo)
+      
       // Wait a bit for Firebase to be fully ready on iOS
-      const { Capacitor } = await import('@capacitor/core')
-      if (Capacitor.getPlatform() === 'ios') {
+      if (platformInfo.platform === 'ios' && platformInfo.isNative) {
         console.log('OptimizedAuthService: iOS detected, waiting for Firebase to stabilize...')
         await new Promise(resolve => setTimeout(resolve, 1000)) // Increased delay for iOS
       }
@@ -62,42 +65,22 @@ class OptimizedAuthService {
     }
 
     try {
-      // Check Capacitor plugin for iOS first
-      const { Capacitor } = await import('@capacitor/core')
-      const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
-      
-      if (isIOS) {
-        try {
-          // Wait for Firebase to be ready on iOS
-          if (!this.initialized) {
-            console.log('🚀 OptimizedAuthService: Waiting for initialization before getting current user...')
-            await this.initialize()
-          }
-          
-          // Additional wait for iOS to ensure auth state is ready
-          await new Promise(resolve => setTimeout(resolve, 500))
-          
-          const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
-          
-          // Wrap in timeout to prevent hanging
-          const getUserPromise = FirebaseAuthentication.getCurrentUser()
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('getCurrentUser timeout')), 5000) // Increased timeout
-          )
-          
-          const result = await Promise.race([getUserPromise, timeoutPromise])
-          
-          if (result && result.user) {
-            console.log('🚀 OptimizedAuthService: Current user from Capacitor plugin:', result.user.uid)
-            this.currentUser = result.user
-            return this.currentUser
-          }
-        } catch (capError) {
-          console.warn('Capacitor getCurrentUser failed, trying Web SDK:', capError?.message)
-        }
+      // Wait for initialization if needed
+      if (!this.initialized) {
+        console.log('🚀 OptimizedAuthService: Waiting for initialization before getting current user...')
+        await this.initialize()
       }
       
-      // Use Web SDK for all platforms (simpler and more reliable)
+      // On iOS, use Web SDK with longer wait time
+      const platformInfo = detectPlatformFromUrl()
+      if (platformInfo.platform === 'ios' && platformInfo.isNative) {
+        // Wait longer for iOS auth state to be established
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+      
+      // Use Web SDK - wait for auth state to be established
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
       this.currentUser = this.auth.currentUser
       console.log('🚀 OptimizedAuthService: Current user from Web SDK:', this.currentUser ? 'authenticated' : 'not authenticated')
       
@@ -111,6 +94,7 @@ class OptimizedAuthService {
 
   /**
    * Sign in with email and password
+   * Uses Firebase Web SDK with timeout protection
    */
   async signInWithEmailAndPassword(email, password) {
     try {
@@ -122,55 +106,20 @@ class OptimizedAuthService {
         await this.initialize()
       }
       
-      // Check if iOS native platform
-      const { Capacitor } = await import('@capacitor/core')
-      const platform = Capacitor.getPlatform()
-      const isIOS = platform === 'ios' && Capacitor.isNativePlatform()
+      console.log('🌐 Using Firebase Web SDK for sign in (all platforms)')
       
-      if (isIOS) {
-        // Use Capacitor Firebase Authentication plugin for iOS
-        console.log('📱 iOS: Using Capacitor plugin for email/password sign in')
-        
-        try {
-          const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
-          
-          // Add timeout protection
-          const signInPromise = FirebaseAuthentication.signInWithEmailAndPassword({
-            email,
-            password
-          })
-          
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Sign in timeout after 15 seconds')), 15000)
-          )
-          
-          const result = await Promise.race([signInPromise, timeoutPromise])
-          
-          console.log('📱 iOS: Capacitor sign in successful:', result.user?.uid)
-          
-          // Wait for auth state to sync
-          await new Promise(resolve => setTimeout(resolve, 500))
-          
-          // Get user from Web SDK (for consistency)
-          this.currentUser = this.auth.currentUser || result.user
-          
-          console.log('📱 iOS: Final user:', this.currentUser?.uid)
-          
-          return {
-            user: this.currentUser,
-            credential: result.credential
-          }
-        } catch (iosError) {
-          console.warn('📱 iOS: Capacitor sign in failed, falling back to Web SDK:', iosError.message)
-          // Fall through to Web SDK
-        }
-      }
+      // Add 10 second timeout to detect hanging requests
+      const authPromise = signInWithEmailAndPassword(this.auth, email, password)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => {
+          console.error('⚠️ Firebase Web SDK is hanging - this is a WKWebView networking issue on iOS')
+          reject(new Error('Authentication request timed out after 10 seconds. This indicates a networking issue in iOS WebView. Please check your internet connection or try again.'))
+        }, 10000)
+      )
       
-      // Use Web SDK for Android, web, or iOS fallback
-      console.log('🌐 Using Web SDK for sign in')
-      const result = await signInWithEmailAndPassword(this.auth, email, password)
+      const result = await Promise.race([authPromise, timeoutPromise])
       this.currentUser = result.user
-      console.log('🌐 Web SDK sign in successful:', result.user.uid)
+      console.log('✅ Sign in successful:', result.user.uid)
       return {
         user: result.user,
         credential: result.credential
@@ -182,6 +131,12 @@ class OptimizedAuthService {
         message: error.message,
         name: error.name
       })
+      
+      // If it's a timeout error, provide helpful message
+      if (error.message && error.message.includes('timed out')) {
+        throw new Error('Unable to connect to authentication service. Please check your internet connection and try again.')
+      }
+      
       throw error
     }
   }
@@ -191,15 +146,19 @@ class OptimizedAuthService {
    */
   async createUserWithEmailAndPassword(email, password) {
     try {
-      // Use Web SDK for all platforms
+      console.log('🔐 OptimizedAuthService: Creating user account...')
+      
+      // Use Web SDK for all platforms (most reliable)
+      console.log('🌐 Using Web SDK for create user')
       const result = await createUserWithEmailAndPassword(this.auth, email, password)
       this.currentUser = result.user
+      console.log('🌐 Web SDK create user successful:', result.user.uid)
       return {
         user: result.user,
         credential: result.credential
       }
     } catch (error) {
-      console.error('Create user error:', error)
+      console.error('❌ Create user error:', error)
       throw error
     }
   }
@@ -212,18 +171,8 @@ class OptimizedAuthService {
       // FCM token cleanup is handled by the fcm boot file (onAuthStateChanged)
       // No need to manually clear here to avoid conflicts
       
-      // Use Capacitor plugin for iOS, Web SDK for others
-      const { Capacitor } = await import('@capacitor/core')
-      const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
-      
-      if (isIOS) {
-        console.log('🚀 OptimizedAuthService: Signing out via Capacitor plugin...')
-        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
-        await FirebaseAuthentication.signOut()
-        console.log('🚀 OptimizedAuthService: Capacitor sign out complete')
-      } else {
-        await firebaseSignOut(this.auth)
-      }
+      // Use Web SDK for all platforms
+      await firebaseSignOut(this.auth)
       
       // Clear cached user (FCM cleanup handled by fcm boot file)
       this.currentUser = null
@@ -304,47 +253,20 @@ class OptimizedAuthService {
 
   /**
    * Sign in with Google
-   * Supports both web (popup) and native (Capacitor) platforms
-   * Note: Only iOS uses Capacitor plugin, Android uses Web SDK for reliability
+   * Uses Web SDK for all platforms for reliability
    */
   async signInWithGoogle() {
     try {
-      const { Capacitor } = await import('@capacitor/core')
-      const platform = Capacitor.getPlatform()
-      const isIOS = platform === 'ios' && Capacitor.isNativePlatform()
-      
-      if (isIOS) {
-        // Use Capacitor Firebase Authentication plugin for iOS only
-        console.log('[OptimizedAuth] Using Capacitor Google Sign-In for iOS')
-        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
-        
-        const result = await FirebaseAuthentication.signInWithGoogle()
-        
-        // Get the user from Firebase Auth
-        const user = this.auth.currentUser
-        
-        if (!user) {
-          // If for some reason currentUser is not set, wait a bit and try again
-          await new Promise(resolve => setTimeout(resolve, 500))
-        }
-        
-        this.currentUser = this.auth.currentUser
-        
-        return {
-          user: this.currentUser,
-          credential: result.credential || null
-        }
-      } else {
-        // Use Web SDK popup for Android and web (more reliable)
-        console.log(`[OptimizedAuth] Using Web SDK for ${platform}`)
-        const { signInWithPopup, GoogleAuthProvider } = await import('firebase/auth')
-        const provider = new GoogleAuthProvider()
-        const result = await signInWithPopup(this.auth, provider)
-        this.currentUser = result.user
-        return {
-          user: result.user,
-          credential: result.credential
-        }
+      // Use Web SDK popup for all platforms (most reliable)
+      console.log('[OptimizedAuth] Using Web SDK for Google Sign-In')
+      const { signInWithPopup, GoogleAuthProvider } = await import('firebase/auth')
+      const provider = new GoogleAuthProvider()
+      const result = await signInWithPopup(this.auth, provider)
+      this.currentUser = result.user
+      console.log('🌐 Google sign in successful:', result.user.uid)
+      return {
+        user: result.user,
+        credential: result.credential
       }
     } catch (error) {
       console.error('Google sign in error:', error)

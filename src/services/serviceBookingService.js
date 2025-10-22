@@ -66,19 +66,18 @@ class ServiceBookingService {
 
         console.log('✅ Service booking created successfully:', { bookingId: result.id });
         
-        // Send notification to user
-        try {
-          await createServiceNotification(
-            booking.userId,
-            projectId,
-            'Service Request Submitted',
-            `Your ${bookingData.serviceName} request has been submitted and will be reviewed soon.`,
-            `/service-booking-chat/${result.id}`
-          );
+        // Send notification to user in the background (don't await to prevent blocking)
+        createServiceNotification(
+          booking.userId,
+          projectId,
+          'Service Request Submitted',
+          `Your ${bookingData.serviceName} request has been submitted and will be reviewed soon.`,
+          `/service-booking-chat/${result.id}`
+        ).then(() => {
           console.log('✅ Service booking notification sent');
-        } catch (notifError) {
+        }).catch((notifError) => {
           console.error('⚠️ Failed to send service booking notification:', notifError);
-        }
+        });
         
         return result.id;
       } catch (error) {
@@ -418,20 +417,19 @@ class ServiceBookingService {
         await firestoreService.updateDoc(docPath, updateData);
         console.log('✅ Message added successfully to service booking')
         
-        // Send notification if admin is replying to user
-        try {
-          if (messageData.senderType === 'admin' && booking.userId !== user.uid) {
-            await createServiceNotification(
-              booking.userId,
-              projectId,
-              'New Reply on Your Service Request',
-              `Admin has replied to your ${booking.serviceName} request.`,
-              `/service-booking-chat/${bookingId}`
-            );
+        // Send notification if admin is replying to user (in the background, don't await)
+        if (messageData.senderType === 'admin' && booking.userId !== user.uid) {
+          createServiceNotification(
+            booking.userId,
+            projectId,
+            'New Reply on Your Service Request',
+            `Admin has replied to your ${booking.serviceName} request.`,
+            `/service-booking-chat/${bookingId}`
+          ).then(() => {
             console.log('✅ Service booking reply notification sent');
-          }
-        } catch (notifError) {
-          console.error('⚠️ Failed to send service booking reply notification:', notifError);
+          }).catch((notifError) => {
+            console.error('⚠️ Failed to send service booking reply notification:', notifError);
+          });
         }
       } catch (error) {
         console.error('❌ Error adding message:', error);

@@ -237,8 +237,10 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFormKeyboard } from 'src/composables/useFormKeyboard';
 import { useAcademiesStore } from 'src/stores/academyStore';
+import { useProjectStore } from 'src/stores/projectStore';
 import { useNotificationStore } from 'src/stores/notifications';
 import bookingService from 'src/services/bookingService';
+import optimizedAuthService from 'src/services/optimizedAuthService';
 import PageHeader from 'src/components/PageHeader.vue';
 
 // Component name for ESLint
@@ -248,6 +250,7 @@ defineOptions({
 
 const router = useRouter();
 const academiesStore = useAcademiesStore();
+const projectStore = useProjectStore();
 const notificationStore = useNotificationStore();
 
 // Setup keyboard handling for better mobile UX
@@ -318,10 +321,22 @@ const confirmEnrollment = async () => {
       return;
     }
 
+    if (!projectStore.selectedProject?.id) {
+      notificationStore.showError('No project selected. Please select a project first.');
+      return;
+    }
+
+    // Get current user
+    const user = await optimizedAuthService.getCurrentUser();
+    if (!user) {
+      notificationStore.showError('Please log in to enroll.');
+      return;
+    }
+
     isSubmitting.value = true;
 
     const enrollmentData = {
-      userId: 'current-user-id', // This should come from auth store
+      userId: user.uid,
       academyId: selectedAcademy.value.id,
       academyName: selectedAcademy.value.name,
       programId: selectedProgram.value.id,
@@ -332,14 +347,12 @@ const confirmEnrollment = async () => {
       status: 'enrolled'
     };
 
-    const result = await bookingService.createAcademyBooking(enrollmentData);
+    const result = await bookingService.createAcademyBooking(projectStore.selectedProject.id, enrollmentData);
     
     if (result.success) {
-      notificationStore.showSuccess('Enrollment confirmed successfully!');
+      notificationStore.showSuccess(`${selectedProgram.value.name} enrollment confirmed successfully!`);
       
-      // Wait a bit for user to see the success message
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      // Navigate to bookings page immediately
       router.push('/my-bookings');
     } else {
       notificationStore.showError('Failed to confirm enrollment. Please try again.');

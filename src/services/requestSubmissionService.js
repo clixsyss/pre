@@ -115,19 +115,18 @@ class RequestSubmissionService {
         categoryId: submissionData.categoryId
       });
 
-      // Send notification to user
-      try {
-        await createRequestNotification(
-          submissionData.userId,
-          submissionData.projectId,
-          'Request Submitted',
-          `Your ${submissionData.categoryName || 'request'} has been submitted and will be reviewed by management.`,
-          `/request-chat/${submissionId}`
-        );
+      // Send notification to user in the background (don't await to prevent blocking)
+      createRequestNotification(
+        submissionData.userId,
+        submissionData.projectId,
+        'Request Submitted',
+        `Your ${submissionData.categoryName || 'request'} has been submitted and will be reviewed by management.`,
+        `/request-chat/${submissionId}`
+      ).then(() => {
         console.log('✅ Request submission notification sent');
-      } catch (notifError) {
+      }).catch((notifError) => {
         console.error('⚠️ Failed to send request submission notification:', notifError);
-      }
+      });
 
       return submissionId;
 
@@ -550,28 +549,32 @@ class RequestSubmissionService {
         messageId: docRef.id
       });
 
-      // Send notification if admin is replying to user
-      try {
-        if (messageData.senderType === 'admin') {
-          // Get submission details to find user
-          const { doc, getDoc } = await import('firebase/firestore');
-          const submissionRef = doc(db, `projects/${projectId}/requestSubmissions/${submissionId}`);
-          const submissionSnap = await getDoc(submissionRef);
-          
-          if (submissionSnap.exists()) {
-            const submission = submissionSnap.data();
-            await createRequestNotification(
-              submission.userId,
-              projectId,
-              'New Reply on Your Request',
-              `Admin has replied to your ${submission.categoryName || 'request'}.`,
-              `/request-chat/${submissionId}`
-            );
+      // Send notification if admin is replying to user (in the background, don't await)
+      if (messageData.senderType === 'admin') {
+        // Get submission details and send notification in the background
+        import('firebase/firestore')
+          .then(({ doc, getDoc }) => {
+            const submissionRef = doc(db, `projects/${projectId}/requestSubmissions/${submissionId}`);
+            return getDoc(submissionRef);
+          })
+          .then((submissionSnap) => {
+            if (submissionSnap.exists()) {
+              const submission = submissionSnap.data();
+              return createRequestNotification(
+                submission.userId,
+                projectId,
+                'New Reply on Your Request',
+                `Admin has replied to your ${submission.categoryName || 'request'}.`,
+                `/request-chat/${submissionId}`
+              );
+            }
+          })
+          .then(() => {
             console.log('✅ Request reply notification sent');
-          }
-        }
-      } catch (notifError) {
-        console.error('⚠️ Failed to send request reply notification:', notifError);
+          })
+          .catch((notifError) => {
+            console.error('⚠️ Failed to send request reply notification:', notifError);
+          });
       }
 
       return docRef.id;

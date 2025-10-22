@@ -494,10 +494,7 @@ const confirmBooking = async () => {
     console.log('🔍 Court booking result:', result);
     
     if (result.success && result.bookingId) {
-      notificationStore.showSuccess(`Booking request submitted! Awaiting admin confirmation.`);
-      
-      // Wait a bit to ensure Firestore has committed the write
-      await new Promise(resolve => setTimeout(resolve, 500));
+      notificationStore.showSuccess(`Court booked successfully! Awaiting admin confirmation.`);
       
       // Refresh the academy store in the background (don't await to prevent blocking)
       academiesStore.fetchUserBookings(user.uid, projectId.value)
@@ -505,10 +502,7 @@ const confirmBooking = async () => {
           console.error('Error refreshing bookings:', err);
         });
       
-      // Show success for 2 more seconds before redirecting
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Navigate to bookings page
+      // Navigate to bookings page immediately
       router.push('/my-bookings');
     } else {
       console.error('❌ Court booking failed:', result);

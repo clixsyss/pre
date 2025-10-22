@@ -595,12 +595,9 @@ const confirmBooking = async () => {
     console.log('✅ Service booking created successfully:', { bookingId, bookingData })
 
     // Show success notification
-    notificationStore.showSuccess('Service booked successfully!')
+    notificationStore.showSuccess(`${selectedService.value?.englishTitle} booked successfully!`)
 
-    // Wait a bit for user to see the success message
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    // Close dialog and reset loading state
+    // Close dialog immediately
     closeBookingDialog()
     
     // Refresh service bookings in the background (don't await to prevent blocking)

@@ -705,7 +705,7 @@ watch(
       // Start background data preloading for new project immediately
       setTimeout(async () => {
         try {
-          const currentUser = await optimizedAuthService.getUser()
+          const currentUser = await optimizedAuthService.getCurrentUser()
           if (currentUser && newProject) {
             console.log('🚀 MainLayout: Preloading data for new project:', newProject.id)
             await preloadAppData(currentUser.uid, newProject.id)
@@ -847,7 +847,7 @@ onMounted(async () => {
     // This runs in parallel with page loads
     setTimeout(async () => {
       try {
-        const currentUser = await optimizedAuthService.getUser()
+        const currentUser = await optimizedAuthService.getCurrentUser()
         if (currentUser && projectStore.selectedProject) {
           console.log('🚀 MainLayout: Starting background data preload...')
           await preloadAppData(currentUser.uid, projectStore.selectedProject.id)
