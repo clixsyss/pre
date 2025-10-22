@@ -36,19 +36,27 @@
         
         <!-- Logo Section (Center) -->
         <div class="header-center">
-          <button @click="toggleQuickMenu" class="logo-button" :class="{ 'menu-open': showQuickMenu }">
+          <button @click="toggleQuickMenu" class="logo-button" :class="{ 'menu-open': showQuickMenu, 'first-time': !hasSeenLogoHint }">
             <div class="logo-wrapper">
               <img src="../assets/logo.png" alt="PRE Logo" class="logo-image" />
-              <svg class="logo-arrow" :class="{ 'pulse': !hasSeenLogoHint && !showQuickMenu }" width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- Enhanced arrow with shimmer effect -->
+              <svg class="logo-arrow" :class="{ 'pulse': !hasSeenLogoHint && !showQuickMenu }" width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
+            <!-- Always-visible subtle label -->
+            <span class="quick-actions-label">Quick Actions</span>
           </button>
           
-          <!-- First-time hint -->
+          <!-- Enhanced first-time hint with pointer -->
           <transition name="hint-fade">
             <div v-if="showLogoHint" class="logo-hint">
-              <span>Tap for quick actions</span>
+              <div class="hint-content">
+                <svg class="hint-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor"/>
+                </svg>
+                <span>Tap here for quick navigation</span>
+              </div>
             </div>
           </transition>
         </div>
@@ -916,14 +924,14 @@ onMounted(async () => {
     // Show hint after swipe hint disappears
     setTimeout(() => {
       showLogoHint.value = true
-      // Hide hint after 5 seconds
+      // Hide hint after 8 seconds (longer for better visibility)
       setTimeout(() => {
         showLogoHint.value = false
         if (!hasSeenLogoHint.value) {
           localStorage.setItem('hasSeenLogoHint', 'true')
           hasSeenLogoHint.value = true
         }
-      }, 5000)
+      }, 8000)
     }, hasSeenSwipeHint ? 2000 : 7000) // Show after swipe hint or earlier if swipe hint already seen
   } else {
     hasSeenLogoHint.value = true
@@ -1014,9 +1022,43 @@ onUnmounted(() => {
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: 4px 10px;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border-radius: 12px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Shimmer effect for first-time users */
+.logo-button.first-time::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(175, 30, 35, 0.2) 50%, 
+    transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    background-position: 200% 0;
+  }
+  50% {
+    background-position: -200% 0;
+  }
+}
+
+.logo-button.menu-open {
+  background: rgba(175, 30, 35, 0.08);
 }
 
 .logo-button:active {
@@ -1025,7 +1067,10 @@ onUnmounted(() => {
 
 .logo-wrapper {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 1;
 }
 
 .logo-image {
@@ -1043,68 +1088,97 @@ onUnmounted(() => {
   filter: drop-shadow(0 4px 12px rgba(175, 30, 35, 0.5));
 }
 
-.logo-arrow {
-  position: absolute;
-  bottom: -3px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: rgba(246, 246, 246, 0.3);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  opacity: 0;
-  pointer-events: none;
+/* Always-visible label */
+.quick-actions-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #AF1E23;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.85;
+  transition: all 0.3s ease;
+  z-index: 1;
 }
 
-/* Pulsing animation for first-time hint */
+.logo-button:active .quick-actions-label {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.logo-arrow {
+  color: #AF1E23;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 1px 3px rgba(175, 30, 35, 0.3));
+}
+
+/* Enhanced pulsing animation for first-time hint */
 .logo-arrow.pulse {
-  opacity: 1 !important;
-  color: #AF1E23 !important;
-  animation: arrowPulse 2s ease-in-out infinite;
+  animation: arrowPulse 1.5s ease-in-out infinite;
 }
 
 @keyframes arrowPulse {
   0%, 100% {
-    transform: translateX(-50%) translateY(0);
-    opacity: 1;
-    filter: drop-shadow(0 2px 8px rgba(175, 30, 35, 0.4));
+    transform: translateY(0) scale(1);
+    opacity: 0.8;
+    filter: drop-shadow(0 2px 6px rgba(175, 30, 35, 0.4));
   }
   50% {
-    transform: translateX(-50%) translateY(3px);
-    opacity: 0.6;
-    filter: drop-shadow(0 4px 12px rgba(175, 30, 35, 0.6));
+    transform: translateY(3px) scale(1.2);
+    opacity: 1;
+    filter: drop-shadow(0 4px 12px rgba(175, 30, 35, 0.7));
   }
 }
 
 /* Removed hover effects for mobile */
 
 .logo-button.menu-open .logo-arrow {
+  transform: rotate(180deg);
   opacity: 1;
-  transform: translateX(-50%) rotate(180deg);
-  color: #AF1E23;
-  bottom: -5px;
-  filter: drop-shadow(0 2px 4px rgba(175, 30, 35, 0.3));
+  filter: drop-shadow(0 2px 4px rgba(175, 30, 35, 0.4));
   animation: none;
 }
 
-/* Logo hint tooltip */
+/* Enhanced logo hint tooltip with icon */
 .logo-hint {
   position: absolute;
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  margin-top: 12px;
+  margin-top: 16px;
   background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
   color: #F6F6F6;
-  padding: 8px 16px;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  padding: 12px 20px;
+  border-radius: 16px;
+  font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
   box-shadow: 
-    0 4px 16px rgba(175, 30, 35, 0.4),
-    0 0 0 2px rgba(175, 30, 35, 0.2);
+    0 8px 24px rgba(175, 30, 35, 0.5),
+    0 0 0 3px rgba(175, 30, 35, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   z-index: 1001;
   pointer-events: none;
-  animation: hintBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: hintBounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), hintGlow 2s ease-in-out infinite;
+}
+
+.hint-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hint-icon {
+  flex-shrink: 0;
+  animation: iconPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15) rotate(5deg);
+  }
 }
 
 .logo-hint::before {
@@ -1123,10 +1197,11 @@ onUnmounted(() => {
 @keyframes hintBounce {
   0% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-10px) scale(0.8);
+    transform: translateX(-50%) translateY(-15px) scale(0.85);
   }
-  50% {
-    transform: translateX(-50%) translateY(2px) scale(1.05);
+  60% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(3px) scale(1.05);
   }
   100% {
     opacity: 1;
@@ -1134,8 +1209,23 @@ onUnmounted(() => {
   }
 }
 
+@keyframes hintGlow {
+  0%, 100% {
+    box-shadow: 
+      0 8px 24px rgba(175, 30, 35, 0.5),
+      0 0 0 3px rgba(175, 30, 35, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 
+      0 8px 32px rgba(175, 30, 35, 0.7),
+      0 0 0 3px rgba(175, 30, 35, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+}
+
 .hint-fade-enter-active {
-  animation: hintBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: hintBounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .hint-fade-leave-active {
