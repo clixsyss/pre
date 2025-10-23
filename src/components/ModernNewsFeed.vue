@@ -87,7 +87,7 @@
         <!-- Content Section -->
         <div class="news-content">
           <div class="news-meta">
-            <span class="news-category" :class="getCategoryClass(item.category)">
+            <span class="news-category" :style="getCategoryStyle(item.category)">
               {{ getCategoryLabel(item.category) }}
             </span>
             <span class="news-time">{{ formatTime(item.createdAt) }}</span>
@@ -144,7 +144,7 @@
           <!-- Meta Information -->
           <div class="detail-section">
             <div class="news-meta-info">
-              <span class="news-category-badge" :class="getCategoryClass(selectedNewsItem.category)">
+              <span class="news-category-badge" :style="getCategoryStyle(selectedNewsItem.category)">
                 {{ getCategoryLabel(selectedNewsItem.category) }}
               </span>
               <span class="news-time-badge">{{ formatTime(selectedNewsItem.createdAt) }}</span>
@@ -240,6 +240,7 @@ import { getDownloadURL, ref as storageRef } from 'firebase/storage'
 import { storage, isNative } from '../boot/firebase'
 import NewsComments from './NewsComments.vue'
 import { useModalState } from '../composables/useModalState'
+import newsService from '../services/newsService'
 
 // Component name for ESLint
 defineOptions({
@@ -278,6 +279,8 @@ const selectedNewsItem = ref(null)
 const videoLoadingStates = ref({})
 const videoIntersectionObserver = ref(null)
 const videoElements = ref(new Map())
+const newsCategories = ref([])
+const categoriesLoading = ref(false)
 const isInitialMount = ref(true)
 
 // const tabs = [
@@ -384,24 +387,43 @@ const filteredNews = computed(() => {
 //   return newsItems.value.filter(item => item.type === tabValue).length
 // }
 
-const getCategoryClass = (category) => {
-  const classes = {
-    general: 'category-general',
-    announcement: 'category-announcement',
-    event: 'category-event',
-    update: 'category-update'
+const fetchNewsCategories = async () => {
+  if (!props.projectId && !projectStore.selectedProject?.id) return;
+  
+  const projectId = props.projectId || projectStore.selectedProject?.id;
+  
+  try {
+    categoriesLoading.value = true;
+    console.log('📡 Fetching news categories...');
+    
+    const categories = await newsService.fetchNewsCategories(projectId);
+    newsCategories.value = categories;
+    
+    console.log('✅ News categories fetched:', categories.length);
+  } catch (err) {
+    console.error('❌ Error fetching news categories:', err);
+    newsCategories.value = [];
+  } finally {
+    categoriesLoading.value = false;
   }
-  return classes[category] || 'category-default'
 }
 
-const getCategoryLabel = (category) => {
-  const labels = {
-    general: 'General',
-    announcement: 'Announcement',
-    event: 'Event',
-    update: 'Update'
-  }
-  return labels[category] || 'News'
+const getCategoryStyle = (catId) => {
+  const category = newsCategories.value.find(c => c.id === catId);
+  if (!category) return {};
+  
+  const color = category.color || '#6B7280';
+  return {
+    backgroundColor: `${color}20`,
+    color: color,
+    borderColor: `${color}80`,
+    border: `1.5px solid`
+  };
+}
+
+const getCategoryLabel = (catId) => {
+  const category = newsCategories.value.find(c => c.id === catId);
+  return category ? `${category.icon} ${category.name}` : 'News';
 }
 
 const formatTime = (timestamp) => {
@@ -761,6 +783,9 @@ onMounted(async () => {
   loadDefaultLogo().catch(error => {
     console.log('Logo loading failed, continuing with news fetch:', error.message)
   })
+  
+  // Fetch categories first
+  await fetchNewsCategories()
   
   // Fetch news immediately
   await fetchNews()

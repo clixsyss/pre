@@ -69,17 +69,6 @@
     <div class="my-complaints-section">
       <h2 class="section-title">My Complaints</h2>
       
-      <!-- Debug Info (temporary) -->
-      <div style="background: #f0f0f0; padding: 10px; margin-bottom: 10px; border-radius: 8px; font-size: 12px;">
-        <strong>Debug Info:</strong><br>
-        Store complaints: {{ complaintStore.complaints.length }}<br>
-        User complaints: {{ complaintStore.userComplaints.length }}<br>
-        Filtered complaints: {{ filteredComplaints.length }}<br>
-        Loading: {{ complaintStore.loading }}<br>
-        Selected filter: {{ selectedStatus }}<br>
-        Categories: {{ complaintStore.complaintCategories.length }}
-      </div>
-      
       <div class="section-header">
         <div class="filter-tabs">
           <button v-for="status in statusOptions" :key="status.id" @click="selectedStatus = status.id"

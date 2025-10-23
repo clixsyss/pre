@@ -280,6 +280,57 @@ class NewsService {
    * @param {string} category - News category
    * @returns {string} Human-readable label
    */
+  /**
+   * Fetch news categories from Firestore
+   * @param {string} projectId - The project ID
+   * @param {boolean} activeOnly - Only fetch active categories
+   * @returns {Promise<Array>} Array of news categories
+   */
+  async fetchNewsCategories(projectId, activeOnly = true) {
+    try {
+      console.log('📡 Fetching news categories from Firestore...');
+      
+      const { collection, getDocs, query, where, orderBy } = await import('firebase/firestore');
+      const { db } = await import('../boot/firebase');
+      
+      const categoriesRef = collection(db, `projects/${projectId}/newsCategories`);
+      
+      // Try with full query first (requires composite index)
+      let snapshot;
+      try {
+        const q = query(
+          categoriesRef,
+          where('isActive', '==', true),
+          orderBy('displayOrder', 'asc')
+        );
+        snapshot = await getDocs(q);
+        console.log('✅ Fetched with composite query');
+      } catch (indexError) {
+        console.warn('⚠️ Composite index not available, falling back to simple query:', indexError.message);
+        // Fallback: fetch all and filter/sort in memory
+        snapshot = await getDocs(categoriesRef);
+      }
+      
+      let categories = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Filter and sort in memory if we had to use fallback
+      if (activeOnly) {
+        categories = categories
+          .filter(cat => cat.isActive !== false)
+          .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+      }
+      
+      console.log('✅ News categories fetched:', categories.length);
+      return categories;
+    } catch (err) {
+      console.error('❌ Error fetching news categories:', err);
+      return [];
+    }
+  }
+
   getCategoryLabel(category) {
     const labels = {
       general: 'General',
