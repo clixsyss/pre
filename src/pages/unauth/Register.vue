@@ -1,5 +1,11 @@
 <template>
   <div class="register-page">
+    <!-- Pending Approval Modal -->
+    <PendingApprovalModal
+      v-if="showPendingModal"
+      @close="router.push('/signin')"
+    />
+
     <!-- Header -->
     <div class="header">
       <button @click="goToOnboarding" class="back-btn">
@@ -500,6 +506,7 @@ import { useNotificationStore } from '../../stores/notifications'
 import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../boot/firebase'
 import firebaseRestAuth from '../../services/firebaseRestAuth'
+import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
 
 // Component name for ESLint
 defineOptions({
@@ -513,6 +520,7 @@ const currentStep = ref('personal')
 const loading = ref(false)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
+const showPendingModal = ref(false)
 
 // Setup keyboard handling for better mobile UX
 useFormKeyboard({
@@ -903,11 +911,9 @@ const handlePropertySubmit = async () => {
     console.log('[Register] Showing success notification')
     notificationStore.showSuccess('Registration completed!')
     
-    console.log('[Register] Navigating to /signin')
-    setTimeout(() => {
-      router.push('/signin')
-      console.log('[Register] ✅ Navigation triggered')
-    }, 500)
+    console.log('[Register] ✅ Registration complete - showing pending approval modal')
+    // Show pending approval modal since all new registrations are pending by default
+    showPendingModal.value = true
   } catch (error) {
     console.error('Property save error:', error)
     notificationStore.showError('Failed to save properties: ' + error.message)

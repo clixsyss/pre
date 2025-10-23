@@ -166,20 +166,13 @@
         <div class="form-group">
           <label class="form-label">Profile Picture (Optional)</label>
           <div class="media-upload-options">
-            <button type="button" @click="takeProfilePicture" class="upload-option-btn">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 3H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              📸 Take Photo
-            </button>
             <button type="button" @click="selectProfilePicture" class="upload-option-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
                 <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
                 <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              🖼️ Choose from Gallery
+              Upload an image or file
             </button>
           </div>
           <input
@@ -199,20 +192,13 @@
           <div class="form-group">
             <label class="form-label">Front National ID Picture <span class="required">*</span></label>
             <div class="media-upload-options">
-              <button type="button" @click="takeFrontIdPhoto" class="upload-option-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 3H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                📸 Take Photo
-              </button>
               <button type="button" @click="selectFrontIdFromGallery" class="upload-option-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
                   <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
                   <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                🖼️ Choose from Gallery
+                Upload an image or file
               </button>
             </div>
             <input
@@ -231,20 +217,13 @@
           <div class="form-group">
             <label class="form-label">Back National ID Picture <span class="required">*</span></label>
             <div class="media-upload-options">
-              <button type="button" @click="takeBackIdPhoto" class="upload-option-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 3H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                📸 Take Photo
-              </button>
               <button type="button" @click="selectBackIdFromGallery" class="upload-option-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
                   <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
                   <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                🖼️ Choose from Gallery
+                Upload an image or file
               </button>
             </div>
             <input
@@ -274,7 +253,6 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../../boot/firebase'
 import { useRegistrationStore } from '../../stores/registration'
@@ -394,28 +372,6 @@ const handleProfilePictureUpload = (event) => {
   }
 }
 
-// Camera and Gallery functions for Profile Picture
-const takeProfilePicture = async () => {
-  try {
-    const image = await Camera.getPhoto({
-      quality: 90,
-      allowEditing: true,
-      resultType: CameraResultType.Uri,
-      source: CameraSource.Camera
-    });
-    
-    // Convert to blob
-    const response = await fetch(image.webPath);
-    const blob = await response.blob();
-    const file = new File([blob], `profile_${Date.now()}.jpg`, { type: 'image/jpeg' });
-    
-    profilePictureFile.value = file;
-    profilePicturePreview.value = image.webPath;
-  } catch (error) {
-    console.log('Camera cancelled or error:', error);
-  }
-};
-
 const selectProfilePicture = () => {
   profilePictureInput.value.click();
 };
@@ -425,26 +381,6 @@ const removeProfilePicture = () => {
   profilePicturePreview.value = null;
 };
 
-// Camera and Gallery functions for Front ID
-const takeFrontIdPhoto = async () => {
-  try {
-    const image = await Camera.getPhoto({
-      quality: 90,
-      allowEditing: false,
-      resultType: CameraResultType.Uri,
-      source: CameraSource.Camera
-    });
-    
-    const response = await fetch(image.webPath);
-    const blob = await response.blob();
-    const file = new File([blob], `front_id_${Date.now()}.jpg`, { type: 'image/jpeg' });
-    
-    frontIdFile.value = file;
-    frontIdPreview.value = image.webPath;
-  } catch (error) {
-    console.log('Camera cancelled or error:', error);
-  }
-};
 
 const selectFrontIdFromGallery = () => {
   frontIdInput.value.click();
@@ -455,26 +391,6 @@ const removeFrontId = () => {
   frontIdPreview.value = null;
 };
 
-// Camera and Gallery functions for Back ID
-const takeBackIdPhoto = async () => {
-  try {
-    const image = await Camera.getPhoto({
-      quality: 90,
-      allowEditing: false,
-      resultType: CameraResultType.Uri,
-      source: CameraSource.Camera
-    });
-    
-    const response = await fetch(image.webPath);
-    const blob = await response.blob();
-    const file = new File([blob], `back_id_${Date.now()}.jpg`, { type: 'image/jpeg' });
-    
-    backIdFile.value = file;
-    backIdPreview.value = image.webPath;
-  } catch (error) {
-    console.log('Camera cancelled or error:', error);
-  }
-};
 
 const selectBackIdFromGallery = () => {
   backIdInput.value.click();

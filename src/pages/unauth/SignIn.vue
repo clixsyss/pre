@@ -180,7 +180,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
@@ -208,6 +208,23 @@ const formData = reactive({
   email: '',
   password: '',
   rememberMe: false,
+})
+
+// Check if we should show the pending approval modal on mount
+onMounted(() => {
+  const showApprovalStatus = localStorage.getItem('showApprovalStatus')
+  if (showApprovalStatus) {
+    console.log('[SignIn] Showing approval modal for status:', showApprovalStatus)
+    localStorage.removeItem('showApprovalStatus')
+    showPendingModal.value = true
+    
+    // Show error message for rejected users
+    if (showApprovalStatus === 'rejected') {
+      notificationStore.showError(
+        'Your account has been rejected. Please contact support for more information.'
+      )
+    }
+  }
 })
 
 const goBack = () => {
@@ -353,15 +370,33 @@ const handleSignIn = async () => {
     console.log('🚀 Sign-in approval check result:', status)
 
     if (status.approvalStatus === 'pending') {
-      console.log('⏳ User is pending approval, showing modal')
-      // Show pending approval modal
+      console.log('⏳ User is pending approval, showing modal then signing out')
+      console.log('[SignIn] Setting showPendingModal to true...')
+      // Show pending approval modal FIRST (before sign out)
       showPendingModal.value = true
+      console.log('[SignIn] showPendingModal value:', showPendingModal.value)
+      // Stop loading immediately so UI can update
+      loading.value = false
+      console.log('[SignIn] Loading set to false')
+      // Wait a bit longer for the modal to render
+      console.log('[SignIn] Waiting for modal to render...')
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      console.log('[SignIn] Modal should be visible now, signing out user...')
+      // Then sign out the user
+      await optimizedAuthService.signOut()
+      console.log('✅ Pending user signed out, modal should still be visible')
       return
     } else if (status.approvalStatus === 'rejected') {
-      console.log('❌ User is rejected')
+      console.log('❌ User is rejected, showing error then signing out')
+      // Show error message FIRST
       notificationStore.showError(
         'Your account has been rejected. Please contact support for more information.',
       )
+      // Wait a tiny bit for the message to render
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      // Then sign out the user
+      await optimizedAuthService.signOut()
+      console.log('✅ Rejected user signed out')
       return
     }
 
@@ -511,15 +546,33 @@ const signInWithGoogle = async () => {
     console.log('🚀 Google sign-in approval check result:', status)
 
     if (status.approvalStatus === 'pending') {
-      console.log('⏳ User is pending approval, showing modal')
-      // Show pending approval modal
+      console.log('⏳ User is pending approval (Google), showing modal then signing out')
+      console.log('[SignIn-Google] Setting showPendingModal to true...')
+      // Show pending approval modal FIRST (before sign out)
       showPendingModal.value = true
+      console.log('[SignIn-Google] showPendingModal value:', showPendingModal.value)
+      // Stop loading immediately so UI can update
+      loading.value = false
+      console.log('[SignIn-Google] Loading set to false')
+      // Wait for the modal to render
+      console.log('[SignIn-Google] Waiting for modal to render...')
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      console.log('[SignIn-Google] Modal should be visible now, signing out user...')
+      // Then sign out the user
+      await optimizedAuthService.signOut()
+      console.log('✅ Pending user signed out (Google sign-in), modal should still be visible')
       return
     } else if (status.approvalStatus === 'rejected') {
-      console.log('❌ User is rejected')
+      console.log('❌ User is rejected (Google), showing error then signing out')
+      // Show error message FIRST
       notificationStore.showError(
         'Your account has been rejected. Please contact support for more information.',
       )
+      // Wait a tiny bit for the message to render
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      // Then sign out the user
+      await optimizedAuthService.signOut()
+      console.log('✅ Rejected user signed out (Google sign-in)')
       return
     }
 

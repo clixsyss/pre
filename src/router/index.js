@@ -3,6 +3,25 @@ import optimizedAuthService from '../services/optimizedAuthService'
 import firestoreService from '../services/firestoreService'
 import { canUserAccessRoute, checkUserSuspension } from '../services/suspensionService'
 
+// Helper function to check user approval status
+async function checkUserApprovalStatus(userId) {
+  try {
+    const userDoc = await firestoreService.getDoc(`users/${userId}`)
+    if (!userDoc.exists) {
+      return { approvalStatus: 'unknown', registrationStatus: 'incomplete' }
+    }
+    
+    const userData = userDoc.data
+    return {
+      approvalStatus: userData.approvalStatus || 'pending',
+      registrationStatus: userData.registrationStatus || 'incomplete'
+    }
+  } catch (error) {
+    console.error('Error checking approval status:', error)
+    return { approvalStatus: 'unknown', registrationStatus: 'incomplete' }
+  }
+}
+
 // Import pages
 import Onboarding from '../pages/unauth/Onboarding.vue'
 import SignIn from '../pages/unauth/SignIn.vue'
@@ -416,7 +435,24 @@ router.beforeEach(async (to, from, next) => {
       )
 
       if (currentUser) {
-        console.log('Navigation guard: User authenticated, redirecting to /home')
+        // Check approval status before allowing access
+        console.log('Navigation guard: Checking approval status for user:', currentUser.uid)
+        const approvalStatus = await checkUserApprovalStatus(currentUser.uid)
+        console.log('Navigation guard: Approval status:', approvalStatus)
+        
+        if (approvalStatus.approvalStatus === 'pending' || approvalStatus.approvalStatus === 'rejected') {
+          console.log('Navigation guard: User is', approvalStatus.approvalStatus, '- signing out and redirecting to sign-in')
+          // Sign out the user immediately
+          await optimizedAuthService.signOut()
+          console.log('Navigation guard: User signed out')
+          // Store the approval status to show modal on sign-in page
+          localStorage.setItem('showApprovalStatus', approvalStatus.approvalStatus)
+          // Redirect to signin where they'll see the pending/rejected modal
+          next('/signin')
+          return
+        }
+        
+        console.log('Navigation guard: User authenticated and approved, redirecting to /home')
         next('/home')
         return
       } else {
