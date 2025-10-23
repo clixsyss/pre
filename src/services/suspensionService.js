@@ -1,12 +1,28 @@
 import firestoreService from './firestoreService';
 
 /**
- * Check if a user is currently suspended
+ * Check if a user is currently suspended for a specific project
  * @param {string} userId - The user's ID
+ * @param {string} projectId - The project ID (optional, gets from store if not provided)
  * @returns {Promise<Object>} - Suspension status and details
  */
-export const checkUserSuspension = async (userId) => {
+export const checkUserSuspension = async (userId, projectId = null) => {
   try {
+    // Get project ID from store if not provided
+    if (!projectId) {
+      const { useProjectStore } = await import('../stores/projectStore');
+      const projectStore = useProjectStore();
+      projectId = projectStore.selectedProject?.id;
+    }
+    
+    if (!projectId) {
+      console.warn('⚠️ No project ID available for suspension check');
+      return {
+        isSuspended: false,
+        suspensionDetails: null
+      };
+    }
+    
     const userDoc = await firestoreService.getDoc(`users/${userId}`);
     
     if (!userDoc.exists()) {
@@ -18,8 +34,19 @@ export const checkUserSuspension = async (userId) => {
     
     const userData = userDoc.data();
     
-    // Check if user is suspended
-    if (!userData.isSuspended) {
+    // Find the project-specific data
+    const userProject = (userData.projects || []).find(p => p.projectId === projectId);
+    
+    if (!userProject) {
+      console.warn('⚠️ User not found in project:', projectId);
+      return {
+        isSuspended: false,
+        suspensionDetails: null
+      };
+    }
+    
+    // Check if user is suspended for THIS PROJECT
+    if (!userProject.isSuspended) {
       return {
         isSuspended: false,
         suspensionDetails: null
@@ -27,14 +54,14 @@ export const checkUserSuspension = async (userId) => {
     }
     
     // Check if temporary suspension has expired
-    if (userData.suspensionType === 'temporary' && userData.suspensionEndDate) {
-      const endDate = userData.suspensionEndDate.toDate ? 
-        userData.suspensionEndDate.toDate() : 
-        new Date(userData.suspensionEndDate);
+    if (userProject.suspensionType === 'temporary' && userProject.suspensionEndDate) {
+      const endDate = userProject.suspensionEndDate.toDate ? 
+        userProject.suspensionEndDate.toDate() : 
+        new Date(userProject.suspensionEndDate);
       
       if (new Date() > endDate) {
-        // Suspension has expired, automatically unsuspend
-        await unsuspendUser(userId);
+        // Suspension has expired, automatically unsuspend for this project
+        await unsuspendUser(userId, projectId);
         return {
           isSuspended: false,
           suspensionDetails: null
@@ -42,15 +69,17 @@ export const checkUserSuspension = async (userId) => {
       }
     }
     
-    // User is suspended
+    // User is suspended for this project
+    console.log('🚫 User is suspended for project:', projectId);
     return {
       isSuspended: true,
       suspensionDetails: {
-        reason: userData.suspensionReason,
-        type: userData.suspensionType,
-        suspendedAt: userData.suspendedAt,
-        suspendedBy: userData.suspendedBy,
-        suspensionEndDate: userData.suspensionEndDate
+        reason: userProject.suspensionReason,
+        type: userProject.suspensionType,
+        suspendedAt: userProject.suspendedAt,
+        suspendedBy: userProject.suspendedBy,
+        suspensionEndDate: userProject.suspensionEndDate,
+        projectId: projectId
       }
     };
     
@@ -64,21 +93,39 @@ export const checkUserSuspension = async (userId) => {
 };
 
 /**
- * Automatically unsuspend a user when temporary suspension expires
+ * Automatically unsuspend a user when temporary suspension expires (project-specific)
  * @param {string} userId - The user's ID
+ * @param {string} projectId - The project ID
  */
-const unsuspendUser = async (userId) => {
+const unsuspendUser = async (userId, projectId) => {
   try {
-    await firestoreService.updateDoc(`users/${userId}`, {
-      isSuspended: false,
-      suspensionReason: null,
-      suspensionType: null,
-      suspendedAt: null,
-      suspendedBy: null,
-      suspensionEndDate: null,
-      unsuspendedAt: new Date(),
-      unsuspendedBy: 'system'
+    const userDoc = await firestoreService.getDoc(`users/${userId}`);
+    const userData = userDoc.data();
+    
+    // Update the projects array to remove suspension for this specific project
+    const updatedProjects = (userData.projects || []).map(proj => {
+      if (proj.projectId === projectId) {
+        return {
+          ...proj,
+          isSuspended: false,
+          suspensionReason: null,
+          suspensionType: null,
+          suspendedAt: null,
+          suspendedBy: null,
+          suspensionEndDate: null,
+          unsuspendedAt: new Date(),
+          unsuspendedBy: 'system'
+        };
+      }
+      return proj;
     });
+
+    await firestoreService.updateDoc(`users/${userId}`, {
+      projects: updatedProjects,
+      updatedAt: new Date()
+    });
+    
+    console.log('✅ Auto-unsuspended user for project:', projectId);
   } catch (error) {
     console.error('Error auto-unsuspending user:', error);
   }
