@@ -164,75 +164,99 @@
         </div>
 
         <div class="form-group">
-          <label for="profilePicture" class="form-label">Profile Picture (Optional)</label>
-          <div class="file-upload">
-            <input
-              id="profilePicture"
-              type="file"
-              accept="image/*"
-              @change="handleProfilePictureUpload"
-              class="file-input"
-            />
-            <label for="profilePicture" class="file-label">
+          <label class="form-label">Profile Picture (Optional)</label>
+          <div class="media-upload-options">
+            <button type="button" @click="takeProfilePicture" class="upload-option-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 3H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <span>{{ profilePictureFile ? profilePictureFile.name : 'Upload Profile Picture' }}</span>
-            </label>
+              📸 Take Photo
+            </button>
+            <button type="button" @click="selectProfilePicture" class="upload-option-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              🖼️ Choose from Gallery
+            </button>
+          </div>
+          <input
+            ref="profilePictureInput"
+            type="file"
+            accept="image/*"
+            @change="handleProfilePictureUpload"
+            style="display: none"
+          />
+          <div v-if="profilePictureFile" class="file-preview">
+            <img :src="profilePicturePreview" alt="Profile Picture Preview" class="preview-image" />
+            <button type="button" @click="removeProfilePicture" class="remove-file-btn">✕ Remove</button>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label for="frontId" class="form-label">Front National ID Picture <span class="required">*</span></label>
-            <div class="file-upload" :class="{ 'has-file': frontIdFile, 'required': true }">
-              <input
-                id="frontId"
-                type="file"
-                accept="image/*"
-                @change="handleFrontIdUpload"
-                class="file-input"
-                required
-              />
-              <label for="frontId" class="file-label">
+            <label class="form-label">Front National ID Picture <span class="required">*</span></label>
+            <div class="media-upload-options">
+              <button type="button" @click="takeFrontIdPhoto" class="upload-option-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 3H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span>{{ frontIdFile ? frontIdFile.name : 'Upload Front ID' }}</span>
-              </label>
+                📸 Take Photo
+              </button>
+              <button type="button" @click="selectFrontIdFromGallery" class="upload-option-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                  <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                🖼️ Choose from Gallery
+              </button>
             </div>
+            <input
+              ref="frontIdInput"
+              type="file"
+              accept="image/*"
+              @change="handleFrontIdUpload"
+              style="display: none"
+            />
             <div v-if="frontIdFile" class="file-preview">
               <img :src="frontIdPreview" alt="Front ID Preview" class="preview-image" />
-              <button type="button" @click="removeFrontId" class="remove-file-btn">Remove</button>
+              <button type="button" @click="removeFrontId" class="remove-file-btn">✕ Remove</button>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="backId" class="form-label">Back National ID Picture <span class="required">*</span></label>
-            <div class="file-upload" :class="{ 'has-file': backIdFile, 'required': true }">
-              <input
-                id="backId"
-                type="file"
-                accept="image/*"
-                @change="handleBackIdUpload"
-                class="file-input"
-                required
-              />
-              <label for="backId" class="file-label">
+            <label class="form-label">Back National ID Picture <span class="required">*</span></label>
+            <div class="media-upload-options">
+              <button type="button" @click="takeBackIdPhoto" class="upload-option-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 3H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span>{{ backIdFile ? backIdFile.name : 'Upload Back ID' }}</span>
-              </label>
+                📸 Take Photo
+              </button>
+              <button type="button" @click="selectBackIdFromGallery" class="upload-option-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                  <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                🖼️ Choose from Gallery
+              </button>
             </div>
+            <input
+              ref="backIdInput"
+              type="file"
+              accept="image/*"
+              @change="handleBackIdUpload"
+              style="display: none"
+            />
             <div v-if="backIdFile" class="file-preview">
               <img :src="backIdPreview" alt="Back ID Preview" class="preview-image" />
-              <button type="button" @click="removeBackId" class="remove-file-btn">Remove</button>
+              <button type="button" @click="removeBackId" class="remove-file-btn">✕ Remove</button>
             </div>
           </div>
         </div>
@@ -250,6 +274,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../../boot/firebase'
 import { useRegistrationStore } from '../../stores/registration'
@@ -271,6 +296,10 @@ const backIdFile = ref(null)
 const profilePictureFile = ref(null)
 const frontIdPreview = ref(null)
 const backIdPreview = ref(null)
+const profilePicturePreview = ref(null)
+const profilePictureInput = ref(null)
+const frontIdInput = ref(null)
+const backIdInput = ref(null)
 
 // Setup keyboard handling for better mobile UX
 useFormKeyboard({
@@ -356,17 +385,104 @@ const handleProfilePictureUpload = (event) => {
   const file = event.target.files[0]
   if (file) {
     profilePictureFile.value = file
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      profilePicturePreview.value = e.target.result
+    }
+    reader.readAsDataURL(file)
   }
 }
 
+// Camera and Gallery functions for Profile Picture
+const takeProfilePicture = async () => {
+  try {
+    const image = await Camera.getPhoto({
+      quality: 90,
+      allowEditing: true,
+      resultType: CameraResultType.Uri,
+      source: CameraSource.Camera
+    });
+    
+    // Convert to blob
+    const response = await fetch(image.webPath);
+    const blob = await response.blob();
+    const file = new File([blob], `profile_${Date.now()}.jpg`, { type: 'image/jpeg' });
+    
+    profilePictureFile.value = file;
+    profilePicturePreview.value = image.webPath;
+  } catch (error) {
+    console.log('Camera cancelled or error:', error);
+  }
+};
+
+const selectProfilePicture = () => {
+  profilePictureInput.value.click();
+};
+
+const removeProfilePicture = () => {
+  profilePictureFile.value = null;
+  profilePicturePreview.value = null;
+};
+
+// Camera and Gallery functions for Front ID
+const takeFrontIdPhoto = async () => {
+  try {
+    const image = await Camera.getPhoto({
+      quality: 90,
+      allowEditing: false,
+      resultType: CameraResultType.Uri,
+      source: CameraSource.Camera
+    });
+    
+    const response = await fetch(image.webPath);
+    const blob = await response.blob();
+    const file = new File([blob], `front_id_${Date.now()}.jpg`, { type: 'image/jpeg' });
+    
+    frontIdFile.value = file;
+    frontIdPreview.value = image.webPath;
+  } catch (error) {
+    console.log('Camera cancelled or error:', error);
+  }
+};
+
+const selectFrontIdFromGallery = () => {
+  frontIdInput.value.click();
+};
+
 const removeFrontId = () => {
-  frontIdFile.value = null
-  frontIdPreview.value = null
-}
+  frontIdFile.value = null;
+  frontIdPreview.value = null;
+};
+
+// Camera and Gallery functions for Back ID
+const takeBackIdPhoto = async () => {
+  try {
+    const image = await Camera.getPhoto({
+      quality: 90,
+      allowEditing: false,
+      resultType: CameraResultType.Uri,
+      source: CameraSource.Camera
+    });
+    
+    const response = await fetch(image.webPath);
+    const blob = await response.blob();
+    const file = new File([blob], `back_id_${Date.now()}.jpg`, { type: 'image/jpeg' });
+    
+    backIdFile.value = file;
+    backIdPreview.value = image.webPath;
+  } catch (error) {
+    console.log('Camera cancelled or error:', error);
+  }
+};
+
+const selectBackIdFromGallery = () => {
+  backIdInput.value.click();
+};
 
 const removeBackId = () => {
-  backIdFile.value = null
-  backIdPreview.value = null
+  backIdFile.value = null;
+  backIdPreview.value = null;
 }
 
 const handleSubmit = async () => {
@@ -937,6 +1053,43 @@ const handleSubmit = async () => {
   color: white;
 }
 
+/* Media Upload Options */
+.media-upload-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.upload-option-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: white;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.upload-option-btn:active {
+  transform: scale(0.98);
+  border-color: #AF1E23;
+  background: #fef2f2;
+  color: #AF1E23;
+  box-shadow: 0 0 0 3px rgba(175, 30, 35, 0.1);
+}
+
+.upload-option-btn svg {
+  flex-shrink: 0;
+}
+
 .file-upload {
   position: relative;
 }
@@ -975,30 +1128,45 @@ const handleSubmit = async () => {
 }
 
 .file-preview {
-  margin-top: 10px;
-  padding: 10px;
-  border: 1px solid #e1e5e9;
-  border-radius: 8px;
-  background-color: #f8f9fa;
+  margin-top: 12px;
+  padding: 12px;
+  border: 2px solid #10b981;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 .preview-image {
   width: 100%;
-  max-width: 200px;
+  max-width: 250px;
   height: auto;
-  border-radius: 6px;
-  margin-bottom: 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 2px solid white;
 }
 
 .remove-file-btn {
-  background-color: #ef4444;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.remove-file-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 1px 4px rgba(239, 68, 68, 0.3);
 }
 
 .continue-btn {

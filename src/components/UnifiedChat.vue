@@ -571,14 +571,14 @@ onUnmounted(() => {
 .unified-chat {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 60px - 80px);
+  height: calc(100vh - 150px);
   /* Full height minus header and bottom nav */
   background: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   position: fixed;
   left: 0;
   right: 0;
-  top: 77px;
+  top: 68px;
   /* Start below app header */
   bottom: 80px;
   /* Bottom nav height */
@@ -871,7 +871,7 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border: 1px solid #e5e7eb;
   position: relative;
-  max-width: 100%;
+  max-width: 80%;
   word-wrap: break-word;
 }
 
@@ -975,7 +975,6 @@ onUnmounted(() => {
   border-top: 1px solid #e5e7eb;
   padding: 1rem 1.5rem;
   position: sticky;
-  bottom: 0;
   z-index: 10;
 }
 

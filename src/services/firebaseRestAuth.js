@@ -14,30 +14,85 @@ class FirebaseRestAuth {
    */
   async createAccount(email, password) {
     console.log('[RestAuth] Creating account via REST...')
+    console.log('[RestAuth] Email:', email)
     console.log('[RestAuth] Using API key:', API_KEY ? 'KEY PRESENT' : 'KEY MISSING')
+    console.log('[RestAuth] API key value:', API_KEY)
     
     try {
+      const requestUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`
+      console.log('[RestAuth] Request URL:', requestUrl)
+      
       const response = await CapacitorHttp.post({
-        url: `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`,
-        headers: { 'Content-Type': 'application/json' },
-        data: { email, password, returnSecureToken: true }
+        url: requestUrl,
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        data: { 
+          email, 
+          password, 
+          returnSecureToken: true 
+        }
       })
 
-      console.log('[RestAuth] Create account response:', response.status)
+      console.log('[RestAuth] Create account response status:', response.status)
+      console.log('[RestAuth] Response headers:', JSON.stringify(response.headers))
+      console.log('[RestAuth] Response data type:', typeof response.data)
       console.log('[RestAuth] Response data:', JSON.stringify(response.data))
+      console.log('[RestAuth] Response URL:', response.url)
       
-      if (response.status === 200 && response.data.idToken) {
+      // Handle the response data - it might be a string on iOS
+      let responseData = response.data
+      if (typeof responseData === 'string') {
+        try {
+          console.log('[RestAuth] Raw string response:', responseData)
+          responseData = JSON.parse(responseData)
+          console.log('[RestAuth] Parsed string response to object')
+        } catch (e) {
+          console.error('[RestAuth] Failed to parse response data:', e)
+        }
+      }
+      
+      // Check if response data is empty object
+      if (responseData && Object.keys(responseData).length === 0) {
+        console.error('[RestAuth] ⚠️ Response data is empty object!')
+        console.log('[RestAuth] Attempting to use Firebase Web SDK instead...')
+        
+        // Fallback to Firebase Web SDK
+        try {
+          const { auth } = await import('../boot/firebase')
+          const { createUserWithEmailAndPassword } = await import('firebase/auth')
+          
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+          const idToken = await userCredential.user.getIdToken()
+          
+          console.log('[RestAuth] ✅ Account created via Web SDK fallback')
+          return {
+            success: true,
+            uid: userCredential.user.uid,
+            idToken: idToken,
+            refreshToken: userCredential.user.refreshToken
+          }
+        } catch (sdkError) {
+          console.error('[RestAuth] Web SDK fallback also failed:', sdkError)
+          if (sdkError.code === 'auth/email-already-in-use') {
+            return { success: false, alreadyExists: true }
+          }
+          throw sdkError
+        }
+      }
+      
+      if (response.status === 200 && responseData?.idToken) {
         console.log('[RestAuth] ✅ Account created')
         return {
           success: true,
-          uid: response.data.localId,
-          idToken: response.data.idToken,
-          refreshToken: response.data.refreshToken
+          uid: responseData.localId,
+          idToken: responseData.idToken,
+          refreshToken: responseData.refreshToken
         }
       } else {
-        const errorMsg = response.data?.error?.message || 'Unknown error'
+        const errorMsg = responseData?.error?.message || 'Unknown error'
         console.error('[RestAuth] ❌ Create account error:', errorMsg)
-        console.error('[RestAuth] Full error details:', JSON.stringify(response.data))
+        console.error('[RestAuth] Full error details:', JSON.stringify(responseData))
         
         if (errorMsg === 'EMAIL_EXISTS') {
           return { success: false, alreadyExists: true }
@@ -47,6 +102,7 @@ class FirebaseRestAuth {
     } catch (error) {
       console.error('[RestAuth] Create account exception:', error)
       console.error('[RestAuth] Error message:', error?.message)
+      console.error('[RestAuth] Error code:', error?.code)
       throw error
     }
   }
@@ -65,18 +121,30 @@ class FirebaseRestAuth {
       })
 
       console.log('[RestAuth] Sign in response:', response.status)
+      console.log('[RestAuth] Response data type:', typeof response.data)
       
-      if (response.status === 200) {
+      // Handle the response data - it might be a string on iOS
+      let responseData = response.data
+      if (typeof responseData === 'string') {
+        try {
+          responseData = JSON.parse(responseData)
+          console.log('[RestAuth] Parsed string response to object')
+        } catch (e) {
+          console.error('[RestAuth] Failed to parse response data:', e)
+        }
+      }
+      
+      if (response.status === 200 && responseData?.idToken) {
         console.log('[RestAuth] ✅ Signed in')
         return {
           success: true,
-          uid: response.data.localId,
-          idToken: response.data.idToken,
-          refreshToken: response.data.refreshToken,
-          email: response.data.email
+          uid: responseData.localId,
+          idToken: responseData.idToken,
+          refreshToken: responseData.refreshToken,
+          email: responseData.email
         }
       } else {
-        const errorMsg = response.data?.error?.message || 'Sign in failed'
+        const errorMsg = responseData?.error?.message || 'Sign in failed'
         throw new Error(errorMsg)
       }
     } catch (error) {
