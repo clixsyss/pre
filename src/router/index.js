@@ -6,18 +6,27 @@ import { canUserAccessRoute, checkUserSuspension } from '../services/suspensionS
 // Helper function to check user approval status
 async function checkUserApprovalStatus(userId) {
   try {
-    const userDoc = await firestoreService.getDoc(`users/${userId}`)
-    if (!userDoc.exists) {
+    console.log('[Router] Checking approval status for user:', userId)
+    const userDoc = await firestoreService.getDoc(`users/${userId}`, false) // Disable cache for fresh data
+    
+    // Handle both function and direct property access
+    const exists = typeof userDoc.exists === 'function' ? userDoc.exists() : userDoc.exists
+    
+    if (!exists) {
+      console.log('[Router] User document does not exist')
       return { approvalStatus: 'unknown', registrationStatus: 'incomplete' }
     }
     
-    const userData = userDoc.data
+    // Handle both function and direct property access for data
+    const userData = typeof userDoc.data === 'function' ? userDoc.data() : userDoc.data
+    
+    console.log('[Router] User approval status:', userData.approvalStatus)
     return {
       approvalStatus: userData.approvalStatus || 'pending',
       registrationStatus: userData.registrationStatus || 'incomplete'
     }
   } catch (error) {
-    console.error('Error checking approval status:', error)
+    console.error('[Router] Error checking approval status:', error)
     return { approvalStatus: 'unknown', registrationStatus: 'incomplete' }
   }
 }
