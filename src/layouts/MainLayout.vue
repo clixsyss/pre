@@ -1837,6 +1837,7 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .app-header {
     padding: 12px 16px;
+    padding-bottom: 5px;
   }
   
   .header-content {
@@ -1961,6 +1962,7 @@ onUnmounted(() => {
 @media (max-width: 480px) {
   .app-header {
     padding: 10px 12px;
+    padding-bottom: 5px;
   }
   
   .bottom-navigation {
@@ -2180,6 +2182,7 @@ onUnmounted(() => {
 @media (max-width: 480px) {
   .app-header {
     padding: 10px 12px;
+    padding-bottom: 5px;
   }
   
   .header-content {

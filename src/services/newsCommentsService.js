@@ -332,6 +332,8 @@ class NewsCommentsService {
    */
   async addNewsReaction(projectId, newsId, emoji) {
     try {
+      console.log('➕ addNewsReaction called:', { projectId, newsId, emoji });
+      
       // Get current user from optimizedAuthService
       const user = await optimizedAuthService.getCurrentUser();
       
@@ -345,9 +347,15 @@ class NewsCommentsService {
         createdAt: new Date()
       };
       
-      await firestoreService.addDoc(`projects/${projectId}/news/${newsId}/reactions`, reactionData);
+      console.log('💾 Writing reaction data:', reactionData);
+      
+      const result = await firestoreService.addDoc(`projects/${projectId}/news/${newsId}/reactions`, reactionData);
+      
+      console.log('✅ Reaction added successfully:', result);
+      
+      return result;
     } catch (error) {
-      console.error('Error adding news reaction:', error);
+      console.error('❌ Error adding news reaction:', error);
       throw error;
     }
   }
@@ -394,19 +402,41 @@ class NewsCommentsService {
    */
   async getNewsReactions(projectId, newsId) {
     try {
+      console.log('🔍 getNewsReactions called:', { projectId, newsId });
+      
       const result = await firestoreService.getDocs(`projects/${projectId}/news/${newsId}/reactions`, {
-        orderBy: [{ field: 'createdAt', direction: 'desc' }]
+        orderBy: [{ field: 'createdAt', direction: 'desc' }],
+        timeoutMs: 5000 // 5 second timeout for iOS
       });
+      
+      console.log('✅ getNewsReactions result:', { docsCount: result.docs?.length || 0 });
       
       const reactions = result.docs || [];
       
-      return reactions.map(reaction => ({
-        id: reaction.id,
-        ...reaction
-      }));
+      // Extract data properly from Firestore documents
+      const mappedReactions = reactions.map(reaction => {
+        // Try to get data - it might be a function or already extracted
+        const data = typeof reaction.data === 'function' ? reaction.data() : reaction;
+        
+        console.log('📄 Reaction document:', { 
+          id: reaction.id, 
+          hasDataFunction: typeof reaction.data === 'function',
+          emoji: data.emoji,
+          userId: data.userId
+        });
+        
+        return {
+          id: reaction.id,
+          ...data
+        };
+      });
+      
+      console.log('📊 Mapped reactions:', mappedReactions);
+      return mappedReactions;
     } catch (error) {
-      console.error('Error fetching news reactions:', error?.message || JSON.stringify(error) || error);
-      throw error;
+      console.error('❌ Error fetching news reactions:', error?.message || JSON.stringify(error) || error);
+      // Return empty array instead of throwing to prevent UI from breaking
+      return [];
     }
   }
 
@@ -419,36 +449,49 @@ class NewsCommentsService {
    */
   async subscribeToNewsReactions(projectId, newsId, callback) {
     try {
-      // Check if iOS to use polling instead of real-time listeners
+      console.log('🔔 subscribeToNewsReactions called:', { projectId, newsId });
+      
+      // Always use polling on iOS since Web SDK hangs in WKWebView
       const { Capacitor } = await import('@capacitor/core');
       const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform();
       
+      console.log('🔔 Platform check:', { isIOS, platform: Capacitor.getPlatform() });
+      
       if (isIOS) {
-        // Use polling for iOS since collection listeners don't work reliably
+        console.log('📱 Using polling for iOS...');
+        // Use polling for iOS since collection listeners hang in WKWebView
         let intervalId;
         
         const pollReactions = async () => {
           try {
+            console.log('🔄 Polling reactions...');
             const reactions = await this.getNewsReactions(projectId, newsId);
+            console.log('🔄 Poll result:', reactions.length, 'reactions');
             callback(reactions);
           } catch (error) {
-            console.error('Error polling reactions:', error?.message || JSON.stringify(error) || error);
+            console.error('❌ Error polling reactions:', error?.message || JSON.stringify(error) || error);
+            callback([]); // Call with empty array to prevent hanging
           }
         };
         
         // Initial fetch
+        console.log('🔄 Initial poll...');
         await pollReactions();
+        console.log('✅ Initial poll complete');
         
-        // Poll every 5 seconds
-        intervalId = setInterval(pollReactions, 5000);
+        // Poll every 3 seconds for updates
+        intervalId = setInterval(pollReactions, 3000);
+        console.log('✅ Polling interval set up');
         
         // Return unsubscribe function
         return () => {
+          console.log('🛑 Unsubscribing from reactions polling');
           if (intervalId) {
             clearInterval(intervalId);
           }
         };
       } else {
+        console.log('🌐 Using real-time listener for web...');
         // Use real-time listeners for web
         return firestoreService.subscribeToQuery(
           `projects/${projectId}/news/${newsId}/reactions`,
@@ -458,17 +501,19 @@ class NewsCommentsService {
               id: doc.id,
               ...doc.data()
             }));
+            console.log('🔔 Subscription update:', reactions.length, 'reactions');
             callback(reactions);
           },
           (error) => {
-            console.error('Error in reactions subscription:', error?.message || error);
+            console.error('❌ Error in reactions subscription:', error?.message || error);
             callback([]);
           }
         );
       }
     } catch (error) {
-      console.error('Error subscribing to news reactions:', error);
-      throw error;
+      console.error('❌ Error setting up subscription:', error);
+      // Return a no-op unsubscribe function to prevent crashes
+      return () => {};
     }
   }
 

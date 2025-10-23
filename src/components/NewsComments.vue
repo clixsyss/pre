@@ -19,7 +19,8 @@
       <button 
         @click="toggleReaction('like')"
         class="action-btn"
-        :class="{ active: userReactions.includes('like') }"
+        :class="{ active: userReactions.includes('like'), disabled: isTogglingReaction }"
+        :disabled="isTogglingReaction"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M7 10V19H4C3.46957 19 2.96086 18.7893 2.58579 18.4142C2.21071 18.0391 2 17.5304 2 17V12C2 11.4696 2.21071 10.9609 2.58579 10.5858C2.96086 10.2107 3.46957 10 4 10H7ZM7 10V5C7 4.20435 7.31607 3.44129 7.87868 2.87868C8.44129 2.31607 9.20435 2 10 2C10.7956 2 11.5587 2.31607 12.1213 2.87868C12.6839 3.44129 13 4.20435 13 5V8H20C20.5304 8 21.0391 8.21071 21.4142 8.58579C21.7893 8.96086 22 9.46957 22 10V17C22 17.5304 21.7893 18.0391 21.4142 18.4142C21.0391 18.7893 20.5304 19 20 19H9L7 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -30,11 +31,13 @@
       <button 
         @click="toggleComments"
         class="action-btn"
+        :class="{ active: showComments && activeComments.length > 0 }"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span>Comment</span>
+        <span>{{ showComments ? 'Hide' : 'Show' }} Comments</span>
+        <span v-if="activeComments.length > 0" class="comment-count-badge">({{ activeComments.length }})</span>
       </button>
       
     </div>
@@ -143,11 +146,12 @@ export default {
     console.log('toggleNewsReaction function:', commentsStore.toggleNewsReaction);
     
      // Local state
-     const showComments = ref(false);
+     const showComments = ref(true); // Show comments by default
      const newComment = ref('');
      const replyingTo = ref(null);
      const showSortDropdown = ref(false);
      const currentSortOption = ref('Most relevant');
+     const isTogglingReaction = ref(false); // Prevent rapid clicks
     
 // Available reaction types
 const availableReactions = ['like', 'love', 'laugh', 'sad'];
@@ -237,9 +241,15 @@ const availableReactions = ['like', 'love', 'laugh', 'sad'];
        return sortedRootComments;
      });
     
-    // Get news reactions from store
-    const newsReactions = computed(() => commentsStore.getNewsReactions(props.newsId));
-    const userReactions = computed(() => commentsStore.getUserNewsReactions(props.newsId));
+    // Get news reactions from store - access the reactive refs directly for proper reactivity
+    const newsReactions = computed(() => {
+      // Direct access to the reactive ref to establish proper dependency tracking
+      return commentsStore.newsReactions[props.newsId] || {};
+    });
+    const userReactions = computed(() => {
+      // Direct access to the reactive ref to establish proper dependency tracking
+      return commentsStore.userNewsReactions[props.newsId] || [];
+    });
     
     // Reaction summary for display
     const reactionSummary = computed(() => {
@@ -261,36 +271,61 @@ const availableReactions = ['like', 'love', 'laugh', 'sad'];
     // Methods
     const toggleComments = () => {
       showComments.value = !showComments.value;
-      if (showComments.value) {
-        commentsStore.subscribeToComments(props.newsId);
-      } else {
-        commentsStore.unsubscribeFromComments(props.newsId);
-      }
+      // Don't unsubscribe when hiding - just toggle visibility
+      // Subscription is managed in lifecycle hooks
     };
     
     const toggleReaction = async (reactionType) => {
+      // Prevent multiple rapid clicks
+      if (isTogglingReaction.value) {
+        console.log('⏸️ Already toggling reaction, ignoring click');
+        return;
+      }
+      
       try {
+        isTogglingReaction.value = true;
+        
         // Check if the function exists
         if (typeof commentsStore.toggleNewsReaction !== 'function') {
           console.error('toggleNewsReaction function not found in store');
           return;
         }
         
+        console.log('👆 User clicked reaction button:', {
+          newsId: props.newsId,
+          reactionType,
+          currentUserReactions: userReactions.value
+        });
+        
         // If user already has this reaction, remove it
         if (userReactions.value.includes(reactionType)) {
+          console.log('🗑️ Removing existing reaction:', reactionType);
           await commentsStore.toggleNewsReaction(props.newsId, reactionType);
         } else {
           // Remove any existing reaction first (Facebook-style: only one reaction per user)
           if (userReactions.value.length > 0) {
             const currentReaction = userReactions.value[0];
+            console.log('🔄 Switching from', currentReaction, 'to', reactionType);
             await commentsStore.toggleNewsReaction(props.newsId, currentReaction);
+            // Wait a bit for the first write to complete
+            await new Promise(resolve => setTimeout(resolve, 200));
           }
           
           // Add the new reaction
+          console.log('➕ Adding new reaction:', reactionType);
           await commentsStore.toggleNewsReaction(props.newsId, reactionType);
         }
+        
+        console.log('✅ Reaction toggle completed successfully');
       } catch (error) {
-        console.error('Error toggling reaction:', error);
+        console.error('❌ Error toggling reaction:', error);
+        // You could show a user-friendly error message here
+        alert('Failed to update reaction. Please try again.');
+      } finally {
+        // Always re-enable the button after 1 second
+        setTimeout(() => {
+          isTogglingReaction.value = false;
+        }, 1000);
       }
     };
     
@@ -347,10 +382,29 @@ const availableReactions = ['like', 'love', 'laugh', 'sad'];
 // Load news reactions
 const loadNewsReactions = async () => {
   try {
-    await commentsStore.fetchNewsReactions(props.newsId);
-    commentsStore.subscribeToNewsReactions(props.newsId);
+    console.log('📊 Loading news reactions for newsId:', props.newsId);
+    
+    // Fetch initial reactions with timeout protection
+    const fetchPromise = commentsStore.fetchNewsReactions(props.newsId);
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => {
+      console.warn('⏰ fetchNewsReactions timed out after 5s, continuing anyway...');
+      resolve();
+    }, 5000));
+    
+    await Promise.race([fetchPromise, timeoutPromise]);
+    console.log('📊 Initial fetch complete (or timed out), subscribing to reactions...');
+    
+    // Set up subscription - don't await to avoid hanging
+    commentsStore.subscribeToNewsReactions(props.newsId).then(() => {
+      console.log('📊 Subscription set up successfully');
+    }).catch((error) => {
+      console.error('❌ Error setting up subscription:', error);
+    });
+    
+    console.log('📊 Current reactions:', commentsStore.newsReactions[props.newsId]);
+    console.log('📊 Current user reactions:', commentsStore.userNewsReactions[props.newsId]);
   } catch (error) {
-    console.error('Error loading news reactions:', error);
+    console.error('❌ Error loading news reactions:', error);
   }
 };
     
@@ -358,6 +412,7 @@ const loadNewsReactions = async () => {
     onMounted(() => {
       console.log('NewsComments mounted, fetching comments for newsId:', props.newsId);
       commentsStore.fetchComments(props.newsId);
+      commentsStore.subscribeToComments(props.newsId); // Subscribe to get real-time updates
       loadNewsReactions();
     });
     
@@ -367,15 +422,29 @@ const loadNewsReactions = async () => {
     });
     
     // Watch for newsId changes
-    watch(() => props.newsId, (newId) => {
+    watch(() => props.newsId, (newId, oldId) => {
       if (newId) {
-        commentsStore.fetchComments(newId);
-        loadNewsReactions();
-        if (showComments.value) {
-          commentsStore.subscribeToComments(newId);
+        // Unsubscribe from old newsId if it changed
+        if (oldId && oldId !== newId) {
+          commentsStore.unsubscribeFromComments(oldId);
+          commentsStore.unsubscribeFromNewsReactions(oldId);
         }
+        
+        // Fetch and subscribe to new newsId
+        commentsStore.fetchComments(newId);
+        commentsStore.subscribeToComments(newId);
+        loadNewsReactions();
       }
     });
+    
+    // Debug: Watch for reaction changes
+    watch(newsReactions, (newVal) => {
+      console.log('🔄 newsReactions changed:', newVal);
+    }, { deep: true });
+    
+    watch(userReactions, (newVal) => {
+      console.log('🔄 userReactions changed:', newVal);
+    }, { deep: true });
     
      return {
        showComments,
@@ -392,6 +461,7 @@ const loadNewsReactions = async () => {
        userReactions,
        reactionSummary,
        totalReactions,
+       isTogglingReaction,
        toggleComments,
        toggleReaction,
        handleAddComment,
@@ -480,6 +550,19 @@ const loadNewsReactions = async () => {
 .action-btn.active {
   color: #AF1E23;
   background-color: #fef2f2;
+}
+
+.action-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.comment-count-badge {
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.8;
+  margin-left: 2px;
 }
 
 .action-btn svg {

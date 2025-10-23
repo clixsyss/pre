@@ -35,17 +35,14 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
     };
   });
 
-  const getNewsReactions = computed(() => {
-    return (newsId) => {
-      return newsReactions.value[newsId] || {};
-    };
-  });
+  // Getter functions for accessing reactions by newsId
+  const getNewsReactions = (newsId) => {
+    return newsReactions.value[newsId] || {};
+  };
 
-  const getUserNewsReactions = computed(() => {
-    return (newsId) => {
-      return userNewsReactions.value[newsId] || [];
-    };
-  });
+  const getUserNewsReactions = (newsId) => {
+    return userNewsReactions.value[newsId] || [];
+  };
 
   // Actions
   const fetchComments = async (newsId) => {
@@ -196,6 +193,8 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
     if (!newsId) return;
     
     try {
+      console.log('📊 fetchNewsReactions START for newsId:', newsId);
+      
       const projectStore = useProjectStore();
       const projectId = projectStore.selectedProject?.id;
       
@@ -203,15 +202,31 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
         throw new Error('No project selected');
       }
       
+      console.log('📊 Calling newsCommentsService.getNewsReactions...');
       const reactions = await newsCommentsService.getNewsReactions(projectId, newsId);
+      console.log('📊 Got reactions:', reactions?.length || 0, reactions);
       
       // Process reactions to group by emoji
       const reactionGroups = {};
       const userReactions = [];
       const user = await optimizedAuthService.getCurrentUser();
       
+      console.log('👤 Current user ID:', user?.uid);
+      
       reactions.forEach(reaction => {
+        console.log('Processing reaction:', {
+          emoji: reaction.emoji,
+          userId: reaction.userId,
+          userName: reaction.userName,
+          isCurrentUser: user && reaction.userId === user.uid
+        });
+        
         const emoji = reaction.emoji;
+        if (!emoji) {
+          console.warn('⚠️ Reaction missing emoji field:', reaction);
+          return; // Skip reactions without emoji
+        }
+        
         if (!reactionGroups[emoji]) {
           reactionGroups[emoji] = { count: 0, users: [] };
         }
@@ -224,15 +239,28 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
         
         // Track user's own reactions
         if (user && reaction.userId === user.uid) {
+          console.log('✅ Found user reaction:', emoji);
           userReactions.push(emoji);
         }
       });
       
-      newsReactions.value[newsId] = reactionGroups;
-      userNewsReactions.value[newsId] = userReactions;
+      // Update state in a reactive way - create new objects to ensure Vue detects changes
+      newsReactions.value = {
+        ...newsReactions.value,
+        [newsId]: reactionGroups
+      };
+      userNewsReactions.value = {
+        ...userNewsReactions.value,
+        [newsId]: userReactions
+      };
+      
+      console.log('✅ fetchNewsReactions COMPLETE:', {
+        totalReactions: Object.values(reactionGroups).reduce((sum, r) => sum + r.count, 0),
+        userReactions
+      });
     } catch (err) {
       error.value = err.message;
-      console.error('Error fetching news reactions:', err?.message || JSON.stringify(err) || err);
+      console.error('❌ Error fetching news reactions:', err?.message || JSON.stringify(err) || err);
     }
   };
 
@@ -251,12 +279,20 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
       const currentUser = await optimizedAuthService.getCurrentUser();
       
       const unsubscribe = await newsCommentsService.subscribeToNewsReactions(projectId, newsId, (reactions) => {
+        console.log('🔔 Subscription callback received reactions:', reactions);
+        
         // Process reactions to group by emoji
         const reactionGroups = {};
         const userReactions = [];
         
         reactions.forEach(reaction => {
           const emoji = reaction.emoji;
+          
+          if (!emoji) {
+            console.warn('⚠️ Subscription: Reaction missing emoji field:', reaction);
+            return; // Skip reactions without emoji
+          }
+          
           if (!reactionGroups[emoji]) {
             reactionGroups[emoji] = { count: 0, users: [] };
           }
@@ -269,12 +305,25 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
           
           // Track user's own reactions
           if (currentUser && reaction.userId === currentUser.uid) {
+            console.log('✅ Subscription: Found user reaction:', emoji);
             userReactions.push(emoji);
           }
         });
         
-        newsReactions.value[newsId] = reactionGroups;
-        userNewsReactions.value[newsId] = userReactions;
+        // Update state in a reactive way - create new objects to ensure Vue detects changes
+        newsReactions.value = {
+          ...newsReactions.value,
+          [newsId]: reactionGroups
+        };
+        userNewsReactions.value = {
+          ...userNewsReactions.value,
+          [newsId]: userReactions
+        };
+        
+        console.log('News reactions updated for', newsId, ':', {
+          totalReactions: Object.values(reactionGroups).reduce((sum, r) => sum + r.count, 0),
+          userReactions: userReactions
+        });
       });
       
       reactionSubscriptions.value[newsId] = unsubscribe;
@@ -308,13 +357,32 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
         throw new Error('No project selected');
       }
       
+      console.log('🎯 Toggling reaction in Firestore...');
+      const startTime = Date.now();
+      
       await newsCommentsService.toggleNewsReaction(projectId, newsId, emoji);
       
-      // Refresh reactions after toggle
+      const duration = Date.now() - startTime;
+      console.log(`✅ Reaction toggled successfully (took ${duration}ms)`);
+      
+      // Manually refresh reactions after toggle (important for iOS where subscriptions may hang)
+      console.log('🔄 Refreshing reactions after toggle...');
       await fetchNewsReactions(newsId);
+      console.log('✅ Reactions refreshed after toggle');
+      
+      // Extra safety: if reactions still don't show user's reaction after 500ms, fetch again
+      setTimeout(async () => {
+        const currentUserReactions = userNewsReactions.value[newsId] || [];
+        console.log('🔍 Safety check - current user reactions:', currentUserReactions);
+        
+        if (currentUserReactions.length === 0) {
+          console.warn('⚠️ User reactions still empty, fetching again...');
+          await fetchNewsReactions(newsId);
+        }
+      }, 500);
     } catch (err) {
       error.value = err.message;
-      console.error('Error toggling news reaction:', err?.message || JSON.stringify(err) || err);
+      console.error('❌ Error toggling news reaction:', err?.message || JSON.stringify(err) || err);
     }
   };
 
