@@ -75,7 +75,9 @@ class ComplaintService {
         
         const collectionPath = `projects/${projectId}/complaints`
         const queryFilters = {}
-        const orderByClause = { field: 'lastMessageAt', direction: 'desc' }
+        
+        // Only use orderBy if we're not filtering by userId (to avoid composite index requirement)
+        const orderByClause = filters.userId ? null : { field: 'lastMessageAt', direction: 'desc' }
 
         // Apply filters
         if (filters.status) {
@@ -100,18 +102,32 @@ class ComplaintService {
             field,
             operator: filter.operator,
             value: filter.value
-          })),
-          orderBy: orderByClause
+          }))
+        }
+        
+        // Only add orderBy if it's not null
+        if (orderByClause) {
+          queryOptions.orderBy = orderByClause
         }
 
         console.log('🔍 Calling firestoreService.getDocs with:', { collectionPath, queryOptions })
         const result = await firestoreService.getDocs(collectionPath, queryOptions)
-        console.log('🔍 FirestoreService result:', { docsCount: result.docs?.length, empty: result.empty, size: result.size })
+        console.log('🔍 FirestoreService result:', { docsCount: result.docs?.length || result.length, empty: result.empty || result.length === 0, size: result.size || result.length })
         
-        const complaints = result.docs.map(doc => ({
+        let complaints = (result.docs || result).map(doc => ({
           id: doc.id,
-          ...(typeof doc.data === 'function' ? doc.data() : doc.data)
+          ...(typeof doc.data === 'function' ? doc.data() : doc.data || doc)
         }));
+        
+        // If we skipped orderBy due to userId filter, sort in memory
+        if (filters.userId && complaints.length > 0) {
+          console.log('🔍 Sorting complaints in memory by lastMessageAt')
+          complaints = complaints.sort((a, b) => {
+            const aTime = a.lastMessageAt?.toDate ? a.lastMessageAt.toDate() : new Date(a.lastMessageAt)
+            const bTime = b.lastMessageAt?.toDate ? b.lastMessageAt.toDate() : new Date(b.lastMessageAt)
+            return bTime - aTime // desc order
+          })
+        }
 
         console.log('🔍 Raw complaints from Firestore:', complaints.map(c => ({ id: c.id, userId: c.userId })))
 

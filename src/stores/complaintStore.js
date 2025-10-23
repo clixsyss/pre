@@ -17,6 +17,9 @@ export const useComplaintStore = defineStore('complaint', () => {
     resolved: 0,
     closed: 0
   });
+  const complaintCategories = ref([]);
+  const categoriesLoading = ref(false);
+  const categoriesLastFetch = ref(null);
 
   // Getters
   const userComplaints = computed(() => {
@@ -378,16 +381,82 @@ export const useComplaintStore = defineStore('complaint', () => {
     error.value = null;
   };
 
-  // Common complaint categories
-  const complaintCategories = [
-    { id: 'gate_access', name: 'Gate Access', icon: 'gate' },
-    { id: 'noise', name: 'Noise Complaint', icon: 'volume_off' },
-    { id: 'maintenance', name: 'Maintenance Request', icon: 'build' },
-    { id: 'security', name: 'Security Issue', icon: 'security' },
-    { id: 'facility', name: 'Facility Issue', icon: 'home' },
-    { id: 'billing', name: 'Billing Issue', icon: 'receipt' },
-    { id: 'other', name: 'Other', icon: 'help' }
-  ];
+  // Fetch complaint categories from Firestore
+  const fetchComplaintCategories = async (force = false) => {
+    const projectStore = useProjectStore();
+    const projectId = projectStore.selectedProject?.id;
+    
+    if (!projectId) {
+      console.error('No project selected for fetching complaint categories');
+      return [];
+    }
+
+    // Check cache - fetch only if forced or older than 5 minutes
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+    const now = Date.now();
+    
+    if (!force && 
+        complaintCategories.value.length > 0 && 
+        categoriesLastFetch.value && 
+        (now - categoriesLastFetch.value) < CACHE_DURATION) {
+      console.log('✨ Using cached complaint categories');
+      return complaintCategories.value;
+    }
+
+    try {
+      categoriesLoading.value = true;
+      console.log('📡 Fetching complaint categories from Firestore...');
+      console.log('📡 Project ID:', projectId);
+      
+      const { collection, getDocs, query, where, orderBy } = await import('firebase/firestore');
+      const { db } = await import('../boot/firebase');
+      
+      const categoriesRef = collection(db, `projects/${projectId}/complaintCategories`);
+      
+      // Try with full query first (requires composite index)
+      let snapshot;
+      try {
+        const q = query(
+          categoriesRef,
+          where('isActive', '==', true),
+          orderBy('displayOrder', 'asc')
+        );
+        snapshot = await getDocs(q);
+        console.log('✅ Fetched with composite query');
+      } catch (indexError) {
+        console.warn('⚠️ Composite index not available, falling back to simple query:', indexError.message);
+        // Fallback: fetch all and filter/sort in memory
+        snapshot = await getDocs(categoriesRef);
+      }
+      
+      let categories = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Filter and sort in memory if we had to use fallback
+      categories = categories
+        .filter(cat => cat.isActive !== false) // Include if isActive is true or undefined
+        .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+      
+      complaintCategories.value = categories;
+      categoriesLastFetch.value = now;
+      
+      console.log('✅ Complaint categories fetched:', categories.length);
+      console.log('📋 Categories data:', categories);
+      return categories;
+    } catch (err) {
+      console.error('❌ Error fetching complaint categories:', err);
+      console.error('❌ Error details:', err.message, err.code);
+      error.value = err.message;
+      
+      // Don't use fallback - keep empty array to show proper empty state
+      complaintCategories.value = [];
+      return [];
+    } finally {
+      categoriesLoading.value = false;
+    }
+  };
 
   // Priority levels
   const priorityLevels = [
@@ -404,6 +473,8 @@ export const useComplaintStore = defineStore('complaint', () => {
     loading,
     error,
     stats,
+    complaintCategories,
+    categoriesLoading,
     
     // Getters
     userComplaints,
@@ -422,9 +493,9 @@ export const useComplaintStore = defineStore('complaint', () => {
     subscribeToComplaint,
     clearCurrentComplaint,
     clearError,
+    fetchComplaintCategories,
     
     // Constants
-    complaintCategories,
     priorityLevels
   };
 });

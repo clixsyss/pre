@@ -1,7 +1,7 @@
 <template>
   <div class="main-layout">
     <!-- Header (Black)  padding top-->
-    <header class="app-header" :class="{ 'hide-for-modal': showProjectSwitcher }" style="padding: 20px;">
+    <header class="app-header" :class="{ 'hide-for-modal': showProjectSwitcher }">
       <div class="header-content">
         <!-- Project Selection Section -->
         <div class="header-left">
@@ -979,6 +979,7 @@ onUnmounted(() => {
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
   transition: opacity 0.2s ease, visibility 0.2s ease;
+  padding-bottom: 5px;
 }
 
 /* Hide header when modal is open - iOS fix */

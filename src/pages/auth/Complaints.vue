@@ -19,45 +19,67 @@
       </div>
     </div>
 
-    <!-- Quick Complaint Options -->
+    <!-- Quick Complaint Options - Modern Grid -->
     <div class="quick-complaints-section">
       <h2 class="section-title">{{ $t('quickComplaints') }}</h2>
-      <div class="quick-options-scroll">
-        <button v-for="category in complaintStore.complaintCategories" :key="category.id"
-          @click="startQuickComplaint(category)" class="quick-option-card">
-          <div class="quick-option-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path v-if="category.icon === 'gate'" d="M3 3H7V7H3V3Z" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" />
-              <path v-if="category.icon === 'volume_off'" d="M11 5L6 9H2V15H6L11 19V5Z" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path v-if="category.icon === 'build'"
-                d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path v-if="category.icon === 'security'" d="M12 22S8 18 8 13V6L12 4L16 6V13C16 18 12 22 12 22Z"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path v-if="category.icon === 'home'"
-                d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path v-if="category.icon === 'receipt'" d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" />
-              <path v-if="category.icon === 'help'" d="M9.09 9A3 3 0 0 1 12 6C12.5 6 13 6.5 13 7A3 3 0 0 1 9.09 9Z"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path v-if="category.icon === 'help'" d="M12 17H12.01" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </div>
-          <div class="quick-option-content">
-            <h3>{{ category.name }}</h3>
-            <p>Report issue</p>
-          </div>
+      
+      <!-- Loading State -->
+      <div v-if="complaintStore.categoriesLoading" class="categories-loading">
+        <div class="spinner-small"></div>
+        <p>Loading categories...</p>
+      </div>
+      
+      <!-- Empty State - No Categories -->
+      <div v-else-if="complaintStore.complaintCategories.length === 0" class="categories-empty-state">
+        <div class="empty-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 8V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="17" r="1" fill="currentColor"/>
+          </svg>
+        </div>
+        <h4>No Categories Available</h4>
+        <p>The admin hasn't created any complaint categories yet. Please contact support or try the manual complaint form below.</p>
+        <button @click="showNewComplaintModal = true" class="btn-primary">
+          Start Manual Complaint
         </button>
+      </div>
+      
+      <!-- Categories Dropdown -->
+      <div v-else class="category-dropdown-container">
+        <label class="dropdown-label">Select complaint category:</label>
+        <select 
+          @change="handleCategorySelect" 
+          class="category-dropdown"
+          v-model="selectedCategoryId"
+        >
+          <option value="">Choose a category...</option>
+          <option 
+            v-for="category in complaintStore.complaintCategories" 
+            :key="category.id"
+            :value="category.id"
+          >
+            {{ getCategoryEmoji(category.icon) }} {{ category.name }}
+          </option>
+        </select>
       </div>
     </div>
 
     <!-- My Complaints List -->
     <div class="my-complaints-section">
       <h2 class="section-title">My Complaints</h2>
+      
+      <!-- Debug Info (temporary) -->
+      <div style="background: #f0f0f0; padding: 10px; margin-bottom: 10px; border-radius: 8px; font-size: 12px;">
+        <strong>Debug Info:</strong><br>
+        Store complaints: {{ complaintStore.complaints.length }}<br>
+        User complaints: {{ complaintStore.userComplaints.length }}<br>
+        Filtered complaints: {{ filteredComplaints.length }}<br>
+        Loading: {{ complaintStore.loading }}<br>
+        Selected filter: {{ selectedStatus }}<br>
+        Categories: {{ complaintStore.complaintCategories.length }}
+      </div>
+      
       <div class="section-header">
         <div class="filter-tabs">
           <button v-for="status in statusOptions" :key="status.id" @click="selectedStatus = status.id"
@@ -260,6 +282,7 @@ const { openModal, closeModal: hideNavigationBars } = useModalState();
 const showNewComplaintModal = ref(false);
 const selectedStatus = ref('all');
 const unsubscribe = ref(null);
+const selectedCategoryId = ref('');
 
 const newComplaint = ref({
   title: '',
@@ -277,21 +300,28 @@ const statusOptions = [
   { id: 'all', name: 'All' },
   { id: 'Open', name: 'Open' },
   { id: 'In Progress', name: 'In Progress' },
-  { id: 'Resolved', name: 'Resolved' },
-  { id: 'Closed', name: 'Closed' }
+  { id: 'Resolved', name: 'Resolved' }
 ];
 
 // Computed properties
 const filteredComplaints = computed(() => {
   let complaints = complaintStore.userComplaints;
+  
+  console.log('🔍 Filtering complaints, total:', complaints.length);
+  console.log('🔍 Selected status filter:', selectedStatus.value);
+  console.log('🔍 Raw complaints data:', complaints);
 
   if (selectedStatus.value !== 'all') {
     complaints = complaints.filter(complaint => complaint.status === selectedStatus.value);
+    console.log('🔍 After status filter:', complaints.length);
   }
 
-  return complaints.sort((a, b) =>
+  const sorted = complaints.sort((a, b) =>
     new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
   );
+  
+  console.log('🔍 Final filtered complaints:', sorted.length);
+  return sorted;
 });
 
 const isImage = computed(() => {
@@ -303,6 +333,18 @@ const isImage = computed(() => {
 const startQuickComplaint = (category) => {
   newComplaint.value.category = category.id;
   showNewComplaintModal.value = true;
+};
+
+const handleCategorySelect = (event) => {
+  const categoryId = event.target.value;
+  if (!categoryId) return;
+  
+  const category = complaintStore.complaintCategories.find(c => c.id === categoryId);
+  if (category) {
+    startQuickComplaint(category);
+    // Reset selection after opening modal
+    selectedCategoryId.value = '';
+  }
 };
 
 const openComplaint = (complaint) => {
@@ -375,6 +417,25 @@ const getCategoryName = (categoryId) => {
   return category ? category.name : 'Other';
 };
 
+// Map icon names to emojis
+const getCategoryEmoji = (iconName) => {
+  const emojiMap = {
+    'gate': '🚪',
+    'volume_off': '🔇',
+    'build': '🔧',
+    'security': '🛡️',
+    'home': '🏠',
+    'receipt': '🧾',
+    'water': '💧',
+    'electric': '⚡',
+    'cleaning': '🧹',
+    'elevator': '🛗',
+    'parking': '🅿️',
+    'help': '❓'
+  };
+  return emojiMap[iconName] || '❓';
+};
+
 const formatTime = (timestamp) => {
   if (!timestamp) return '';
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -430,6 +491,10 @@ onMounted(async () => {
   try {
     console.log('🚀 ComplaintsPage: Component mounted, fetching complaints...');
     console.log('🚀 ComplaintsPage: Current user complaints before fetch:', complaintStore.userComplaints.length);
+    
+    // Fetch complaint categories first
+    await complaintStore.fetchComplaintCategories();
+    console.log('✅ ComplaintsPage: Categories fetched:', complaintStore.complaintCategories.length);
     
     await complaintStore.fetchComplaints();
     
@@ -536,76 +601,136 @@ watch(showNewComplaintModal, (isOpen) => {
   letter-spacing: -0.01em;
 }
 
-.quick-options-scroll {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding: 4px 0 8px 0;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.quick-options-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.quick-option-card {
+/* Categories Loading State */
+.categories-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 12px;
-  padding: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  min-width: 120px;
-  flex-shrink: 0;
+  justify-content: center;
+  padding: 2rem;
+  gap: 0.75rem;
 }
 
-/* Mobile app - hover effects disabled */
-/* .quick-option-card:hover {
-  background: #F6F6F6;
-  border-color: #AF1E23;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
-} */
+.categories-loading p {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
 
-.quick-option-icon {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
-  border-radius: 8px;
+.spinner-small {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #f3f4f6;
+  border-top-color: #AF1E23;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Categories Empty State */
+.categories-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  background: #f9fafb;
+  border-radius: 16px;
+  border: 2px dashed #e5e7eb;
+}
+
+.categories-empty-state .empty-icon {
+  width: 64px;
+  height: 64px;
+  background: white;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #F6F6F6;
-  flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
+  margin-bottom: 1rem;
+  color: #9ca3af;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.quick-option-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.quick-option-content h3 {
-  font-size: 0.85rem;
+.categories-empty-state h4 {
+  margin: 0 0 0.5rem 0;
+  color: #374151;
+  font-size: 1.125rem;
   font-weight: 600;
-  color: #333;
-  margin: 0 0 2px 0;
-  line-height: 1.2;
 }
 
-.quick-option-content p {
-  font-size: 0.7rem;
-  color: #666;
-  margin: 0;
-  line-height: 1.3;
+.categories-empty-state p {
+  margin: 0 0 1.5rem 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+.categories-empty-state .btn-primary {
+  background: linear-gradient(135deg, #AF1E23 0%, #8B1820 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.3);
+}
+
+.categories-empty-state .btn-primary:active {
+  transform: scale(0.98);
+  box-shadow: 0 1px 4px rgba(175, 30, 35, 0.3);
+}
+
+/* Category Dropdown Container */
+.category-dropdown-container {
+  padding: 8px 0;
+}
+
+.dropdown-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.category-dropdown {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #1f2937;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23AF1E23' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 48px;
+}
+
+.category-dropdown:focus {
+  outline: none;
+  border-color: #AF1E23;
+  box-shadow: 0 0 0 3px rgba(175, 30, 35, 0.1), 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.category-dropdown option {
+  padding: 12px;
+  font-size: 1rem;
+  background: white;
+  color: #1f2937;
+}
+
+.category-dropdown option:hover {
+  background: #f9fafb;
 }
 
 /* My Complaints Section */
@@ -1140,21 +1265,9 @@ watch(showNewComplaintModal, (isOpen) => {
     margin-bottom: 24px;
   }
 
-  .quick-options-scroll {
-    gap: 14px;
-  }
-
-  .quick-option-card {
-    min-width: 140px;
-    padding: 16px;
-  }
-
-  .quick-option-content h3 {
-    font-size: 0.9rem;
-  }
-
-  .quick-option-content p {
-    font-size: 0.75rem;
+  .category-dropdown {
+    font-size: 1.05rem;
+    padding: 16px 18px;
   }
 
   .my-complaints-section {
@@ -1185,22 +1298,9 @@ watch(showNewComplaintModal, (isOpen) => {
     font-size: 2.25rem;
   }
 
-  .quick-options-scroll {
-    gap: 16px;
-  }
-
-  .quick-option-card {
-    min-width: 160px;
-    padding: 18px;
-  }
-
-  .quick-option-icon {
-    width: 40px;
-    height: 40px;
-  }
-
-  .quick-option-content h3 {
-    font-size: 0.95rem;
+  .category-dropdown {
+    font-size: 1.1rem;
+    padding: 18px 20px;
   }
 
   .complaint-card {
