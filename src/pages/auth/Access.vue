@@ -707,15 +707,6 @@
                 required
               />
             </div>
-
-            <div class="info-box-pro">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                <path d="M12 16V12M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-              <p>The QR code will be generated and ready to share via WhatsApp, Messages, or any app of your choice.</p>
-            </div>
-
             <!-- Location Permission Info -->
             <div v-if="locationRestriction.active" class="info-box-pro" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-color: #fecaca;">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -1068,13 +1059,14 @@ const getUserUnitInfo = () => {
 /**
  * Load passes from Firebase AND calculate limits
  * 
- * Limit Hierarchy:
+ * NEW Per-Project Limit Hierarchy:
  * 1. Fetch global limit from guestPassSettings/{projectId} (set by admin in dashboard)
- * 2. Check if user has custom limit in users/{uid}/guestPassData.monthlyLimit (set by admin)
- * 3. Use user-specific limit if exists, otherwise use global limit
+ * 2. Check if user has custom limit in projects/{projectId}/userGuestPassSettings/{userId}.monthlyLimit
+ * 3. Use per-project user limit if exists, otherwise use global limit
  * 4. Fallback to 10 if both fail
  * 
- * Note: Handles both string and number types for backward compatibility
+ * This allows the same user to have different limits per project!
+ * Example: User has 10 in Project A, 100 in Project B, blocked in Project C
  */
 const loadPassesFromFirebase = async () => {
   try {
@@ -1095,12 +1087,17 @@ const loadPassesFromFirebase = async () => {
     console.log('📥 Loading passes from Firebase for project:', projectId)
     console.log('👤 User ID:', user.uid)
 
-    // Get user's guest pass limits from their user document
-    const userDoc = await firestoreService.getDoc(`users/${user.uid}`)
-    const userData = userDoc.data ? userDoc.data() : userDoc
-    const guestPassData = userData?.guestPassData || {}
+    // Get per-project user settings
+    let userProjectSettings = {}
+    try {
+      const settingsResult = await firestoreService.getDoc(`projects/${projectId}/userGuestPassSettings/${user.uid}`)
+      userProjectSettings = settingsResult.data ? settingsResult.data() : settingsResult
+      console.log('📋 Per-project user settings:', userProjectSettings)
+    } catch {
+      console.log('ℹ️ No per-project settings found, will use defaults')
+    }
     
-    // Check for global settings first
+    // Check for global settings
     let globalMonthlyLimit = 10
     let globalBlockAllUsers = false
     let globalSettingsDoc = null
@@ -1121,32 +1118,34 @@ const loadPassesFromFirebase = async () => {
       console.warn('⚠️ Could not fetch global settings, using defaults:', settingsError)
     }
     
-    // Use user-specific limit if set, otherwise use global limit
+    // Use per-project user limit if set, otherwise use global limit
     let monthlyLimit = globalMonthlyLimit
-    if (guestPassData.monthlyLimit !== undefined && guestPassData.monthlyLimit !== null) {
-      // Handle both string and number values for user-specific limit
-      monthlyLimit = typeof guestPassData.monthlyLimit === 'string'
-        ? parseInt(guestPassData.monthlyLimit, 10)
-        : guestPassData.monthlyLimit
+    if (userProjectSettings.monthlyLimit !== undefined && userProjectSettings.monthlyLimit !== null) {
+      // Handle both string and number values for per-project user limit
+      monthlyLimit = typeof userProjectSettings.monthlyLimit === 'string'
+        ? parseInt(userProjectSettings.monthlyLimit, 10)
+        : userProjectSettings.monthlyLimit
     }
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('📊 GUEST PASS LIMIT CALCULATION')
+    console.log('📊 GUEST PASS LIMIT CALCULATION (PER-PROJECT)')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('📊 User guestPassData:', guestPassData)
-    console.log('📊 Global settings limit:', globalMonthlyLimit)
-    console.log('📊 User-specific limit:', guestPassData.monthlyLimit || 'NOT SET (will use global)')
+    console.log('🏢 Project ID:', projectId)
+    console.log('📋 Per-project user settings:', userProjectSettings)
+    console.log('🌐 Global limit for this project:', globalMonthlyLimit)
+    console.log('🎯 Per-project user limit:', userProjectSettings.monthlyLimit || 'NOT SET (will use global)')
     console.log('📊 Final monthly limit:', monthlyLimit)
-    console.log('📊 Limit source:', guestPassData.monthlyLimit !== undefined && guestPassData.monthlyLimit !== null ? '🎯 USER-SPECIFIC OVERRIDE (won\'t change when global changes)' : '🌐 GLOBAL DEFAULT (will change when admin updates global)')
+    console.log('💡 Limit source:', userProjectSettings.monthlyLimit !== undefined && userProjectSettings.monthlyLimit !== null ? '🎯 CUSTOM LIMIT FOR THIS PROJECT ONLY' : '🌐 GLOBAL DEFAULT FOR THIS PROJECT')
     console.log('🔒 Global block all users:', globalBlockAllUsers)
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     
-    // Update user blocking status based on global and individual settings
+    // Update user blocking status based on global and per-project settings
+    const isBlockedInProject = userProjectSettings.blocked || false
     userBlockingStatus.value = {
-      isBlocked: guestPassData.blocked || globalBlockAllUsers,
+      isBlocked: isBlockedInProject || globalBlockAllUsers,
       blockingDetails: globalBlockAllUsers 
         ? { reason: 'Guest pass generation has been temporarily disabled by administration', global: true }
-        : (guestPassData.blocked ? { reason: 'Your account is blocked from generating guest passes', individual: true } : null),
+        : (isBlockedInProject ? { reason: 'You are blocked from generating guest passes in this project', individual: true, projectSpecific: true } : null),
       loading: false,
     }
 
@@ -1256,20 +1255,27 @@ const checkUserBlockingStatus = async () => {
       return
     }
 
-    // Get user's blocking status from their user document
-    const userDoc = await firestoreService.getDoc(`users/${user.uid}`)
-    const userData = userDoc.data ? userDoc.data() : userDoc
-    const guestPassData = userData?.guestPassData || {}
+    // Get per-project user settings
+    let userProjectSettings = {}
+    try {
+      const settingsResult = await firestoreService.getDoc(`projects/${projectId}/userGuestPassSettings/${user.uid}`)
+      userProjectSettings = settingsResult.data ? settingsResult.data() : settingsResult
+    } catch {
+      console.log('ℹ️ No per-project settings found for blocking check')
+    }
     
     // Check global settings for block all users
     const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
     const globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
     const globalBlockAllUsers = globalSettingsDoc?.blockAllUsers || false
     
-    console.log('🔍 Guest pass data:', guestPassData)
+    const isBlockedInProject = userProjectSettings.blocked || false
+    
+    console.log('🔍 Per-project user settings:', userProjectSettings)
     console.log('🔒 Global block all users:', globalBlockAllUsers)
+    console.log('🚫 Blocked in this project:', isBlockedInProject)
 
-    // Check if user is blocked globally or individually
+    // Check if user is blocked globally or in this specific project
     if (globalBlockAllUsers) {
       userBlockingStatus.value = {
         isBlocked: true,
@@ -1281,25 +1287,26 @@ const checkUserBlockingStatus = async () => {
         loading: false,
       }
       console.log('🚫 All users blocked from generating passes (global setting)')
-    } else if (guestPassData.blocked === true) {
+    } else if (isBlockedInProject) {
       userBlockingStatus.value = {
         isBlocked: true,
         blockingDetails: {
-          reason: guestPassData.blockedReason || 'Your account is blocked from generating guest passes',
-          blockedBy: guestPassData.blockedBy || 'admin',
-          blockedUntil: guestPassData.blockedUntil || null,
+          reason: userProjectSettings.blockedReason || 'You are blocked from generating guest passes in this project',
+          blockedBy: userProjectSettings.blockedBy || 'admin',
+          blockedAt: userProjectSettings.blockedAt || null,
           individual: true,
+          projectSpecific: true,
         },
         loading: false,
       }
-      console.log('⛔ User is individually blocked from generating passes')
+      console.log('⛔ User is blocked from generating passes in this project')
     } else {
       userBlockingStatus.value = {
         isBlocked: false,
         blockingDetails: null,
         loading: false,
       }
-      console.log('✅ User is NOT blocked')
+      console.log('✅ User is NOT blocked in this project')
     }
   } catch (error) {
     console.error('❌ Error checking user blocking status:', error)
@@ -1843,7 +1850,6 @@ onMounted(async () => {
 .access-page {
   min-height: calc(100vh - 200px);
   background: #fafafa;
-  padding: 20px;
   padding-bottom: 100px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   line-height: 1.6;
@@ -2755,6 +2761,8 @@ onMounted(async () => {
   overflow: hidden;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
   animation: modalSlideUp 0.3s ease-out;
+  max-height: 85vh;
+  overflow-y: scroll !important;
 }
 
 @keyframes modalSlideUp {

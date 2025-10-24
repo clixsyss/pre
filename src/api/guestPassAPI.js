@@ -1,4 +1,4 @@
-import { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, collection, addDoc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from 'src/boot/firebase'
 import firestoreService from '../services/firestoreService'
 
@@ -20,8 +20,12 @@ export const checkUserEligibility = async (projectId, userId) => {
     if (!userId) {
       throw new Error('User ID is required')
     }
+    
+    if (!projectId) {
+      throw new Error('Project ID is required')
+    }
 
-    console.log('🔍 Checking user eligibility via API')
+    console.log(`🔍 Checking user eligibility for project ${projectId}`)
 
     // Check if user exists and get their data
     const userDocRef = doc(db, 'users', userId)
@@ -41,102 +45,134 @@ export const checkUserEligibility = async (projectId, userId) => {
     }
 
     const userData = userDoc.data()
-    const guestPassData = userData.guestPassData || {}
+    
+    // Check if user belongs to this project
+    if (!userData.projects || !Array.isArray(userData.projects)) {
+      return {
+        success: false,
+        error: 'User not in project',
+        message: 'User does not belong to this project',
+        data: {
+          canGenerate: false,
+          reason: 'not_in_project',
+          user: null,
+        },
+      }
+    }
+    
+    const projectInfo = userData.projects.find(project => project.projectId === projectId)
+    if (!projectInfo) {
+      return {
+        success: false,
+        error: 'User not in project',
+        message: 'User does not belong to this project',
+        data: {
+          canGenerate: false,
+          reason: 'not_in_project',
+          user: null,
+        },
+      }
+    }
 
-    // Check if user is blocked
-    if (guestPassData.blocked === true) {
+    // Get per-project user settings
+    let userSettings = {}
+    try {
+      const userSettingsResult = await firestoreService.getDoc(`projects/${projectId}/userGuestPassSettings/${userId}`)
+      userSettings = userSettingsResult.data ? userSettingsResult.data() : userSettingsResult
+      console.log(`📋 Per-project settings for user ${userId}:`, userSettings)
+    } catch {
+      console.log(`ℹ️ No per-project settings found for user ${userId}, will use defaults`)
+    }
+
+    // Check if user is blocked in this specific project
+    const blocked = userSettings.blocked ?? false
+    if (blocked) {
       return {
         success: false,
         error: 'User blocked',
-        message: 'User is blocked from generating passes',
+        message: 'User is blocked from generating passes in this project',
         data: {
           canGenerate: false,
           reason: 'blocked',
           user: userData,
           blockingDetails: {
-            reason: guestPassData.blockedReason || 'No reason provided',
-            blockedBy: guestPassData.blockedBy || 'admin',
-            blockedUntil: guestPassData.blockedUntil || null,
+            reason: userSettings.blockedReason || 'Blocked by admin',
+            blockedAt: userSettings.blockedAt || null,
           },
         },
       }
     }
 
-    // Get monthly limit - IMPORTANT: Hierarchy explanation
-    // 1. If user has custom limit set → use that (won't change when global changes)
-    // 2. If user has NO custom limit → use global (will auto-update when admin changes global)
-    // This allows VIP users to have higher limits while normal users follow global policy
+    // Get monthly limit - per-project hierarchy:
+    // 1. If user has custom limit for THIS project → use that
+    // 2. If user has NO custom limit for THIS project → use global for THIS project
+    // This allows different limits per project for the same user
     
     let monthlyLimit = 10 // Final fallback
     
-    if (projectId) {
-      try {
-        const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
-        const globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
-        
-        if (globalSettingsDoc?.monthlyLimit) {
-          // Handle both string and number values
-          monthlyLimit = typeof globalSettingsDoc.monthlyLimit === 'string'
-            ? parseInt(globalSettingsDoc.monthlyLimit, 10)
-            : globalSettingsDoc.monthlyLimit
-          console.log('🌐 Global limit from settings:', monthlyLimit, '(type:', typeof globalSettingsDoc.monthlyLimit, ')')
-        }
-      } catch (settingsError) {
-        console.warn('⚠️ Could not fetch global settings:', settingsError)
+    // Get global settings for this project
+    try {
+      const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
+      const globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
+      
+      if (globalSettingsDoc?.monthlyLimit) {
+        // Handle both string and number values
+        monthlyLimit = typeof globalSettingsDoc.monthlyLimit === 'string'
+          ? parseInt(globalSettingsDoc.monthlyLimit, 10)
+          : globalSettingsDoc.monthlyLimit
+        console.log(`🌐 Global limit for project ${projectId}:`, monthlyLimit)
       }
+    } catch (settingsError) {
+      console.warn('⚠️ Could not fetch global settings:', settingsError)
     }
     
-    // Override with user-specific limit if set (this takes precedence)
-    if (guestPassData.monthlyLimit !== undefined && guestPassData.monthlyLimit !== null) {
+    // Override with per-project user limit if set (this takes precedence)
+    if (userSettings.monthlyLimit !== undefined && userSettings.monthlyLimit !== null) {
       // Handle both string and number values
-      monthlyLimit = typeof guestPassData.monthlyLimit === 'string'
-        ? parseInt(guestPassData.monthlyLimit, 10)
-        : guestPassData.monthlyLimit
-      console.log('🎯 User has CUSTOM limit:', monthlyLimit, '(type:', typeof guestPassData.monthlyLimit, ')')
-      console.log('   ℹ️  This user will NOT be affected by global limit changes')
+      monthlyLimit = typeof userSettings.monthlyLimit === 'string'
+        ? parseInt(userSettings.monthlyLimit, 10)
+        : userSettings.monthlyLimit
+      console.log(`🎯 User has CUSTOM limit for project ${projectId}:`, monthlyLimit)
+      console.log('   ℹ️  This user-project limit is independent of other projects')
     } else {
-      console.log('🌐 User using GLOBAL limit:', monthlyLimit)
-      console.log('   ℹ️  This user WILL be affected by global limit changes')
+      console.log(`🌐 User using GLOBAL limit for project ${projectId}:`, monthlyLimit)
+      console.log('   ℹ️  This user WILL be affected by global limit changes for this project')
     }
     
     // Count actual passes for this month from the project-specific subcollection
     let usedThisMonth = 0
     
-    if (projectId) {
-      try {
-        const now = new Date()
-        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-        
-        console.log(`📊 Counting passes for user ${userId} in project ${projectId} since ${firstDayOfMonth}`)
-        
-        // Query passes created this month for this user in this project using firestoreService
-        const result = await firestoreService.getDocs(
-          `projects/${projectId}/guestPasses`,
-          {
-            filters: [
-              { field: 'userId', operator: '==', value: userId },
-              { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
-            ]
-          }
-        )
-        
-        usedThisMonth = result?.docs?.length || 0
-        
-        console.log(`📊 Counted ${usedThisMonth} passes this month for user ${userId} in project ${projectId}`)
-        console.log(`📊 Query result:`, result)
-      } catch (error) {
-        console.error('❌ Error counting monthly passes:', error)
-        console.error('❌ Error details:', error?.message, error?.code)
-        // If counting fails, fall back to 0
-        usedThisMonth = 0
-      }
+    try {
+      const now = new Date()
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      
+      console.log(`📊 Counting passes for user ${userId} in project ${projectId} since ${firstDayOfMonth}`)
+      
+      // Query passes created this month for this user in this project using firestoreService
+      const result = await firestoreService.getDocs(
+        `projects/${projectId}/guestPasses`,
+        {
+          filters: [
+            { field: 'userId', operator: '==', value: userId },
+            { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
+          ]
+        }
+      )
+      
+      usedThisMonth = result?.docs?.length || 0
+      
+      console.log(`📊 Counted ${usedThisMonth} passes this month for user ${userId} in project ${projectId}`)
+    } catch (error) {
+      console.error('❌ Error counting monthly passes:', error)
+      // If counting fails, fall back to 0
+      usedThisMonth = 0
     }
 
     if (usedThisMonth >= monthlyLimit) {
       return {
         success: false,
         error: 'Limit reached',
-        message: `User has reached their monthly limit of ${monthlyLimit} passes`,
+        message: `You have reached your monthly limit of ${monthlyLimit} passes for this project`,
         data: {
           canGenerate: false,
           reason: 'limit_reached',
@@ -152,7 +188,7 @@ export const checkUserEligibility = async (projectId, userId) => {
     return {
       success: true,
       error: null,
-      message: 'User is eligible to generate passes',
+      message: 'User is eligible to generate passes in this project',
       data: {
         canGenerate: true,
         reason: 'eligible',
@@ -225,25 +261,46 @@ export const createGuestPass = async (
       updatedAt: serverTimestamp(),
     })
 
-    // Update user's usage count and remaining quota
-    const userDocRef = doc(db, 'users', userId)
-    const userDoc = await getDoc(userDocRef)
-
-    if (userDoc.exists()) {
-      const userData = userDoc.data()
-      const guestPassData = userData.guestPassData || {}
-      const monthlyLimit = guestPassData.monthlyLimit || 10
-      const newUsed = (guestPassData.usedThisMonth || 0) + 1
-      const remainingQuota = Math.max(0, monthlyLimit - newUsed)
-
-      await updateDoc(userDocRef, {
-        'guestPassData.usedThisMonth': newUsed,
-        'guestPassData.remainingQuota': remainingQuota,
-        'guestPassData.lastPassCreated': serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      })
+    // Update user's usage count in per-project settings
+    const userSettingsRef = doc(db, `projects/${projectId}/userGuestPassSettings`, userId)
+    
+    // Count current passes to get accurate count
+    const now = new Date()
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const result = await firestoreService.getDocs(
+      `projects/${projectId}/guestPasses`,
+      {
+        filters: [
+          { field: 'userId', operator: '==', value: userId },
+          { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
+        ]
+      }
+    )
+    const newUsed = result?.docs?.length || 0
+    
+    // Update or create per-project user settings
+    try {
+      const userSettingsDoc = await getDoc(userSettingsRef)
+      if (userSettingsDoc.exists()) {
+        await updateDoc(userSettingsRef, {
+          usedThisMonth: newUsed,
+          lastPassCreated: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+      } else {
+        // Create new settings document
+        await setDoc(userSettingsRef, {
+          usedThisMonth: newUsed,
+          lastPassCreated: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        })
+      }
       
-      console.log(`✅ Updated user guestPassData: used=${newUsed}, remaining=${remainingQuota}, limit=${monthlyLimit}`)
+      console.log(`✅ Updated per-project settings for user ${userId} in project ${projectId}: used=${newUsed}`)
+    } catch (error) {
+      console.warn('⚠️ Could not update per-project user settings:', error)
+      // Continue anyway, the pass was created successfully
     }
 
     console.log('✅ Guest pass created successfully:', passId)
@@ -314,32 +371,73 @@ export const getUserStatus = async (userId, projectId = null) => {
     }
 
     const userData = userDoc.data()
-    const guestPassData = userData.guestPassData || {}
-
-    // Get monthly limit - check global settings first, then user-specific
-    let monthlyLimit = 10
-    if (projectId) {
-      try {
-        const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
-        const globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
-        
-        if (globalSettingsDoc?.monthlyLimit) {
-          // Handle both string and number values
-          monthlyLimit = typeof globalSettingsDoc.monthlyLimit === 'string'
-            ? parseInt(globalSettingsDoc.monthlyLimit, 10)
-            : globalSettingsDoc.monthlyLimit
-        }
-      } catch (settingsError) {
-        console.warn('⚠️ Could not fetch global settings:', settingsError)
+    
+    // If no projectId provided, return basic user info
+    if (!projectId) {
+      return {
+        success: true,
+        data: {
+          userId: userId,
+          name: userData.fullName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+          email: userData.email,
+          blocked: false,
+          monthlyLimit: 10,
+          usedThisMonth: 0,
+          remainingQuota: 10,
+        },
       }
     }
+
+    // Get per-project user settings
+    let userSettings = {}
+    try {
+      const userSettingsResult = await firestoreService.getDoc(`projects/${projectId}/userGuestPassSettings/${userId}`)
+      userSettings = userSettingsResult.data ? userSettingsResult.data() : userSettingsResult
+    } catch {
+      console.log(`ℹ️ No per-project settings found for user ${userId} in project ${projectId}`)
+    }
+
+    // Get monthly limit - check global settings first, then per-project user settings
+    let monthlyLimit = 10
+    try {
+      const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
+      const globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
+      
+      if (globalSettingsDoc?.monthlyLimit) {
+        // Handle both string and number values
+        monthlyLimit = typeof globalSettingsDoc.monthlyLimit === 'string'
+          ? parseInt(globalSettingsDoc.monthlyLimit, 10)
+          : globalSettingsDoc.monthlyLimit
+      }
+    } catch (settingsError) {
+      console.warn('⚠️ Could not fetch global settings:', settingsError)
+    }
     
-    // Override with user-specific limit if set
-    if (guestPassData.monthlyLimit !== undefined && guestPassData.monthlyLimit !== null) {
+    // Override with per-project user limit if set
+    if (userSettings.monthlyLimit !== undefined && userSettings.monthlyLimit !== null) {
       // Handle both string and number values
-      monthlyLimit = typeof guestPassData.monthlyLimit === 'string'
-        ? parseInt(guestPassData.monthlyLimit, 10)
-        : guestPassData.monthlyLimit
+      monthlyLimit = typeof userSettings.monthlyLimit === 'string'
+        ? parseInt(userSettings.monthlyLimit, 10)
+        : userSettings.monthlyLimit
+    }
+    
+    // Get actual usage for this project this month
+    let usedThisMonth = 0
+    try {
+      const now = new Date()
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      const result = await firestoreService.getDocs(
+        `projects/${projectId}/guestPasses`,
+        {
+          filters: [
+            { field: 'userId', operator: '==', value: userId },
+            { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
+          ]
+        }
+      )
+      usedThisMonth = result?.docs?.length || 0
+    } catch (error) {
+      console.error('❌ Error counting passes:', error)
     }
 
     return {
@@ -348,10 +446,10 @@ export const getUserStatus = async (userId, projectId = null) => {
         userId: userId,
         name: userData.fullName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
         email: userData.email,
-        blocked: guestPassData.blocked || false,
+        blocked: userSettings.blocked || false,
         monthlyLimit: monthlyLimit,
-        usedThisMonth: guestPassData.usedThisMonth || 0,
-        remainingQuota: monthlyLimit - (guestPassData.usedThisMonth || 0),
+        usedThisMonth: usedThisMonth,
+        remainingQuota: Math.max(0, monthlyLimit - usedThisMonth),
       },
     }
   } catch (error) {
