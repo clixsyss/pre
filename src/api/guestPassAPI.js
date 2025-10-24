@@ -1,6 +1,8 @@
 import { doc, getDoc, collection, addDoc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from 'src/boot/firebase'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { db, storage } from 'src/boot/firebase'
 import firestoreService from '../services/firestoreService'
+import QRCode from 'qrcode'
 
 /**
  * Centralized Guest Pass API
@@ -220,7 +222,6 @@ export const checkUserEligibility = async (projectId, userId) => {
  * @param {string} userName - Name of the user creating the pass
  * @param {string} guestName - Name of the guest
  * @param {string} purpose - Purpose of the visit
- * @param {string} validUntil - Valid until date
  * @param {string} phoneNumber - Phone number for WhatsApp (optional)
  * @returns {Promise<Object>} Created pass data
  */
@@ -230,7 +231,6 @@ export const createGuestPass = async (
   userName,
   guestName,
   purpose,
-  validUntil,
   phoneNumber = null,
 ) => {
   try {
@@ -241,8 +241,57 @@ export const createGuestPass = async (
       throw new Error(eligibility.message)
     }
 
+    // Get global settings to determine validity duration
+    let validityDurationHours = 2 // Default: 2 hours
+    try {
+      const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
+      const globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
+      validityDurationHours = globalSettingsDoc?.validityDurationHours || 2
+      console.log(`📋 Using validity duration: ${validityDurationHours} hours`)
+    } catch {
+      console.log('ℹ️ No global settings found, using default validity duration: 2 hours')
+    }
+
+    // Calculate validUntil based on current time + validity duration
+    const createdAt = new Date()
+    const validUntil = new Date(createdAt.getTime() + validityDurationHours * 60 * 60 * 1000)
+    console.log(`⏰ Pass valid from ${createdAt.toLocaleString()} until ${validUntil.toLocaleString()}`)
+
     // Generate unique pass ID
     const passId = `GP-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`.toUpperCase()
+
+    // Generate verification token for one-time use
+    const verificationToken = `${passId}-${Math.random().toString(36).substr(2, 16)}`.toUpperCase()
+
+    // Generate QR code data with verification token
+    const qrData = JSON.stringify({
+      passId: passId,
+      projectId: projectId,
+      guestName: guestName,
+      validUntil: validUntil.toISOString(),
+      createdAt: createdAt.toISOString(),
+      verificationToken: verificationToken
+    })
+
+    // Generate QR code as data URL
+    console.log('🎨 Generating QR code...')
+    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+      errorCorrectionLevel: 'H',
+      type: 'image/png',
+      width: 512,
+      margin: 2
+    })
+
+    // Convert data URL to blob
+    const response = await fetch(qrCodeDataUrl)
+    const blob = await response.blob()
+
+    // Upload QR code to Firebase Storage
+    console.log('☁️ Uploading QR code to Firebase Storage...')
+    const storageRef = ref(storage, `guestPasses/${projectId}/${passId}.png`)
+    await uploadBytes(storageRef, blob)
+    const qrCodeUrl = await getDownloadURL(storageRef)
+    console.log('✅ QR code uploaded successfully:', qrCodeUrl)
 
     // Create pass record in Firebase - per project subcollection
     const passRef = await addDoc(collection(db, `projects/${projectId}/guestPasses`), {
@@ -252,13 +301,16 @@ export const createGuestPass = async (
       userName: userName,
       guestName: guestName,
       purpose: purpose,
-      validUntil: new Date(validUntil),
+      validUntil: validUntil,
       phoneNumber: phoneNumber,
-      createdAt: serverTimestamp(),
+      createdAt: createdAt,
       sentStatus: false,
       sentAt: null,
-      qrCodeUrl: null, // Will be set by mobile app
-      updatedAt: serverTimestamp(),
+      qrCodeUrl: qrCodeUrl,
+      used: false,
+      usedAt: null,
+      verificationToken: verificationToken,
+      updatedAt: createdAt,
     })
 
     // Update user's usage count in per-project settings
@@ -309,6 +361,7 @@ export const createGuestPass = async (
       success: true,
       passId: passId,
       passRef: passRef.id,
+      qrCodeUrl: qrCodeUrl,
       data: {
         id: passId,
         projectId: projectId,
@@ -464,6 +517,100 @@ export const getUserStatus = async (userId, projectId = null) => {
  * @param {string} projectId - Project ID
  * @returns {Promise<boolean>} Success status
  */
+/**
+ * Verify and mark a guest pass as used (one-time use)
+ * @param {string} projectId - Project ID
+ * @param {string} passId - Pass ID
+ * @param {string} verificationToken - Verification token from QR code
+ * @returns {Promise<Object>} Verification result
+ */
+export const verifyAndUsePass = async (projectId, passId, verificationToken) => {
+  try {
+    console.log(`🔍 Verifying pass ${passId} in project ${projectId}`)
+
+    // Find the pass document
+    const passesResult = await firestoreService.getDocs(
+      `projects/${projectId}/guestPasses`,
+      {
+        filters: [
+          { field: 'id', operator: '==', value: passId }
+        ]
+      }
+    )
+
+    if (!passesResult?.docs || passesResult.docs.length === 0) {
+      return {
+        success: false,
+        error: 'Pass not found',
+        message: 'This guest pass does not exist'
+      }
+    }
+
+    const passDoc = passesResult.docs[0]
+    const passData = passDoc.data ? passDoc.data() : passDoc
+    const passRef = doc(db, `projects/${projectId}/guestPasses`, passDoc.id)
+
+    // Verify the token
+    if (passData.verificationToken !== verificationToken) {
+      return {
+        success: false,
+        error: 'Invalid token',
+        message: 'Invalid verification token'
+      }
+    }
+
+    // Check if already used
+    if (passData.used) {
+      return {
+        success: false,
+        error: 'Already used',
+        message: 'This pass has already been used',
+        data: {
+          usedAt: passData.usedAt
+        }
+      }
+    }
+
+    // Check if expired
+    const now = new Date()
+    const validUntil = new Date(passData.validUntil)
+    if (now > validUntil) {
+      return {
+        success: false,
+        error: 'Expired',
+        message: 'This pass has expired'
+      }
+    }
+
+    // Mark as used
+    await updateDoc(passRef, {
+      used: true,
+      usedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    })
+
+    console.log(`✅ Pass ${passId} marked as used`)
+
+    return {
+      success: true,
+      message: 'Pass verified and marked as used',
+      data: {
+        passId: passId,
+        guestName: passData.guestName,
+        purpose: passData.purpose,
+        usedAt: new Date()
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error verifying pass:', error)
+    return {
+      success: false,
+      error: 'Verification failed',
+      message: 'Unable to verify pass. Please try again.'
+    }
+  }
+}
+
 export const initializeUser = async (userId) => {
   try {
     const userDocRef = doc(db, 'users', userId)

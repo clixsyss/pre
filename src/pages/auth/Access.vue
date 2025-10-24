@@ -518,7 +518,7 @@
             </div>
 
             <!-- Location Restriction Indicator -->
-            <div v-if="locationRestriction.active" class="location-restriction-hint">
+            <!-- <div v-if="locationRestriction.active" class="location-restriction-hint">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2" />
                 <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" />
@@ -527,8 +527,8 @@
                 Location Restriction: 
                 <strong :style="{ color: '#AF1E23' }">Active</strong>
               </span>
-            </div>
-            <div v-else-if="!locationRestriction.loading" class="location-restriction-hint inactive">
+            </div> -->
+            <!-- <div v-else-if="!locationRestriction.loading" class="location-restriction-hint inactive">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2" />
                 <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" />
@@ -537,56 +537,66 @@
                 Location Restriction: 
                 <strong style="color: #10b981">Inactive</strong>
               </span>
-            </div>
+            </div> -->
 
             <!-- Passes Grid -->
             <div v-if="currentProjectPasses.length > 0" class="passes-grid">
-              <div v-for="pass in currentProjectPasses" :key="pass.id" class="pass-card">
-                <!-- Hidden canvas for QR code generation -->
+              <div v-for="pass in currentProjectPasses" :key="pass.id" class="pass-card-compact" :class="{ 'pass-used': pass.used, 'pass-expired': isPassExpired(pass) }">
+                <!-- Hidden canvas for QR code generation (for legacy passes) -->
                 <canvas :ref="(el) => setQRRef(el, pass.id)" class="qr-code-hidden"></canvas>
                 
-                <!-- Professional Pass Card Design -->
-                <div class="pass-card-header">
-                  <div class="pass-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Compact Pass Layout -->
+                <div class="pass-compact-header">
+                  <!-- Icon and Name -->
+                  <div class="pass-icon-compact">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
+                      <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
                     </svg>
                   </div>
-                  <h3 class="pass-guest-name">{{ pass.guestName }}</h3>
-                </div>
-
-                <div class="pass-card-body">
-                  <div class="pass-info-row">
-                    <div class="pass-info-label">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
-                        <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                        <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                        <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" />
-                      </svg>
-                      <span>Valid Until</span>
+                  <div class="pass-info-compact">
+                    <h3 class="pass-name-compact">{{ pass.guestName || 'Guest' }}</h3>
+                    <div class="pass-meta-compact">
+                      <span class="meta-item">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                          <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        {{ formatCreationDate(pass.createdAt) }}
+                      </span>
+                      <span class="meta-divider">•</span>
+                      <span class="meta-item" :class="{ 'text-red': isPassExpiringSoon(pass) || isPassExpired(pass) }">
+                        {{ getRemainingTime(pass) }}
+                      </span>
                     </div>
-                    <span class="pass-info-value">{{ formatDate(pass.validUntil) }}</span>
+                  </div>
+                  <!-- Status Badge -->
+                  <div class="pass-status-compact" :class="getPassStatusClass(pass)">
+                    {{ getPassStatusText(pass) }}
                   </div>
                 </div>
 
-                <div class="pass-card-footer">
-                  <button class="pass-share-button" @click="sharePass(pass)">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                      <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2" />
-                      <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2" />
-                      <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2" />
-                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2" />
-                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2" />
+                <!-- Compact Actions -->
+                <div class="pass-actions-compact">
+                  <button 
+                    class="pass-btn-compact pass-share-compact" 
+                    @click="sharePass(pass)"
+                    :disabled="pass.used || isPassExpired(pass)"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
+                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
                     </svg>
-                    <span>{{ $t('share') || 'Share Guest Pass' }}</span>
+                    Share
                   </button>
 
-                  <button class="pass-delete-button" @click="deletePass(pass.id)">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  <button class="pass-btn-compact pass-delete-compact" @click="deletePass(pass.id)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                   </button>
                 </div>
@@ -689,24 +699,6 @@
               />
             </div>
 
-            <div class="form-group-pro">
-              <label class="form-label-pro">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
-                </svg>
-                <span>Valid Until</span>
-                <span class="required-star">*</span>
-              </label>
-              <input
-                v-model="newPass.validUntil"
-                type="datetime-local"
-                class="form-input-pro"
-                required
-              />
-            </div>
             <!-- Location Permission Info -->
             <div v-if="locationRestriction.active" class="info-box-pro" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-color: #fecaca;">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -727,7 +719,7 @@
             </button>
             <button
               class="modal-btn-generate"
-              :disabled="!newPass.guestName || !newPass.validUntil || isValidatingLocation"
+              :disabled="!newPass.guestName || isValidatingLocation"
               @click="generatePass"
             >
               <div v-if="isValidatingLocation" class="button-spinner"></div>
@@ -850,7 +842,6 @@ watch(showGenerateDialog, (isOpen) => {
 const newPass = ref({
   guestName: '',
   purpose: '',
-  validUntil: '',
 })
 
 // User blocking state
@@ -1205,6 +1196,9 @@ const loadPassesFromFirebase = async () => {
         createdAt: doc.createdAt,
         code: doc.id,
         firebaseRef: doc.id,
+        qrCodeUrl: doc.qrCodeUrl || null,
+        used: doc.used || false,
+        usedAt: doc.usedAt || null,
       }
     })
 
@@ -1394,11 +1388,6 @@ const generatePass = async () => {
       return
     }
 
-    if (!newPass.value.validUntil) {
-      notificationStore.showError('Valid until date is required')
-      return
-    }
-
     const sanitizedGuestName = newPass.value.guestName.trim().substring(0, 100)
     const sanitizedPurpose = (newPass.value.purpose || 'Guest Visit').trim().substring(0, 200)
 
@@ -1472,7 +1461,6 @@ const generatePass = async () => {
       userName,
       sanitizedGuestName,
       sanitizedPurpose,
-      newPass.value.validUntil,
     )
 
     if (!result.success) {
@@ -1485,11 +1473,14 @@ const generatePass = async () => {
       userName: userName, // Add user name for QR code
       guestName: sanitizedGuestName,
       purpose: sanitizedPurpose,
-      validUntil: new Date(newPass.value.validUntil).toISOString(),
+      validUntil: result.data.validUntil,
       status: 'active',
-      createdAt: new Date().toISOString(),
+      createdAt: result.data.createdAt || new Date().toISOString(),
       code: result.passId,
       firebaseRef: result.passRef,
+      qrCodeUrl: result.qrCodeUrl,
+      used: false,
+      usedAt: null,
     }
 
     // Add pass to beginning for immediate UI feedback
@@ -1504,7 +1495,6 @@ const generatePass = async () => {
     newPass.value = {
       guestName: '',
       purpose: '',
-      validUntil: '',
     }
 
     showGenerateDialog.value = false
@@ -1722,14 +1712,33 @@ const deletePass = (passId) => {
 }
 
 const sharePass = async (pass) => {
-  const canvas = qrRefs.get(pass.id)
-  if (!canvas) {
-    notificationStore.showError('QR code not ready. Please try again.')
-    return
-  }
-
   try {
-    const qrCodeDataUrl = canvas.toDataURL('image/png')
+    let qrCodeDataUrl
+
+    // Use stored QR code from Firebase Storage if available
+    if (pass.qrCodeUrl) {
+      console.log('📥 Using stored QR code from Firebase Storage')
+      // Fetch the QR code image from storage
+      const response = await fetch(pass.qrCodeUrl)
+      const blob = await response.blob()
+      // Convert blob to data URL
+      const reader = new FileReader()
+      qrCodeDataUrl = await new Promise((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+    } else {
+      // Fallback to canvas if no stored QR code (legacy passes)
+      console.log('📋 Generating QR code from canvas (legacy mode)')
+      const canvas = qrRefs.get(pass.id)
+      if (!canvas) {
+        notificationStore.showError('QR code not ready. Please try again.')
+        return
+      }
+      qrCodeDataUrl = canvas.toDataURL('image/png')
+    }
+
     const result = await sharingService.sharePassWithImage(pass, qrCodeDataUrl)
 
     if (result.success) {
@@ -1752,6 +1761,16 @@ const sharePass = async (pass) => {
       const canvas = qrRefs.get(pass.id)
       if (canvas) {
         downloadQRCode(canvas, pass.guestName)
+      } else if (pass.qrCodeUrl) {
+        // Try downloading from storage URL
+        const a = document.createElement('a')
+        a.href = pass.qrCodeUrl
+        a.download = `gate-pass-${pass.guestName.replace(/\s+/g, '-')}.png`
+        a.target = '_blank'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        notificationStore.showSuccess('QR code downloaded')
       }
     } else {
       notificationStore.showError('Failed to share pass. Please try again.')
@@ -1775,15 +1794,73 @@ const downloadQRCode = (canvas, guestName) => {
   }
 }
 
-const formatDate = (dateString) => {
+const formatCreationDate = (dateString) => {
   const date = new Date(dateString)
-  return date.toLocaleString('en-US', {
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  
+  return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
   })
+}
+
+const isPassExpired = (pass) => {
+  if (!pass.validUntil) return false
+  const now = new Date()
+  const expiryDate = new Date(pass.validUntil)
+  return now > expiryDate
+}
+
+const isPassExpiringSoon = (pass) => {
+  if (!pass.validUntil || isPassExpired(pass)) return false
+  const now = new Date()
+  const expiryDate = new Date(pass.validUntil)
+  const remainingMs = expiryDate - now
+  const remainingMins = Math.floor(remainingMs / 60000)
+  return remainingMins < 30 && remainingMins > 0
+}
+
+const getRemainingTime = (pass) => {
+  if (pass.used) return 'Used'
+  if (!pass.validUntil) return 'No expiry'
+  
+  const now = new Date()
+  const expiryDate = new Date(pass.validUntil)
+  const remainingMs = expiryDate - now
+  
+  if (remainingMs < 0) return 'Expired'
+  
+  const remainingMins = Math.floor(remainingMs / 60000)
+  const remainingHours = Math.floor(remainingMs / 3600000)
+  const remainingDays = Math.floor(remainingMs / 86400000)
+  
+  if (remainingDays > 0) return `${remainingDays}d ${remainingHours % 24}h left`
+  if (remainingHours > 0) return `${remainingHours}h ${remainingMins % 60}m left`
+  if (remainingMins > 0) return `${remainingMins}m left`
+  return 'Expiring soon'
+}
+
+const getPassStatusClass = (pass) => {
+  if (pass.used) return 'status-used'
+  if (isPassExpired(pass)) return 'status-expired'
+  if (isPassExpiringSoon(pass)) return 'status-expiring'
+  return 'status-active'
+}
+
+const getPassStatusText = (pass) => {
+  if (pass.used) return 'Used'
+  if (isPassExpired(pass)) return 'Expired'
+  if (isPassExpiringSoon(pass)) return 'Expiring Soon'
+  return 'Active'
 }
 
 // Watch for user changes
@@ -2437,7 +2514,7 @@ onMounted(async () => {
 .passes-panel {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 10px;
   background: transparent;
   padding: 0;
   margin: 0;
@@ -2548,7 +2625,6 @@ onMounted(async () => {
   border-radius: 12px;
   color: #7f1d1d;
   font-size: 0.9rem;
-  margin-top: 8px;
   box-shadow: 0 2px 8px rgba(175, 30, 35, 0.1);
   animation: fadeIn 0.3s ease;
 }
@@ -2702,6 +2778,180 @@ onMounted(async () => {
 }
 
 .pass-delete-button:active {
+  transform: scale(0.95);
+  background: #fee2e2;
+}
+
+/* Compact Pass Card Design */
+.pass-card-compact {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+  animation: fadeIn 0.3s ease;
+  border: 1px solid #e5e7eb;
+}
+
+.pass-card-compact.pass-used {
+  opacity: 0.65;
+  background: #fafafa;
+}
+
+.pass-card-compact.pass-expired {
+  opacity: 0.65;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.pass-card-compact:active {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Compact Header */
+.pass-compact-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.pass-icon-compact {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.pass-info-compact {
+  flex: 1;
+  min-width: 0;
+}
+
+.pass-name-compact {
+  margin: 0 0 4px 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.pass-meta-compact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  line-height: 1;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-item svg {
+  flex-shrink: 0;
+}
+
+.meta-item.text-red {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.meta-divider {
+  color: #d1d5db;
+}
+
+.pass-status-compact {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.pass-status-compact.status-active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.pass-status-compact.status-expiring {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.pass-status-compact.status-expired {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.pass-status-compact.status-used {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* Compact Actions */
+.pass-actions-compact {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.pass-btn-compact {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pass-share-compact {
+  background: #AF1E23;
+  color: white;
+}
+
+.pass-share-compact:active:not(:disabled) {
+  transform: scale(0.97);
+  background: #8A1820;
+}
+
+.pass-share-compact:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.pass-delete-compact {
+  flex: 0 0 auto;
+  width: 40px;
+  padding: 0;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.pass-delete-compact:active {
   transform: scale(0.95);
   background: #fee2e2;
 }
