@@ -398,11 +398,12 @@ class FCMService {
    * This is critical when app opens from a notification tap
    */
   async waitForAuthenticationState() {
-    const maxWaitTime = 5000; // 5 seconds max wait
+    // iOS needs more time to restore auth state on app launch from notification
+    const maxWaitTime = this.platform === 'ios' ? 8000 : 5000; // 8s for iOS, 5s for others
     const checkInterval = 100; // Check every 100ms
     let elapsed = 0;
     
-    console.log('FCMService: Waiting for authentication state before navigation...');
+    console.log(`FCMService: Waiting for authentication state before navigation (max: ${maxWaitTime}ms)...`);
     
     while (elapsed < maxWaitTime) {
       try {
@@ -420,6 +421,7 @@ class FCMService {
         
         if (currentUser && currentUser.uid) {
           console.log('FCMService: Authentication state ready, user:', currentUser.uid);
+          console.log(`FCMService: Auth ready after ${elapsed}ms`);
           return true;
         }
       } catch (error) {
@@ -430,7 +432,7 @@ class FCMService {
       elapsed += checkInterval;
     }
     
-    console.warn('FCMService: Authentication state not ready after timeout');
+    console.warn(`FCMService: Authentication state not ready after ${maxWaitTime}ms timeout`);
     return false;
   }
 
@@ -449,8 +451,11 @@ class FCMService {
       // Still allow navigation, router guards will handle redirect if needed
     }
     
-    // Small additional delay to ensure everything is initialized
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // iOS needs extra time for Firebase Auth persistence to fully restore
+    // and for the app initialization to complete before navigation
+    const additionalDelay = this.platform === 'ios' ? 1500 : 500;
+    console.log(`FCMService: Waiting ${additionalDelay}ms before navigation (platform: ${this.platform})`);
+    await new Promise(resolve => setTimeout(resolve, additionalDelay));
     
     // Import router dynamically to avoid circular dependencies
     import('src/router').then(({ default: router }) => {

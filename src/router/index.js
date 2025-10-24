@@ -446,19 +446,29 @@ router.beforeEach(async (to, from, next) => {
       if (currentUser) {
         // Check approval status before allowing access
         console.log('Navigation guard: Checking approval status for user:', currentUser.uid)
-        const approvalStatus = await checkUserApprovalStatus(currentUser.uid)
-        console.log('Navigation guard: Approval status:', approvalStatus)
         
-        if (approvalStatus.approvalStatus === 'pending' || approvalStatus.approvalStatus === 'rejected') {
-          console.log('Navigation guard: User is', approvalStatus.approvalStatus, '- signing out and redirecting to sign-in')
-          // Sign out the user immediately
-          await optimizedAuthService.signOut()
-          console.log('Navigation guard: User signed out')
-          // Store the approval status to show modal on sign-in page
-          localStorage.setItem('showApprovalStatus', approvalStatus.approvalStatus)
-          // Redirect to signin where they'll see the pending/rejected modal
-          next('/signin')
-          return
+        try {
+          const approvalStatus = await checkUserApprovalStatus(currentUser.uid)
+          console.log('Navigation guard: Approval status:', approvalStatus)
+          
+          // Only sign out if we have a definitive pending/rejected status
+          // Don't sign out on unknown status (which happens during initialization)
+          if (approvalStatus.approvalStatus === 'pending' || approvalStatus.approvalStatus === 'rejected') {
+            console.log('Navigation guard: User is', approvalStatus.approvalStatus, '- signing out and redirecting to sign-in')
+            // Sign out the user immediately
+            await optimizedAuthService.signOut()
+            console.log('Navigation guard: User signed out')
+            // Store the approval status to show modal on sign-in page
+            localStorage.setItem('showApprovalStatus', approvalStatus.approvalStatus)
+            // Redirect to signin where they'll see the pending/rejected modal
+            next('/signin')
+            return
+          }
+        } catch (approvalError) {
+          // If approval status check fails, don't sign out the user
+          // This prevents logout during app initialization or network issues
+          console.error('Navigation guard: Error checking approval status:', approvalError)
+          console.log('Navigation guard: Allowing navigation despite approval check error to prevent logout')
         }
         
         console.log('Navigation guard: User authenticated and approved, redirecting to /home')
