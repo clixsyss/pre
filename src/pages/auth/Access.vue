@@ -715,26 +715,39 @@
               </svg>
               <p>The QR code will be generated and ready to share via WhatsApp, Messages, or any app of your choice.</p>
             </div>
+
+            <!-- Location Permission Info -->
+            <div v-if="locationRestriction.active" class="info-box-pro" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-color: #fecaca;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <p style="color: #7f1d1d;">
+                <strong>Location verification required.</strong><br/>
+                You must be within the project premises. The app will request location access when you generate the pass.
+              </p>
+            </div>
           </div>
 
           <!-- Modal Footer -->
           <div class="modal-footer-pro">
-            <button class="modal-btn-cancel" @click="showGenerateDialog = false">
+            <button class="modal-btn-cancel" @click="showGenerateDialog = false" :disabled="isValidatingLocation">
               {{ $t('cancel') || 'Cancel' }}
             </button>
             <button
               class="modal-btn-generate"
-              :disabled="!newPass.guestName || !newPass.validUntil"
+              :disabled="!newPass.guestName || !newPass.validUntil || isValidatingLocation"
               @click="generatePass"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <div v-if="isValidatingLocation" class="button-spinner"></div>
+              <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
                 <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
                 <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
                 <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
                 <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
               </svg>
-              {{ $t('generate') || 'Generate & Share' }}
+              <span>{{ isValidatingLocation ? 'Checking Location...' : ($t('generate') || 'Generate & Share') }}</span>
             </button>
           </div>
         </div>
@@ -832,6 +845,7 @@ const lastConnectedDevice = ref(null)
 // Passes state
 const passes = ref([])
 const showGenerateDialog = ref(false)
+const isValidatingLocation = ref(false)
 
 // Watch for modal state to hide bottom navigation
 watch(showGenerateDialog, (isOpen) => {
@@ -1407,26 +1421,42 @@ const generatePass = async () => {
 
     // Check location restriction before creating pass
     console.log('🔍 Validating location for guest pass generation...')
-    const locationCheckService = (await import('../../services/locationCheckService')).default
-    const locationValidation = await locationCheckService.validateGuestPassLocation()
+    isValidatingLocation.value = true
     
-    if (!locationValidation.allowed) {
-      console.error('❌ Location validation failed:', locationValidation)
+    try {
+      const locationCheckService = (await import('../../services/locationCheckService')).default
+      const locationValidation = await locationCheckService.validateGuestPassLocation()
       
-      let errorMessage = locationValidation.message || 'Location check failed'
-      
-      // Add distance info if available
-      if (locationValidation.nearestProject) {
-        const locationService = (await import('../../services/locationService')).default
-        const distanceText = locationService.formatDistance(locationValidation.nearestProject.distance)
-        errorMessage += `\n\nNearest project: ${locationValidation.nearestProject.project.name} (${distanceText} away)`
+      if (!locationValidation.allowed) {
+        console.error('❌ Location validation failed:', locationValidation)
+        
+        let errorMessage = locationValidation.message || 'Location check failed'
+        
+        // Add distance info if available
+        if (locationValidation.nearestProject) {
+          const locationService = (await import('../../services/locationService')).default
+          const distanceText = locationService.formatDistance(locationValidation.nearestProject.distance)
+          errorMessage += `\n\nNearest project: ${locationValidation.nearestProject.project.name} (${distanceText} away)`
+        }
+        
+        // Add permission guidance for permission errors
+        if (locationValidation.reason === 'location_unavailable') {
+          errorMessage += '\n\nTo enable location:\niOS: Settings → PRE Group → Location → While Using the App\nAndroid: Settings → Apps → PRE Group → Permissions → Location'
+        }
+        
+        isValidatingLocation.value = false
+        notificationStore.showWarning(errorMessage)
+        return
       }
       
-      notificationStore.showWarning(errorMessage)
+      console.log('✅ Location validation passed:', locationValidation.message)
+      isValidatingLocation.value = false
+    } catch (error) {
+      isValidatingLocation.value = false
+      notificationStore.showError('Failed to validate location. Please try again.')
+      console.error('Location validation error:', error)
       return
     }
-    
-    console.log('✅ Location validation passed:', locationValidation.message)
 
     const userName = user.displayName || user.email || 'Unknown User'
     const result = await createGuestPass(
@@ -2927,14 +2957,22 @@ onMounted(async () => {
 }
 
 .modal-btn-generate:disabled {
-  background: #cbd5e1;
-  color: #94a3b8;
-  box-shadow: none;
+  opacity: 0.6;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .modal-btn-generate:disabled:active {
   transform: none;
+}
+
+.button-spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 /* Old Modal Styles (Legacy - can be removed later) */

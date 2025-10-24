@@ -913,6 +913,108 @@
         </div>
       </div>
 
+      <!-- Device Key Reset Accordion -->
+      <div class="accordion-section">
+        <button @click="toggleAccordion('deviceKey')" class="accordion-header"
+          :class="{ active: activeAccordion === 'deviceKey' }">
+          <div class="accordion-title">
+            <div class="section-icon device-key-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 2L19 4M19 4L15.5 7.5M19 4L17 6M15.5 7.5L13 10L15 12L10 17H7V14L12 9L14.5 11.5L15.5 7.5ZM7 14L4.18 16.82C3.39 17.61 3 18.33 3 19.05C3 20.12 3.88 21 5 21C5.72 21 6.44 20.61 7.23 19.82L10 17L7 14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="section-text">
+              <h3>Device Key Reset</h3>
+              <p>Request to reset your device authentication</p>
+            </div>
+          </div>
+          <div class="accordion-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </div>
+        </button>
+        <div class="accordion-content" :class="{ active: activeAccordion === 'deviceKey' }">
+          <div class="device-key-container">
+            <!-- Info message -->
+            <div class="device-key-info">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <path d="M12 16V12M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <p>If you're experiencing issues with device authentication or need to use your account on a new device, submit a reset request. An admin will review your request.</p>
+            </div>
+
+            <!-- Latest request status -->
+            <div v-if="latestDeviceKeyRequest" class="latest-request">
+              <div class="request-header">
+                <h4>Latest Request</h4>
+                <span class="request-status" :style="{ 
+                  color: getDeviceKeyStatusDisplay(latestDeviceKeyRequest.status).color,
+                  backgroundColor: getDeviceKeyStatusDisplay(latestDeviceKeyRequest.status).color + '20'
+                }">
+                  {{ getDeviceKeyStatusDisplay(latestDeviceKeyRequest.status).label }}
+                </span>
+              </div>
+              <div class="request-details">
+                <div class="request-info-item">
+                  <span class="label">Reason:</span>
+                  <span class="value">{{ latestDeviceKeyRequest.reason }}</span>
+                </div>
+                <div class="request-info-item">
+                  <span class="label">Requested:</span>
+                  <span class="value">{{ formatDeviceKeyRequestDate(latestDeviceKeyRequest.requestedAt) }}</span>
+                </div>
+                <div v-if="latestDeviceKeyRequest.status === 'rejected' && latestDeviceKeyRequest.adminNotes" class="request-info-item">
+                  <span class="label">Admin Notes:</span>
+                  <span class="value rejection-note">{{ latestDeviceKeyRequest.adminNotes }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Request form -->
+            <div v-if="!hasPendingDeviceKeyRequest" class="device-key-form">
+              <div class="form-group">
+                <label for="resetReason">Reason for Reset Request <span class="required">*</span></label>
+                <textarea
+                  id="resetReason"
+                  v-model="deviceKeyResetReason"
+                  placeholder="Please explain why you need a device key reset..."
+                  rows="4"
+                  class="form-textarea"
+                  :disabled="submittingDeviceKeyRequest"
+                ></textarea>
+                <span class="char-count" :class="{ 'over-limit': deviceKeyResetReason.length > 500 }">
+                  {{ deviceKeyResetReason.length }} / 500
+                </span>
+              </div>
+              <button 
+                @click="submitDeviceKeyResetRequest" 
+                class="submit-request-btn"
+                :disabled="!deviceKeyResetReason.trim() || deviceKeyResetReason.length > 500 || submittingDeviceKeyRequest"
+              >
+                <svg v-if="!submittingDeviceKeyRequest" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M21 2L19 4M19 4L15.5 7.5M19 4L17 6M15.5 7.5L13 10L15 12L10 17H7V14L12 9L14.5 11.5L15.5 7.5ZM7 14L4.18 16.82C3.39 17.61 3 18.33 3 19.05C3 20.12 3.88 21 5 21C5.72 21 6.44 20.61 7.23 19.82L10 17L7 14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <div v-else class="button-spinner-small"></div>
+                <span>{{ submittingDeviceKeyRequest ? 'Submitting...' : 'Submit Request' }}</span>
+              </button>
+            </div>
+
+            <!-- Pending request message -->
+            <div v-else class="pending-request-message">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="#f59e0b" stroke-width="2"/>
+                <path d="M12 6V12L16 14" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <h4>Request Pending</h4>
+              <p>You have a pending device key reset request. Please wait for an admin to review it.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Actions -->
       <div class="actions-section">
         <div class="compact-actions">
@@ -1265,6 +1367,7 @@ import EditProfileDialog from '../../components/EditProfileDialog.vue'
 import ViolationsModal from '../../components/ViolationsModal.vue'
 import { getUserFines } from '../../services/finesService'
 import complaintService from '../../services/complaintService'
+import deviceKeyResetService from '../../services/deviceKeyResetService'
 
 // Component name for ESLint
 defineOptions({
@@ -1321,6 +1424,12 @@ const savingSettings = ref(false)
 
 // Smart Mirror disconnect state
 const disconnectingProject = ref(null)
+
+// Device key reset state
+const deviceKeyResetReason = ref('')
+const submittingDeviceKeyRequest = ref(false)
+const latestDeviceKeyRequest = ref(null)
+const hasPendingDeviceKeyRequest = ref(false)
 
 // Accordion state
 const activeAccordion = ref(null) // Default to all accordions closed
@@ -2112,6 +2221,93 @@ const handleSupport = () => {
   router.push('/support')
 }
 
+// Device Key Reset Methods
+const loadDeviceKeyRequests = async () => {
+  try {
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    if (!currentUser) return
+
+    // Get latest request
+    const latest = await deviceKeyResetService.getLatestRequest(currentUser.uid)
+    latestDeviceKeyRequest.value = latest
+    
+    // Check if user has pending request
+    const hasPending = await deviceKeyResetService.hasPendingRequest(currentUser.uid)
+    hasPendingDeviceKeyRequest.value = hasPending
+    
+    console.log('📝 Device key requests loaded:', { latest, hasPending })
+  } catch (error) {
+    console.error('❌ Error loading device key requests:', error)
+  }
+}
+
+const submitDeviceKeyResetRequest = async () => {
+  try {
+    if (!deviceKeyResetReason.value.trim()) {
+      notificationStore.showWarning('Please provide a reason for your reset request')
+      return
+    }
+
+    if (deviceKeyResetReason.value.length > 500) {
+      notificationStore.showWarning('Reason must be 500 characters or less')
+      return
+    }
+
+    submittingDeviceKeyRequest.value = true
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    
+    if (!currentUser) {
+      throw new Error('No authenticated user found')
+    }
+
+    // Get current project (if any)
+    const currentProject = projectStore.currentProject?.id || null
+
+    // Submit the request
+    await deviceKeyResetService.submitResetRequest(
+      currentUser.uid,
+      deviceKeyResetReason.value,
+      currentProject
+    )
+
+    notificationStore.showSuccess('Device key reset request submitted successfully!')
+    
+    // Clear form
+    deviceKeyResetReason.value = ''
+    
+    // Reload requests
+    await loadDeviceKeyRequests()
+    
+  } catch (error) {
+    console.error('❌ Error submitting device key reset request:', error)
+    notificationStore.showError('Failed to submit request. Please try again.')
+  } finally {
+    submittingDeviceKeyRequest.value = false
+  }
+}
+
+const getDeviceKeyStatusDisplay = (status) => {
+  return deviceKeyResetService.getStatusDisplay(status)
+}
+
+const formatDeviceKeyRequestDate = (timestamp) => {
+  if (!timestamp) return 'N/A'
+  
+  try {
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (error) {
+    console.error('Error formatting date:', error)
+    return 'Invalid date'
+  }
+}
+
 
 // Load profile on component mount
 onMounted(() => {
@@ -2121,6 +2317,7 @@ onMounted(() => {
   loadProfile()
   loadViolationStats()
   loadComplaintStats()
+  loadDeviceKeyRequests()
 })
 
 // Watch modal states to manage navigation bar visibility and background scrolling
@@ -2654,6 +2851,225 @@ watch(showDeviceManagementModal, (isOpen) => {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
 } */
+
+/* Device Key Reset Section */
+.device-key-icon {
+  background: #AF1E23;
+}
+
+.device-key-container {
+  padding: 20px;
+}
+
+.device-key-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.device-key-info svg {
+  flex-shrink: 0;
+  color: #3b82f6;
+  margin-top: 2px;
+}
+
+.device-key-info p {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #1e40af;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.latest-request {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.request-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.request-header h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.request-status {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.request-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.request-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.request-info-item .label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.request-info-item .value {
+  font-size: 0.875rem;
+  color: #111827;
+  line-height: 1.5;
+}
+
+.request-info-item .rejection-note {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.device-key-form {
+  margin-top: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.form-group .required {
+  color: #ef4444;
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: #111827;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: #AF1E23;
+}
+
+.form-textarea:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.char-count.over-limit {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.submit-request-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #AF1E23;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
+}
+
+.submit-request-btn:disabled {
+  background: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.submit-request-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.pending-request-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 20px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  gap: 12px;
+}
+
+.pending-request-message h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #92400e;
+  margin: 0;
+}
+
+.pending-request-message p {
+  font-size: 0.875rem;
+  color: #78350f;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.button-spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* Actions Section */
 .actions-section {

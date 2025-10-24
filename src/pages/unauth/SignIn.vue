@@ -361,6 +361,33 @@ const handleSignIn = async () => {
     const userId = userCredential.user.uid
     console.log('[SignIn] ✅ Authentication successful:', userId)
 
+    // TEMPORARILY DISABLED: Device key check (Capacitor plugin build issue)
+    console.log('[SignIn] ⚠️ Device key check temporarily disabled for testing')
+    
+    /* TODO: Fix Capacitor plugin imports in production build
+    // Check device key BEFORE proceeding
+    console.log('[SignIn] 🔐 Checking device key...')
+    const deviceKeyService = (await import('../../services/deviceKeyService')).default
+    const deviceCheck = await deviceKeyService.handleLoginDeviceCheck(userId)
+    
+    if (!deviceCheck.allowed) {
+      console.log('[SignIn] ❌ Device key check failed:', deviceCheck.message)
+      // Sign out the user
+      await optimizedAuthService.signOut()
+      // Show error message
+      notificationStore.showError(deviceCheck.message)
+      loading.value = false
+      return
+    }
+    
+    console.log('[SignIn] ✅ Device key check passed:', deviceCheck.action)
+    if (deviceCheck.action === 'registered') {
+      notificationStore.showSuccess('Device registered successfully!')
+    } else if (deviceCheck.action === 'reset_approved') {
+      notificationStore.showSuccess('Device reset approved! Welcome to your new device.')
+    }
+    */
+
     // Sync PRE user with Smart Mirror service for user isolation
     console.log('[SignIn] 🔐 Syncing PRE user with Smart Mirror service:', userId)
     smartMirrorService.setPreUserId(userId)
