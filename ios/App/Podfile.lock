@@ -1182,6 +1182,9 @@ PODS:
   - CapacitorFirebaseStorage (7.3.1):
     - Capacitor
     - FirebaseStorage (~> 11.7.0)
+  - CapacitorGeolocation (7.1.5):
+    - Capacitor
+    - IONGeolocationLib (= 1.0.1)
   - CapacitorKeyboard (7.0.3):
     - Capacitor
   - CapacitorNetwork (7.0.2):
@@ -1372,6 +1375,7 @@ PODS:
   - gRPC-Core/Privacy (1.65.5)
   - GTMSessionFetcher/Core (4.5.0)
   - IONFilesystemLib (1.0.1)
+  - IONGeolocationLib (1.0.1)
   - leveldb-library (1.22.6)
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
@@ -1393,6 +1397,7 @@ DEPENDENCIES:
   - "CapacitorFirebaseFirestore (from `../../node_modules/@capacitor-firebase/firestore`)"
   - "CapacitorFirebaseMessaging (from `../../node_modules/@capacitor-firebase/messaging`)"
   - "CapacitorFirebaseStorage (from `../../node_modules/@capacitor-firebase/storage`)"
+  - "CapacitorGeolocation (from `../../node_modules/@capacitor/geolocation`)"
   - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
   - "CapacitorNetwork (from `../../node_modules/@capacitor/network`)"
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
@@ -1421,6 +1426,7 @@ SPEC REPOS:
     - gRPC-Core
     - GTMSessionFetcher
     - IONFilesystemLib
+    - IONGeolocationLib
     - leveldb-library
     - nanopb
     - PromisesObjC
@@ -1449,6 +1455,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor-firebase/messaging"
   CapacitorFirebaseStorage:
     :path: "../../node_modules/@capacitor-firebase/storage"
+  CapacitorGeolocation:
+    :path: "../../node_modules/@capacitor/geolocation"
   CapacitorKeyboard:
     :path: "../../node_modules/@capacitor/keyboard"
   CapacitorNetwork:
@@ -1474,6 +1482,7 @@ SPEC CHECKSUMS:
   CapacitorFirebaseFirestore: a8803eb308a18876054a070d0f5fb01b2dc3471b
   CapacitorFirebaseMessaging: 71ea2cde4484e172de29e4b4e68100c2f84fb441
   CapacitorFirebaseStorage: 4622602d777e2af1d270f3709ab7ddd482607677
+  CapacitorGeolocation: 84f868bea4c2499aebc3bb3a88fd0a508f87ab87
   CapacitorKeyboard: 62f36104f26d53d8b3a2a43f2a69fe714f1777d5
   CapacitorNetwork: 695069886b3c5ed514db69aa3d026b8dc3c03a6b
   CapacitorShare: be166411fa995ead2d39b104aa0aae56d8615c66
@@ -1497,11 +1506,12 @@ SPEC CHECKSUMS:
   gRPC-Core: a27c294d6149e1c39a7d173527119cfbc3375ce4
   GTMSessionFetcher: fc75fc972958dceedee61cb662ae1da7a83a91cf
   IONFilesystemLib: 89258b8e3e85465da93127d25d7ce37f977e8a6f
+  IONGeolocationLib: 20f9d0248a0b5264511fb57a37e25dd2badf797a
   leveldb-library: cc8b8f8e013647a295ad3f8cd2ddf49a6f19be19
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
 
-PODFILE CHECKSUM: a9c4f6f7fca572b766c9a0f3abfbc4be75110059
+PODFILE CHECKSUM: 10742e7a233f92702ea5e2111d2cd39a5b6a0243
 
 COCOAPODS: 1.16.2

@@ -517,6 +517,28 @@
               <span>{{ $t('generationBlocked') || 'Pass generation is currently disabled' }}</span>
             </div>
 
+            <!-- Location Restriction Indicator -->
+            <div v-if="locationRestriction.active" class="location-restriction-hint">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2" />
+                <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" />
+              </svg>
+              <span>
+                Location Restriction: 
+                <strong :style="{ color: '#AF1E23' }">Active</strong>
+              </span>
+            </div>
+            <div v-else-if="!locationRestriction.loading" class="location-restriction-hint inactive">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2" />
+                <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" />
+              </svg>
+              <span>
+                Location Restriction: 
+                <strong style="color: #10b981">Inactive</strong>
+              </span>
+            </div>
+
             <!-- Passes Grid -->
             <div v-if="currentProjectPasses.length > 0" class="passes-grid">
               <div v-for="pass in currentProjectPasses" :key="pass.id" class="pass-card">
@@ -831,6 +853,14 @@ const userBlockingStatus = ref({
   isBlocked: false,
   blockingDetails: null,
   loading: true,
+})
+
+// Location restriction state
+const locationRestriction = ref({
+  active: false,
+  projectCount: 0,
+  projects: [],
+  loading: false,
 })
 
 // Pass limits
@@ -1277,12 +1307,39 @@ const setQRRef = (el, passId) => {
   }
 }
 
+const checkLocationRestrictionStatus = async () => {
+  try {
+    locationRestriction.value.loading = true
+    
+    const locationCheckService = (await import('../../services/locationCheckService')).default
+    const status = await locationCheckService.getLocationRestrictionStatus()
+    
+    locationRestriction.value = {
+      active: status.active,
+      projectCount: status.projectCount,
+      projects: status.projects,
+      loading: false,
+    }
+    
+    console.log('📍 Location restriction status:', locationRestriction.value)
+  } catch (error) {
+    console.error('Error checking location restriction status:', error)
+    locationRestriction.value = {
+      active: false,
+      projectCount: 0,
+      projects: [],
+      loading: false,
+    }
+  }
+}
+
 const switchToPassesTab = async () => {
   activeTab.value = 'passes'
   // Load passes (this also calculates limits) and check blocking status
   await Promise.all([
     loadPassesFromFirebase(),
-    checkUserBlockingStatus()
+    checkUserBlockingStatus(),
+    checkLocationRestrictionStatus()
   ])
 }
 
@@ -1347,6 +1404,29 @@ const generatePass = async () => {
     }
     
     console.log('✅ Eligibility check passed:', eligibilityResult.data)
+
+    // Check location restriction before creating pass
+    console.log('🔍 Validating location for guest pass generation...')
+    const locationCheckService = (await import('../../services/locationCheckService')).default
+    const locationValidation = await locationCheckService.validateGuestPassLocation()
+    
+    if (!locationValidation.allowed) {
+      console.error('❌ Location validation failed:', locationValidation)
+      
+      let errorMessage = locationValidation.message || 'Location check failed'
+      
+      // Add distance info if available
+      if (locationValidation.nearestProject) {
+        const locationService = (await import('../../services/locationService')).default
+        const distanceText = locationService.formatDistance(locationValidation.nearestProject.distance)
+        errorMessage += `\n\nNearest project: ${locationValidation.nearestProject.project.name} (${distanceText} away)`
+      }
+      
+      notificationStore.showWarning(errorMessage)
+      return
+    }
+    
+    console.log('✅ Location validation passed:', locationValidation.message)
 
     const userName = user.displayName || user.email || 'Unknown User'
     const result = await createGuestPass(
@@ -2418,6 +2498,33 @@ onMounted(async () => {
 }
 
 .blocked-hint svg {
+  flex-shrink: 0;
+}
+
+/* Location Restriction Hint */
+.location-restriction-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  color: #7f1d1d;
+  font-size: 0.9rem;
+  margin-top: 8px;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.1);
+  animation: fadeIn 0.3s ease;
+}
+
+.location-restriction-hint.inactive {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1px solid #bbf7d0;
+  color: #14532d;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+}
+
+.location-restriction-hint svg {
   flex-shrink: 0;
 }
 

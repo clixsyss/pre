@@ -86,6 +86,10 @@
 	<string>This app would like to send you notifications about important updates, announcements, and personalized content from your community.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>This app uses motion detection to provide quick access to gate access by shaking your device.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to your location to verify you are within the project premises when generating guest passes.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs access to your location to verify you are within the project premises when generating guest passes. You can choose "While Using the App" for better privacy.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
