@@ -990,7 +990,7 @@ class FirestoreService {
             if (doc.exists()) {
               callback({
                 id: doc.id,
-                data: () => doc.data(),
+                ...doc.data(),
                 exists: () => true,
               })
             } else {

@@ -20,6 +20,7 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   const unreadCount = ref(0)
   const isLoading = ref(false)
   const unsubscribe = ref(null)
+  const unsubscribeReadStatus = ref(null)
   const isModalOpen = ref(false)
   const readStatusMap = ref(new Map()) // Store read status for persistence
 
@@ -81,9 +82,12 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
       return
     }
 
-    // Unsubscribe from previous listener if exists
+    // Unsubscribe from previous listeners if exist
     if (unsubscribe.value) {
       unsubscribe.value()
+    }
+    if (unsubscribeReadStatus.value) {
+      unsubscribeReadStatus.value()
     }
 
     isLoading.value = true
@@ -130,6 +134,15 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         readStatusMap.value.set(doc.id, doc.data())
       })
       console.log('NotificationCenter: Fetched read status for', readStatusMap.value.size, 'notifications')
+      
+      // Set up real-time listener for read status changes
+      unsubscribeReadStatus.value = onSnapshot(readStatusRef, (snapshot) => {
+        console.log('NotificationCenter: Read status update received:', snapshot.size, 'documents')
+        snapshot.forEach((doc) => {
+          readStatusMap.value.set(doc.id, doc.data())
+        })
+        console.log('NotificationCenter: Read status map updated, total:', readStatusMap.value.size)
+      })
       
       // Now set up listener
       unsubscribe.value = onSnapshot(q, 
@@ -312,58 +325,70 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
       
       console.log('NotificationCenter: Mark all as read - Platform:', platformInfo)
       
-      if (isIOS) {
-        // Use Capacitor Firebase for iOS - create read status for each notification
-        const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
-        
-        console.log(`NotificationCenter: iOS - Marking ${unreadNotifs.length} notifications as read...`)
-        
-        await Promise.all(unreadNotifs.map(notification =>
-          FirebaseFirestore.setDocument({
-            reference: `users/${userId}/notificationReadStatus/${notification.id}`,
-            data: {
-              read: true,
-              readAt: Date.now()
-            },
-            merge: true // Changed to true for consistency
-          })
-        ))
-        
-        console.log(`NotificationCenter: ✅ Marked ${unreadNotifs.length} notifications as read in user collection`)
-        
-        // Update read status map
-        unreadNotifs.forEach(notification => {
-          readStatusMap.value.set(notification.id, { read: true, readAt: Date.now() })
-        })
-      } else {
-        // Use Web SDK batch for web - create read status for all notifications
-        const batch = writeBatch(db)
-        
-        unreadNotifs.forEach((notification) => {
-          const readStatusRef = doc(db, `users/${userId}/notificationReadStatus`, notification.id)
-          batch.set(readStatusRef, {
-            read: true,
-            readAt: Timestamp.now()
-          })
-        })
-
-        await batch.commit()
-        
-        console.log(`NotificationCenter: ✅ Marked ${unreadNotifs.length} notifications as read in user collection`)
-        
-        // Update read status map
-        unreadNotifs.forEach(notification => {
-          readStatusMap.value.set(notification.id, { read: true, readAt: Date.now() })
-        })
-      }
+      // Store original unread count for potential rollback
+      const originalUnreadCount = unreadCount.value
       
-      // Update local state
+      // Update read status map FIRST (before Firestore write)
+      unreadNotifs.forEach(notification => {
+        readStatusMap.value.set(notification.id, { read: true, readAt: Date.now() })
+      })
+      
+      // Update local state FIRST (before Firestore write)
       unreadNotifs.forEach(notif => {
         notif.read = true
       })
       unreadCount.value = 0
+      
+      console.log(`NotificationCenter: Local state updated - ${unreadCount.value} unread`)
+      
+      try {
+        if (isIOS) {
+          // Use Capacitor Firebase for iOS - create read status for each notification
+          const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
+          
+          console.log(`NotificationCenter: iOS - Marking ${unreadNotifs.length} notifications as read...`)
+          
+          await Promise.all(unreadNotifs.map(notification =>
+            FirebaseFirestore.setDocument({
+              reference: `users/${userId}/notificationReadStatus/${notification.id}`,
+              data: {
+                read: true,
+                readAt: Date.now()
+              },
+              merge: true
+            })
+          ))
+          
+          console.log(`NotificationCenter: ✅ Marked ${unreadNotifs.length} notifications as read in user collection`)
+        } else {
+          // Use Web SDK batch for web - create read status for all notifications
+          const batch = writeBatch(db)
+          
+          unreadNotifs.forEach((notification) => {
+            const readStatusRef = doc(db, `users/${userId}/notificationReadStatus`, notification.id)
+            batch.set(readStatusRef, {
+              read: true,
+              readAt: Timestamp.now()
+            })
+          })
+
+          await batch.commit()
+          
+          console.log(`NotificationCenter: ✅ Marked ${unreadNotifs.length} notifications as read in user collection`)
+        }
+      } catch (firestoreError) {
+        // Rollback local state changes if Firestore write fails
+        console.error('NotificationCenter: Firestore write failed, rolling back local state:', firestoreError)
+        unreadNotifs.forEach(notification => {
+          readStatusMap.value.delete(notification.id)
+          notification.read = false
+        })
+        unreadCount.value = originalUnreadCount
+        throw firestoreError
+      }
     } catch (error) {
       console.error('NotificationCenter: Error marking all notifications as read:', { code: error?.code, errorMessage: error?.message })
+      throw error
     }
   }
 
@@ -375,6 +400,11 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
       unsubscribe.value()
       unsubscribe.value = null
       console.log('NotificationCenter: Unsubscribed from notifications')
+    }
+    if (unsubscribeReadStatus.value) {
+      unsubscribeReadStatus.value()
+      unsubscribeReadStatus.value = null
+      console.log('NotificationCenter: Unsubscribed from read status')
     }
   }
 

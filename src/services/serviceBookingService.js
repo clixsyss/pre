@@ -450,10 +450,8 @@ class ServiceBookingService {
     const docPath = `projects/${projectId}/serviceBookings/${bookingId}`;
     return firestoreService.onSnapshot(docPath, (doc) => {
       if (doc.exists()) {
-        callback({
-          id: doc.id,
-          ...doc.data()
-        });
+        // doc is already spread with id and data at top level
+        callback(doc);
       }
     });
   }

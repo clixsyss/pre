@@ -231,14 +231,37 @@ class DeviceKeyService {
    * @param {string} userId - User's ID
    * @returns {Promise<boolean>} True if user has approved reset
    */
-  async hasApprovedResetRequest(userId) {
+  async hasApprovedResetRequest(userId, projectId = null) {
     try {
-      const requests = await firestoreService.getDocs('deviceKeyResetRequests', [
-        { field: 'userId', operator: '==', value: userId },
-        { field: 'status', operator: '==', value: 'approved' }
-      ])
-
-      return !requests.empty
+      if (projectId) {
+        // Check specific project subcollection
+        const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
+        const requests = await firestoreService.getDocs(collectionPath, [
+          { field: 'userId', operator: '==', value: userId },
+          { field: 'status', operator: '==', value: 'approved' }
+        ])
+        return !requests.empty
+      }
+      
+      // Check all projects for approved requests
+      const projectsSnapshot = await firestoreService.getDocs('projects')
+      
+      for (const projectDoc of projectsSnapshot.docs) {
+        const collectionPath = `projects/${projectDoc.id}/deviceKeyResetRequests`
+        try {
+          const requests = await firestoreService.getDocs(collectionPath, [
+            { field: 'userId', operator: '==', value: userId },
+            { field: 'status', operator: '==', value: 'approved' }
+          ])
+          if (!requests.empty) {
+            return true
+          }
+        } catch (err) {
+          console.warn(`Error checking requests in project ${projectDoc.id}:`, err)
+        }
+      }
+      
+      return false
     } catch (error) {
       console.error('Error checking reset requests:', error)
       return false
@@ -249,15 +272,38 @@ class DeviceKeyService {
    * Clear approved reset requests for a user after device is registered
    * @param {string} userId - User's ID
    */
-  async clearApprovedResetRequests(userId) {
+  async clearApprovedResetRequests(userId, projectId = null) {
     try {
-      const requests = await firestoreService.getDocs('deviceKeyResetRequests', [
-        { field: 'userId', operator: '==', value: userId },
-        { field: 'status', operator: '==', value: 'approved' }
-      ])
+      if (projectId) {
+        // Clear from specific project subcollection
+        const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
+        const requests = await firestoreService.getDocs(collectionPath, [
+          { field: 'userId', operator: '==', value: userId },
+          { field: 'status', operator: '==', value: 'approved' }
+        ])
 
-      for (const doc of requests.docs) {
-        await firestoreService.deleteDoc(`deviceKeyResetRequests/${doc.id}`)
+        for (const doc of requests.docs) {
+          await firestoreService.deleteDoc(`${collectionPath}/${doc.id}`)
+        }
+      } else {
+        // Clear from all projects
+        const projectsSnapshot = await firestoreService.getDocs('projects')
+        
+        for (const projectDoc of projectsSnapshot.docs) {
+          const collectionPath = `projects/${projectDoc.id}/deviceKeyResetRequests`
+          try {
+            const requests = await firestoreService.getDocs(collectionPath, [
+              { field: 'userId', operator: '==', value: userId },
+              { field: 'status', operator: '==', value: 'approved' }
+            ])
+
+            for (const doc of requests.docs) {
+              await firestoreService.deleteDoc(`${collectionPath}/${doc.id}`)
+            }
+          } catch (err) {
+            console.warn(`Error clearing requests in project ${projectDoc.id}:`, err)
+          }
+        }
       }
 
       console.log('✅ Cleared approved reset requests')

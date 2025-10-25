@@ -391,13 +391,12 @@ class ComplaintService {
       
       return firestoreService.onSnapshot(docPath, (docSnapshot) => {
         if (docSnapshot && docSnapshot.exists()) {
-          const data = docSnapshot.data();
+          // docSnapshot is already spread with id and data at top level
           const complaint = {
-            id: docSnapshot.id,
-            ...data,
-            createdAt: data.createdAt?.toDate?.() || data.createdAt,
-            updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-            lastMessageAt: data.lastMessageAt?.toDate?.() || data.lastMessageAt
+            ...docSnapshot,
+            createdAt: docSnapshot.createdAt?.toDate?.() || docSnapshot.createdAt,
+            updatedAt: docSnapshot.updatedAt?.toDate?.() || docSnapshot.updatedAt,
+            lastMessageAt: docSnapshot.lastMessageAt?.toDate?.() || docSnapshot.lastMessageAt
           };
           console.log('📨 Real-time complaint update received:', complaint);
           callback(complaint);

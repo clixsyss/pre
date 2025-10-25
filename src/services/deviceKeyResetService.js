@@ -22,6 +22,10 @@ const deviceKeyResetService = {
         throw new Error('Reason is required')
       }
 
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+
       const requestData = {
         userId,
         reason: reason.trim(),
@@ -35,7 +39,9 @@ const deviceKeyResetService = {
 
       console.log('📝 Submitting device key reset request:', requestData)
       
-      const docRef = await firestoreService.addDoc('deviceKeyResetRequests', requestData)
+      // Save to project subcollection: projects/{projectId}/deviceKeyResetRequests
+      const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
+      const docRef = await firestoreService.addDoc(collectionPath, requestData)
       
       console.log('✅ Device key reset request submitted:', docRef.id)
       
@@ -54,25 +60,61 @@ const deviceKeyResetService = {
    * @param {string} userId - The user's ID
    * @returns {Promise<Array>} List of reset requests
    */
-  async getUserResetRequests(userId) {
+  async getUserResetRequests(userId, projectId = null) {
     try {
-      const snapshot = await firestoreService.getDocs('deviceKeyResetRequests', [
-        { field: 'userId', operator: '==', value: userId }
-      ])
+      // If projectId is provided, query that specific project's subcollection
+      if (projectId) {
+        const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
+        const snapshot = await firestoreService.getDocs(collectionPath, [
+          { field: 'userId', operator: '==', value: userId }
+        ])
+        
+        const requests = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        
+        // Sort by requestedAt descending (newest first)
+        requests.sort((a, b) => {
+          const aTime = a.requestedAt?.toMillis() || 0
+          const bTime = b.requestedAt?.toMillis() || 0
+          return bTime - aTime
+        })
+        
+        return requests
+      }
       
-      const requests = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
+      // Otherwise, query all projects' subcollections for this user
+      // Get all projects first
+      const projectsSnapshot = await firestoreService.getDocs('projects')
+      const allRequests = []
+      
+      for (const projectDoc of projectsSnapshot.docs) {
+        const collectionPath = `projects/${projectDoc.id}/deviceKeyResetRequests`
+        try {
+          const snapshot = await firestoreService.getDocs(collectionPath, [
+            { field: 'userId', operator: '==', value: userId }
+          ])
+          
+          snapshot.docs.forEach(doc => {
+            allRequests.push({
+              id: doc.id,
+              ...doc.data()
+            })
+          })
+        } catch (err) {
+          console.warn(`Error fetching requests from project ${projectDoc.id}:`, err)
+        }
+      }
       
       // Sort by requestedAt descending (newest first)
-      requests.sort((a, b) => {
+      allRequests.sort((a, b) => {
         const aTime = a.requestedAt?.toMillis() || 0
         const bTime = b.requestedAt?.toMillis() || 0
         return bTime - aTime
       })
       
-      return requests
+      return allRequests
     } catch (error) {
       console.error('❌ Error fetching user reset requests:', error)
       throw error
