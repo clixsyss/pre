@@ -280,10 +280,18 @@ import { useAcademiesStore } from 'src/stores/academyStore';
 import bookingService from 'src/services/bookingService';
 import optimizedAuthService from 'src/services/optimizedAuthService';
 import PageHeader from '../../components/PageHeader.vue';
+import { useFormKeyboard } from '../../composables/useFormKeyboard';
 
 // Component name for ESLint
 defineOptions({
   name: 'CourtBookingPage'
+});
+
+// Setup keyboard handling for better mobile UX
+useFormKeyboard({
+  scrollToInput: true,
+  hideOnBackdropClick: true,
+  scrollOffset: 150
 });
 
 const router = useRouter();

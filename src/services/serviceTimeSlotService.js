@@ -8,21 +8,32 @@ class ServiceTimeSlotService {
   }
 
   // Generate available time slots for a given day
-  generateTimeSlots(startHour = 9, endHour = 17, intervalMinutes = 30) {
+  generateTimeSlots(startHour = 9, endHour = 17, intervalMinutes = 30, selectedDate = null) {
     const slots = [];
     const startTime = startHour * 60; // Convert to minutes
     const endTime = endHour * 60; // Convert to minutes
+    
+    // Get current date/time for filtering past slots
+    const now = new Date();
+    const dateToUse = selectedDate ? new Date(selectedDate) : new Date();
     
     for (let time = startTime; time < endTime; time += intervalMinutes) {
       const hours = Math.floor(time / 60);
       const minutes = time % 60;
       const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
       
-      slots.push({
-        time: timeString,
-        displayTime: timeString,
-        isReserved: false
-      });
+      // Create a date object for this time slot
+      const slotDateTime = new Date(dateToUse);
+      slotDateTime.setHours(hours, minutes, 0, 0);
+      
+      // Skip past time slots if selected date is today
+      if (slotDateTime > now) {
+        slots.push({
+          time: timeString,
+          displayTime: timeString,
+          isReserved: false
+        });
+      }
     }
 
     return slots;
@@ -50,7 +61,7 @@ class ServiceTimeSlotService {
             const startHour = parseInt(daySchedule.startTime.split(':')[0]);
             const endHour = parseInt(daySchedule.endTime.split(':')[0]);
             const intervalMinutes = categoryDoc.timeSlotInterval || 30;
-            baseSlots = this.generateTimeSlots(startHour, endHour, intervalMinutes);
+            baseSlots = this.generateTimeSlots(startHour, endHour, intervalMinutes, date);
           } else {
             // Day not available, return empty slots
             console.log('🚀 ServiceTimeSlotService: Day not available for service')
@@ -58,7 +69,7 @@ class ServiceTimeSlotService {
           }
         } else {
           // Fallback to default time slots
-          baseSlots = this.generateTimeSlots();
+          baseSlots = this.generateTimeSlots(9, 17, 30, date);
         }
         
         // Check which slots are already booked for this service on this date

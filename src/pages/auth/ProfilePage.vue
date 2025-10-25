@@ -1362,6 +1362,7 @@ import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { useAppSettingsStore } from '../../stores/appSettings'
 import { useModalState } from '../../composables/useModalState'
+import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import ProjectGuidelinesDialog from '../../components/ProjectGuidelinesDialog.vue'
 import EditProfileDialog from '../../components/EditProfileDialog.vue'
 import ViolationsModal from '../../components/ViolationsModal.vue'
@@ -1372,6 +1373,13 @@ import deviceKeyResetService from '../../services/deviceKeyResetService'
 // Component name for ESLint
 defineOptions({
   name: 'ProfilePage'
+})
+
+// Setup keyboard handling for better mobile UX
+useFormKeyboard({
+  scrollToInput: true,
+  hideOnBackdropClick: true,
+  scrollOffset: 150
 })
 
 const router = useRouter()

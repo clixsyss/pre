@@ -350,6 +350,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useModalState } from '../../composables/useModalState'
+import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore'
 import { useProjectStore } from '../../stores/projectStore'
 import { useNotificationStore } from '../../stores/notifications'
@@ -361,6 +362,13 @@ import PageHeader from '../../components/PageHeader.vue'
 // Component name for ESLint
 defineOptions({
   name: 'ServiceCategoryDetails',
+})
+
+// Setup keyboard handling for better mobile UX
+useFormKeyboard({
+  scrollToInput: true,
+  hideOnBackdropClick: true,
+  scrollOffset: 150
 })
 
 const route = useRoute()

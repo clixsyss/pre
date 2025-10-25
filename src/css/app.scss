@@ -233,25 +233,53 @@ body {
   position: relative;
 }
 
-/* Global Keyboard Handling */
+/* Global Keyboard Handling - Modern Consistent Behavior */
 body.keyboard-open {
-  /* Prevent body from scrolling when keyboard is open */
-  overflow: hidden !important;
-  /* Ensure viewport stays in place */
-  position: fixed !important;
-  width: 100% !important;
-  height: 100% !important;
+  /* Allow body to scroll normally on iOS/Android */
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
   /* Prevent any layout shifts */
-  -webkit-overflow-scrolling: none !important;
   overscroll-behavior: contain !important;
 }
 
-/* Ensure bottom navigation stays fixed when keyboard is open */
+/* Hide bottom navigation when keyboard is open */
 body.keyboard-open .bottom-navigation {
-  position: fixed !important;
-  bottom: 0 !important;
-  z-index: 1000 !important;
-  transform: none !important;
+  transform: translateY(100%) !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Ensure main content can scroll properly when keyboard is open */
+body.keyboard-open .main-content {
+  margin-bottom: 0 !important;
+  padding-bottom: 20px !important;
+  /* Allow smooth scrolling */
+  -webkit-overflow-scrolling: touch !important;
+  overflow-y: auto !important;
+}
+
+/* Ensure inputs are visible and properly positioned */
+body.keyboard-open input,
+body.keyboard-open textarea,
+body.keyboard-open select {
+  /* Prevent iOS zoom on focus for inputs less than 16px */
+  font-size: 16px !important;
+}
+
+/* Prevent iOS zoom on input focus */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 /* Ensure main layout handles keyboard properly */

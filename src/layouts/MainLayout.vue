@@ -391,10 +391,9 @@ const pageTransition = computed(() => {
   return transitionDirection.value
 })
 
-// Hide bottom navigation when keyboard is visible on chat pages
+// Hide bottom navigation when keyboard is visible
 const shouldHideBottomNav = computed(() => {
-  // return isKeyboardVisible.value && isChatPage.value
-  return false
+  return isKeyboardVisible.value
 })
 
 // Quick menu items
@@ -1846,7 +1845,7 @@ onUnmounted(() => {
   }
   
   .main-content {
-    padding-top: 60px; /* Adjust for smaller header */
+    padding-top: 50px; /* Adjust for smaller header */
     padding-bottom: 40px;
   }
   
@@ -2192,7 +2191,7 @@ onUnmounted(() => {
   
   .main-content {
     padding: 16px;
-    padding-top: 60px; /* Adjust for smallest header */
+    padding-top: 50px; /* Adjust for smallest header */
     padding-bottom: 40px;
   }
   

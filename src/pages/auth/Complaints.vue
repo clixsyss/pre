@@ -255,11 +255,19 @@ import { useRouter } from 'vue-router';
 import { useComplaintStore } from '../../stores/complaintStore';
 import { useNotificationStore } from '../../stores/notifications';
 import { useModalState } from '../../composables/useModalState';
+import { useFormKeyboard } from '../../composables/useFormKeyboard';
 import ModalHeader from '../../components/ModalHeader.vue';
 
 // Component name for ESLint
 defineOptions({
   name: 'ComplaintsPage'
+});
+
+// Setup keyboard handling for better mobile UX
+useFormKeyboard({
+  scrollToInput: true,
+  hideOnBackdropClick: true,
+  scrollOffset: 150
 });
 
 const router = useRouter();

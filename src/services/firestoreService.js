@@ -10,6 +10,11 @@ import {
   collection,
   addDoc,
   serverTimestamp,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
 } from 'firebase/firestore'
 
 class FirestoreService {
@@ -1014,12 +1019,8 @@ class FirestoreService {
     try {
       console.log('🔔 subscribeToQuery called for:', collectionPath, queryOptions);
 
-      // Import Firebase Web SDK (real-time listeners work better on Web SDK for queries)
-      const { getFirestore } = require('firebase/firestore');
-      const { collection, query, where, orderBy, limit: firestoreLimit, onSnapshot } = require('firebase/firestore');
-
-      const db = getFirestore();
-      let q = collection(db, collectionPath);
+      // Use the imported firebase functions and db instance
+      let q = collection(this.db, collectionPath);
 
       // Build query constraints
       const constraints = [];
@@ -1039,7 +1040,7 @@ class FirestoreService {
 
       // Add limit
       if (queryOptions.limit) {
-        constraints.push(firestoreLimit(queryOptions.limit));
+        constraints.push(limit(queryOptions.limit));
       }
 
       // Apply constraints if any

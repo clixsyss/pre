@@ -189,11 +189,19 @@ import { useNotificationStore } from '../../stores/notifications'
 import { useRegistrationStore } from '../../stores/registration'
 import { validateProfileCompletion, getNextProfileStep } from '../../utils/profileValidation'
 import { attemptGoogleSignIn } from '../../utils/googleAuthHelper'
+import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
 
 // Component name for ESLint
 defineOptions({
   name: 'SignInPage',
+})
+
+// Setup keyboard handling for better mobile UX
+useFormKeyboard({
+  scrollToInput: true,
+  hideOnBackdropClick: true,
+  scrollOffset: 150
 })
 
 const router = useRouter()

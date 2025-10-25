@@ -627,8 +627,6 @@ const submitRequest = async () => {
 <style scoped>
 .request-category-details {
   background: #fafafa;
-  min-height: 100vh;
-  padding-bottom: 200px;
   /* Enable scrolling for keyboard visibility */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;

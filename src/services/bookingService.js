@@ -9,24 +9,31 @@ export class BookingService {
     }
 
     // Generate available time slots for a given day
-    generateTimeSlots(startHour = 6, endHour = 22, intervalMinutes = 60) {
+    generateTimeSlots(startHour = 6, endHour = 22, intervalMinutes = 60, selectedDate = null) {
         const slots = [];
-        const startTime = new Date();
+        const dateToUse = selectedDate ? new Date(selectedDate) : new Date();
+        const startTime = new Date(dateToUse);
         startTime.setHours(startHour, 0, 0, 0);
         
-        const endTime = new Date();
+        const endTime = new Date(dateToUse);
         endTime.setHours(endHour, 0, 0, 0);
 
+        // Get current date/time for filtering past slots
+        const now = new Date();
+
         while (startTime < endTime) {
-            slots.push({
-                time: startTime.toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    hour12: true 
-                }),
-                isReserved: false,
-                startTime: new Date(startTime)
-            });
+            // Skip past time slots if generating for today
+            if (startTime > now) {
+                slots.push({
+                    time: startTime.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: true 
+                    }),
+                    isReserved: false,
+                    startTime: new Date(startTime)
+                });
+            }
             startTime.setMinutes(startTime.getMinutes() + intervalMinutes);
         }
         
@@ -90,7 +97,7 @@ export class BookingService {
                     
                     if (!courtData) {
                         console.warn('⚠️ No court data found, using default time slots');
-                        baseSlots = this.generateTimeSlots();
+                        baseSlots = this.generateTimeSlots(8, 22, 60, date);
                     } else {
                         console.log('📋 Court data:', courtData);
                         
@@ -129,22 +136,28 @@ export class BookingService {
                             
                             // Generate time slots based on availability
                             const slots = [];
-                            const currentTime = new Date();
+                            const currentTime = new Date(selectedDate);
                             currentTime.setHours(startHour, startMinute, 0, 0);
                             
-                            const endDateTime = new Date();
+                            const endDateTime = new Date(selectedDate);
                             endDateTime.setHours(endHour, endMinute, 0, 0);
                             
+                            // Get current date/time for filtering past slots
+                            const now = new Date();
+                            
                             while (currentTime < endDateTime) {
-                                slots.push({
-                                    time: currentTime.toLocaleTimeString('en-US', { 
-                                        hour: '2-digit', 
-                                        minute: '2-digit',
-                                        hour12: true 
-                                    }),
-                                    isReserved: false,
-                                    startTime: new Date(currentTime)
-                                });
+                                // Skip past time slots if selected date is today
+                                if (currentTime > now) {
+                                    slots.push({
+                                        time: currentTime.toLocaleTimeString('en-US', { 
+                                            hour: '2-digit', 
+                                            minute: '2-digit',
+                                            hour12: true 
+                                        }),
+                                        isReserved: false,
+                                        startTime: new Date(currentTime)
+                                    });
+                                }
                                 currentTime.setMinutes(currentTime.getMinutes() + intervalMinutes);
                             }
                             
@@ -154,16 +167,16 @@ export class BookingService {
                             // Legacy support: Use old timeSlotConfig if exists
                             const { startHour, endHour, intervalMinutes } = courtData.timeSlotConfig;
                             console.log('🔍 Using legacy timeSlotConfig:', courtData.timeSlotConfig);
-                            baseSlots = this.generateTimeSlots(startHour, endHour, intervalMinutes);
+                            baseSlots = this.generateTimeSlots(startHour, endHour, intervalMinutes, date);
                         } else {
                             // No availability data - use default
                             console.log('🔍 No availability schedule found, using defaults (8 AM - 10 PM, 1 hour)');
-                            baseSlots = this.generateTimeSlots(8, 22, 60);
+                            baseSlots = this.generateTimeSlots(8, 22, 60, date);
                         }
                     }
                 } catch (configError) {
                     console.warn('⚠️ Could not fetch court config, using default time slots:', configError);
-                    baseSlots = this.generateTimeSlots(8, 22, 60);
+                    baseSlots = this.generateTimeSlots(8, 22, 60, date);
                 }
                 
                 // Check which slots are already booked
@@ -225,7 +238,7 @@ export class BookingService {
             } catch (error) {
                 console.error("❌ Error getting available time slots:", error);
                 errorHandlingService.handleFirestoreError(error, 'getAvailableTimeSlots')
-                return this.generateTimeSlots();
+                return this.generateTimeSlots(8, 22, 60, date);
             }
         })
     }
@@ -276,21 +289,27 @@ export class BookingService {
                     
                     // Generate slots
                     const slots = [];
-                    const currentTime = new Date();
+                    const currentTime = new Date(selectedDate);
                     currentTime.setHours(startHour, startMinute, 0, 0);
-                    const endDateTime = new Date();
+                    const endDateTime = new Date(selectedDate);
                     endDateTime.setHours(endHour, endMinute, 0, 0);
                     
+                    // Get current date/time for filtering past slots
+                    const now = new Date();
+                    
                     while (currentTime < endDateTime) {
-                        slots.push({
-                            time: currentTime.toLocaleTimeString('en-US', { 
-                                hour: '2-digit', 
-                                minute: '2-digit',
-                                hour12: true 
-                            }),
-                            isReserved: false,
-                            startTime: new Date(currentTime)
-                        });
+                        // Skip past time slots if selected date is today
+                        if (currentTime > now) {
+                            slots.push({
+                                time: currentTime.toLocaleTimeString('en-US', { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit',
+                                    hour12: true 
+                                }),
+                                isReserved: false,
+                                startTime: new Date(currentTime)
+                            });
+                        }
                         currentTime.setMinutes(currentTime.getMinutes() + intervalMinutes);
                     }
                     
@@ -299,7 +318,7 @@ export class BookingService {
                 } else {
                     // No availability data - use default
                     console.log('🔍 No availability schedule, using defaults');
-                    baseSlots = this.generateTimeSlots(8, 22, 60);
+                    baseSlots = this.generateTimeSlots(8, 22, 60, date);
                 }
                 
                 // Step 2: Fetch bookings with OPTIMIZED query (simplified, faster)
@@ -367,7 +386,7 @@ export class BookingService {
                 return availableSlots;
             } catch (error) {
                 console.error("❌ Error in optimized time slots:", error);
-                return this.generateTimeSlots();
+                return this.generateTimeSlots(8, 22, 60, date);
             }
         })
     }

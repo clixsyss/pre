@@ -304,6 +304,8 @@ const messageInput = ref(null);
 const imageInput = ref(null);
 const keyboardHeight = ref(0);
 const isKeyboardVisible = ref(false);
+const documentFocusHandler = ref(null);
+const documentBlurHandler = ref(null);
 
 // Computed properties
 const isClosed = computed(() => {
@@ -493,11 +495,16 @@ const formatMessageTime = (timestamp) => {
 // Keyboard handling functions
 const setupKeyboardListeners = async () => {
   try {
-    // Listen for keyboard events
+    // Try Capacitor Keyboard API first
     Keyboard.addListener('keyboardWillShow', (info) => {
-      console.log('Keyboard will show:', info);
+      console.log('🔑 UnifiedChat: Keyboard will show:', info);
       keyboardHeight.value = info.keyboardHeight;
       isKeyboardVisible.value = true;
+      
+      // Add keyboard-open class to body to trigger global CSS
+      document.body.classList.add('keyboard-open');
+      console.log('✅ UnifiedChat: Added keyboard-open class to body');
+      
       // Scroll to bottom when keyboard appears
       setTimeout(() => {
         scrollToBottom();
@@ -505,9 +512,13 @@ const setupKeyboardListeners = async () => {
     });
 
     Keyboard.addListener('keyboardWillHide', () => {
-      console.log('Keyboard will hide');
+      console.log('🔑 UnifiedChat: Keyboard will hide');
       keyboardHeight.value = 0;
       isKeyboardVisible.value = false;
+      
+      // Remove keyboard-open class from body
+      document.body.classList.remove('keyboard-open');
+      console.log('✅ UnifiedChat: Removed keyboard-open class from body');
     });
 
     // Set resize mode to ionic for better keyboard handling
@@ -515,14 +526,114 @@ const setupKeyboardListeners = async () => {
 
     // Set scroll to true to enable keyboard scrolling
     await Keyboard.setScroll({ isDisabled: false });
+    
+    console.log('✅ UnifiedChat: Capacitor Keyboard API listeners set up');
   } catch (error) {
-    console.log('Keyboard API not available:', error);
+    console.log('⚠️ Capacitor Keyboard API not available, using fallback:', error);
+  }
+  
+  // PRIMARY METHOD: Listen to document-level focus events for keyboard detection
+  // This works on ALL platforms (iOS, Android, Web)
+  console.log('🔍 UnifiedChat: Setting up PRIMARY keyboard detection via document focus');
+  
+  const handleDocumentFocus = (event) => {
+    const target = event.target;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+      console.log('🔑 UnifiedChat: Input focused - showing keyboard', {
+        tagName: target.tagName,
+        className: target.className,
+        currentBodyClasses: document.body.className
+      });
+      
+      // Force add keyboard-open class
+      document.body.classList.add('keyboard-open');
+      console.log('✅ UnifiedChat: Added keyboard-open class. Body classes now:', document.body.className);
+      
+      // Verify the class was added
+      if (document.body.classList.contains('keyboard-open')) {
+        console.log('✅ UnifiedChat: Keyboard-open class confirmed on body');
+      } else {
+        console.error('❌ UnifiedChat: Failed to add keyboard-open class!');
+      }
+      
+      // Scroll to bottom when keyboard appears
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    }
+  };
+  
+  const handleDocumentBlur = (event) => {
+    const target = event.target;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+      console.log('🔑 UnifiedChat: Input blurred - hiding keyboard');
+      // Delay removal to catch any subsequent focus events
+      setTimeout(() => {
+        const activeElement = document.activeElement;
+        const isInput = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
+        if (!isInput && document.body.classList.contains('keyboard-open')) {
+          document.body.classList.remove('keyboard-open');
+          console.log('✅ UnifiedChat: Removed keyboard-open class');
+        }
+      }, 150);
+    }
+  };
+  
+  // Store handlers for cleanup
+  documentFocusHandler.value = handleDocumentFocus;
+  documentBlurHandler.value = handleDocumentBlur;
+  
+  // Attach document-level listeners
+  document.addEventListener('focusin', handleDocumentFocus, true);
+  document.addEventListener('focusout', handleDocumentBlur, true);
+  console.log('✅ UnifiedChat: Document-level keyboard listeners attached');
+  
+  // Also attach direct listener to the message input for instant detection
+  await nextTick();
+  if (messageInput.value) {
+    const directFocusHandler = () => {
+      console.log('🔑 UnifiedChat: Message input focused directly');
+      if (!document.body.classList.contains('keyboard-open')) {
+        document.body.classList.add('keyboard-open');
+        console.log('✅ UnifiedChat: Added keyboard-open class (direct)');
+      }
+    };
+    
+    const directBlurHandler = () => {
+      console.log('🔑 UnifiedChat: Message input blurred directly');
+      setTimeout(() => {
+        if (!messageInput.value || document.activeElement !== messageInput.value) {
+          if (document.body.classList.contains('keyboard-open')) {
+            document.body.classList.remove('keyboard-open');
+            console.log('✅ UnifiedChat: Removed keyboard-open class (direct)');
+          }
+        }
+      }, 150);
+    };
+    
+    messageInput.value.addEventListener('focus', directFocusHandler);
+    messageInput.value.addEventListener('blur', directBlurHandler);
+    console.log('✅ UnifiedChat: Direct listeners attached to message input');
+  } else {
+    console.warn('⚠️ UnifiedChat: Message input ref not available');
   }
 };
 
 const cleanupKeyboardListeners = async () => {
   try {
     await Keyboard.removeAllListeners();
+    
+    // Remove document-level listeners
+    if (documentFocusHandler.value) {
+      document.removeEventListener('focusin', documentFocusHandler.value, true);
+    }
+    if (documentBlurHandler.value) {
+      document.removeEventListener('focusout', documentBlurHandler.value, true);
+    }
+    
+    // Clean up body class
+    document.body.classList.remove('keyboard-open');
+    console.log('✅ UnifiedChat: Keyboard listeners cleaned up');
   } catch (error) {
     console.log('Error cleaning up keyboard listeners:', error);
   }
@@ -547,8 +658,12 @@ watch(() => props.messages, () => {
 
 // Lifecycle
 onMounted(async () => {
+  console.log('🎬 UnifiedChat: Component mounted, setting up keyboard listeners...');
+  
   // Set up keyboard listeners
-  setupKeyboardListeners();
+  await setupKeyboardListeners();
+  
+  console.log('✅ UnifiedChat: Keyboard listeners setup complete');
 
   // Focus on message input
   nextTick(() => {
@@ -589,15 +704,22 @@ onUnmounted(() => {
 /* Adjust for keyboard visibility */
 .unified-chat.keyboard-visible {
   bottom: var(--keyboard-height, 0px);
-  height: calc(100vh - 100px - var(--keyboard-height, 0px));
+  height: calc(100vh - 68px - var(--keyboard-height, 0px));
 }
 
-/* When keyboard is visible, expand to full height */
-@media (max-height: 600px) {
-  .unified-chat {
-    bottom: 0;
-    height: calc(100vh - 195px);
-  }
+/* When keyboard is visible, ensure proper positioning above keyboard */
+body.keyboard-open .unified-chat {
+  bottom: var(--keyboard-height, 0px);
+  height: calc(100vh - 68px - var(--keyboard-height, 0px));
+}
+
+/* Force hide bottom nav when keyboard is open on chat pages */
+body.keyboard-open :deep(.bottom-navigation) {
+  transform: translateY(100%) !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: transform 0.3s ease-in-out, opacity 0.2s ease, visibility 0.2s ease !important;
 }
 
 /* Header Styles */
@@ -956,17 +1078,20 @@ onUnmounted(() => {
 
 .message-wrapper.user .message-time {
   color: rgba(255, 255, 255, 0.8);
-  text-align: right;
+  text-align: left !important;
+  width: 120px;
 }
 
 .message-wrapper.admin .message-time {
   color: #6b7280;
-  text-align: left;
+  text-align: left !important;
+  width: 120px;
 }
 
 .message-wrapper.system .message-time {
   color: #6b7280;
-  text-align: left;
+  text-align: left !important;
+  width: 120px;
 }
 
 /* Message Input Container */
@@ -975,7 +1100,9 @@ onUnmounted(() => {
   border-top: 1px solid #e5e7eb;
   padding: 1rem 1.5rem;
   position: sticky;
+  bottom: 0;
   z-index: 10;
+  margin-top: auto;
 }
 
 .closed-notice {

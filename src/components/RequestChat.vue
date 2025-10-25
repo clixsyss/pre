@@ -130,30 +130,44 @@ const loadMessages = async () => {
     }
     
     // Use subscribeToQuery for collection-level real-time updates
-    unsubscribe.value = firestoreService.subscribeToQuery(
-      messagesPath,
-      {
-        orderByField: 'createdAt',
-        orderDirection: 'asc'
-      },
-      (snapshot) => {
-        // Handle real-time updates
-        const newMessages = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            timestamp: data.createdAt
-          };
-        });
-        
-        console.log('🔍 RequestChat: Real-time messages update received:', newMessages.length);
-        messages.value = newMessages;
-      },
-      (error) => {
-        console.error('❌ RequestChat: Real-time listener error:', error);
-      }
-    );
+    try {
+      unsubscribe.value = firestoreService.subscribeToQuery(
+        messagesPath,
+        {
+          orderByField: 'createdAt',
+          orderDirection: 'asc'
+        },
+        (snapshot) => {
+          // Handle real-time updates
+          const newMessages = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              timestamp: data.createdAt
+            };
+          });
+          
+          console.log('🔍 RequestChat: Real-time messages update received:', newMessages.length);
+          messages.value = newMessages;
+        },
+        (error) => {
+          console.error('❌ RequestChat: Real-time listener error:', error);
+          console.error('Error details:', {
+            message: error?.message,
+            code: error?.code,
+            stack: error?.stack
+          });
+        }
+      );
+    } catch (err) {
+      console.error('❌ RequestChat: Error setting up real-time listener:', err);
+      console.error('Error details:', {
+        message: err?.message,
+        code: err?.code,
+        stack: err?.stack
+      });
+    }
     
     console.log('✅ RequestChat: Real-time listener setup successfully');
     
