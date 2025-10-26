@@ -65,9 +65,11 @@ const deviceKeyResetService = {
       // If projectId is provided, query that specific project's subcollection
       if (projectId) {
         const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
-        const snapshot = await firestoreService.getDocs(collectionPath, [
-          { field: 'userId', operator: '==', value: userId }
-        ])
+        const snapshot = await firestoreService.getDocs(collectionPath, {
+          filters: [
+            { field: 'userId', operator: '==', value: userId }
+          ]
+        })
         
         const requests = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -92,9 +94,11 @@ const deviceKeyResetService = {
       for (const projectDoc of projectsSnapshot.docs) {
         const collectionPath = `projects/${projectDoc.id}/deviceKeyResetRequests`
         try {
-          const snapshot = await firestoreService.getDocs(collectionPath, [
-            { field: 'userId', operator: '==', value: userId }
-          ])
+          const snapshot = await firestoreService.getDocs(collectionPath, {
+            filters: [
+              { field: 'userId', operator: '==', value: userId }
+            ]
+          })
           
           snapshot.docs.forEach(doc => {
             allRequests.push({

@@ -30,6 +30,13 @@
       @refresh="checkUserApprovalStatus"
     />
 
+    <!-- Device Key Error Modal -->
+    <DeviceKeyErrorModal
+      v-if="showDeviceKeyErrorModal"
+      :message="deviceKeyErrorMessage"
+      @close="handleDeviceKeyModalClose"
+    />
+
     <!-- Content -->
     <div class="content">
       <div class="welcome-section">
@@ -191,6 +198,7 @@ import { validateProfileCompletion, getNextProfileStep } from '../../utils/profi
 import { attemptGoogleSignIn } from '../../utils/googleAuthHelper'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
+import DeviceKeyErrorModal from '../../components/DeviceKeyErrorModal.vue'
 
 // Component name for ESLint
 defineOptions({
@@ -209,6 +217,8 @@ const notificationStore = useNotificationStore()
 const loading = ref(false)
 const showPassword = ref(false)
 const showPendingModal = ref(false)
+const showDeviceKeyErrorModal = ref(false)
+const deviceKeyErrorMessage = ref('')
 
 // Global keyboard handling is now managed by MainLayout
 
@@ -242,6 +252,11 @@ const goBack = () => {
 const handlePageClick = async () => {
   // Keyboard is now automatically hidden by composable when clicking outside inputs
   // No need for manual handling
+}
+
+const handleDeviceKeyModalClose = () => {
+  showDeviceKeyErrorModal.value = false
+  deviceKeyErrorMessage.value = ''
 }
 
 const togglePassword = () => {
@@ -378,8 +393,9 @@ const handleSignIn = async () => {
       console.log('[SignIn] ❌ Device key check failed:', deviceCheck.message)
       // Sign out the user
       await optimizedAuthService.signOut()
-      // Show error message
-      notificationStore.showError(deviceCheck.message)
+      // Show device key error modal instead of toast
+      deviceKeyErrorMessage.value = deviceCheck.message
+      showDeviceKeyErrorModal.value = true
       loading.value = false
       return
     }

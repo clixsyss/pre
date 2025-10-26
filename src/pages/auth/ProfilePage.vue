@@ -2268,14 +2268,20 @@ const submitDeviceKeyResetRequest = async () => {
       throw new Error('No authenticated user found')
     }
 
-    // Get current project (if any)
-    const currentProject = projectStore.currentProject?.id || null
+    // Get selected project ID
+    const projectId = projectStore.selectedProject?.id || currentProjectId.value
+    
+    if (!projectId) {
+      throw new Error('No project selected. Please select a project first.')
+    }
+    
+    console.log('📝 Submitting device key reset request for project:', projectId)
 
     // Submit the request
     await deviceKeyResetService.submitResetRequest(
       currentUser.uid,
       deviceKeyResetReason.value,
-      currentProject
+      projectId
     )
 
     notificationStore.showSuccess('Device key reset request submitted successfully!')

@@ -72,6 +72,10 @@ export function useFormKeyboard(options = {}) {
     isKeyboardVisible.value = true
     keyboardHeight.value = info.keyboardHeight || 0
 
+    // Hide bottom navigation by adding modal-open class
+    document.body.classList.add('modal-open')
+    console.log('✅ Bottom nav hidden (keyboard shown)')
+
     // Scroll to active input if enabled
     if (activeInput.value && scrollToInput) {
       scrollToInputElement(activeInput.value)
@@ -86,6 +90,10 @@ export function useFormKeyboard(options = {}) {
     isKeyboardVisible.value = false
     keyboardHeight.value = 0
     activeInput.value = null
+
+    // Show bottom navigation by removing modal-open class
+    document.body.classList.remove('modal-open')
+    console.log('✅ Bottom nav shown (keyboard hidden)')
   }
 
   /**
