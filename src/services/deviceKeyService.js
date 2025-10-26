@@ -1,6 +1,4 @@
 import firestoreService from './firestoreService'
-import { Device } from '@capacitor/device'
-import { Preferences } from '@capacitor/preferences'
 
 /**
  * Device Key Service - Manages device-based authentication
@@ -9,6 +7,27 @@ import { Preferences } from '@capacitor/preferences'
 class DeviceKeyService {
   constructor() {
     this.DEVICE_KEY_STORAGE_KEY = 'pre_device_key'
+    // Lazy load Capacitor plugins to avoid bundling issues
+    this.Device = null
+    this.Preferences = null
+  }
+
+  /**
+   * Initialize Capacitor plugins (lazy loading)
+   */
+  async initializePlugins() {
+    if (!this.Device || !this.Preferences) {
+      try {
+        const { Device } = await import('@capacitor/device')
+        const { Preferences } = await import('@capacitor/preferences')
+        this.Device = Device
+        this.Preferences = Preferences
+        console.log('✅ Capacitor plugins loaded successfully')
+      } catch (error) {
+        console.error('❌ Error loading Capacitor plugins:', error)
+        throw new Error('Failed to load Capacitor plugins')
+      }
+    }
   }
 
   /**
@@ -17,9 +36,11 @@ class DeviceKeyService {
    */
   async generateDeviceKey() {
     try {
+      await this.initializePlugins()
+      
       console.log('🔍 Getting device ID...')
       
-      const deviceInfo = await Device.getId()
+      const deviceInfo = await this.Device.getId()
       
       console.log('📱 Device info received:', deviceInfo)
       
@@ -47,9 +68,11 @@ class DeviceKeyService {
    */
   async getLocalDeviceKey() {
     try {
+      await this.initializePlugins()
+      
       console.log('🔍 Getting local device key from Preferences...')
       
-      const result = await Preferences.get({ key: this.DEVICE_KEY_STORAGE_KEY })
+      const result = await this.Preferences.get({ key: this.DEVICE_KEY_STORAGE_KEY })
       
       console.log('📱 Preferences result:', result)
       
@@ -67,9 +90,11 @@ class DeviceKeyService {
    */
   async saveLocalDeviceKey(deviceKey) {
     try {
+      await this.initializePlugins()
+      
       console.log('💾 Saving device key to local storage...')
       
-      await Preferences.set({
+      await this.Preferences.set({
         key: this.DEVICE_KEY_STORAGE_KEY,
         value: deviceKey
       })
@@ -87,7 +112,9 @@ class DeviceKeyService {
    */
   async removeLocalDeviceKey() {
     try {
-      await Preferences.remove({ key: this.DEVICE_KEY_STORAGE_KEY })
+      await this.initializePlugins()
+      
+      await this.Preferences.remove({ key: this.DEVICE_KEY_STORAGE_KEY })
       
       console.log('✅ Device key removed from local storage')
     } catch (error) {

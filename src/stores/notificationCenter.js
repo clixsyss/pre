@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { 
   collection, 
   query, 
@@ -431,6 +431,29 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   const closeModal = () => {
     isModalOpen.value = false
   }
+
+  /**
+   * Update app badge when unread count changes (iOS/Android)
+   */
+  watch(unreadCount, async (newCount) => {
+    try {
+      console.log('NotificationCenter: Updating app badge to:', newCount)
+      
+      // Lazy load Badge plugin to avoid bundling issues
+      const { Badge } = await import('@capawesome/capacitor-badge')
+      
+      if (newCount > 0) {
+        await Badge.set({ count: newCount })
+        console.log('NotificationCenter: Badge set to', newCount)
+      } else {
+        await Badge.clear()
+        console.log('NotificationCenter: Badge cleared')
+      }
+    } catch (error) {
+      console.error('NotificationCenter: Error updating badge:', error)
+      // Badge plugin may not be available on web, ignore error
+    }
+  })
 
   return {
     // State
