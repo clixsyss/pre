@@ -3,83 +3,56 @@ import firestoreService from './firestoreService'
 /**
  * Device Key Service - Manages device-based authentication
  * Ensures users can only login from their registered device unless reset is approved
+ * 
+ * SIMPLE APPROACH:
+ * - Generate a UUID and store in localStorage
+ * - Compare with Firestore deviceKey
+ * - User can only login from ONE device at a time
+ * - To switch devices, user must request device key reset from admin
  */
 class DeviceKeyService {
   constructor() {
     this.DEVICE_KEY_STORAGE_KEY = 'pre_device_key'
-    // Lazy load Capacitor plugins to avoid bundling issues
-    this.Device = null
-    this.Preferences = null
   }
 
   /**
-   * Initialize Capacitor plugins (lazy loading)
+   * Generate a unique device key
+   * @returns {string} Unique device key
    */
-  async initializePlugins() {
-    if (!this.Device || !this.Preferences) {
-      try {
-        const { Device } = await import('@capacitor/device')
-        const { Preferences } = await import('@capacitor/preferences')
-        this.Device = Device
-        this.Preferences = Preferences
-        console.log('✅ Capacitor plugins loaded successfully')
-      } catch (error) {
-        console.error('❌ Error loading Capacitor plugins:', error)
-        throw new Error('Failed to load Capacitor plugins')
-      }
-    }
-  }
-
-  /**
-   * Generate a unique device key based on device info
-   * @returns {Promise<string>} Unique device key
-   */
-  async generateDeviceKey() {
+  generateDeviceKey() {
     try {
-      await this.initializePlugins()
-      
-      console.log('🔍 Getting device ID...')
-      
-      const deviceInfo = await this.Device.getId()
-      
-      console.log('📱 Device info received:', deviceInfo)
-      
-      const timestamp = Date.now()
-      const randomPart = Math.random().toString(36).substring(2, 15)
-      
-      // Create a unique key combining device UUID, timestamp, and random string
-      const deviceKey = `${deviceInfo.identifier || deviceInfo.uuid || randomPart}_${timestamp}_${randomPart}`
-      
-      console.log('🔑 Generated device key:', deviceKey.substring(0, 20) + '...')
-      return deviceKey
+      // Use crypto.randomUUID if available, otherwise fallback
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        const deviceKey = `device_${crypto.randomUUID()}_${Date.now()}`
+        console.log('🔑 Generated device key using crypto.randomUUID')
+        return deviceKey
+      } else {
+        // Fallback to random string
+        const randomPart1 = Math.random().toString(36).substring(2, 15)
+        const randomPart2 = Math.random().toString(36).substring(2, 15)
+        const deviceKey = `device_${randomPart1}${randomPart2}_${Date.now()}`
+        console.log('🔑 Generated device key using Math.random fallback')
+        return deviceKey
+      }
     } catch (error) {
-      console.error('❌ Error generating device key:', error.message || error)
-      console.error('❌ Error stack:', error.stack)
-      // Fallback to pure random if device info fails
-      const fallbackKey = `fallback_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
-      console.log('⚠️ Using fallback device key:', fallbackKey.substring(0, 20) + '...')
-      return fallbackKey
+      console.error('❌ Error generating device key:', error)
+      // Ultimate fallback
+      const deviceKey = `device_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+      return deviceKey
     }
   }
 
   /**
    * Get the device key stored on this device
-   * @returns {Promise<string|null>} Stored device key or null
+   * @returns {string|null} Stored device key or null
    */
-  async getLocalDeviceKey() {
+  getLocalDeviceKey() {
     try {
-      await this.initializePlugins()
-      
-      console.log('🔍 Getting local device key from Preferences...')
-      
-      const result = await this.Preferences.get({ key: this.DEVICE_KEY_STORAGE_KEY })
-      
-      console.log('📱 Preferences result:', result)
-      
-      return result.value
+      const deviceKey = localStorage.getItem(this.DEVICE_KEY_STORAGE_KEY)
+      console.log('📱 Local device key:', deviceKey ? 'Found' : 'Not found')
+      return deviceKey
     } catch (error) {
-      console.error('❌ Error getting local device key:', error.message || error)
-      console.error('❌ Error stack:', error.stack)
+      console.error('❌ Error getting local device key:', error)
       return null
     }
   }
@@ -88,35 +61,23 @@ class DeviceKeyService {
    * Save device key to local storage
    * @param {string} deviceKey - Device key to save
    */
-  async saveLocalDeviceKey(deviceKey) {
+  saveLocalDeviceKey(deviceKey) {
     try {
-      await this.initializePlugins()
-      
-      console.log('💾 Saving device key to local storage...')
-      
-      await this.Preferences.set({
-        key: this.DEVICE_KEY_STORAGE_KEY,
-        value: deviceKey
-      })
-      
-      console.log('✅ Device key saved to local storage')
+      localStorage.setItem(this.DEVICE_KEY_STORAGE_KEY, deviceKey)
+      console.log('✅ Device key saved to localStorage')
     } catch (error) {
-      console.error('❌ Error saving device key:', error.message || error)
-      console.error('❌ Error stack:', error.stack)
-      throw new Error('Failed to save device key: ' + (error.message || JSON.stringify(error)))
+      console.error('❌ Error saving device key:', error)
+      throw new Error('Failed to save device key')
     }
   }
 
   /**
    * Remove device key from local storage
    */
-  async removeLocalDeviceKey() {
+  removeLocalDeviceKey() {
     try {
-      await this.initializePlugins()
-      
-      await this.Preferences.remove({ key: this.DEVICE_KEY_STORAGE_KEY })
-      
-      console.log('✅ Device key removed from local storage')
+      localStorage.removeItem(this.DEVICE_KEY_STORAGE_KEY)
+      console.log('✅ Device key removed from localStorage')
     } catch (error) {
       console.error('Error removing device key:', error)
     }
@@ -167,8 +128,8 @@ class DeviceKeyService {
     try {
       console.log('🔐 Validating device key for user:', userId)
 
-      // Get local device key
-      const localKey = await this.getLocalDeviceKey()
+      // Get local device key (synchronous now)
+      const localKey = this.getLocalDeviceKey()
       console.log('📱 Local device key:', localKey ? 'Found' : 'Not found')
 
       // Get stored device key from Firestore
@@ -236,13 +197,13 @@ class DeviceKeyService {
     try {
       console.log('📝 Registering device for user:', userId)
 
-      // Generate new device key
-      const deviceKey = await this.generateDeviceKey()
+      // Generate new device key (synchronous now)
+      const deviceKey = this.generateDeviceKey()
 
-      // Save to local storage
-      await this.saveLocalDeviceKey(deviceKey)
+      // Save to local storage (synchronous now)
+      this.saveLocalDeviceKey(deviceKey)
 
-      // Save to Firestore
+      // Save to Firestore (still async)
       await this.saveUserDeviceKey(userId, deviceKey)
 
       console.log('✅ Device registered successfully')
