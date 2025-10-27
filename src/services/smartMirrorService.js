@@ -4,6 +4,14 @@ import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebas
 import { collection, query, getDocs, doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore'
 import { smartMirrorAuth, smartMirrorDb } from '../boot/smartMirrorFirebase'
 
+// Log Smart Mirror Firebase initialization status
+console.log('[SmartMirrorService] Module loaded - Auth status:', {
+  authExists: !!smartMirrorAuth,
+  dbExists: !!smartMirrorDb,
+  authApp: smartMirrorAuth?.app?.name,
+  authProjectId: smartMirrorAuth?.app?.options?.projectId
+})
+
 class SmartMirrorService {
   constructor() {
     // Global state for current session
@@ -87,6 +95,13 @@ class SmartMirrorService {
           authApp: smartMirrorAuth?.app?.name,
           authProjectId: smartMirrorAuth?.app?.options?.projectId 
         })
+        
+        // Check if smartMirrorAuth is initialized
+        if (!smartMirrorAuth) {
+          const error = new Error('Smart Mirror authentication not initialized. Please reload the app.')
+          console.error('❌ smartMirrorAuth is undefined!')
+          throw error
+        }
         
         // Authenticate with Firebase
         console.log('📍 Step 2: Attempting signInWithEmailAndPassword...')

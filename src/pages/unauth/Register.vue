@@ -306,11 +306,17 @@
               </div>
             </div>
 
-            <!-- Unit Input -->
+            <!-- Unit Selection -->
             <div class="form-group">
-              <label for="unit" class="form-label">Unit Number/Name *</label>
-              <input id="unit" v-model="propertyForm.unit" type="text" class="form-input"
-                placeholder="e.g., A1, Villa 5, Office 12" required :disabled="!propertyForm.selectedProject" />
+              <SearchableUnitDropdown
+                v-model="propertyForm.unit"
+                :project-id="propertyForm.selectedProject"
+                :project-users="projectUsers"
+                label="Unit Number/Name *"
+                placeholder="Select your unit..."
+                search-placeholder="Search units (e.g., D1A-1, D2A)..."
+                :disabled="!propertyForm.selectedProject"
+              />
             </div>
 
             <!-- Role Selection -->
@@ -431,9 +437,15 @@
                 </div>
 
                 <div class="form-group">
-                  <label for="additional-unit" class="form-label">Unit Number/Name</label>
-                  <input id="additional-unit" v-model="additionalPropertyForm.unit" type="text" class="form-input"
-                    placeholder="e.g., A2, Villa 6, Office 15" :disabled="!additionalPropertyForm.selectedProject" />
+                  <SearchableUnitDropdown
+                    v-model="additionalPropertyForm.unit"
+                    :project-id="additionalPropertyForm.selectedProject"
+                    :project-users="projectUsers"
+                    label="Unit Number/Name"
+                    placeholder="Select your unit..."
+                    search-placeholder="Search units (e.g., D1A-1, D2A)..."
+                    :disabled="!additionalPropertyForm.selectedProject"
+                  />
                 </div>
 
                 <div class="form-group">
@@ -507,6 +519,7 @@ import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/fire
 import { db } from '../../boot/firebase'
 import firebaseRestAuth from '../../services/firebaseRestAuth'
 import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
+import SearchableUnitDropdown from '../../components/SearchableUnitDropdown.vue'
 
 // Component name for ESLint
 defineOptions({
@@ -544,6 +557,7 @@ const propertyForm = reactive({
 const availableProjects = ref([])
 const selectedProjects = ref([])
 const showAddAnotherForm = ref(false)
+const projectUsers = ref([]) // For determining occupied units
 
 const additionalPropertyForm = reactive({
   selectedProject: '',
@@ -590,6 +604,63 @@ const fetchAvailableProjects = async () => {
   }
 }
 
+// Function to fetch users for the selected project (to determine occupied units)
+const fetchProjectUsers = async (projectId) => {
+  if (!projectId) {
+    projectUsers.value = []
+    return
+  }
+
+  try {
+    console.log('[Register] Fetching users for project:', projectId)
+    
+    const { Capacitor } = await import('@capacitor/core')
+    
+    if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
+      // Use Capacitor Firebase plugin for iOS
+      const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
+      
+      const result = await FirebaseFirestore.getCollection({
+        reference: 'users'
+      })
+      
+      projectUsers.value = result.documents
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data
+        }))
+        .filter(user => {
+          if (user.projects && Array.isArray(user.projects)) {
+            return user.projects.some(p => p.projectId === projectId)
+          }
+          return false
+        })
+      
+      console.log('[Register] ✅ Fetched', projectUsers.value.length, 'users for project via Capacitor')
+    } else {
+      // Use Web SDK for web/Android
+      const usersRef = collection(db, 'users')
+      const snapshot = await getDocs(usersRef)
+      projectUsers.value = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter(user => {
+          if (user.projects && Array.isArray(user.projects)) {
+            return user.projects.some(p => p.projectId === projectId)
+          }
+          return false
+        })
+      
+      console.log('[Register] ✅ Fetched', projectUsers.value.length, 'users for project via Web SDK')
+    }
+  } catch (error) {
+    console.error('[Register] Error fetching project users:', error)
+    projectUsers.value = []
+  }
+}
+
 // Function to get project name by ID
 const getProjectName = (projectId) => {
   const project = availableProjects.value.find(p => p.id === projectId)
@@ -624,6 +695,11 @@ const onProjectChange = () => {
   // Clear unit input when project changes
   propertyForm.unit = ''
   propertyForm.role = ''
+  
+  // Fetch users for the selected project to determine occupied units
+  if (propertyForm.selectedProject) {
+    fetchProjectUsers(propertyForm.selectedProject)
+  }
 }
 
 // Function to handle additional project selection change
@@ -631,6 +707,11 @@ const onAdditionalProjectChange = () => {
   // Clear unit input when project changes
   additionalPropertyForm.unit = ''
   additionalPropertyForm.role = ''
+  
+  // Fetch users for the selected project to determine occupied units
+  if (additionalPropertyForm.selectedProject) {
+    fetchProjectUsers(additionalPropertyForm.selectedProject)
+  }
 }
 
 // Function to add additional property

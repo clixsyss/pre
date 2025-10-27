@@ -1117,9 +1117,15 @@
             </div>
 
             <div class="form-group">
-              <label for="userUnit">Your Unit</label>
-              <input id="userUnit" v-model="newProject.userUnit" type="text" placeholder="e.g., A1, B2, etc."
-                required />
+              <SearchableUnitDropdown
+                v-model="newProject.userUnit"
+                :project-id="newProject.projectId"
+                :project-users="profileProjectUsers"
+                label="Your Unit"
+                placeholder="Select your unit..."
+                search-placeholder="Search units (e.g., D1A-1, D2A)..."
+                :disabled="!newProject.projectId"
+              />
             </div>
 
             <div class="form-group">
@@ -1366,6 +1372,7 @@ import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import ProjectGuidelinesDialog from '../../components/ProjectGuidelinesDialog.vue'
 import EditProfileDialog from '../../components/EditProfileDialog.vue'
 import ViolationsModal from '../../components/ViolationsModal.vue'
+import SearchableUnitDropdown from '../../components/SearchableUnitDropdown.vue'
 import { getUserFines } from '../../services/finesService'
 import complaintService from '../../services/complaintService'
 import deviceKeyResetService from '../../services/deviceKeyResetService'
@@ -1412,6 +1419,7 @@ const newProject = ref({
 // Available projects from Firestore
 const availableProjects = ref([])
 const loadingAvailableProjects = ref(false)
+const profileProjectUsers = ref([]) // For determining occupied units in add project modal
 
 // Smart Mirror modal state
 const showLoginModalFlag = ref(false)
@@ -1809,10 +1817,71 @@ const resetNewProjectForm = () => {
   }
 }
 
+// Function to fetch users for the selected project (to determine occupied units)
+const fetchProfileProjectUsers = async (projectId) => {
+  if (!projectId) {
+    profileProjectUsers.value = []
+    return
+  }
+
+  try {
+    console.log('[ProfilePage] Fetching users for project:', projectId)
+    
+    const { Capacitor } = await import('@capacitor/core')
+    
+    if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
+      // Use Capacitor Firebase plugin for iOS
+      const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
+      
+      const result = await FirebaseFirestore.getCollection({
+        reference: 'users'
+      })
+      
+      profileProjectUsers.value = result.documents
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data
+        }))
+        .filter(user => {
+          if (user.projects && Array.isArray(user.projects)) {
+            return user.projects.some(p => p.projectId === projectId)
+          }
+          return false
+        })
+      
+      console.log('[ProfilePage] ✅ Fetched', profileProjectUsers.value.length, 'users for project via Capacitor')
+    } else {
+      // Use Web SDK for web/Android
+      const usersSnapshot = await firestoreService.getDocs('users')
+      profileProjectUsers.value = usersSnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter(user => {
+          if (user.projects && Array.isArray(user.projects)) {
+            return user.projects.some(p => p.projectId === projectId)
+          }
+          return false
+        })
+      
+      console.log('[ProfilePage] ✅ Fetched', profileProjectUsers.value.length, 'users for project via Web SDK')
+    }
+  } catch (error) {
+    console.error('[ProfilePage] Error fetching project users:', error)
+    profileProjectUsers.value = []
+  }
+}
+
 const onProjectChange = () => {
   // Reset unit and role when project changes
   newProject.value.userUnit = ''
   newProject.value.userRole = ''
+  
+  // Fetch users for the selected project to determine occupied units
+  if (newProject.value.projectId) {
+    fetchProfileProjectUsers(newProject.value.projectId)
+  }
 }
 
 const switchToProject = async (project) => {
@@ -3331,9 +3400,15 @@ watch(showDeviceManagementModal, (isOpen) => {
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* Changed from center to flex-start */
   justify-content: center;
-  z-index: 999999;
+  z-index: 9999999; /* Increased to be above bottom nav */
+  overflow-y: auto; /* Allow scrolling */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  padding: 20px 0; /* Add padding for better spacing */
+  /* Ensure modal stays above bottom navigation */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .modal-content {
@@ -3343,6 +3418,10 @@ watch(showDeviceManagementModal, (isOpen) => {
   max-width: 400px;
   width: 90%;
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
+  margin: auto; /* Center vertically when there's space */
+  max-height: calc(100vh - 40px); /* Prevent modal from exceeding viewport */
+  overflow-y: auto; /* Allow content scrolling if needed */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 .modal-header h3 {
@@ -4023,14 +4102,19 @@ watch(showDeviceManagementModal, (isOpen) => {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* Changed from center to flex-start for keyboard support */
   justify-content: center;
-  z-index: 999999;
+  z-index: 9999999; /* Increased to be above bottom nav */
   animation: fadeIn 0.3s ease-out;
   width: 100vw;
   height: 100vh;
   margin: 0;
-  padding: 0;
+  padding: 20px 0; /* Add padding for scrolling */
+  overflow-y: auto; /* Allow scrolling */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  /* Ensure modal stays above bottom navigation */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 @keyframes fadeIn {
@@ -4049,15 +4133,16 @@ watch(showDeviceManagementModal, (isOpen) => {
   padding: 0;
   max-width: 480px;
   width: 90%;
-  max-height: 90vh;
-  overflow: hidden;
+  max-height: calc(100vh - 40px); /* Prevent exceeding viewport with padding */
+  overflow-y: auto; /* Allow content scrolling */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.25),
     0 0 0 1px rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.2);
   animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
-  margin: auto;
+  margin: auto; /* Center when space available */
   transform: none;
 }
 
@@ -4418,7 +4503,7 @@ watch(showDeviceManagementModal, (isOpen) => {
 /* Device Management Modal Styles */
 .device-management-modal {
   max-width: 700px;
-  max-height: 85vh;
+  max-height: calc(100vh - 40px); /* Account for padding */
   width: 95%;
   background: #F6F6F6;
   border-radius: 20px;
@@ -4427,6 +4512,7 @@ watch(showDeviceManagementModal, (isOpen) => {
   animation: slideUp 0.3s ease-out;
   display: flex;
   flex-direction: column;
+  margin: auto; /* Center when space available */
 }
 
 .device-management-modal .modal-header {
