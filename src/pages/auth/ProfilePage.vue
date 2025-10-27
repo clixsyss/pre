@@ -2405,23 +2405,43 @@ onMounted(() => {
 
 // Watch modal states to manage navigation bar visibility and background scrolling
 watch(showLogoutConfirm, (isOpen) => {
-  if (isOpen) openModal()
-  else closeModal()
+  if (isOpen) {
+    openModal()
+    document.body.classList.add('hide-bottom-nav')
+  } else {
+    closeModal()
+    document.body.classList.remove('hide-bottom-nav')
+  }
 })
 
 watch(showAddProjectModal, (isOpen) => {
-  if (isOpen) openModal()
-  else closeModal()
+  if (isOpen) {
+    openModal()
+    document.body.classList.add('hide-bottom-nav')
+  } else {
+    closeModal()
+    document.body.classList.remove('hide-bottom-nav')
+  }
 })
 
 watch(showLoginModalFlag, (isOpen) => {
-  if (isOpen) openModal()
-  else closeModal()
+  if (isOpen) {
+    openModal()
+    document.body.classList.add('hide-bottom-nav')
+  } else {
+    closeModal()
+    document.body.classList.remove('hide-bottom-nav')
+  }
 })
 
 watch(showDeviceManagementModal, (isOpen) => {
-  if (isOpen) openModal()
-  else closeModal()
+  if (isOpen) {
+    openModal()
+    document.body.classList.add('hide-bottom-nav')
+  } else {
+    closeModal()
+    document.body.classList.remove('hide-bottom-nav')
+  }
 })
 </script>
 
@@ -3409,6 +3429,9 @@ watch(showDeviceManagementModal, (isOpen) => {
   /* Ensure modal stays above bottom navigation */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
+  /* Force hardware acceleration and proper stacking */
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .modal-content {
@@ -3422,6 +3445,9 @@ watch(showDeviceManagementModal, (isOpen) => {
   max-height: calc(100vh - 40px); /* Prevent modal from exceeding viewport */
   overflow-y: auto; /* Allow content scrolling if needed */
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  /* Ensure modal content is above bottom nav */
+  position: relative;
+  z-index: 1;
 }
 
 .modal-header h3 {
@@ -4115,6 +4141,9 @@ watch(showDeviceManagementModal, (isOpen) => {
   /* Ensure modal stays above bottom navigation */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
+  /* Force hardware acceleration and proper stacking */
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 @keyframes fadeIn {

@@ -147,7 +147,7 @@
       <div class="divider">
         <span>or</span>
       </div>
-
+<!-- 
       <div class="google-signin-section">
         <button @click="signInWithGoogle" class="social-btn google-btn">
           <svg
@@ -176,11 +176,115 @@
           </svg>
           Continue with Google
         </button>
-      </div>
+      </div> -->
 
       <div class="signup-prompt">
         <span>Don't have an account?</span>
         <button @click="goToSignUp" class="signup-link">Sign up</button>
+      </div>
+
+      <div class="device-key-reset-link">
+        <button @click="showDeviceKeyResetModal = true" class="reset-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          New Device? Request Device Key Reset
+        </button>
+      </div>
+    </div>
+
+    <!-- Device Key Reset Request Modal -->
+    <div v-if="showDeviceKeyResetModal" class="modal-overlay" @click="closeDeviceKeyResetModal">
+      <div class="modal-content device-key-reset-modal" @click.stop>
+        <div class="modal-header">
+          <h3>🔑 Device Key Reset Request</h3>
+          <button @click="closeDeviceKeyResetModal" class="close-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <p class="modal-description">
+            If you're trying to sign in from a new device, submit a reset request. Our admin will review and approve it.
+          </p>
+
+          <form @submit.prevent="handleDeviceKeyResetSubmit">
+            <div class="form-group">
+              <label class="form-label">Email *</label>
+              <input
+                v-model="deviceKeyResetForm.email"
+                type="email"
+                class="form-input"
+                placeholder="Enter your registered email"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">National ID *</label>
+              <input
+                v-model="deviceKeyResetForm.nationalId"
+                type="text"
+                class="form-input"
+                placeholder="Enter your national ID"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Mobile Number *</label>
+              <input
+                v-model="deviceKeyResetForm.mobile"
+                type="tel"
+                class="form-input"
+                placeholder="Enter your mobile number"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Your Project *</label>
+              <select
+                v-model="deviceKeyResetForm.projectId"
+                class="form-input"
+                required
+                @change="onResetProjectChange"
+              >
+                <option value="">Select your project</option>
+                <option v-for="project in availableProjects" :key="project.id" :value="project.id">
+                  {{ project.name }}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Reason for Reset *</label>
+              <textarea
+                v-model="deviceKeyResetForm.reason"
+                class="form-textarea"
+                placeholder="Please explain why you need a device key reset (e.g., new phone, lost device)..."
+                rows="4"
+                maxlength="500"
+                required
+              ></textarea>
+              <div class="char-count">{{ deviceKeyResetForm.reason.length }}/500</div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" @click="closeDeviceKeyResetModal" class="cancel-btn" :disabled="submittingDeviceKeyReset">
+                Cancel
+              </button>
+              <button type="submit" class="submit-btn" :disabled="submittingDeviceKeyReset">
+                <span v-if="submittingDeviceKeyReset">Submitting...</span>
+                <span v-else>Submit Request</span>
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -194,8 +298,8 @@ import firestoreService from '../../services/firestoreService'
 import { smartMirrorService } from '../../services/smartMirrorService'
 import { useNotificationStore } from '../../stores/notifications'
 import { useRegistrationStore } from '../../stores/registration'
-import { validateProfileCompletion, getNextProfileStep } from '../../utils/profileValidation'
-import { attemptGoogleSignIn } from '../../utils/googleAuthHelper'
+// import { validateProfileCompletion, getNextProfileStep } from '../../utils/profileValidation'
+// import { attemptGoogleSignIn } from '../../utils/googleAuthHelper'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
 import DeviceKeyErrorModal from '../../components/DeviceKeyErrorModal.vue'
@@ -220,6 +324,18 @@ const showPendingModal = ref(false)
 const showDeviceKeyErrorModal = ref(false)
 const deviceKeyErrorMessage = ref('')
 
+// Device key reset modal state
+const showDeviceKeyResetModal = ref(false)
+const submittingDeviceKeyReset = ref(false)
+const availableProjects = ref([])
+const deviceKeyResetForm = reactive({
+  email: '',
+  nationalId: '',
+  mobile: '',
+  projectId: '',
+  reason: ''
+})
+
 // Global keyboard handling is now managed by MainLayout
 
 const formData = reactive({
@@ -227,6 +343,24 @@ const formData = reactive({
   password: '',
   rememberMe: false,
 })
+
+// Load available projects for device key reset
+const loadAvailableProjects = async () => {
+  try {
+    const projectsResult = await firestoreService.getDocs('projects', {
+      timeoutMs: 8000
+    })
+    
+    if (projectsResult && !projectsResult.empty) {
+      availableProjects.value = projectsResult.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(p => p.status === 'active')
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    }
+  } catch (error) {
+    console.error('❌ Error loading projects:', error)
+  }
+}
 
 // Check if we should show the pending approval modal on mount
 onMounted(() => {
@@ -243,6 +377,9 @@ onMounted(() => {
       )
     }
   }
+  
+  // Load projects for device key reset modal
+  loadAvailableProjects()
 })
 
 const goBack = () => {
@@ -516,131 +653,131 @@ const handleSignIn = async () => {
   }
 }
 
-const signInWithGoogle = async () => {
-  if (loading.value) return
+// const signInWithGoogle = async () => {
+//   if (loading.value) return
 
-  loading.value = true
+//   loading.value = true
 
-  try {
-    // Attempt Google sign-in with validation
-    const signInResult = await attemptGoogleSignIn()
+//   try {
+//     // Attempt Google sign-in with validation
+//     const signInResult = await attemptGoogleSignIn()
 
-    if (!signInResult.success) {
-      // Sign-in was rejected
-      notificationStore.showError(signInResult.reason)
-      return
-    }
+//     if (!signInResult.success) {
+//       // Sign-in was rejected
+//       notificationStore.showError(signInResult.reason)
+//       return
+//     }
 
-    // Sync PRE user with Smart Mirror service for user isolation
-    const googleUserId = signInResult.user?.uid
-    if (googleUserId) {
-      console.log('[SignIn] 🔐 Syncing Google user with Smart Mirror service:', googleUserId)
-      smartMirrorService.setPreUserId(googleUserId)
-    }
+//     // Sync PRE user with Smart Mirror service for user isolation
+//     const googleUserId = signInResult.user?.uid
+//     if (googleUserId) {
+//       console.log('[SignIn] 🔐 Syncing Google user with Smart Mirror service:', googleUserId)
+//       smartMirrorService.setPreUserId(googleUserId)
+//     }
 
-    // User is eligible for Google sign-in
-    // Check if profile is complete
-    const userData = signInResult.userData
-    const profileValidation = validateProfileCompletion(userData)
+//     // User is eligible for Google sign-in
+//     // Check if profile is complete
+//     const userData = signInResult.userData
+//     const profileValidation = validateProfileCompletion(userData)
 
-    if (!profileValidation.isComplete) {
-      // Profile incomplete - redirect to appropriate completion step
-      const nextStep = getNextProfileStep(userData)
-      notificationStore.showWarning(
-        `Please complete your profile information before proceeding. Missing: ${profileValidation.message}`,
-      )
+//     if (!profileValidation.isComplete) {
+//       // Profile incomplete - redirect to appropriate completion step
+//       const nextStep = getNextProfileStep(userData)
+//       notificationStore.showWarning(
+//         `Please complete your profile information before proceeding. Missing: ${profileValidation.message}`,
+//       )
 
-      // Store user data in registration store for completion
-      const registrationStore = useRegistrationStore()
-      registrationStore.setPersonalData({ email: userData.email })
-      registrationStore.setPropertyData({
-        compound: userData.compound || '',
-        unit: userData.unit || '',
-        role: userData.role || '',
-        projects: userData.projects || [], // Include projects data
-      })
-      registrationStore.setUserDetails({
-        firstName: userData.firstName || '',
-        lastName: userData.lastName || '',
-        mobile: userData.mobile || '',
-        dateOfBirth: userData.dateOfBirth || '',
-        gender: userData.gender || 'male',
-        nationalId: userData.nationalId || '',
-      })
-      registrationStore.setTempUserId(userData.uid)
-      registrationStore.setEmailVerified(userData.emailVerified || false)
+//       // Store user data in registration store for completion
+//       const registrationStore = useRegistrationStore()
+//       registrationStore.setPersonalData({ email: userData.email })
+//       registrationStore.setPropertyData({
+//         compound: userData.compound || '',
+//         unit: userData.unit || '',
+//         role: userData.role || '',
+//         projects: userData.projects || [], // Include projects data
+//       })
+//       registrationStore.setUserDetails({
+//         firstName: userData.firstName || '',
+//         lastName: userData.lastName || '',
+//         mobile: userData.mobile || '',
+//         dateOfBirth: userData.dateOfBirth || '',
+//         gender: userData.gender || 'male',
+//         nationalId: userData.nationalId || '',
+//       })
+//       registrationStore.setTempUserId(userData.uid)
+//       registrationStore.setEmailVerified(userData.emailVerified || false)
 
-      // Redirect to appropriate completion step
-      switch (nextStep) {
-        case 'email_verification':
-          router.push('/register/verify-email')
-          break
-        case 'property_details':
-          router.push('/register')
-          break
-        case 'personal_details':
-          router.push('/register/personal-details')
-          break
-        default:
-          router.push('/register')
-      }
-      return
-    }
+//       // Redirect to appropriate completion step
+//       switch (nextStep) {
+//         case 'email_verification':
+//           router.push('/register/verify-email')
+//           break
+//         case 'property_details':
+//           router.push('/register')
+//           break
+//         case 'personal_details':
+//           router.push('/register/personal-details')
+//           break
+//         default:
+//           router.push('/register')
+//       }
+//       return
+//     }
 
-    // Check user approval status
-    const status = await checkUserApprovalStatus(userData.uid)
-    console.log('🚀 Google sign-in approval check result:', status)
+//     // Check user approval status
+//     const status = await checkUserApprovalStatus(userData.uid)
+//     console.log('🚀 Google sign-in approval check result:', status)
 
-    if (status.approvalStatus === 'pending') {
-      console.log('⏳ User is pending approval (Google), showing modal then signing out')
-      console.log('[SignIn-Google] Setting showPendingModal to true...')
-      // Show pending approval modal FIRST (before sign out)
-      showPendingModal.value = true
-      console.log('[SignIn-Google] showPendingModal value:', showPendingModal.value)
-      // Stop loading immediately so UI can update
-      loading.value = false
-      console.log('[SignIn-Google] Loading set to false')
-      // Wait for the modal to render
-      console.log('[SignIn-Google] Waiting for modal to render...')
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      console.log('[SignIn-Google] Modal should be visible now, signing out user...')
-      // Then sign out the user
-      await optimizedAuthService.signOut()
-      console.log('✅ Pending user signed out (Google sign-in), modal should still be visible')
-      return
-    } else if (status.approvalStatus === 'rejected') {
-      console.log('❌ User is rejected (Google), showing error then signing out')
-      // Show error message FIRST
-      notificationStore.showError(
-        'Your account has been rejected. Please contact support for more information.',
-      )
-      // Wait a tiny bit for the message to render
-      await new Promise((resolve) => setTimeout(resolve, 100))
-      // Then sign out the user
-      await optimizedAuthService.signOut()
-      console.log('✅ Rejected user signed out (Google sign-in)')
-      return
-    }
+//     if (status.approvalStatus === 'pending') {
+//       console.log('⏳ User is pending approval (Google), showing modal then signing out')
+//       console.log('[SignIn-Google] Setting showPendingModal to true...')
+//       // Show pending approval modal FIRST (before sign out)
+//       showPendingModal.value = true
+//       console.log('[SignIn-Google] showPendingModal value:', showPendingModal.value)
+//       // Stop loading immediately so UI can update
+//       loading.value = false
+//       console.log('[SignIn-Google] Loading set to false')
+//       // Wait for the modal to render
+//       console.log('[SignIn-Google] Waiting for modal to render...')
+//       await new Promise((resolve) => setTimeout(resolve, 500))
+//       console.log('[SignIn-Google] Modal should be visible now, signing out user...')
+//       // Then sign out the user
+//       await optimizedAuthService.signOut()
+//       console.log('✅ Pending user signed out (Google sign-in), modal should still be visible')
+//       return
+//     } else if (status.approvalStatus === 'rejected') {
+//       console.log('❌ User is rejected (Google), showing error then signing out')
+//       // Show error message FIRST
+//       notificationStore.showError(
+//         'Your account has been rejected. Please contact support for more information.',
+//       )
+//       // Wait a tiny bit for the message to render
+//       await new Promise((resolve) => setTimeout(resolve, 100))
+//       // Then sign out the user
+//       await optimizedAuthService.signOut()
+//       console.log('✅ Rejected user signed out (Google sign-in)')
+//       return
+//     }
 
-    // User is approved - update last login and proceed
-    await firestoreService.setDoc(
-      `users/${userData.uid}`,
-      {
-        lastLogin: new Date(),
-        updatedAt: new Date(),
-      },
-      { merge: true },
-    )
+//     // User is approved - update last login and proceed
+//     await firestoreService.setDoc(
+//       `users/${userData.uid}`,
+//       {
+//         lastLogin: new Date(),
+//         updatedAt: new Date(),
+//       },
+//       { merge: true },
+//     )
 
-    notificationStore.showSuccess('Welcome back!')
-    router.push('/home')
-  } catch (error) {
-    console.error('Google sign in error:', error)
-    notificationStore.showError('Google sign in failed. Please try again.')
-  } finally {
-    loading.value = false
-  }
-}
+//     notificationStore.showSuccess('Welcome back!')
+//     router.push('/home')
+//   } catch (error) {
+//     console.error('Google sign in error:', error)
+//     notificationStore.showError('Google sign in failed. Please try again.')
+//   } finally {
+//     loading.value = false
+//   }
+// }
 
 const forgotPassword = () => {
   // TODO: Implement forgot password
@@ -649,6 +786,156 @@ const forgotPassword = () => {
 
 const goToSignUp = () => {
   router.push('/register')
+}
+
+// Device key reset modal handlers
+const closeDeviceKeyResetModal = () => {
+  showDeviceKeyResetModal.value = false
+  // Reset form
+  deviceKeyResetForm.email = ''
+  deviceKeyResetForm.nationalId = ''
+  deviceKeyResetForm.mobile = ''
+  deviceKeyResetForm.projectId = ''
+  deviceKeyResetForm.reason = ''
+}
+
+const onResetProjectChange = () => {
+  console.log('📋 Project selected for reset:', deviceKeyResetForm.projectId)
+}
+
+const handleDeviceKeyResetSubmit = async () => {
+  if (submittingDeviceKeyReset.value) return
+  
+  submittingDeviceKeyReset.value = true
+  
+  try {
+    console.log('🔑 Submitting device key reset request...')
+    
+    // Normalize input
+    const normalizedEmail = deviceKeyResetForm.email.toLowerCase().trim()
+    const normalizedNationalId = deviceKeyResetForm.nationalId.trim()
+    const normalizedMobile = deviceKeyResetForm.mobile.trim()
+    
+    // Validate user exists with matching details
+    console.log('🔍 Validating user details...')
+    const usersResult = await firestoreService.getDocs('users', {
+      filters: [{ field: 'email', operator: '==', value: normalizedEmail }],
+      timeoutMs: 10000
+    })
+    
+    if (!usersResult || usersResult.empty || usersResult.docs.length === 0) {
+      notificationStore.showError(
+        '❌ No account found with this email. Please check your email and try again.'
+      )
+      submittingDeviceKeyReset.value = false
+      return
+    }
+    
+    const userDoc = usersResult.docs[0]
+    const userData = userDoc.data()
+    const userId = userDoc.id
+    
+    console.log('✅ User found:', userId)
+    
+    // Validate national ID
+    if (userData.nationalId !== normalizedNationalId) {
+      notificationStore.showError(
+        '❌ National ID does not match our records. Please check and try again.'
+      )
+      submittingDeviceKeyReset.value = false
+      return
+    }
+    
+    // Validate mobile number
+    if (userData.mobile !== normalizedMobile) {
+      notificationStore.showError(
+        '❌ Mobile number does not match our records. Please check and try again.'
+      )
+      submittingDeviceKeyReset.value = false
+      return
+    }
+    
+    // Validate user is part of the selected project
+    const userProjects = userData.projects || []
+    const isInProject = userProjects.some(p => p.projectId === deviceKeyResetForm.projectId)
+    
+    if (!isInProject) {
+      notificationStore.showError(
+        '❌ You are not registered in the selected project. Please select the correct project.'
+      )
+      submittingDeviceKeyReset.value = false
+      return
+    }
+    
+    console.log('✅ All validations passed')
+    
+    // Check if user already has a pending request for this project
+    const existingRequestsResult = await firestoreService.getDocs(
+      `projects/${deviceKeyResetForm.projectId}/deviceKeyResetRequests`,
+      {
+        filters: [
+          { field: 'userId', operator: '==', value: userId },
+          { field: 'status', operator: '==', value: 'pending' }
+        ],
+        timeoutMs: 8000
+      }
+    )
+    
+    if (existingRequestsResult && !existingRequestsResult.empty && existingRequestsResult.docs.length > 0) {
+      notificationStore.showWarning(
+        'ℹ️ You already have a pending device key reset request for this project. Please wait for admin approval.'
+      )
+      submittingDeviceKeyReset.value = false
+      closeDeviceKeyResetModal()
+      return
+    }
+    
+    // Create the reset request
+    console.log('📝 Creating device key reset request...')
+    const requestData = {
+      userId: userId,
+      userEmail: normalizedEmail,
+      userName: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+      userUnit: userProjects.find(p => p.projectId === deviceKeyResetForm.projectId)?.unit || '',
+      nationalId: normalizedNationalId,
+      mobile: normalizedMobile,
+      projectId: deviceKeyResetForm.projectId,
+      reason: deviceKeyResetForm.reason.trim(),
+      status: 'pending',
+      requestedAt: new Date(),
+      resolvedAt: null,
+      resolvedBy: null,
+      adminNotes: ''
+    }
+    
+    await firestoreService.addDoc(
+      `projects/${deviceKeyResetForm.projectId}/deviceKeyResetRequests`,
+      requestData
+    )
+    
+    console.log('✅ Device key reset request submitted successfully')
+    
+    notificationStore.showSuccess(
+      '✅ Your device key reset request has been submitted successfully! Our admin will review it shortly. You will be notified once approved.'
+    )
+    
+    closeDeviceKeyResetModal()
+    
+  } catch (error) {
+    console.error('❌ Error submitting device key reset request:', error)
+    
+    let errorMessage = '❌ Failed to submit request. Please try again.'
+    
+    if (error.message?.includes('timeout')) {
+      errorMessage = '❌ Request timed out. Please check your internet connection and try again.'
+    } else if (error.message?.includes('permission')) {
+      errorMessage = '❌ Permission denied. Please contact support.'
+    }
+    
+    notificationStore.showError(errorMessage)
+  } finally {
+    submittingDeviceKeyReset.value = false
+  }
 }
 </script>
 
@@ -941,6 +1228,212 @@ const goToSignUp = () => {
   margin-left: 5px;
 }
 
+.device-key-reset-link {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.reset-link {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.reset-link:hover {
+  background-color: #f0f0f0;
+  color: #af1e23;
+}
+
+.reset-link svg {
+  color: #af1e23;
+  flex-shrink: 0;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 9999999;
+  animation: fadeIn 0.3s ease-out;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 0;
+}
+
+.modal-content {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #e1e5e9;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #222;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background-color: #f0f0f0;
+  color: #af1e23;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-description {
+  color: #666;
+  font-size: 0.95rem;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 15px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+  resize: vertical;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: #af1e23;
+}
+
+.char-count {
+  text-align: right;
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 4px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.cancel-btn {
+  flex: 1;
+  padding: 14px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  background: white;
+  color: #666;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background-color: #f8f9fa;
+  border-color: #ccc;
+}
+
+.cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.submit-btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #af1e23 0%, #8b161a 100%);
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
+}
+
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(175, 30, 35, 0.4);
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Responsive design */
 @media (max-width: 480px) {
   .content {
@@ -954,6 +1447,22 @@ const goToSignUp = () => {
 
   .form-input {
     padding: 14px;
+  }
+
+  .modal-content {
+    width: 95%;
+  }
+
+  .modal-header {
+    padding: 20px;
+  }
+
+  .modal-body {
+    padding: 20px;
+  }
+
+  .modal-header h3 {
+    font-size: 1.1rem;
   }
 }
 </style>

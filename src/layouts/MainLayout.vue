@@ -1503,6 +1503,17 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
+/* Hide bottom nav when keyboard is open or ProfilePage modals are open */
+body.keyboard-open .bottom-navigation,
+body.hide-bottom-nav .bottom-navigation {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(100%) !important;
+  z-index: -1 !important;
+}
+
 .nav-item {
   display: flex;
   flex-direction: column;
