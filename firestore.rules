@@ -911,16 +911,16 @@ service cloud.firestore {
     }
     
     // PROJECT-SPECIFIC DEVICE KEY RESET REQUESTS
-    // Allow unauthenticated users to create requests (they can't log in)
+    // Allow unauthenticated and anonymous users to create requests (they can't log in)
     // Allow authenticated users to read their own requests
     // Admins can read/update all requests
     match /projects/{projectId}/deviceKeyResetRequests/{requestId} {
-      // ANYONE can create a reset request (even unauthenticated)
+      // ANYONE can create a reset request (unauthenticated, anonymous, or authenticated)
       // This is necessary because users locked out of their account need to submit requests
       // Validation is done by checking user details (email, nationalId, mobile) match Firestore
-      allow create: if true;
+      allow create: if true; // Allows unauthenticated, anonymous, and authenticated users
       
-      // Authenticated users can read their own requests
+      // Authenticated users (including anonymous) can read their own requests
       // Admins can read all requests
       allow read: if request.auth != null && 
         (resource.data.userId == request.auth.uid || 

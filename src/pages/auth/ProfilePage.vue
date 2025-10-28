@@ -984,6 +984,8 @@
                   rows="4"
                   class="form-textarea"
                   :disabled="submittingDeviceKeyRequest"
+                  @focus="handleTextareaFocus"
+                  @blur="handleTextaraBlur"
                 ></textarea>
                 <span class="char-count" :class="{ 'over-limit': deviceKeyResetReason.length > 500 }">
                   {{ deviceKeyResetReason.length }} / 500
@@ -2389,6 +2391,37 @@ const formatDeviceKeyRequestDate = (timestamp) => {
     console.error('Error formatting date:', error)
     return 'Invalid date'
   }
+}
+
+// Explicit handlers for textarea focus/blur to ensure bottom nav hides on iOS
+const handleTextareaFocus = () => {
+  console.log('📝 Device key reset textarea focused - ensuring bottom nav is hidden')
+  // Add keyboard-open class as extra safeguard for iOS
+  document.body.classList.add('keyboard-open')
+  // Force a reflow to ensure CSS applies immediately
+  document.body.offsetHeight
+}
+
+const handleTextaraBlur = () => {
+  console.log('📝 Device key reset textarea blurred')
+  // Delay removal to check if another input was focused
+  setTimeout(() => {
+    const activeElement = document.activeElement
+    const isInputFocused = 
+      activeElement?.tagName === 'INPUT' ||
+      activeElement?.tagName === 'TEXTAREA' ||
+      activeElement?.tagName === 'SELECT' ||
+      activeElement?.isContentEditable
+    
+    if (!isInputFocused) {
+      console.log('📝 No input focused, showing bottom nav')
+      document.body.classList.remove('keyboard-open')
+      // Force a reflow to ensure CSS applies immediately
+      document.body.offsetHeight
+    } else {
+      console.log('📝 Another input is focused, keeping bottom nav hidden')
+    }
+  }, 150)
 }
 
 

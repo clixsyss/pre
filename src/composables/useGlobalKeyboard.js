@@ -12,6 +12,10 @@ export function useGlobalKeyboard() {
   
   let keyboardShowListener = null
   let keyboardHideListener = null
+  let keyboardDidShowListener = null
+  let keyboardDidHideListener = null
+  let focusListener = null
+  let blurListener = null
 
   /**
    * Handle keyboard showing
@@ -23,6 +27,9 @@ export function useGlobalKeyboard() {
     
     // Add class to body for global styling
     document.body.classList.add('keyboard-open')
+    
+    // Force a reflow to ensure CSS applies immediately
+    document.body.offsetHeight
     
     // Adjust viewport to prevent scrolling issues
     const viewport = document.querySelector('meta[name=viewport]')
@@ -42,10 +49,60 @@ export function useGlobalKeyboard() {
     // Remove class from body
     document.body.classList.remove('keyboard-open')
     
+    // Force a reflow to ensure CSS applies immediately
+    document.body.offsetHeight
+    
     // Restore viewport settings
     const viewport = document.querySelector('meta[name=viewport]')
     if (viewport) {
       viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes'
+    }
+  }
+
+  /**
+   * Handle focus events (fallback for iOS)
+   */
+  const handleFocus = (event) => {
+    const target = event.target
+    // Check if the focused element is an input, textarea, or contenteditable
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable
+    ) {
+      console.log('🔍 Input focused (fallback detection):', target.tagName)
+      // Delay to ensure keyboard is actually showing
+      setTimeout(() => {
+        if (!isKeyboardVisible.value) {
+          handleKeyboardShow({ keyboardHeight: 300 }) // Estimated height
+        }
+      }, 100)
+    }
+  }
+
+  /**
+   * Handle blur events (fallback for iOS)
+   */
+  const handleBlur = (event) => {
+    const target = event.target
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable
+    ) {
+      console.log('🔍 Input blurred (fallback detection):', target.tagName)
+      // Delay to check if another input was focused
+      setTimeout(() => {
+        const activeElement = document.activeElement
+        const isInputFocused = 
+          activeElement.tagName === 'INPUT' ||
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.isContentEditable
+        
+        if (!isInputFocused && isKeyboardVisible.value) {
+          handleKeyboardHide()
+        }
+      }, 100)
     }
   }
 
@@ -60,9 +117,13 @@ export function useGlobalKeyboard() {
     }
 
     try {
-      // Listen for keyboard events
+      // Listen for keyboard events (primary method)
       keyboardShowListener = await Keyboard.addListener('keyboardWillShow', handleKeyboardShow)
       keyboardHideListener = await Keyboard.addListener('keyboardWillHide', handleKeyboardHide)
+      
+      // Also listen to didShow/didHide events (backup for iOS)
+      keyboardDidShowListener = await Keyboard.addListener('keyboardDidShow', handleKeyboardShow)
+      keyboardDidHideListener = await Keyboard.addListener('keyboardDidHide', handleKeyboardHide)
 
       // Set keyboard configuration for consistent behavior
       await Keyboard.setResizeMode({ mode: 'native' })
@@ -73,6 +134,11 @@ export function useGlobalKeyboard() {
     } catch (error) {
       console.log('❌ Keyboard API setup failed:', error)
     }
+    
+    // Add DOM event listeners as fallback (for cases where Capacitor events don't fire)
+    focusListener = document.addEventListener('focusin', handleFocus, true)
+    blurListener = document.addEventListener('focusout', handleBlur, true)
+    console.log('✅ DOM focus/blur listeners added as fallback')
   }
 
   /**
@@ -86,6 +152,24 @@ export function useGlobalKeyboard() {
     if (keyboardHideListener) {
       await keyboardHideListener.remove()
       keyboardHideListener = null
+    }
+    if (keyboardDidShowListener) {
+      await keyboardDidShowListener.remove()
+      keyboardDidShowListener = null
+    }
+    if (keyboardDidHideListener) {
+      await keyboardDidHideListener.remove()
+      keyboardDidHideListener = null
+    }
+    
+    // Remove DOM event listeners
+    if (focusListener) {
+      document.removeEventListener('focusin', handleFocus, true)
+      focusListener = null
+    }
+    if (blurListener) {
+      document.removeEventListener('focusout', handleBlur, true)
+      blurListener = null
     }
     
     // Clean up body class

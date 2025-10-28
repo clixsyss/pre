@@ -184,7 +184,7 @@
       </div>
 
       <div class="device-key-reset-link">
-        <button @click="showDeviceKeyResetModal = true" class="reset-link">
+        <button @click="openDeviceKeyResetModal" class="reset-link">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -199,7 +199,7 @@
     <div v-if="showDeviceKeyResetModal" class="modal-overlay" @click="closeDeviceKeyResetModal">
       <div class="modal-content device-key-reset-modal" @click.stop>
         <div class="modal-header">
-          <h3>🔑 Device Key Reset Request</h3>
+          <h3>Device Key Reset Request</h3>
           <button @click="closeDeviceKeyResetModal" class="close-btn">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -253,12 +253,17 @@
                 class="form-input"
                 required
                 @change="onResetProjectChange"
+                :disabled="loadingProjects"
               >
-                <option value="">Select your project</option>
+                <option value="" v-if="loadingProjects">Loading projects...</option>
+                <option value="" v-else-if="availableProjects.length === 0">No projects available</option>
+                <option value="" v-else>Select your project</option>
                 <option v-for="project in availableProjects" :key="project.id" :value="project.id">
                   {{ project.name }}
                 </option>
               </select>
+              <span v-if="loadingProjects" class="loading-text">⏳ Loading projects...</span>
+              <span v-else-if="availableProjects.length === 0" class="error-text">⚠️ No active projects found. Please contact support.</span>
             </div>
 
             <div class="form-group">
@@ -327,6 +332,7 @@ const deviceKeyErrorMessage = ref('')
 // Device key reset modal state
 const showDeviceKeyResetModal = ref(false)
 const submittingDeviceKeyReset = ref(false)
+const loadingProjects = ref(false)
 const availableProjects = ref([])
 const deviceKeyResetForm = reactive({
   email: '',
@@ -346,20 +352,51 @@ const formData = reactive({
 
 // Load available projects for device key reset
 const loadAvailableProjects = async () => {
+  if (loadingProjects.value) {
+    console.log('⏳ Already loading projects, skipping...')
+    return
+  }
+  
   try {
-    const projectsResult = await firestoreService.getDocs('projects', {
-      timeoutMs: 8000
-    })
+    loadingProjects.value = true
+    console.log('🔄 Loading available projects for device key reset...')
     
-    if (projectsResult && !projectsResult.empty) {
-      availableProjects.value = projectsResult.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(p => p.status === 'active')
-        .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-    }
+    // Use Firebase Web SDK (works on all platforms including iOS)
+    console.log('[SignIn] Using Firebase Web SDK...')
+    const { collection, getDocs } = await import('firebase/firestore')
+    const { db } = await import('../../boot/firebase')
+    
+    const projectsRef = collection(db, 'projects')
+    const snapshot = await getDocs(projectsRef)
+    const fetchedProjects = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+    console.log('[SignIn] ✅ Fetched', fetchedProjects.length, 'projects via Web SDK')
+    
+    // Sort projects by name (don't filter by status - show all projects like Register page)
+    availableProjects.value = fetchedProjects
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    
+    console.log('✅ Loaded', availableProjects.value.length, 'projects:', availableProjects.value.map(p => p.name))
   } catch (error) {
     console.error('❌ Error loading projects:', error)
+    console.error('[SignIn] Error details:', error?.message, error?.code)
+    notificationStore.showError('Failed to load projects. Please try again.')
+    availableProjects.value = []
+  } finally {
+    loadingProjects.value = false
   }
+}
+
+// Open device key reset modal and ensure projects are loaded
+const openDeviceKeyResetModal = async () => {
+  console.log('🔑 Opening device key reset modal...')
+  showDeviceKeyResetModal.value = true
+  
+  // Always reload projects to ensure fresh data
+  console.log('📋 Reloading projects list...')
+  await loadAvailableProjects()
 }
 
 // Check if we should show the pending approval modal on mount
@@ -869,26 +906,28 @@ const handleDeviceKeyResetSubmit = async () => {
     
     console.log('✅ All validations passed')
     
-    // Check if user already has a pending request for this project
-    const existingRequestsResult = await firestoreService.getDocs(
-      `projects/${deviceKeyResetForm.projectId}/deviceKeyResetRequests`,
-      {
-        filters: [
-          { field: 'userId', operator: '==', value: userId },
-          { field: 'status', operator: '==', value: 'pending' }
-        ],
-        timeoutMs: 8000
-      }
-    )
+    // Use direct Firebase SDK for better reliability
+    const { collection, addDoc, serverTimestamp } = await import('firebase/firestore')
+    const { signInAnonymously, signOut } = await import('firebase/auth')
+    const { db, auth } = await import('../../boot/firebase')
     
-    if (existingRequestsResult && !existingRequestsResult.empty && existingRequestsResult.docs.length > 0) {
-      notificationStore.showWarning(
-        'ℹ️ You already have a pending device key reset request for this project. Please wait for admin approval.'
-      )
-      submittingDeviceKeyReset.value = false
-      closeDeviceKeyResetModal()
-      return
+    // iOS native apps require authentication to write to Firestore, even with "allow create: if true"
+    // Sign in anonymously first to get write permissions
+    console.log('🔐 Signing in anonymously to enable Firestore write...')
+    try {
+      await signInAnonymously(auth)
+      console.log('✅ Anonymous sign-in successful')
+    } catch (authError) {
+      console.log('⚠️ Anonymous sign-in failed (might already be signed in):', authError.code)
+      // Continue anyway - user might already be signed in
     }
+    
+    // Note: We skip checking for existing pending requests because:
+    // 1. User is not authenticated with their real account (they're locked out)
+    // 2. The admin dashboard will handle any duplicate requests
+    console.log('ℹ️ Skipping duplicate check (user not authenticated on SignIn page)')
+    
+    const requestsRef = collection(db, 'projects', deviceKeyResetForm.projectId, 'deviceKeyResetRequests')
     
     // Create the reset request
     console.log('📝 Creating device key reset request...')
@@ -908,12 +947,22 @@ const handleDeviceKeyResetSubmit = async () => {
       adminNotes: ''
     }
     
-    await firestoreService.addDoc(
-      `projects/${deviceKeyResetForm.projectId}/deviceKeyResetRequests`,
-      requestData
-    )
+    // Use Firebase Web SDK (works on all platforms including iOS)
+    console.log('[SignIn] Creating device key reset request via Firebase Web SDK...')
+    await addDoc(requestsRef, {
+      ...requestData,
+      requestedAt: serverTimestamp()
+    })
     
-    console.log('✅ Device key reset request submitted successfully')
+    console.log('✅ Device key reset request submitted successfully via Web SDK')
+    
+    // Sign out the anonymous user immediately after submission
+    try {
+      await signOut(auth)
+      console.log('✅ Signed out anonymous user')
+    } catch (signOutError) {
+      console.log('⚠️ Error signing out anonymous user:', signOutError.code)
+    }
     
     notificationStore.showSuccess(
       '✅ Your device key reset request has been submitted successfully! Our admin will review it shortly. You will be notified once approved.'
@@ -1358,6 +1407,22 @@ const handleDeviceKeyResetSubmit = async () => {
   font-size: 0.75rem;
   color: #999;
   margin-top: 4px;
+}
+
+.loading-text {
+  display: block;
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 8px;
+  font-style: italic;
+}
+
+.error-text {
+  display: block;
+  font-size: 0.8rem;
+  color: #af1e23;
+  margin-top: 8px;
+  font-weight: 500;
 }
 
 .modal-actions {

@@ -43,6 +43,8 @@ export function useFormKeyboard(options = {}) {
   // Cleanup functions
   let keyboardShowListener = null
   let keyboardHideListener = null
+  let keyboardDidShowListener = null
+  let keyboardDidHideListener = null
   let focusListener = null
   let clickListener = null
 
@@ -72,8 +74,13 @@ export function useFormKeyboard(options = {}) {
     isKeyboardVisible.value = true
     keyboardHeight.value = info.keyboardHeight || 0
 
-    // Hide bottom navigation by adding modal-open class
+    // Hide bottom navigation by adding keyboard classes
     document.body.classList.add('modal-open')
+    document.body.classList.add('keyboard-open')
+    
+    // Force a reflow to ensure CSS applies immediately
+    document.body.offsetHeight
+    
     console.log('✅ Bottom nav hidden (keyboard shown)')
 
     // Scroll to active input if enabled
@@ -91,8 +98,13 @@ export function useFormKeyboard(options = {}) {
     keyboardHeight.value = 0
     activeInput.value = null
 
-    // Show bottom navigation by removing modal-open class
+    // Show bottom navigation by removing keyboard classes
     document.body.classList.remove('modal-open')
+    document.body.classList.remove('keyboard-open')
+    
+    // Force a reflow to ensure CSS applies immediately
+    document.body.offsetHeight
+    
     console.log('✅ Bottom nav shown (keyboard hidden)')
   }
 
@@ -147,9 +159,13 @@ export function useFormKeyboard(options = {}) {
     }
 
     try {
-      // Listen for keyboard events
+      // Listen for keyboard events (primary method)
       keyboardShowListener = await Keyboard.addListener('keyboardWillShow', handleKeyboardShow)
       keyboardHideListener = await Keyboard.addListener('keyboardWillHide', handleKeyboardHide)
+      
+      // Also listen to didShow/didHide events (backup for iOS)
+      keyboardDidShowListener = await Keyboard.addListener('keyboardDidShow', handleKeyboardShow)
+      keyboardDidHideListener = await Keyboard.addListener('keyboardDidHide', handleKeyboardHide)
 
       // Set resize mode to native - this pushes content up when keyboard appears
       await Keyboard.setResizeMode({ mode: 'native' })
@@ -160,7 +176,7 @@ export function useFormKeyboard(options = {}) {
       // Set keyboard style
       await Keyboard.setStyle({ style: 'dark' })
 
-      console.log('✅ Keyboard listeners set up successfully (native mode)')
+      console.log('✅ Keyboard listeners set up successfully (native mode with iOS fallback)')
     } catch (error) {
       console.log('Keyboard API setup failed (might not be available):', error)
     }
@@ -192,6 +208,12 @@ export function useFormKeyboard(options = {}) {
     if (keyboardHideListener) {
       await keyboardHideListener.remove()
     }
+    if (keyboardDidShowListener) {
+      await keyboardDidShowListener.remove()
+    }
+    if (keyboardDidHideListener) {
+      await keyboardDidHideListener.remove()
+    }
 
     // Remove DOM listeners
     if (focusListener) {
@@ -200,6 +222,10 @@ export function useFormKeyboard(options = {}) {
     if (clickListener) {
       document.removeEventListener('click', clickListener, true)
     }
+    
+    // Clean up body classes
+    document.body.classList.remove('modal-open')
+    document.body.classList.remove('keyboard-open')
   }
 
   /**

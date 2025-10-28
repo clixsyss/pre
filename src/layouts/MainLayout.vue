@@ -1494,6 +1494,7 @@ onUnmounted(() => {
 
 .bottom-navigation.hidden {
   transform: translateY(100%);
+  -webkit-transform: translateY(100%);
 }
 
 /* Hide bottom nav when modal is open - iOS fix */
@@ -1511,7 +1512,11 @@ body.hide-bottom-nav .bottom-navigation {
   visibility: hidden !important;
   pointer-events: none !important;
   transform: translateY(100%) !important;
+  -webkit-transform: translateY(100%) !important;
   z-index: -1 !important;
+  /* Disable transitions to ensure immediate hiding */
+  transition: none !important;
+  -webkit-transition: none !important;
 }
 
 .nav-item {
