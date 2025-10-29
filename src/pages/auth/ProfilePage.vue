@@ -435,6 +435,8 @@
                   </div>
                   <div class="project-status-badges">
                     <span class="project-status" :class="project.status">{{ project.status || 'active' }}</span>
+                    <span v-if="project.approvalStatus === 'pending'" class="approval-status-badge pending">Pending Approval</span>
+                    <span v-else-if="project.approvalStatus === 'approved'" class="approval-status-badge approved">Approved</span>
                     <span v-if="project.id === currentProjectId" class="current-badge">Current</span>
                   </div>
                 </div>
@@ -530,9 +532,19 @@
                 </div>
               </div>
 
+              <!-- Pending Approval Message -->
+              <div v-if="project.approvalStatus === 'pending'" class="pending-approval-message">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 11c-.55 0-1-.45-1-1V8c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1zm1 4h-2v-2h2v2z" fill="currentColor"/>
+                </svg>
+                <span>This unit is awaiting admin approval. You'll be able to access it once approved.</span>
+              </div>
+
               <!-- Project Actions -->
               <div class="project-actions">
-                <button v-if="project.id !== currentProjectId" @click="switchToProject(project)"
+                <button 
+                  v-if="project.id !== currentProjectId && project.approvalStatus !== 'pending'" 
+                  @click="switchToProject(project)"
                   class="switch-project-btn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M3 7H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -1762,11 +1774,13 @@ const addNewProject = async () => {
     const userData = userDoc.data()
     const currentProjects = userData.projects || []
 
-    // Create the project object to add to the user's projects array
+    // Create the project object to add to the user's projects array with pending approval status
     const newUserProject = {
       projectId: newProject.value.projectId,
       role: newProject.value.userRole,
       unit: newProject.value.userUnit,
+      approvalStatus: 'pending', // New field for admin approval
+      requestedAt: new Date(),
       updatedAt: new Date()
     }
 
@@ -1776,7 +1790,22 @@ const addNewProject = async () => {
       updatedAt: firestoreService.serverTimestamp()
     })
 
-    notificationStore.showSuccess(`Successfully joined ${selectedProject.name}!`)
+    // Create a unit request document for admin review
+    await firestoreService.addDoc('unitRequests', {
+      userId: currentUser.uid,
+      userName: userData.name || currentUser.displayName || currentUser.email,
+      userEmail: currentUser.email,
+      userPhone: userData.phone || '',
+      projectId: newProject.value.projectId,
+      projectName: selectedProject.name,
+      unit: newProject.value.userUnit,
+      role: newProject.value.userRole,
+      status: 'pending',
+      requestedAt: firestoreService.serverTimestamp(),
+      createdAt: firestoreService.serverTimestamp()
+    })
+
+    notificationStore.showSuccess(`Unit request submitted for ${selectedProject.name}! Awaiting admin approval.`)
 
     // Show success state briefly before closing
     projectJoinSuccess.value = true
@@ -3864,6 +3893,45 @@ watch(showDeviceManagementModal, (isOpen) => {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+}
+
+.approval-status-badge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.approval-status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
+.approval-status-badge.approved {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.pending-approval-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #fffbeb;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  margin-top: 12px;
+  font-size: 0.875rem;
+  color: #92400e;
+}
+
+.pending-approval-message svg {
+  flex-shrink: 0;
+  color: #f59e0b;
 }
 
 .project-role-info {

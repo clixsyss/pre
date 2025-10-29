@@ -127,6 +127,7 @@ export const useProjectStore = defineStore('project', () => {
                 userUnit: userProject.unit || 'N/A',
                 registrationStatus: userProject.registrationStatus || 'unknown',
                 registrationStep: userProject.registrationStep || 'unknown',
+                approvalStatus: userProject.approvalStatus || 'approved', // Default to approved for existing projects
                 updatedAt: userProject.updatedAt || null
               }
             } catch (err) {
@@ -143,6 +144,7 @@ export const useProjectStore = defineStore('project', () => {
                 userUnit: userProject.unit || 'N/A',
                 registrationStatus: userProject.registrationStatus || 'unknown',
                 registrationStep: userProject.registrationStep || 'unknown',
+                approvalStatus: userProject.approvalStatus || 'approved', // Default to approved for existing projects
                 updatedAt: userProject.updatedAt || null
               }
             }
