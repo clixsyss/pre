@@ -17,11 +17,12 @@
 
       <!-- Instant Start Chat Button -->
       <div class="action-section">
-        <button @click="startNewChat" class="start-chat-btn">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <button @click="startNewChat" class="start-chat-btn" :disabled="creatingChat">
+          <div v-if="creatingChat" class="button-spinner"></div>
+          <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          {{ $t('startNewChat') }}
+          {{ creatingChat ? $t('startingChat') : $t('startNewChat') }}
         </button>
       </div>
 
@@ -54,7 +55,7 @@
 </template>
 
 <script setup>
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSupportStore } from '../../stores/supportStore'
 import PageHeader from '../../components/PageHeader.vue'
@@ -66,6 +67,9 @@ defineOptions({
 const router = useRouter()
 const supportStore = useSupportStore()
 
+// State
+const creatingChat = ref(false)
+
 // Computed properties
 const supportChats = computed(() => supportStore.userSupportChats)
 const loadingChats = computed(() => supportStore.loading)
@@ -73,14 +77,24 @@ const errorChats = computed(() => supportStore.error)
 
 
 const startNewChat = async () => {
+  if (creatingChat.value) return
+  
   try {
+    creatingChat.value = true
     const newChat = await supportStore.createSupportChat({
       title: `Support Chat - ${new Date().toLocaleString()}`,
       category: 'general'
     })
-    router.push(`/support-chat/${newChat.id}`)
+    // Navigate to the chat - loading state will be cleared by navigation
+    await router.push(`/support-chat/${newChat.id}`)
   } catch (error) {
     console.error('Error starting new chat:', error)
+    creatingChat.value = false
+  } finally {
+    // Reset loading state after a short delay to ensure navigation completes
+    setTimeout(() => {
+      creatingChat.value = false
+    }, 500)
   }
 }
 
@@ -163,6 +177,11 @@ onMounted(async () => {
   box-shadow: 0 4px 15px rgba(175, 30, 35, 0.3);
 }
 
+.start-chat-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 /* Mobile app - hover effects disabled */
 /* .start-chat-btn:hover {
   background-color: #8a181c;
@@ -173,6 +192,15 @@ onMounted(async () => {
 .start-chat-btn svg {
   width: 22px;
   height: 22px;
+}
+
+.button-spinner {
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 0.8s linear infinite;
 }
 
 .recent-chats-section {

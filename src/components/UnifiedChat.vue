@@ -1112,7 +1112,7 @@ body.keyboard-open .unified-chat {
   background: white;
   border-top: 1px solid #e5e7eb;
   padding: 1rem 1.5rem;
-  padding-bottom: 40px;
+  padding-bottom: 30px;
   position: fixed;
   bottom: 0;
   z-index: 9999999 !important;
@@ -1463,6 +1463,7 @@ body.keyboard-open .unified-chat {
 
   .message-input-container {
     padding: 0.75rem 1rem;
+    padding-bottom: 30px;
   }
 
   .header-title h2 {
@@ -1524,6 +1525,7 @@ body.keyboard-open .unified-chat {
 
   .message-input-container {
     padding: 0.5rem 0.75rem;
+    padding-bottom: 30px;
   }
 
   .message-bubble {

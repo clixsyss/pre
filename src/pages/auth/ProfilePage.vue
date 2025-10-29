@@ -1913,17 +1913,19 @@ const switchToProject = async (project) => {
     }
 
     // Switch Smart Mirror data to the new project
-    await smartMirrorStore.switchToProject(project.id)
+    const result = await smartMirrorStore.switchToProject(project.id)
+    
+    // Check if smart mirror switch was successful (it returns {success: true/false})
+    // If it fails, it's not critical - user can still use the project
+    if (result && !result.success) {
+      console.warn('[ProfilePage] Smart Mirror switch failed (non-critical):', result.error)
+    }
 
-    notificationStore.showSuccess(`Switched to ${project.name}`)
-
-    // Redirect to home page after a short delay
-    setTimeout(() => {
-      router.push('/home')
-    }, 1000)
+    // Redirect to home page - no toast needed, clean UX
+    router.push('/home')
 
   } catch (err) {
-    console.error('Error switching project:', err)
+    console.error('[ProfilePage] Critical error switching project:', err)
     notificationStore.showError('Failed to switch project. Please try again.')
   }
 }
