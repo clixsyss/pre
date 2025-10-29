@@ -268,31 +268,16 @@
       <div class="progress-bar">
         <div class="progress-fill" :style="{ width: `${((currentSlide + 1) / slides.length) * 100}%` }"></div>
       </div>
-      <div class="navigation-wrapper">
-        <button v-if="currentSlide > 0" @click="previousSlide" class="nav-btn prev-btn" aria-label="Previous slide">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
-            <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-              stroke-linejoin="round" />
-          </svg>
-        </button>
-        <div class="progress-dots">
-          <div v-for="(slide, index) in slides" :key="index" class="progress-dot"
-            :class="{ active: currentSlide === index }" @click="goToSlide(index)">
-            <span class="dot-number">{{ index + 1 }}</span>
-          </div>
+      <div class="progress-dots">
+        <div v-for="(slide, index) in slides" :key="index" class="progress-dot"
+          :class="{ active: currentSlide === index }" @click="goToSlide(index)">
+          <span class="dot-number">{{ index + 1 }}</span>
         </div>
-        <button v-if="currentSlide < slides.length - 1" @click="nextSlide" class="nav-btn next-btn"
-          aria-label="Next slide">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
-            <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-              stroke-linejoin="round" />
-          </svg>
-        </button>
       </div>
     </div>
 
-    <!-- Swipe Indicator (shows on first slide) -->
-    <div v-if="currentSlide === 0 && !hasInteracted" class="swipe-indicator">
+    <!-- Swipe Indicator (shows on all slides except last) -->
+    <div v-if="currentSlide < slides.length - 1" class="swipe-indicator">
       <svg viewBox="0 0 100 50" class="swipe-animation">
         <path d="M10 25 L50 25 L40 15 M50 25 L40 35" stroke="white" stroke-width="3" fill="none" stroke-linecap="round"
           stroke-linejoin="round" opacity="0.6" />
@@ -1158,16 +1143,11 @@ onUnmounted(() => {
   box-shadow: 0 0 8px rgba(175, 30, 35, 0.6);
 }
 
-.navigation-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
 .progress-dots {
   display: flex;
   gap: 8px;
   align-items: center;
+  justify-content: center;
 }
 
 .progress-dot {
@@ -1205,31 +1185,6 @@ onUnmounted(() => {
 
 .progress-dot:active {
   transform: scale(0.95);
-}
-
-/* Navigation Buttons */
-.nav-btn {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
-  flex-shrink: 0;
-}
-
-.nav-btn:active {
-  background: rgba(175, 30, 35, 0.9);
-  border-color: #AF1E23;
-  transform: scale(0.9);
-  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.5);
 }
 
 /* Swipe Indicator */
