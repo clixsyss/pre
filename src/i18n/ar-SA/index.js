@@ -155,6 +155,7 @@ export default {
   howCanWeHelp: 'كيف يمكننا مساعدتك؟',
   supportTeamMessage: 'فريقنا هنا لمساعدتك في أي أسئلة أو مشاكل',
   startNewChat: 'بدء محادثة جديدة',
+  startingChat: 'جاري بدء المحادثة...',
   recentSupportChats: 'محادثات الدعم الأخيرة',
   loadingChats: 'جاري تحميل المحادثات...',
   errorLoadingChats: 'خطأ في تحميل المحادثات',

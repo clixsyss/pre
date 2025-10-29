@@ -1187,6 +1187,8 @@ PODS:
   - CapacitorGeolocation (7.1.5):
     - Capacitor
     - IONGeolocationLib (= 1.0.1)
+  - CapacitorHaptics (7.0.2):
+    - Capacitor
   - CapacitorKeyboard (7.0.3):
     - Capacitor
   - CapacitorNetwork (7.0.2):
@@ -1405,6 +1407,7 @@ DEPENDENCIES:
   - "CapacitorFirebaseMessaging (from `../../node_modules/@capacitor-firebase/messaging`)"
   - "CapacitorFirebaseStorage (from `../../node_modules/@capacitor-firebase/storage`)"
   - "CapacitorGeolocation (from `../../node_modules/@capacitor/geolocation`)"
+  - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
   - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
   - "CapacitorNetwork (from `../../node_modules/@capacitor/network`)"
   - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
@@ -1468,6 +1471,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor-firebase/storage"
   CapacitorGeolocation:
     :path: "../../node_modules/@capacitor/geolocation"
+  CapacitorHaptics:
+    :path: "../../node_modules/@capacitor/haptics"
   CapacitorKeyboard:
     :path: "../../node_modules/@capacitor/keyboard"
   CapacitorNetwork:
@@ -1499,6 +1504,7 @@ SPEC CHECKSUMS:
   CapacitorFirebaseMessaging: 71ea2cde4484e172de29e4b4e68100c2f84fb441
   CapacitorFirebaseStorage: 4622602d777e2af1d270f3709ab7ddd482607677
   CapacitorGeolocation: 84f868bea4c2499aebc3bb3a88fd0a508f87ab87
+  CapacitorHaptics: b3fb2869e72c4466e18ce9ccbeb60a3d8723b3d4
   CapacitorKeyboard: 62f36104f26d53d8b3a2a43f2a69fe714f1777d5
   CapacitorNetwork: 695069886b3c5ed514db69aa3d026b8dc3c03a6b
   CapacitorPreferences: 65107ed7437d96ee72583df5763985e3c0ff2bc2
@@ -1530,6 +1536,6 @@ SPEC CHECKSUMS:
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
 
-PODFILE CHECKSUM: 47510f2bce6d06059857231c75207731437b4bc3
+PODFILE CHECKSUM: ee0fb9ce2959e300ef15c16969e21b2c2656faff
 
 COCOAPODS: 1.15.2

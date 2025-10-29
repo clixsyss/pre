@@ -161,6 +161,7 @@ export default {
   howCanWeHelp: 'How can we help you?',
   supportTeamMessage: 'Our support team is here to assist you with any questions or issues',
   startNewChat: 'Start a New Chat',
+  startingChat: 'Starting Chat...',
   recentSupportChats: 'Recent Support Chats',
   loadingChats: 'Loading recent chats...',
   errorLoadingChats: 'Error loading chats',

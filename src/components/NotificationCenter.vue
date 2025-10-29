@@ -60,12 +60,22 @@
 
       <!-- Actions Bar -->
       <div v-if="unreadCount > 0" class="actions-bar">
-        <button @click="handleMarkAllAsRead" class="mark-all-read-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <button 
+          @click="handleMarkAllAsRead" 
+          @touchstart="handleTouchStart"
+          @touchend="handleTouchEnd"
+          class="mark-all-read-btn" 
+          :class="{ 'touching': isTouching, 'loading': isMarkingAsRead }"
+          :disabled="isMarkingAsRead"
+        >
+          <!-- Loading Spinner -->
+          <div v-if="isMarkingAsRead" class="button-spinner-small"></div>
+          <!-- Check Icon -->
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.7088 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98232 16.07 2.85999" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          Mark all as read
+          <span>{{ isMarkingAsRead ? 'Marking...' : 'Mark all as read' }}</span>
         </button>
         <span class="unread-badge">{{ unreadCount }} unread</span>
       </div>
@@ -161,18 +171,106 @@ const handleOverlayClick = () => {
   closeNotificationCenter()
 }
 
+// Touch handling for iOS
+const isTouching = ref(false)
+const isMarkingAsRead = ref(false)
+
+const handleTouchStart = () => {
+  isTouching.value = true
+  console.log('NotificationCenter: Touch started on mark all as read button')
+}
+
+const handleTouchEnd = () => {
+  isTouching.value = false
+  console.log('NotificationCenter: Touch ended on mark all as read button')
+}
+
 const handleMarkAllAsRead = async () => {
-  // Get userId from optimizedAuthService
-  const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
-  const currentUser = await optimizedAuthService.getCurrentUser()
-  const userId = currentUser?.uid
+  if (isMarkingAsRead.value) {
+    console.log('NotificationCenter: Already marking as read, ignoring duplicate click')
+    return
+  }
   
-  console.log('NotificationCenter: Mark all as read clicked, userId:', userId)
+  // Add haptic feedback on iOS for immediate tactile response
+  try {
+    const { Haptics, ImpactStyle } = await import('@capacitor/haptics')
+    await Haptics.impact({ style: ImpactStyle.Light })
+    console.log('NotificationCenter: Haptic feedback triggered')
+  } catch {
+    // Haptics not available on this platform
+    console.log('NotificationCenter: Haptics not available')
+  }
   
-  if (userId) {
+  try {
+    isMarkingAsRead.value = true
+    console.log('NotificationCenter: Mark all as read clicked')
+    console.log('NotificationCenter: Platform:', navigator.userAgent)
+    
+    // Get userId from optimizedAuthService
+    const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    const userId = currentUser?.uid
+    
+    console.log('NotificationCenter: User ID:', userId)
+    console.log('NotificationCenter: Current user:', { uid: userId, email: currentUser?.email })
+    console.log('NotificationCenter: Unread count before:', unreadCount.value)
+    console.log('NotificationCenter: Total notifications:', notificationStore.notifications.length)
+    
+    if (!userId) {
+      console.error('NotificationCenter: No userId available for mark all as read')
+      
+      // Import notification store for toast
+      const { useNotificationStore } = await import('../stores/notifications')
+      const toastStore = useNotificationStore()
+      toastStore.showError('Unable to mark notifications as read. Please try logging in again.')
+      return
+    }
+    
+    const countBefore = unreadCount.value
+    console.log(`NotificationCenter: About to mark ${countBefore} notifications as read for user ${userId}`)
+    
     await notificationStore.markAllAsRead(userId)
-  } else {
-    console.error('NotificationCenter: No userId available for mark all as read')
+    
+    console.log('NotificationCenter: ✅ Mark all as read completed successfully')
+    console.log('NotificationCenter: Unread count after:', unreadCount.value)
+    
+    // Add success haptic
+    try {
+      const { Haptics, NotificationType } = await import('@capacitor/haptics')
+      await Haptics.notification({ type: NotificationType.Success })
+    } catch {
+      // Haptics not available
+    }
+    
+    // Show success toast with correct parameters
+    const { useNotificationStore } = await import('../stores/notifications')
+    const toastStore = useNotificationStore()
+    toastStore.showSuccess(`${countBefore} notification${countBefore > 1 ? 's' : ''} marked as read`)
+    
+  } catch (error) {
+    console.error('NotificationCenter: ❌ Error in handleMarkAllAsRead:', error)
+    console.error('NotificationCenter: Error details:', {
+      code: error?.code,
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name
+    })
+    
+    // Add error haptic
+    try {
+      const { Haptics, NotificationType } = await import('@capacitor/haptics')
+      await Haptics.notification({ type: NotificationType.Error })
+    } catch {
+      // Haptics not available
+    }
+    
+    // Show error toast with correct parameters
+    const { useNotificationStore } = await import('../stores/notifications')
+    const toastStore = useNotificationStore()
+    toastStore.showError('Failed to mark notifications as read. Please try again.')
+  } finally {
+    isMarkingAsRead.value = false
+    console.log('NotificationCenter: Mark all as read operation finished, isMarkingAsRead:', isMarkingAsRead.value)
   }
 }
 
@@ -439,9 +537,50 @@ padding-top: 40px;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
   transition: all 0.2s ease;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+  /* iOS minimum touch target size */
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* iOS touch feedback */
+.mark-all-read-btn.touching {
+  background: rgba(175, 30, 35, 0.15);
+  transform: scale(0.98);
+}
+
+/* Active state for immediate feedback */
+.mark-all-read-btn:active {
+  background: rgba(175, 30, 35, 0.15);
+  transform: scale(0.98);
+}
+
+/* Loading state */
+.mark-all-read-btn.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.mark-all-read-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Small button spinner */
+.button-spinner-small {
+  border: 2px solid rgba(175, 30, 35, 0.3);
+  border-top: 2px solid #AF1E23;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  animation: spin 0.8s linear infinite;
 }
 
 /* Removed hover effect for mobile */

@@ -1,6 +1,5 @@
 <template>
-  <div class="unified-chat" :class="{ 'keyboard-visible': isKeyboardVisible }"
-    :style="{ '--keyboard-height': keyboardHeight + 'px' }">
+  <div class="unified-chat">
     <!-- Header -->
     <div class="chat-header">
       <button @click="goBack" class="back-btn">
@@ -18,15 +17,6 @@
             </span>
             <span class="category">{{ getCategoryInfo(chatData) }}</span>
           </div>
-        </div>
-        <div class="header-actions">
-          <button @click="toggleFullscreen" class="action-btn" title="Toggle Fullscreen">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M8 3H5C3.89543 3 3 3.89543 3 5V8M21 3H19C17.8954 3 17 3.89543 17 5V8M3 16V19C3 20.1046 3.89543 21 5 21H8M16 21H19C20.1046 21 21 20.1046 21 19V16"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -322,19 +312,6 @@ const goBack = () => {
 
 const toggleImageUpload = () => {
   showImageUpload.value = !showImageUpload.value;
-};
-
-const toggleFullscreen = () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
-};
-
-const closeFullscreen = () => {
-  showImagePreview.value = false;
-  previewImageUrl.value = '';
 };
 
 const isImageFile = (url) => {
@@ -660,6 +637,10 @@ watch(() => props.messages, () => {
 onMounted(async () => {
   console.log('🎬 UnifiedChat: Component mounted, setting up keyboard listeners...');
   
+  // Add chat-page-active class to body to hide navigation
+  document.body.classList.add('chat-page-active');
+  console.log('✅ UnifiedChat: Added chat-page-active class to hide navigation');
+  
   // Set up keyboard listeners
   await setupKeyboardListeners();
   
@@ -677,28 +658,68 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  // Remove chat-page-active class from body
+  document.body.classList.remove('chat-page-active');
+  console.log('✅ UnifiedChat: Removed chat-page-active class');
+  
   // Clean up keyboard listeners
   cleanupKeyboardListeners();
 });
 </script>
 
+<style>
+/* GLOBAL STYLES - Hide navigation when chat is active */
+body.chat-page-active .app-header,
+body.chat-page-active .bottom-navigation {
+  transform: translateY(-100%) !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: transform 0.3s ease-in-out, opacity 0.2s ease, visibility 0.2s ease !important;
+}
+
+body.chat-page-active .bottom-navigation {
+  transform: translateY(100%) !important;
+}
+
+/* Also hide when keyboard is open (works with chat-page-active) */
+body.keyboard-open.chat-page-active .app-header,
+body.keyboard-open.chat-page-active .bottom-navigation {
+  transform: translateY(-100%) !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.keyboard-open.chat-page-active .bottom-navigation {
+  transform: translateY(100%) !important;
+}
+</style>
+
 <style scoped>
 .unified-chat {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 150px);
+  height: 100vh;
   /* Full height minus header and bottom nav */
   background: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   position: fixed;
   left: 0;
   right: 0;
-  top: 68px;
+  top: 0;
   /* Start below app header */
-  bottom: 80px;
+  bottom: 0;
   /* Bottom nav height */
-  z-index: 100;
-  transition: bottom 0.3s ease-in-out;
+  z-index: 9999999 !important;
+  transition: bottom 0.3s ease-in-out, height 0.3s ease-in-out;
+}
+
+/* When chat page is active, take full viewport */
+body.chat-page-active .unified-chat {
+  top: 0 !important;
+  bottom: 0 !important;
+  height: 100vh !important;
 }
 
 /* Adjust for keyboard visibility */
@@ -713,25 +734,17 @@ body.keyboard-open .unified-chat {
   height: calc(100vh - 68px - var(--keyboard-height, 0px));
 }
 
-/* Force hide bottom nav when keyboard is open on chat pages */
-body.keyboard-open :deep(.bottom-navigation) {
-  transform: translateY(100%) !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-  transition: transform 0.3s ease-in-out, opacity 0.2s ease, visibility 0.2s ease !important;
-}
-
 /* Header Styles */
 .chat-header {
-  background: white;
+  background: #231F20;
+  color: white;
   padding: 1rem 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   gap: 1rem;
   position: sticky;
-  z-index: 10;
+  z-index: 9999999 !important;
   border-bottom: 1px solid #e5e7eb;
 }
 
@@ -768,7 +781,7 @@ body.keyboard-open :deep(.bottom-navigation) {
   margin: 0 0 0.25rem 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1f2937;
+  color: white;
   line-height: 1.3;
 }
 
@@ -1099,10 +1112,11 @@ body.keyboard-open :deep(.bottom-navigation) {
   background: white;
   border-top: 1px solid #e5e7eb;
   padding: 1rem 1.5rem;
-  position: sticky;
+  padding-bottom: 40px;
+  position: fixed;
   bottom: 0;
-  z-index: 10;
-  margin-top: auto;
+  z-index: 9999999 !important;
+  width: 100%;
 }
 
 .closed-notice {
@@ -1342,7 +1356,7 @@ body.keyboard-open :deep(.bottom-navigation) {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 9999999 !important;
   cursor: pointer;
 }
 
@@ -1361,7 +1375,7 @@ body.keyboard-open :deep(.bottom-navigation) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  z-index: 10;
+  z-index: 9999999 !important;
 }
 
 .close-btn {
