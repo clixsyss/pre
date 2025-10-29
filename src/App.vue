@@ -16,6 +16,13 @@
     </div>
     
     <NotificationPopup />
+    
+    <!-- Document Verification Modal - Shows when user is missing required documents (only on authenticated pages) -->
+    <DocumentVerificationModal 
+      v-if="showDocumentModal && isAuthenticatedPage && !isRouterLoading"
+      :missing-documents="missingDocuments"
+      @documents-uploaded="handleDocumentsUploaded"
+    />
   </div>
 </template>
 
@@ -28,7 +35,9 @@ import SplashScreen from './components/SplashScreen.vue'
 import NotificationPopup from './components/NotificationPopup.vue'
 import NetworkStatusBanner from './components/NetworkStatusBanner.vue'
 import MainLayout from './layouts/MainLayout.vue'
+import DocumentVerificationModal from './components/DocumentVerificationModal.vue'
 import { useNetworkStatus } from './composables/useNetworkStatus'
+import { useDocumentVerification } from './composables/useDocumentVerification'
 import { useSplashStore } from './stores/splash'
 
 // Component name for ESLint
@@ -42,6 +51,15 @@ const splashStore = useSplashStore()
 
 // Initialize network monitoring
 const { initNetworkMonitoring, stopNetworkMonitoring } = useNetworkStatus()
+
+// Initialize document verification
+const { 
+  showDocumentModal, 
+  missingDocuments, 
+  initializeDocumentVerification, 
+  handleDocumentsUploaded,
+  cleanup: cleanupDocumentVerification 
+} = useDocumentVerification()
 
 // Global error handler - enhanced
 window.addEventListener('error', (event) => {
@@ -160,6 +178,10 @@ onMounted(async () => {
     console.log('🚀 App.vue: Notifying splash that app is initialized')
     splashStore.setAppInitialized()
     
+    // Initialize document verification after app is ready
+    console.log('🔍 App.vue: Initializing document verification...')
+    initializeDocumentVerification()
+    
   } catch (error) {
     console.error('❌ App.vue: Critical error during initialization:', error)
     console.error('❌ Error stack:', error.stack)
@@ -175,10 +197,11 @@ onMounted(async () => {
   }
 })
 
-// Cleanup network monitoring on unmount
+// Cleanup network monitoring and document verification on unmount
 onUnmounted(async () => {
   console.log('🛑 App.vue: Cleaning up...')
   await stopNetworkMonitoring()
+  cleanupDocumentVerification()
 })
 
 // Define which routes should show the main layout (authenticated pages)
