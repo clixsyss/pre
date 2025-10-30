@@ -14,6 +14,21 @@ class NewsCommentsService {
   }
 
   /**
+   * Get user document from Firestore
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} - User data
+   */
+  async getUserDocument(userId) {
+    try {
+      const userDoc = await firestoreService.getDoc(`users/${userId}`);
+      return userDoc && userDoc.exists() ? userDoc.data() : null;
+    } catch (error) {
+      console.error('Error fetching user document:', error);
+      return null;
+    }
+  }
+
+  /**
    * Add a comment to a news item
    * @param {string} projectId - Project ID
    * @param {string} newsId - News item ID
@@ -29,16 +44,17 @@ class NewsCommentsService {
         // const collectionPath = `projects/${projectId}/news/${newsId}/comments` // Not used in this method
         const now = new Date();
         
-        const comment = {
-          id: '', // Will be set after creation
-          userId,
-          userName: commentData.userName || 'Anonymous',
-          userEmail: commentData.userEmail || '',
-          text: commentData.text.trim(),
-          parentCommentId: commentData.parentCommentId || null, // For replies
-          reactions: {}, // { emoji: { count: number, users: [userId] } }
-          isDeleted: false,
-          deletedBy: null,
+      // Get comment ID first
+      const commentId = await firestoreService.addDoc(`projects/${projectId}/news/${newsId}/comments`, {
+        // Create with the ID already set to avoid permission issues
+        userId,
+        userName: commentData.userName || 'Anonymous',
+        userEmail: commentData.userEmail || '',
+        text: commentData.text.trim(),
+        parentCommentId: commentData.parentCommentId || null, // For replies
+        reactions: {}, // { emoji: { count: number, users: [userId] } }
+        isDeleted: false,
+        deletedBy: null,
         deletedAt: null,
         deletionReason: null,
         createdAt: now,
@@ -46,12 +62,7 @@ class NewsCommentsService {
         // Additional metadata
         userUnit: commentData.userUnit || null,
         userProject: commentData.userProject || null,
-      };
-
-      const commentId = await firestoreService.addDoc(`projects/${projectId}/news/${newsId}/comments`, comment);
-      
-      // Update the comment with its ID
-      await firestoreService.updateDoc(`projects/${projectId}/news/${newsId}/comments/${commentId}`, { id: commentId });
+      });
       
       // Update news item comment count
       await this.updateNewsCommentCount(projectId, newsId, 1);
@@ -76,7 +87,8 @@ class NewsCommentsService {
     try {
       const queryOptions = {
         orderBy: [{ field: 'createdAt', direction: 'desc' }],
-        limit: options.limit
+        limit: options.limit,
+        skipCache: options.skipCache || false
       };
       
       const result = await firestoreService.getDocs(
@@ -86,13 +98,20 @@ class NewsCommentsService {
       
       const comments = result.docs || [];
       
-      return comments.map(comment => ({
-        ...comment,
-        createdAt: comment.createdAt?.toDate?.() || comment.createdAt,
+      return comments.map(doc => {
+        // Extract data from Firestore document (handle both DocumentSnapshot and plain objects)
+        const data = typeof doc.data === 'function' ? doc.data() : doc;
+        const docId = doc.id || '';
         
-        updatedAt: comment.updatedAt?.toDate?.() || comment.updatedAt,
-        deletedAt: comment.deletedAt?.toDate?.() || comment.deletedAt,
-      }));
+        // Spread data first, THEN override id to ensure correct id is used
+        return {
+          ...data,
+          id: docId, // Override any id field in data with the actual document ID
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+          deletedAt: data.deletedAt?.toDate?.() || data.deletedAt,
+        };
+      });
     } catch (error) {
       console.error('Error fetching comments:', error?.message || JSON.stringify(error) || error);
       throw error;
@@ -143,16 +162,32 @@ class NewsCommentsService {
           `projects/${projectId}/news/${newsId}/comments`,
           { orderByField: 'createdAt', orderDirection: 'desc' },
           (snapshot) => {
+            console.log('🔔 Comments subscription received:', snapshot.docs?.length || 0, 'documents');
+            
             const comments = snapshot.docs.map(doc => {
-              const data = doc.data();
+              // Extract data - handle both Firestore document and plain objects
+              const data = typeof doc.data === 'function' ? doc.data() : doc;
+              const docId = doc.id || '';
+              
+              console.log('📝 Processing comment:', {
+                docId,
+                dataId: data.id,
+                userName: data.userName,
+                text: data.text,
+                hasDataFunction: typeof doc.data === 'function'
+              });
+              
+              // Spread data first, THEN override id to ensure correct id is used
               return {
-                id: doc.id,
                 ...data,
+                id: docId, // Override any id field in data with the actual document ID
                 createdAt: data.createdAt?.toDate?.() || data.createdAt,
                 updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
                 deletedAt: data.deletedAt?.toDate?.() || data.deletedAt,
               };
             });
+            
+            console.log('✅ Processed comments for subscription:', comments.map(c => ({ id: c.id, userName: c.userName, text: c.text })));
             callback(comments);
           },
           (error) => {
@@ -369,27 +404,56 @@ class NewsCommentsService {
    */
   async removeNewsReaction(projectId, newsId, emoji) {
     try {
+      console.log('🗑️ removeNewsReaction called:', { projectId, newsId, emoji });
+      
       // Get current user from optimizedAuthService
       const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) throw new Error('User not authenticated');
       
-      // Find and delete the user's reaction with this emoji
+      console.log('👤 Current user:', user.uid);
+      
+      // Find and delete the user's reaction with this emoji - SKIP CACHE for real-time accuracy
       const result = await firestoreService.getDocs(`projects/${projectId}/news/${newsId}/reactions`, {
         filters: [
           { field: 'userId', operator: '==', value: user.uid },
           { field: 'emoji', operator: '==', value: emoji }
-        ]
+        ],
+        skipCache: true // CRITICAL: Must skip cache to avoid deleting already-deleted reactions
       });
       
       const reactions = result.docs || [];
       
-      const deletePromises = reactions.map(reaction => 
-        firestoreService.deleteDoc(`projects/${projectId}/news/${newsId}/reactions/${reaction.id}`)
-      );
+      console.log('📄 Found reactions to delete:', reactions.length, reactions.map(r => ({ id: r.id, userId: r.data?.()?.userId })));
+      
+      if (reactions.length === 0) {
+        console.log('⚠️ No reaction found to delete, might have been already deleted');
+        return; // Already deleted, no error
+      }
+      
+      const deletePromises = reactions.map(async (reaction) => {
+        try {
+          console.log('🗑️ Deleting reaction document:', reaction.id);
+          const reactionPath = `projects/${projectId}/news/${newsId}/reactions/${reaction.id}`;
+          console.log('🗑️ Delete path:', reactionPath);
+          await firestoreService.deleteDoc(reactionPath);
+          console.log('✅ Reaction deleted successfully:', reaction.id);
+        } catch (deleteError) {
+          console.error('❌ Delete error for reaction:', reaction.id, deleteError);
+          // If document doesn't exist or permission denied, that's fine (already deleted or rules issue)
+          if (deleteError.code === 'not-found' || deleteError.code === 'permission-denied') {
+            console.log('ℹ️ Reaction delete issue (might be already deleted or rules delay):', reaction.id, deleteError.code);
+            return;
+          }
+          throw deleteError;
+        }
+      });
+      
       await Promise.all(deletePromises);
+      
+      console.log('✅ All reactions removed successfully');
     } catch (error) {
-      console.error('Error removing news reaction:', error?.message || error);
+      console.error('❌ Error removing news reaction:', error?.message || error);
       throw error;
     }
   }
@@ -400,13 +464,14 @@ class NewsCommentsService {
    * @param {string} newsId - The news item ID
    * @returns {Promise<Array>} Array of reactions
    */
-  async getNewsReactions(projectId, newsId) {
+  async getNewsReactions(projectId, newsId, skipCache = false) {
     try {
-      console.log('🔍 getNewsReactions called:', { projectId, newsId });
+      console.log('🔍 getNewsReactions called:', { projectId, newsId, skipCache });
       
       const result = await firestoreService.getDocs(`projects/${projectId}/news/${newsId}/reactions`, {
         orderBy: [{ field: 'createdAt', direction: 'desc' }],
-        timeoutMs: 5000 // 5 second timeout for iOS
+        timeoutMs: 5000, // 5 second timeout for iOS
+        skipCache: skipCache // Skip cache when explicitly requested
       });
       
       console.log('✅ getNewsReactions result:', { docsCount: result.docs?.length || 0 });
@@ -526,30 +591,41 @@ class NewsCommentsService {
    */
   async toggleNewsReaction(projectId, newsId, emoji) {
     try {
+      console.log('🎯 toggleNewsReaction called:', { projectId, newsId, emoji });
+      
       // Get current user from optimizedAuthService
       const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) throw new Error('User not authenticated');
       
-      // Check if user already has this reaction
+      console.log('👤 User:', user.uid);
+      
+      // Check if user already has this reaction - SKIP CACHE to avoid stale data
       const result = await firestoreService.getDocs(`projects/${projectId}/news/${newsId}/reactions`, {
         filters: [
           { field: 'userId', operator: '==', value: user.uid },
           { field: 'emoji', operator: '==', value: emoji }
-        ]
+        ],
+        skipCache: true // CRITICAL: Must skip cache to get real-time state
       });
       
       const reactions = result.docs || [];
       
+      console.log('📊 Existing reactions found:', reactions.length);
+      
       if (reactions.length === 0) {
         // Add reaction
+        console.log('➕ No existing reaction, adding new one');
         await this.addNewsReaction(projectId, newsId, emoji);
       } else {
         // Remove reaction
+        console.log('🗑️ Reaction exists, removing it');
         await this.removeNewsReaction(projectId, newsId, emoji);
       }
+      
+      console.log('✅ toggleNewsReaction completed');
     } catch (error) {
-      console.error('Error toggling news reaction:', error?.message || error);
+      console.error('❌ Error toggling news reaction:', error?.message || error);
       throw error;
     }
   }
@@ -565,7 +641,16 @@ class NewsCommentsService {
     try {
       // Get all comments to find replies
       const result = await firestoreService.getDocs(`projects/${projectId}/news/${newsId}/comments`);
-      const allComments = result.docs || [];
+      const docs = result.docs || [];
+      
+      // Extract data from Firestore documents
+      const allComments = docs.map(doc => {
+        const data = typeof doc.data === 'function' ? doc.data() : doc;
+        return {
+          id: doc.id || data.id,
+          ...data
+        };
+      });
       
       // Find all replies to this comment (recursively)
       const repliesToDelete = [];

@@ -633,14 +633,6 @@ const navigateToServices = () => {
   router.push('/services');
 };
 
-
-
-
-
-
-
-
-
 // Lifecycle
 onMounted(async () => {
   if (projectId.value) {
@@ -754,7 +746,6 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .my-bookings-page {
-  padding: 20px 0;
   max-width: 800px;
   margin: 0 auto;
 }
@@ -1358,10 +1349,6 @@ onBeforeUnmount(() => {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .my-bookings-page {
-    padding: 16px 0;
-  }
-
   .filter-tabs {
     flex-direction: column;
   }

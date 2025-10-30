@@ -50,8 +50,7 @@
             @touchend="handleTouchEnd"
           >
             <span class="date-number">{{ date.day }}</span>
-            <div v-if="date.hasEvents" class="event-indicator"></div>
-            <div v-if="date.eventCount > 1" class="event-count">{{ date.eventCount }}</div>
+            <div v-if="date.eventCount > 0" class="event-count">{{ date.eventCount }}</div>
           </div>
         </div>
       </div>
@@ -107,11 +106,11 @@
 
       <!-- All Upcoming Events -->
       <div class="upcoming-events-section">
-        <h3>All Upcoming Events</h3>
+        <h3>Upcoming Events</h3>
         
-        <div v-if="allUpcomingEvents.length > 0" class="upcoming-events-list">
+        <div v-if="upcomingEventsOnly.length > 0" class="upcoming-events-list">
           <div 
-            v-for="event in allUpcomingEvents" 
+            v-for="event in upcomingEventsOnly" 
             :key="event.id"
             class="upcoming-event-item"
             @click="viewEvent(event)"
@@ -366,6 +365,26 @@ const allUpcomingEvents = computed(() => {
   return sortedEvents;
 });
 
+// Strictly upcoming (future or today) events for the list section
+const upcomingEventsOnly = computed(() => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return allUpcomingEvents.value
+    .filter(event => {
+      const normalized = normalizeDate(event.date);
+      if (!normalized) return false;
+      const isFutureOrToday = normalized >= today;
+
+      if (event.type === 'academy') {
+        return event.status === 'enrolled' && isFutureOrToday;
+      }
+      // For court and service bookings, exclude cancelled and past
+      return event.status !== 'cancelled' && isFutureOrToday;
+    })
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+});
+
 // Methods
 const getEventsForDate = (date) => {
   if (!currentUser.value || !projectStore.selectedProject) return [];
@@ -535,7 +554,6 @@ onMounted(async () => {
 
 <style scoped>
 .calendar-page {
-  padding: 16px 0;
   max-width: 900px;
   margin: 0 auto;
 }
@@ -557,7 +575,6 @@ onMounted(async () => {
   border-radius: 12px;
   padding: 16px 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  margin-bottom: 24px;
 }
 
 .nav-controls {
@@ -666,7 +683,6 @@ onMounted(async () => {
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  margin-bottom: 24px;
 }
 
 .calendar-header {
@@ -727,20 +743,20 @@ onMounted(async () => {
 }
 
 .date-cell.today {
-  background: #AF1E23;
+  background: #AF1E23; /* Primary red for today */
   color: white;
   font-weight: 600;
 }
 
 .date-cell.has-events {
-  background: #e3f2fd;
-  border-color: #1976d2;
+  border-color: #AF1E23;
 }
 
 .date-cell.selected {
-  background: #AF1E23;
-  color: white;
+  background: #231F20; /* Dark header color for selected date */
+  color: #ffffff;
   font-weight: 600;
+  border-color: #231F20;
 }
 
 .date-number {
@@ -776,7 +792,6 @@ onMounted(async () => {
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  margin-bottom: 24px;
 }
 
 .section-header {
@@ -1016,10 +1031,6 @@ onMounted(async () => {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .calendar-page {
-    padding: 16px 0;
-  }
-  
   .calendar-navigation {
     padding: 16px;
     gap: 16px;

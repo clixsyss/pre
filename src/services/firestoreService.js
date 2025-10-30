@@ -429,18 +429,28 @@ class FirestoreService {
       })
       console.log('🚀 FirestoreService: Getting collection docs for:', collectionPath)
 
-      // Check cache first
+      // Check cache first UNLESS skipCache is explicitly set to true
       // Create a cache key that includes query parameters to avoid cache conflicts
-      const queryParams = queryOptions ? JSON.stringify(queryOptions) : 'no-params'
+      // Note: skipCache is excluded from the cache key to prevent it from creating separate cache entries
+      const { skipCache, ...queryParamsWithoutSkipCache } = queryOptions || {}
+      const queryParams = Object.keys(queryParamsWithoutSkipCache).length > 0 
+        ? JSON.stringify(queryParamsWithoutSkipCache) 
+        : 'no-params'
       const cacheKey = `collection:${collectionPath}:${queryParams}`
-      const cachedData = cacheService.get(cacheKey)
-      if (cachedData) {
-        console.log('FirestoreService: Using cached collection data for:', collectionPath)
-        return {
-          docs: cachedData.docs || [],
-          empty: cachedData.empty || false,
-          size: cachedData.size || 0,
+      
+      // Skip cache if explicitly requested
+      if (!skipCache) {
+        const cachedData = cacheService.get(cacheKey)
+        if (cachedData) {
+          console.log('FirestoreService: Using cached collection data for:', collectionPath)
+          return {
+            docs: cachedData.docs || [],
+            empty: cachedData.empty || false,
+            size: cachedData.size || 0,
+          }
         }
+      } else {
+        console.log('🔄 FirestoreService: skipCache=true, bypassing cache for:', collectionPath)
       }
 
       const isIOS = await this.isIOSNative()
@@ -563,8 +573,10 @@ class FirestoreService {
               { empty: collectionData.empty, size: collectionData.size },
             )
 
-            // Cache the result
-            cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
+            // Cache the result (unless skipCache is true)
+            if (!skipCache) {
+              cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
+            }
 
             return collectionData
           } catch (webSDKError) {
@@ -672,8 +684,10 @@ class FirestoreService {
                 size: collectionData.size,
               })
 
-              // Cache the fallback result
-              cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
+              // Cache the fallback result (unless skipCache is true)
+              if (!skipCache) {
+                cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
+              }
 
               return collectionData
             } catch (capacitorError) {
@@ -691,8 +705,10 @@ class FirestoreService {
                 size: 0,
               }
 
-              // Cache empty result for shorter time
-              cacheService.set(cacheKey, emptyResult, 30 * 1000) // 30 seconds cache
+              // Cache empty result for shorter time (unless skipCache is true)
+              if (!skipCache) {
+                cacheService.set(cacheKey, emptyResult, 30 * 1000) // 30 seconds cache
+              }
 
               return emptyResult
             }
@@ -820,8 +836,10 @@ class FirestoreService {
             size: collectionData.size,
           })
 
-          // Cache the result
-          cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
+          // Cache the result (unless skipCache is true)
+          if (!skipCache) {
+            cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
+          }
 
           return collectionData
         } catch (queryError) {
@@ -862,8 +880,10 @@ class FirestoreService {
             size: 0,
           }
 
-          // Cache empty result for shorter time to allow retries
-          cacheService.set(cacheKey, emptyResult, 30 * 1000) // 30 seconds cache
+          // Cache empty result for shorter time to allow retries (unless skipCache is true)
+          if (!skipCache) {
+            cacheService.set(cacheKey, emptyResult, 30 * 1000) // 30 seconds cache
+          }
 
           return emptyResult
         }
@@ -912,8 +932,10 @@ class FirestoreService {
         
         console.log('FirestoreService (Web SDK): Retrieved', collectionData.size, 'documents')
 
-        // Cache the result
-        cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
+        // Cache the result (unless skipCache is true)
+        if (!skipCache) {
+          cacheService.set(cacheKey, collectionData, 2 * 60 * 1000) // 2 minutes cache
+        }
 
         return collectionData
       }

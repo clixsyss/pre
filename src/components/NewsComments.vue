@@ -36,7 +36,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span>{{ showComments ? 'Hide' : 'Show' }} Comments</span>
+        <span>Comments</span>
         <span v-if="activeComments.length > 0" class="comment-count-badge">({{ activeComments.length }})</span>
       </button>
       
@@ -44,6 +44,16 @@
 
     <!-- Comment Input (only visible if interactions enabled) -->
     <div v-if="interactionsEnabled" class="comment-input-section">
+      <!-- Reply indicator -->
+      <div v-if="replyingTo" class="replying-to-indicator">
+        <span class="replying-text">Replying to {{ getReplyingToName() }}</span>
+        <button @click="cancelReply" class="cancel-reply-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      
       <div class="comment-input-wrapper">
         <textarea
           v-model="newComment"
@@ -66,31 +76,40 @@
     </div>
 
     <!-- Comments List (collapsible) -->
-    <div v-if="interactionsEnabled && activeComments.length > 0" class="comments-section">
-      <div class="comments-header">
-        <span class="comments-count">{{ activeComments.length }} comments</span>
-        <div class="sort-dropdown">
-          <button 
-            @click="toggleSortDropdown" 
-            class="sort-btn"
-          >
-            {{ currentSortOption }}
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-          <div v-if="showSortDropdown" class="sort-options">
-            <button @click="setSortOption('Most relevant')" class="sort-option">Most relevant</button>
-            <button @click="setSortOption('Latest')" class="sort-option">Latest</button>
-            <button @click="setSortOption('Oldest')" class="sort-option">Oldest</button>
-            <button @click="setSortOption('Most liked')" class="sort-option">Most liked</button>
+    <div v-if="interactionsEnabled" class="comments-section">
+      <!-- Show loading state while fetching initial comments -->
+      <div v-if="loading && activeComments.length === 0" class="comments-loading">
+        <div class="loading-spinner"></div>
+        <span class="loading-text">Loading comments...</span>
+      </div>
+      
+      <!-- Show comments header and list when loaded -->
+      <div v-else-if="activeComments.length > 0">
+        <div class="comments-header">
+          <span class="comments-count">{{ activeComments.length }} {{ activeComments.length === 1 ? 'comment' : 'comments' }}</span>
+          <div class="sort-dropdown">
+            <button 
+              @click="toggleSortDropdown" 
+              class="sort-btn"
+            >
+              {{ currentSortOption }}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div v-if="showSortDropdown" class="sort-options">
+              <button @click="setSortOption('Most relevant')" class="sort-option">Most relevant</button>
+              <button @click="setSortOption('Latest')" class="sort-option">Latest</button>
+              <button @click="setSortOption('Oldest')" class="sort-option">Oldest</button>
+              <button @click="setSortOption('Most liked')" class="sort-option">Most liked</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div v-if="showComments" class="comments-list">
-        <div v-for="comment in groupedComments" :key="comment.id" class="comment-thread">
+        <div v-if="showComments" class="comments-list">
           <CommentItem
+            v-for="comment in groupedComments"
+            :key="comment.id"
             :comment="comment"
             :news-id="newsId"
             @reply="handleReply"
@@ -98,21 +117,12 @@
             @delete="handleDelete"
             @delete-with-replies="handleDeleteWithReplies"
           />
-          <!-- Render replies -->
-          <div v-if="comment.replies && comment.replies.length > 0" class="replies-container">
-            <CommentItem
-              v-for="reply in comment.replies"
-              :key="reply.id"
-              :comment="reply"
-              :news-id="newsId"
-              :is-reply="true"
-              @reply="handleReply"
-              @react="handleReaction"
-              @delete="handleDelete"
-              @delete-with-replies="handleDeleteWithReplies"
-            />
-          </div>
         </div>
+      </div>
+      
+      <!-- Show empty state when no comments and not loading -->
+      <div v-else-if="!loading" class="no-comments-message">
+        <p>No comments yet. Be the first to comment!</p>
       </div>
     </div>
   </div>
@@ -121,6 +131,7 @@
 <script>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useNewsCommentsStore } from '../stores/newsCommentsStore';
+import { useProjectStore } from '../stores/projectStore';
 import CommentItem from './CommentItem.vue';
 
 export default {
@@ -171,9 +182,14 @@ const availableReactions = ['like', 'love', 'laugh', 'sad'];
        const commentMap = new Map();
        const rootComments = [];
 
-       // First pass: create a map of all comments
+       // First pass: create a map of all comments with deep cloned reactions
        comments.forEach(comment => {
-         commentMap.set(comment.id, { ...comment, replies: [] });
+         commentMap.set(comment.id, { 
+           ...comment, 
+           replies: [],
+           // Ensure reactions are properly cloned for reactivity
+           reactions: comment.reactions ? JSON.parse(JSON.stringify(comment.reactions)) : {}
+         });
        });
 
        // Second pass: build the tree structure
@@ -343,8 +359,14 @@ const availableReactions = ['like', 'love', 'laugh', 'sad'];
     
     const handleReply = (commentId) => {
       console.log('Handling reply to comment:', commentId);
+      
+      // Find the comment to get the user's name
+      const comment = activeComments.value.find(c => c.id === commentId);
+      const userName = comment?.userName || 'User';
+      
       replyingTo.value = commentId;
-      newComment.value = `@${commentId} `;
+      newComment.value = `@${userName} `;
+      
       // Focus on textarea
       setTimeout(() => {
         const textarea = document.querySelector('.comment-input');
@@ -352,9 +374,28 @@ const availableReactions = ['like', 'love', 'laugh', 'sad'];
       }, 100);
     };
     
-    const handleReaction = (commentId, emoji) => {
+    const getReplyingToName = () => {
+      if (!replyingTo.value) return '';
+      const comment = activeComments.value.find(c => c.id === replyingTo.value);
+      return comment?.userName || 'User';
+    };
+    
+    const cancelReply = () => {
+      replyingTo.value = null;
+      // Remove the @mention from the comment text
+      newComment.value = '';
+    };
+    
+    const handleReaction = async (commentId, emoji) => {
       console.log('Handling reaction:', { commentId, emoji, newsId: props.newsId });
-      commentsStore.toggleReaction(props.newsId, commentId, emoji);
+      
+      try {
+        await commentsStore.toggleReaction(props.newsId, commentId, emoji);
+        // Refresh comments to get updated reaction counts - SKIP CACHE for immediate update
+        await commentsStore.fetchComments(props.newsId, true);
+      } catch (error) {
+        console.error('Error handling comment reaction:', error);
+      }
     };
     
      const handleDelete = (commentId) => {
@@ -364,9 +405,29 @@ const availableReactions = ['like', 'love', 'laugh', 'sad'];
        }
      };
 
-     const handleDeleteWithReplies = (commentId) => {
+     const handleDeleteWithReplies = async (commentId) => {
        console.log('Handling delete with replies for comment:', commentId);
-       commentsStore.deleteCommentWithReplies(props.projectId, props.newsId, commentId);
+       
+       // Get projectId from the project store
+       const projectStore = useProjectStore();
+       const projectId = projectStore.selectedProject?.id;
+       
+       if (!projectId) {
+         console.error('No project selected');
+         alert('Unable to delete comment: No project selected');
+         return;
+       }
+       
+       if (confirm('Are you sure you want to delete this comment? This will also delete all replies to this comment.')) {
+         try {
+           await commentsStore.deleteCommentWithReplies(projectId, props.newsId, commentId);
+           // Refresh comments after deletion
+           await commentsStore.fetchComments(props.newsId);
+         } catch (error) {
+           console.error('Error deleting comment:', error);
+           alert('Failed to delete comment. Please try again.');
+         }
+       }
      };
 
      const toggleSortDropdown = () => {
@@ -411,7 +472,8 @@ const loadNewsReactions = async () => {
     // Lifecycle
     onMounted(() => {
       console.log('NewsComments mounted, fetching comments for newsId:', props.newsId);
-      commentsStore.fetchComments(props.newsId);
+      // Skip cache on initial load to ensure fresh data
+      commentsStore.fetchComments(props.newsId, true);
       commentsStore.subscribeToComments(props.newsId); // Subscribe to get real-time updates
       loadNewsReactions();
     });
@@ -430,8 +492,8 @@ const loadNewsReactions = async () => {
           commentsStore.unsubscribeFromNewsReactions(oldId);
         }
         
-        // Fetch and subscribe to new newsId
-        commentsStore.fetchComments(newId);
+        // Fetch and subscribe to new newsId (skip cache to ensure fresh data)
+        commentsStore.fetchComments(newId, true);
         commentsStore.subscribeToComments(newId);
         loadNewsReactions();
       }
@@ -466,6 +528,8 @@ const loadNewsReactions = async () => {
        toggleReaction,
        handleAddComment,
        handleReply,
+       getReplyingToName,
+       cancelReply,
        handleReaction,
        handleDelete,
        handleDeleteWithReplies,
@@ -580,6 +644,40 @@ const loadNewsReactions = async () => {
   border-bottom: 1px solid #e2e8f0;
 }
 
+.replying-to-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.replying-text {
+  color: #991b1b;
+  font-weight: 500;
+}
+
+.cancel-reply-btn {
+  background: none;
+  border: none;
+  color: #991b1b;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.cancel-reply-btn:hover {
+  background: #fee2e2;
+}
+
 .comment-input-wrapper {
   display: flex;
   align-items: center;
@@ -645,6 +743,48 @@ const loadNewsReactions = async () => {
 /* Comments Section - Compact */
 .comments-section {
   background: #ffffff;
+}
+
+/* Loading State */
+.comments-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 12px;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #f3f4f6;
+  border-top: 3px solid #AF1E23;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Empty State */
+.no-comments-message {
+  text-align: center;
+  padding: 24px 16px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.no-comments-message p {
+  margin: 0;
 }
 
 .comments-header {

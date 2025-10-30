@@ -247,7 +247,7 @@
 
       <!-- Quick Menu Dropdown -->
       <transition name="quick-menu">
-        <div v-if="showQuickMenu" class="quick-menu-dropdown" @click.stop>
+        <div v-if="showQuickMenu" class="quick-menu-dropdown" :data-open="showQuickMenu" @click.stop>
           <div class="quick-menu-content">
             <div class="quick-menu-grid">
               <button 
@@ -2301,12 +2301,15 @@ body.hide-bottom-nav .bottom-navigation {
 /* Quick Menu Dropdown */
 .quick-menu-dropdown {
   position: fixed;
-  top: 75px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 0;
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
   z-index: 1000;
   width: 90%;
   max-width: 520px;
+  transform-origin: 50% 0;
 }
 
 .quick-menu-content {
@@ -2316,6 +2319,7 @@ body.hide-bottom-nav .bottom-navigation {
     0 20px 60px rgba(0, 0, 0, 0.2),
     0 0 1px rgba(0, 0, 0, 0.1);
   padding: 20px;
+  margin-top: 70px;
   max-height: calc(100vh - 180px);
   overflow-y: auto;
   overflow-x: hidden;
@@ -2461,112 +2465,211 @@ body.hide-bottom-nav .bottom-navigation {
 
 /* Removed hover effects for mobile */
 
-/* Enhanced Animations */
+/* SUPER SMOOTH PREMIUM ANIMATIONS*/
+
+/* Backdrop - Smooth fade with blur */
+.quick-menu-backdrop-enter-active {
+  transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1),
+              backdrop-filter 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.quick-menu-backdrop-leave-active {
+  transition: opacity 300ms cubic-bezier(0.4, 0, 1, 1),
+              backdrop-filter 300ms cubic-bezier(0.4, 0, 1, 1);
+}
+.quick-menu-backdrop-enter-from,
+.quick-menu-backdrop-leave-to {
+  opacity: 0;
+  backdrop-filter: blur(0px);
+}
+
+/* Main Dropdown - Spring-like entrance with scale and bounce */
 .quick-menu-enter-active {
-  animation: menuSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: quick-menu-enter 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-
 .quick-menu-leave-active {
-  animation: menuSlideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: quick-menu-leave 300ms cubic-bezier(0.6, 0, 0.9, 0.4);
 }
 
-@keyframes menuSlideIn {
+@keyframes quick-menu-enter {
   0% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-30px) scale(0.85) rotateX(20deg);
-    filter: blur(6px);
+    transform: translate3d(0, -60px, 0) scale(0.85) rotateX(10deg);
+    filter: blur(8px);
   }
-  40% {
-    opacity: 0.5;
-    transform: translateX(-50%) translateY(-8px) scale(0.95) rotateX(5deg);
+  50% {
+    opacity: 0.8;
     filter: blur(2px);
   }
-  70% {
-    opacity: 0.9;
-    transform: translateX(-50%) translateY(5px) scale(1.02) rotateX(-2deg);
-    filter: blur(0);
-  }
   100% {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1) rotateX(0deg);
+    transform: translate3d(0, 0, 0) scale(1) rotateX(0deg);
     filter: blur(0);
   }
 }
 
-@keyframes menuSlideOut {
+@keyframes quick-menu-leave {
   0% {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
     filter: blur(0);
   }
   100% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-20px) scale(0.9);
-    filter: blur(3px);
+    transform: translate3d(0, -40px, 0) scale(0.9);
+    filter: blur(6px);
   }
 }
 
-.quick-menu-backdrop-enter-active {
-  animation: backdropFadeIn 0.4s ease;
-}
-
-.quick-menu-backdrop-leave-active {
-  animation: backdropFadeOut 0.3s ease;
-}
-
-@keyframes backdropFadeIn {
-  0% {
-    opacity: 0;
-    backdrop-filter: blur(0px);
-  }
-  100% {
-    opacity: 1;
-    backdrop-filter: blur(4px);
-  }
-}
-
-@keyframes backdropFadeOut {
-  0% {
-    opacity: 1;
-    backdrop-filter: blur(4px);
-  }
-  100% {
-    opacity: 0;
-    backdrop-filter: blur(0px);
-  }
-}
-
-/* Add staggered animation to menu items */
+/* Menu Items - Staggered cascade with spring physics */
 .quick-menu-item {
-  animation: menuItemFadeIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  opacity: 0;
+  transform: translate3d(0, 30px, 0) scale(0.85) rotateZ(-3deg);
+  filter: blur(4px);
+  transition: 
+    opacity 450ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 450ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 450ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 250ms ease,
+    box-shadow 250ms ease,
+    border-color 250ms ease;
+  will-change: transform, opacity, filter;
 }
 
-.quick-menu-item:nth-child(1) { animation-delay: 0.05s; }
-.quick-menu-item:nth-child(2) { animation-delay: 0.1s; }
-.quick-menu-item:nth-child(3) { animation-delay: 0.15s; }
-.quick-menu-item:nth-child(4) { animation-delay: 0.2s; }
-.quick-menu-item:nth-child(5) { animation-delay: 0.25s; }
-.quick-menu-item:nth-child(6) { animation-delay: 0.3s; }
-.quick-menu-item:nth-child(7) { animation-delay: 0.35s; }
-.quick-menu-item:nth-child(8) { animation-delay: 0.4s; }
-.quick-menu-item:nth-child(9) { animation-delay: 0.45s; }
-.quick-menu-item:nth-child(10) { animation-delay: 0.5s; }
+.quick-menu-dropdown[data-open="true"] .quick-menu-item {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1) rotateZ(0deg);
+  filter: blur(0);
+}
 
-@keyframes menuItemFadeIn {
+/* Cascading delays with perfect rhythm */
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(1) { 
+  transition-delay: 50ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(2) { 
+  transition-delay: 100ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(3) { 
+  transition-delay: 150ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(4) { 
+  transition-delay: 200ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(5) { 
+  transition-delay: 250ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(6) { 
+  transition-delay: 300ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(7) { 
+  transition-delay: 350ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(8) { 
+  transition-delay: 400ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(9) { 
+  transition-delay: 450ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(10) { 
+  transition-delay: 500ms;
+}
+
+/* Icon animations - subtle pulse on menu open */
+.quick-menu-icon {
+  animation: icon-settle 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation-fill-mode: both;
+}
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(1) .quick-menu-icon { 
+  animation-delay: 50ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(2) .quick-menu-icon { 
+  animation-delay: 100ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(3) .quick-menu-icon { 
+  animation-delay: 150ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(4) .quick-menu-icon { 
+  animation-delay: 200ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(5) .quick-menu-icon { 
+  animation-delay: 250ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(6) .quick-menu-icon { 
+  animation-delay: 300ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(7) .quick-menu-icon { 
+  animation-delay: 350ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(8) .quick-menu-icon { 
+  animation-delay: 400ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(9) .quick-menu-icon { 
+  animation-delay: 450ms;
+}
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(10) .quick-menu-icon { 
+  animation-delay: 500ms;
+}
+
+@keyframes icon-settle {
   0% {
+    transform: scale(0.6) rotate(-180deg);
     opacity: 0;
-    transform: translateY(10px) scale(0.9);
+  }
+  60% {
+    transform: scale(1.15) rotate(10deg);
   }
   100% {
+    transform: scale(1) rotate(0deg);
     opacity: 1;
-    transform: translateY(0) scale(1);
+  }
+}
+
+/* Enhanced press interaction - satisfying tactile feedback */
+.quick-menu-item:active {
+  transform: translateY(-2px) scale(0.96);
+  transition: all 80ms cubic-bezier(0.4, 0, 0.6, 1);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.12),
+    0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.quick-menu-item:active .quick-menu-icon {
+  transform: scale(0.92) rotate(-2deg);
+  box-shadow: 
+    0 2px 6px rgba(175, 30, 35, 0.3),
+    inset 0 1px 2px rgba(0, 0, 0, 0.15);
+  transition: all 80ms cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* Improve container paint performance */
+.quick-menu-dropdown,
+.quick-menu-content {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000px;
+  -webkit-perspective: 1000px;
+}
+
+/* Accessibility: respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .quick-menu-enter-active,
+  .quick-menu-leave-active,
+  .quick-menu-backdrop-enter-active,
+  .quick-menu-backdrop-leave-active {
+    transition-duration: 1ms !important;
+  }
+  .quick-menu-item {
+    transition-duration: 1ms !important;
   }
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .quick-menu-dropdown {
-    top: 70px;
+    top: 0;
     width: 95%;
   }
 
@@ -2592,7 +2695,7 @@ body.hide-bottom-nav .bottom-navigation {
 
 @media (max-width: 480px) {
   .quick-menu-dropdown {
-    top: 65px;
+    top: 0;
     width: calc(100% - 16px);
   }
 

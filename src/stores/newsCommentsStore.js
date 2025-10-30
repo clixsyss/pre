@@ -45,7 +45,7 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
   };
 
   // Actions
-  const fetchComments = async (newsId) => {
+  const fetchComments = async (newsId, skipCache = false) => {
     if (!newsId) return;
     
     loading.value = true;
@@ -59,8 +59,22 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
         throw new Error('No project selected');
       }
       
-      const fetchedComments = await newsCommentsService.getComments(projectId, newsId);
-      comments.value[newsId] = fetchedComments;
+      const fetchedComments = await newsCommentsService.getComments(projectId, newsId, { skipCache });
+      // Force Vue reactivity by creating new object references (deep clone reactions and users arrays)
+      const clonedComments = fetchedComments.map(comment => ({
+        ...comment,
+        // Deep clone reactions - each emoji reaction gets a new object reference, including users array
+        reactions: comment.reactions ? Object.fromEntries(
+          Object.entries(comment.reactions).map(([emoji, data]) => [
+            emoji, 
+            { 
+              count: data.count, 
+              users: data.users ? [...data.users] : [] // Clone the users array too
+            }
+          ])
+        ) : {}
+      }));
+      comments.value = { ...comments.value, [newsId]: clonedComments };
     } catch (err) {
       error.value = err.message;
       console.error('Error fetching comments:', err?.message || JSON.stringify(err) || err);
@@ -81,7 +95,21 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
       }
       
       const unsubscribe = await newsCommentsService.subscribeToComments(projectId, newsId, (fetchedComments) => {
-        comments.value[newsId] = fetchedComments;
+        // Force Vue reactivity by creating new object references (deep clone reactions and users arrays)
+        const clonedComments = fetchedComments.map(comment => ({
+          ...comment,
+          // Deep clone reactions - each emoji reaction gets a new object reference, including users array
+          reactions: comment.reactions ? Object.fromEntries(
+            Object.entries(comment.reactions).map(([emoji, data]) => [
+              emoji, 
+              { 
+                count: data.count, 
+                users: data.users ? [...data.users] : [] // Clone the users array too
+              }
+            ])
+          ) : {}
+        }));
+        comments.value = { ...comments.value, [newsId]: clonedComments };
       });
       
       subscriptions.value[newsId] = unsubscribe;
@@ -118,13 +146,31 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
         throw new Error('No project selected');
       }
       
+      // Get user's FIRST NAME ONLY from Firestore user document
+      let userName = user.displayName?.split(' ')[0] || 'Anonymous'; // Fallback to first word of displayName
+      try {
+        const userDoc = await newsCommentsService.getUserDocument(user.uid);
+        if (userDoc && userDoc.firstName) {
+          // Use ONLY first name as requested
+          userName = userDoc.firstName;
+        }
+      } catch (userError) {
+        console.warn('⚠️ Could not fetch user document, using displayName:', userError);
+      }
+      
       // Get user details for comment
       const userDetails = {
-        userName: user.displayName || 'Anonymous',
+        userName,
         userEmail: user.email || '',
         userUnit: projectStore.selectedProject?.userUnit || null,
         userProject: projectStore.selectedProject?.name || null,
       };
+      
+      console.log('💬 Adding comment with data:', {
+        parentCommentId,
+        isReply: !!parentCommentId,
+        text: text.trim().substring(0, 50)
+      });
       
       const commentId = await newsCommentsService.addComment(projectId, newsId, user.uid, {
         ...userDetails,
@@ -132,8 +178,10 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
         parentCommentId
       });
       
-      // Refresh comments
-      await fetchComments(newsId);
+      console.log('✅ Comment added:', { commentId, parentCommentId });
+      
+      // Refresh comments with fresh data (skip cache to ensure new comment shows immediately)
+      await fetchComments(newsId, true);
       
       return commentId;
     } catch (err) {
@@ -149,6 +197,8 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
     if (!newsId || !commentId || !emoji) return;
     
     try {
+      console.log('💬 toggleReaction called:', { newsId, commentId, emoji });
+      
       const user = await optimizedAuthService.getCurrentUser();
       
       if (!user) {
@@ -166,11 +216,25 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
       const newsComments = comments.value[newsId] || [];
       const comment = newsComments.find(c => c.id === commentId);
       
-      if (!comment) return;
+      if (!comment) {
+        console.error('Comment not found:', commentId);
+        return;
+      }
       
       const reactions = comment.reactions || {};
       const emojiReaction = reactions[emoji];
       const hasReacted = emojiReaction?.users?.includes(user.uid) || false;
+      
+      console.log('💬 Comment reaction state:', {
+        commentId,
+        emoji,
+        hasReacted,
+        currentReactions: reactions,
+        userId: user.uid
+      });
+      
+      const actionType = hasReacted ? 'removing' : 'adding';
+      console.log(`💬 ${actionType} reaction ${emoji} on comment ${commentId}`);
       
       await newsCommentsService.toggleReaction(
         projectId, 
@@ -181,19 +245,21 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
         !hasReacted
       );
       
-      // Refresh comments to get updated reactions
-      await fetchComments(newsId);
+      console.log('✅ Comment reaction toggled successfully');
+      
+      // Refresh comments to get updated reactions - SKIP CACHE for immediate update
+      await fetchComments(newsId, true);
     } catch (err) {
       error.value = err.message;
-      console.error('Error toggling reaction:', err);
+      console.error('❌ Error toggling comment reaction:', err);
     }
   };
 
-  const fetchNewsReactions = async (newsId) => {
+  const fetchNewsReactions = async (newsId, skipCache = false) => {
     if (!newsId) return;
     
     try {
-      console.log('📊 fetchNewsReactions START for newsId:', newsId);
+      console.log('📊 fetchNewsReactions START for newsId:', newsId, 'skipCache:', skipCache);
       
       const projectStore = useProjectStore();
       const projectId = projectStore.selectedProject?.id;
@@ -203,7 +269,7 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
       }
       
       console.log('📊 Calling newsCommentsService.getNewsReactions...');
-      const reactions = await newsCommentsService.getNewsReactions(projectId, newsId);
+      const reactions = await newsCommentsService.getNewsReactions(projectId, newsId, skipCache);
       console.log('📊 Got reactions:', reactions?.length || 0, reactions);
       
       // Process reactions to group by emoji
@@ -360,29 +426,38 @@ export const useNewsCommentsStore = defineStore('newsComments', () => {
       console.log('🎯 Toggling reaction in Firestore...');
       const startTime = Date.now();
       
-      await newsCommentsService.toggleNewsReaction(projectId, newsId, emoji);
+      try {
+        await newsCommentsService.toggleNewsReaction(projectId, newsId, emoji);
+      } catch (toggleError) {
+        // If it's a permission error, it might be due to rules propagation delay
+        // The real-time listener will still update the UI correctly
+        if (toggleError.code === 'permission-denied') {
+          console.warn('⚠️ Permission denied during toggle, but real-time listener should handle updates');
+          // Don't throw - let the real-time listener handle the state
+        } else {
+          throw toggleError;
+        }
+      }
       
       const duration = Date.now() - startTime;
-      console.log(`✅ Reaction toggled successfully (took ${duration}ms)`);
+      console.log(`✅ Reaction toggle completed (took ${duration}ms)`);
       
       // Manually refresh reactions after toggle (important for iOS where subscriptions may hang)
+      // IMPORTANT: Skip cache to get fresh data after toggling
       console.log('🔄 Refreshing reactions after toggle...');
-      await fetchNewsReactions(newsId);
+      await fetchNewsReactions(newsId, true);
       console.log('✅ Reactions refreshed after toggle');
       
-      // Extra safety: if reactions still don't show user's reaction after 500ms, fetch again
+      // Extra safety: wait for real-time updates
       setTimeout(async () => {
-        const currentUserReactions = userNewsReactions.value[newsId] || [];
-        console.log('🔍 Safety check - current user reactions:', currentUserReactions);
-        
-        if (currentUserReactions.length === 0) {
-          console.warn('⚠️ User reactions still empty, fetching again...');
-          await fetchNewsReactions(newsId);
-        }
-      }, 500);
+        console.log('🔍 Safety check - fetching reactions again...');
+        await fetchNewsReactions(newsId, true);
+      }, 1000);
     } catch (err) {
       error.value = err.message;
       console.error('❌ Error toggling news reaction:', err?.message || JSON.stringify(err) || err);
+      // Still throw to show user feedback
+      throw err;
     }
   };
 

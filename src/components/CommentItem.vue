@@ -16,19 +16,27 @@
         </div>
       </div>
       <div class="comment-actions">
-        <button @click="toggleReactions" class="action-btn" title="React">
+        <!-- Only show like button on top-level comments, not replies -->
+        <button 
+          v-if="!isReply"
+          @click="handleLike" 
+          class="action-btn like-btn" 
+          :class="{ active: isLiked }"
+          :title="isLiked ? 'Unlike' : 'Like'"
+        >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" 
+              :stroke="isLiked ? '#AF1E23' : 'currentColor'" 
+              :fill="isLiked ? '#AF1E23' : 'none'"
+              stroke-width="2" 
+              stroke-linecap="round" 
+              stroke-linejoin="round"/>
           </svg>
+          <span v-if="likeCount > 0" class="like-count">{{ likeCount }}</span>
         </button>
         <button @click="handleReply" class="action-btn" title="Reply">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <button @click="handleComplaint" class="action-btn complaint-btn" title="Start Complaint">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
         <button 
@@ -49,34 +57,6 @@
       <p class="comment-text">{{ comment.text }}</p>
     </div>
 
-    <!-- Reactions -->
-    <div v-if="hasReactions" class="comment-reactions">
-      <button
-        v-for="(reaction, emoji) in comment.reactions"
-        :key="emoji"
-        @click="handleReaction(emoji)"
-        class="reaction-btn"
-        :class="{ active: hasUserReacted(emoji) }"
-      >
-        <span class="emoji">{{ emoji }}</span>
-        <span class="count">{{ reaction.count }}</span>
-      </button>
-    </div>
-
-    <!-- Quick Reactions -->
-    <div v-if="showReactions" class="quick-reactions">
-      <button
-        v-for="emoji in availableEmojis"
-        :key="emoji"
-        @click="handleReaction(emoji)"
-        class="quick-reaction-btn"
-        :class="{ active: hasUserReacted(emoji) }"
-        :title="emoji"
-      >
-        {{ emoji }}
-      </button>
-    </div>
-
     <!-- Replies -->
     <div v-if="replies.length > 0" class="replies">
       <div class="replies-header">
@@ -88,9 +68,11 @@
           :key="reply.id"
           :comment="reply"
           :news-id="newsId"
+          :is-reply="true"
           @reply="(commentId) => emit('reply', commentId)"
           @react="(commentId, emoji) => emit('react', commentId, emoji)"
           @delete="(commentId) => emit('delete', commentId)"
+          @deleteWithReplies="(commentId) => emit('deleteWithReplies', commentId)"
         />
       </div>
     </div>
@@ -98,7 +80,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { computed } from 'vue';
 import { getAuth } from 'firebase/auth';
 
 export default {
@@ -119,8 +101,10 @@ export default {
   },
   emits: ['reply', 'react', 'delete', 'deleteWithReplies'],
   setup(props, { emit }) {
-    const showReactions = ref(false);
-    const replies = ref([]);
+    // Use replies from the comment prop (passed from parent's groupedComments)
+    const replies = computed(() => {
+      return props.comment.replies || [];
+    });
     
     // Check if this is the current user's comment
     const isCurrentUser = computed(() => {
@@ -129,12 +113,20 @@ export default {
       return user && props.comment.userId === user.uid;
     });
     
-    // Available emojis for reactions
-    const availableEmojis = ['👍', '❤️', '😂', '😮', '😢', '😡', '👏', '🎉'];
+    // Like functionality - using 👍 emoji
+    const LIKE_EMOJI = '👍';
     
-    // Computed
-    const hasReactions = computed(() => {
-      return props.comment.reactions && Object.keys(props.comment.reactions).length > 0;
+    const likeCount = computed(() => {
+      return props.comment.reactions?.[LIKE_EMOJI]?.count || 0;
+    });
+    
+    const isLiked = computed(() => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) return false;
+      
+      const likeReaction = props.comment.reactions?.[LIKE_EMOJI];
+      return likeReaction?.users?.includes(user.uid) || false;
     });
     
     // Methods
@@ -174,13 +166,9 @@ export default {
       }
     };
     
-    const toggleReactions = () => {
-      showReactions.value = !showReactions.value;
-    };
-    
-    const handleReaction = (emoji) => {
-      emit('react', props.comment.id, emoji);
-      showReactions.value = false;
+    const handleLike = () => {
+      // Emit react event with the like emoji
+      emit('react', props.comment.id, LIKE_EMOJI);
     };
     
     const handleReply = () => {
@@ -193,34 +181,15 @@ export default {
       }
     };
     
-    const hasUserReacted = (emoji) => {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) return false;
-      
-      const reaction = props.comment.reactions?.[emoji];
-      return reaction?.users?.includes(user.uid) || false;
-    };
-    
-    // Load replies (if any)
-    onMounted(() => {
-      // This would typically load replies from the store
-      // For now, we'll just show empty array
-      replies.value = [];
-    });
-    
     return {
-      showReactions,
       replies,
-      availableEmojis,
-      hasReactions,
       isCurrentUser,
+      isLiked,
+      likeCount,
       formatTime,
-      toggleReactions,
-      handleReaction,
+      handleLike,
       handleReply,
-      handleDelete,
-      hasUserReacted
+      handleDelete
     };
   }
 };
@@ -328,6 +297,22 @@ export default {
   color: #AF1E23;
 } */
 
+.like-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.like-btn.active {
+  color: #AF1E23;
+  background: #fef2f2;
+}
+
+.like-count {
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .delete-btn {
   color: #dc2626;
 }
@@ -348,78 +333,6 @@ export default {
   color: #475569;
   margin: 0;
   word-wrap: break-word;
-}
-
-.comment-reactions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.reaction-btn {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 4px 8px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 12px;
-}
-
-/* Mobile app - hover effects disabled */
-/* .reaction-btn:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-} */
-
-.reaction-btn.active {
-  background: #fef2f2;
-  border-color: #AF1E23;
-  color: #991b1b;
-}
-
-.emoji {
-  font-size: 14px;
-}
-
-.count {
-  font-weight: 500;
-  color: inherit;
-}
-
-.quick-reactions {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 8px;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-}
-
-.quick-reaction-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  padding: 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-/* Mobile app - hover effects disabled */
-/* .quick-reaction-btn:hover {
-  background: #e2e8f0;
-  transform: scale(1.1);
-} */
-
-.quick-reaction-btn.active {
-  background: #fef2f2;
-  transform: scale(1.1);
 }
 
 .replies {
