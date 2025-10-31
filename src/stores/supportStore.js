@@ -123,6 +123,8 @@ export const useSupportStore = defineStore('support', () => {
 
   const addMessage = async (chatId, message) => {
     try {
+      // Don't set loading.value here - it would disable the send button
+      // The component has its own optimistic UI handling
       const projectStore = useProjectStore();
       const projectId = projectStore.selectedProject?.id;
       

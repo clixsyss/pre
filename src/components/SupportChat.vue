@@ -2,7 +2,7 @@
   <UnifiedChat
     :chat-data="supportChat"
     :messages="messages"
-    :loading="supportStore.loading"
+    :loading="loading"
     chat-type="support"
     default-title="Support Chat"
     error-title="Support Chat Not Found"
@@ -37,36 +37,79 @@ const supportChatId = computed(() => route.params.id);
 // Reactive data
 const supportChat = computed(() => supportStore.currentSupportChat);
 const unsubscribe = ref(null);
+const loading = ref(true);
 
 // Computed properties
 const messages = computed(() => {
-  return supportChat.value?.messages || [];
+  const messageList = supportChat.value?.messages || [];
+  console.log('🔍 SupportChat: Messages computed', {
+    messageCount: messageList.length,
+    messages: messageList
+  });
+  return messageList;
 });
+
+// Load support chat data
+const loadSupportChat = async () => {
+  console.log('🔍 SupportChat: loadSupportChat called', {
+    projectId: supportStore.selectedProject?.id,
+    chatId: supportChatId.value
+  });
+
+  if (!supportChatId.value) {
+    console.log('❌ SupportChat: Missing chat ID');
+    loading.value = false;
+    return;
+  }
+
+  try {
+    console.log('🔍 SupportChat: Loading chat with ID:', supportChatId.value);
+    await supportStore.fetchSupportChat(supportChatId.value);
+    console.log('✅ SupportChat: Support chat loaded successfully');
+  } catch (error) {
+    console.error('❌ SupportChat: Error loading support chat:', error);
+    console.error('❌ SupportChat: Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    notificationStore.addNotification({
+      type: 'error',
+      message: 'Failed to load support chat.'
+    });
+  } finally {
+    loading.value = false;
+  }
+};
+
+const setupRealtimeListener = async () => {
+  if (!supportChatId.value) {
+    console.log('❌ SupportChat: Cannot setup real-time listener - missing chat ID');
+    return;
+  }
+
+  try {
+    console.log('🔍 SupportChat: Setting up real-time listener...');
+    const unsubscribeFn = supportStore.listenToSupportChat(supportChatId.value);
+    unsubscribe.value = unsubscribeFn;
+    console.log('✅ SupportChat: Real-time listener setup successfully');
+  } catch (error) {
+    console.error('❌ SupportChat: Error setting up real-time listener:', error);
+    unsubscribe.value = null;
+  }
+};
 
 // Lifecycle
 onMounted(async () => {
-  if (supportChatId.value) {
-    try {
-      // Load support chat data
-      await supportStore.fetchSupportChat(supportChatId.value);
-      console.log('✅ Support chat loaded successfully');
-      
-      // Set up real-time listener for instant message updates on iOS/Android
-      console.log('🔍 SupportChat: Setting up real-time listener for chat:', supportChatId.value);
-      unsubscribe.value = supportStore.listenToSupportChat(supportChatId.value);
-      console.log('✅ SupportChat: Real-time listener setup successfully');
-    } catch (error) {
-      console.error('Error loading support chat:', error);
-      notificationStore.addNotification({
-        type: 'error',
-        message: 'Failed to load support chat.'
-      });
-    }
-  }
+  console.log('🔍 SupportChat: Component mounted', {
+    chatId: supportChatId.value
+  });
+  
+  await loadSupportChat();
+  await setupRealtimeListener();
 });
 
 onUnmounted(() => {
-  // Clean up real-time listener
   if (unsubscribe.value) {
     console.log('🧹 SupportChat: Cleaning up real-time listener');
     unsubscribe.value();

@@ -13,6 +13,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useNetworkStatus } from '../composables/useNetworkStatus'
+import { useI18n } from 'vue-i18n'
 
 // Component name for ESLint
 defineOptions({
@@ -20,6 +21,7 @@ defineOptions({
 })
 
 const { isOnline, isSlowConnection } = useNetworkStatus()
+const { t } = useI18n()
 
 const bannerClass = computed(() => {
   if (!isOnline.value) return 'banner-offline'
@@ -34,14 +36,14 @@ const bannerIcon = computed(() => {
 })
 
 const bannerTitle = computed(() => {
-  if (!isOnline.value) return 'No Internet Connection'
-  if (isSlowConnection.value) return 'Weak Connection'
-  return 'Connected'
+  if (!isOnline.value) return t('noInternetConnection')
+  if (isSlowConnection.value) return t('weakConnection')
+  return t('connected')
 })
 
 const bannerMessage = computed(() => {
-  if (!isOnline.value) return 'Please check your internet connection'
-  if (isSlowConnection.value) return 'Some features may be slow or unavailable'
+  if (!isOnline.value) return t('pleaseCheckConnection')
+  if (isSlowConnection.value) return t('someFeaturesSlowUnavailable')
   return ''
 })
 </script>
@@ -71,7 +73,7 @@ const bannerMessage = computed(() => {
 }
 
 .banner-icon {
-  margin-right: 12px;
+  margin-inline-end: 12px;
   flex-shrink: 0;
 }
 
@@ -88,6 +90,11 @@ const bannerMessage = computed(() => {
 .banner-message {
   font-size: 12px;
   opacity: 0.9;
+}
+
+/* RTL Support */
+[dir="rtl"] .network-status-banner {
+  text-align: right;
 }
 
 /* Slide down animation */

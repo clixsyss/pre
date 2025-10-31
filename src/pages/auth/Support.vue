@@ -6,11 +6,13 @@
     <div class="content">
       <!-- Support Hero -->
       <div class="support-hero">
-        <div class="support-icon">
+        <!-- <div class="support-icon">
           <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path
+              d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z"
+              stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-        </div>
+        </div> -->
         <h2>{{ $t('howCanWeHelp') }}</h2>
         <p>{{ $t('supportTeamMessage') }}</p>
       </div>
@@ -20,7 +22,9 @@
         <button @click="startNewChat" class="start-chat-btn" :disabled="creatingChat">
           <div v-if="creatingChat" class="button-spinner"></div>
           <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path
+              d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z"
+              stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
           {{ creatingChat ? $t('startingChat') : $t('startNewChat') }}
         </button>
@@ -71,14 +75,21 @@ const supportStore = useSupportStore()
 const creatingChat = ref(false)
 
 // Computed properties
-const supportChats = computed(() => supportStore.userSupportChats)
+const supportChats = computed(() => {
+  // Sort by lastMessageAt in descending order (newest first)
+  return [...supportStore.userSupportChats].sort((a, b) => {
+    const aDate = a.lastMessageAt?.toDate?.() || a.lastMessageAt || new Date(0)
+    const bDate = b.lastMessageAt?.toDate?.() || b.lastMessageAt || new Date(0)
+    return new Date(bDate) - new Date(aDate)
+  })
+})
 const loadingChats = computed(() => supportStore.loading)
 const errorChats = computed(() => supportStore.error)
 
 
 const startNewChat = async () => {
   if (creatingChat.value) return
-  
+
   try {
     creatingChat.value = true
     const newChat = await supportStore.createSupportChat({
@@ -112,7 +123,7 @@ onMounted(async () => {
   try {
     // Fetch support chats using getDocs instead of real-time listener
     await supportStore.fetchSupportChats()
-    
+
     // Note: Real-time listeners are temporarily disabled to prevent app hanging
     // Support chats will be refreshed when user navigates back to this page
     console.log('✅ Support chats fetched successfully')
@@ -129,14 +140,13 @@ onMounted(async () => {
 }
 
 .content {
-  padding: 40px 20px;
   max-width: 800px;
   margin: 0 auto;
 }
 
 .support-hero {
   text-align: center;
-  margin-bottom: 50px;
+  margin-bottom: 20px;
 }
 
 .support-icon {
@@ -218,7 +228,9 @@ onMounted(async () => {
   text-align: center;
 }
 
-.loading-state, .error-state, .no-chats-state {
+.loading-state,
+.error-state,
+.no-chats-state {
   text-align: center;
   padding: 30px 0;
   color: #666;
@@ -235,8 +247,13 @@ onMounted(async () => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .chats-list {
@@ -311,16 +328,19 @@ onMounted(async () => {
 
 /* Responsive design */
 @media (max-width: 600px) {
-  .content {
-    padding: 20px 15px;
-  }
-
   .support-hero h2 {
     font-size: 1.7rem;
+    line-height: normal;
+    margin: 10px;
+  }
+
+  .support-hero p {
+    font-size: 14px;
+    line-height: normal;
   }
 
   .start-chat-btn {
-    width: 100%;
+    width: 70%;
     font-size: 1rem;
     padding: 12px 20px;
   }

@@ -603,7 +603,6 @@ onActivated(async () => {
 
 <style scoped>
 .smart-devices-page {
-  padding: 16px;
   box-sizing: border-box;
   overflow-x: hidden;
 }
@@ -1235,9 +1234,6 @@ onActivated(async () => {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .smart-devices-page {
-    padding: 12px;
-  }
   
   /* Page header responsive styles moved to PageHeader component */
   
@@ -1262,9 +1258,6 @@ onActivated(async () => {
 }
 
 @media (max-width: 480px) {
-  .smart-devices-page {
-    padding: 8px;
-  }
   
   /* Page header responsive styles moved to PageHeader component */
   

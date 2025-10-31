@@ -70,7 +70,7 @@
     <div v-if="showProjectSwitcher" class="modal-overlay" @click="showProjectSwitcher = false">
       <div class="modal-content project-switcher-modal" @click.stop>
         <div class="modal-header">
-          <h3>Switch Project</h3>
+          <h3>{{ $t('switchProject') }}</h3>
           <button @click="showProjectSwitcher = false" class="close-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -84,15 +84,15 @@
               :class="['project-option', { 'current': project.id === currentProjectId }]"
               @click="switchToProject(project)">
               <div class="project-option-info">
-                <h4 class="project-option-name">{{ project.name || 'Unnamed Project' }}</h4>
-                <p class="project-option-location">{{ project.location || 'Location not set' }}</p>
+                <h4 class="project-option-name">{{ project.name || $t('unnamedProject') }}</h4>
+                <p class="project-option-location">{{ project.location || $t('locationNotSet') }}</p>
                 <div class="project-option-details">
-                  <span class="project-option-unit">Unit {{ project.userUnit || 'N/A' }}</span>
-                  <span class="project-option-role">{{ project.userRole || 'Member' }}</span>
+                  <span class="project-option-unit">{{ $t('unit') }} {{ project.userUnit || $t('notProvided') }}</span>
+                  <span class="project-option-role">{{ project.userRole || $t('owner') }}</span>
                 </div>
               </div>
               <div class="project-option-status">
-                <span v-if="project.id === currentProjectId" class="current-badge">Current</span>
+                <span v-if="project.id === currentProjectId" class="current-badge">{{ $t('currentBadge') }}</span>
                 <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round" />
@@ -102,9 +102,9 @@
           </div>
 
           <div v-else class="no-projects">
-            <p>No projects available</p>
+            <p>{{ $t('noProjectsAvailable') }}</p>
             <button @click="goToProjectSelection" class="go-to-selection-btn">
-              Go to Project Selection
+              {{ $t('selectProjectContinue') }}
             </button>
           </div>
         </div>
@@ -115,7 +115,7 @@
                 d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            Manage Projects
+            {{ $t('myProjects') }}
           </button>
         </div>
       </div>

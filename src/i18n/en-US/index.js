@@ -586,4 +586,66 @@ export default {
   invalidPhone: 'Invalid phone number',
   passwordMismatch: 'Passwords do not match',
   passwordTooShort: 'Password must be at least 6 characters',
+
+  // Header & Navigation (Additional)
+  restoringProject: 'Restoring project...',
+  tapHereQuickNav: 'Tap here for quick navigation',
+
+  // Network Status
+  noInternetConnection: 'No Internet Connection',
+  weakConnection: 'Weak Connection',
+  pleaseCheckConnection: 'Please check your internet connection',
+  someFeaturesSlowUnavailable: 'Some features may be slow or unavailable',
+
+  // Device Key Error Modal
+  deviceNotRegistered: 'Device Not Registered',
+  accountSecurityAlert: 'Account Security Alert',
+  deviceNotRegisteredMessage: 'This device is not registered. Your account can only be accessed from your registered device.',
+  whatThisMeans: 'What This Means',
+  deviceSecurityExplanation: 'For your security, your account is linked to a specific device. This prevents unauthorized access and ensures only you can use your account.',
+  howToResolveThis: 'How to Resolve This',
+  goToYourProfile: 'Go to Your Profile',
+  goToYourProfileDesc: 'Open the app on your registered device and navigate to your profile page.',
+  requestDeviceKeyReset: 'Request Device Key Reset',
+  requestDeviceKeyResetDesc: 'In the "Device Key Reset" section, submit a reset request explaining why you need to switch devices.',
+  waitForAdminApproval: 'Wait for Admin Approval',
+  waitForAdminApprovalDesc: 'An administrator will review your request and approve it if appropriate.',
+  loginOnNewDevice: 'Login on New Device',
+  loginOnNewDeviceDesc: 'Once approved, you can login on this device. Your old device will be automatically deactivated.',
+  needHelpQuestion: 'Need Help?',
+  needHelpDesc: 'If you don\'t have access to your registered device or need immediate assistance, please contact support.',
+  gotIt: 'Got It',
+
+  // Unauth Support Page (FAQ)
+  howDoICreateAccount: 'How do I create an account?',
+  howDoICreateAccountAnswer: 'You can create an account by clicking the "Register" button on the onboarding screen and following the registration process.',
+  whatIfForgotPassword: 'What if I forgot my password?',
+  whatIfForgotPasswordAnswer: 'You can reset your password by clicking "Forgot Password?" on the sign-in page.',
+  howDoIContactSupport: 'How do I contact support?',
+  howDoIContactSupportAnswer: 'You can contact support through email, phone, or by filling out the contact form on this page.',
+  whatServicesPreGroup: 'What services does PRE Group provide?',
+  whatServicesPreGroupAnswer: 'PRE Group provides property management solutions including community management, emergency notifications, and general news updates.',
+  messageSentSuccess: 'Message sent successfully! We\'ll get back to you soon.',
+  failedToSendMessage: 'Failed to send message',
+
+  // Verify Email Page
+  verificationInstructions: 'We\'ve sent a verification email to:',
+  checkYourInbox: 'Please check your inbox and click the verification link in the email.',
+  checkSpamFolder: 'If you don\'t see the email, check your spam folder.',
+  afterClickingLink: 'After clicking the verification link:',
+  clickVerificationLink: 'Click the verification link in your email',
+  returnToApp: 'Return to this app (keep this tab open)',
+  waitAutoDetection: 'Wait a few seconds for automatic detection',
+  orClickCheckStatus: 'Or click "Check Verification Status" below',
+  checkVerificationStatus: 'Check Verification Status',
+
+  // Home Page (Project Switcher Modal)
+  unnamed: 'Unnamed',
+  unnamedProject: 'Unnamed Project',
+  locationNotSet: 'Location not set',
+  currentBadge: 'Current',
+  unit: 'Unit',
+
+  // Common Project Selection
+  selectAProject: 'Select a project',
 }

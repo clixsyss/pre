@@ -577,4 +577,66 @@ export default {
   invalidPhone: 'رقم جوال غير صحيح',
   passwordMismatch: 'كلمة المرور غير متطابقة',
   passwordTooShort: 'كلمة المرور قصيرة',
+
+  // Header & Navigation (Additional)
+  restoringProject: 'جاري استعادة المشروع...',
+  tapHereQuickNav: 'اضغط هنا للتنقل السريع',
+
+  // Network Status
+  noInternetConnection: 'لا يوجد اتصال بالإنترنت',
+  weakConnection: 'اتصال ضعيف',
+  pleaseCheckConnection: 'يرجى التحقق من اتصالك بالإنترنت',
+  someFeaturesSlowUnavailable: 'قد تكون بعض الميزات بطيئة أو غير متاحة',
+
+  // Device Key Error Modal
+  deviceNotRegistered: 'الجهاز غير مسجل',
+  accountSecurityAlert: 'تنبيه أمان الحساب',
+  deviceNotRegisteredMessage: 'هذا الجهاز غير مسجل. يمكن الوصول إلى حسابك فقط من جهازك المسجل.',
+  whatThisMeans: 'ماذا يعني هذا',
+  deviceSecurityExplanation: 'لأمانك، حسابك مرتبط بجهاز معين. هذا يمنع الوصول غير المصرح به ويضمن أنك وحدك من يمكنه استخدام حسابك.',
+  howToResolveThis: 'كيفية حل هذا',
+  goToYourProfile: 'اذهب إلى ملفك الشخصي',
+  goToYourProfileDesc: 'افتح التطبيق على جهازك المسجل وانتقل إلى صفحة ملفك الشخصي.',
+  requestDeviceKeyReset: 'طلب إعادة تعيين مفتاح الجهاز',
+  requestDeviceKeyResetDesc: 'في قسم "إعادة تعيين مفتاح الجهاز"، قدم طلب إعادة تعيين مع توضيح سبب حاجتك لتبديل الأجهزة.',
+  waitForAdminApproval: 'انتظر موافقة المسؤول',
+  waitForAdminApprovalDesc: 'سيراجع المسؤول طلبك ويوافق عليه إذا كان مناسباً.',
+  loginOnNewDevice: 'تسجيل الدخول على الجهاز الجديد',
+  loginOnNewDeviceDesc: 'بمجرد الموافقة، يمكنك تسجيل الدخول على هذا الجهاز. سيتم إلغاء تفعيل جهازك القديم تلقائياً.',
+  needHelpQuestion: 'تحتاج مساعدة؟',
+  needHelpDesc: 'إذا لم يكن لديك وصول إلى جهازك المسجل أو تحتاج مساعدة فورية، يرجى الاتصال بالدعم.',
+  gotIt: 'فهمت',
+
+  // Unauth Support Page (FAQ)
+  howDoICreateAccount: 'كيف أقوم بإنشاء حساب؟',
+  howDoICreateAccountAnswer: 'يمكنك إنشاء حساب بالنقر على زر "تسجيل" في شاشة البداية واتباع عملية التسجيل.',
+  whatIfForgotPassword: 'ماذا لو نسيت كلمة المرور؟',
+  whatIfForgotPasswordAnswer: 'يمكنك إعادة تعيين كلمة المرور بالنقر على "نسيت كلمة المرور؟" في صفحة تسجيل الدخول.',
+  howDoIContactSupport: 'كيف أتواصل مع الدعم؟',
+  howDoIContactSupportAnswer: 'يمكنك الاتصال بالدعم عبر البريد الإلكتروني أو الهاتف أو عن طريق ملء نموذج الاتصال في هذه الصفحة.',
+  whatServicesPreGroup: 'ما هي الخدمات التي تقدمها PRE Group؟',
+  whatServicesPreGroupAnswer: 'تقدم PRE Group حلول إدارة الممتلكات بما في ذلك إدارة المجتمع والإشعارات الطارئة وتحديثات الأخبار العامة.',
+  messageSentSuccess: 'تم إرسال الرسالة بنجاح! سنتواصل معك قريباً.',
+  failedToSendMessage: 'فشل إرسال الرسالة',
+
+  // Verify Email Page
+  verificationInstructions: 'لقد أرسلنا بريد التحقق إلى:',
+  checkYourInbox: 'يرجى التحقق من صندوق الوارد الخاص بك والنقر على رابط التحقق في البريد الإلكتروني.',
+  checkSpamFolder: 'إذا لم تر البريد الإلكتروني، تحقق من مجلد البريد المزعج.',
+  afterClickingLink: 'بعد النقر على رابط التحقق:',
+  clickVerificationLink: 'انقر على رابط التحقق في بريدك الإلكتروني',
+  returnToApp: 'ارجع إلى هذا التطبيق (احتفظ بهذه النافذة مفتوحة)',
+  waitAutoDetection: 'انتظر بضع ثوانٍ للكشف التلقائي',
+  orClickCheckStatus: 'أو انقر على "تحقق من حالة التحقق" أدناه',
+  checkVerificationStatus: 'تحقق من حالة التحقق',
+
+  // Home Page (Project Switcher Modal)
+  unnamed: 'بدون اسم',
+  unnamedProject: 'مشروع بدون اسم',
+  locationNotSet: 'الموقع غير محدد',
+  currentBadge: 'الحالي',
+  unit: 'وحدة',
+
+  // Common Project Selection
+  selectAProject: 'اختر مشروع',
 }

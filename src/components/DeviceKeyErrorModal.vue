@@ -3,7 +3,7 @@
     <div class="device-key-modal-container">
       <!-- Header -->
       <div class="device-key-modal-header">
-        <h2 class="device-key-modal-title">Device Not Registered</h2>
+        <h2 class="device-key-modal-title">{{ $t('deviceNotRegistered') }}</h2>
       </div>
 
       <!-- Body -->
@@ -15,7 +15,7 @@
               <path d="M12 9V13M12 17H12.01M21 2L19 4M19 4L15.5 7.5M19 4L17 6M15.5 7.5L13 10L15 12L10 17H7V14L12 9L14.5 11.5L15.5 7.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <h3 class="status-title">Account Security Alert</h3>
+          <h3 class="status-title">{{ $t('accountSecurityAlert') }}</h3>
           <p class="status-description">
             {{ message }}
           </p>
@@ -28,42 +28,42 @@
               <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
               <path d="M12 16V12M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            What This Means
+            {{ $t('whatThisMeans') }}
           </h4>
           <p class="info-text">
-            For your security, your account is linked to a specific device. This prevents unauthorized access and ensures only you can use your account.
+            {{ $t('deviceSecurityExplanation') }}
           </p>
         </div>
 
         <!-- Steps to Resolve -->
         <div class="steps-section">
-          <h4 class="steps-title">How to Resolve This</h4>
+          <h4 class="steps-title">{{ $t('howToResolveThis') }}</h4>
           <div class="step-item">
             <div class="step-number">1</div>
             <div class="step-content">
-              <h5>Go to Your Profile</h5>
-              <p>Open the app on your registered device and navigate to your profile page.</p>
+              <h5>{{ $t('goToYourProfile') }}</h5>
+              <p>{{ $t('goToYourProfileDesc') }}</p>
             </div>
           </div>
           <div class="step-item">
             <div class="step-number">2</div>
             <div class="step-content">
-              <h5>Request Device Key Reset</h5>
-              <p>In the "Device Key Reset" section, submit a reset request explaining why you need to switch devices.</p>
+              <h5>{{ $t('requestDeviceKeyReset') }}</h5>
+              <p>{{ $t('requestDeviceKeyResetDesc') }}</p>
             </div>
           </div>
           <div class="step-item">
             <div class="step-number">3</div>
             <div class="step-content">
-              <h5>Wait for Admin Approval</h5>
-              <p>An administrator will review your request and approve it if appropriate.</p>
+              <h5>{{ $t('waitForAdminApproval') }}</h5>
+              <p>{{ $t('waitForAdminApprovalDesc') }}</p>
             </div>
           </div>
           <div class="step-item">
             <div class="step-number">4</div>
             <div class="step-content">
-              <h5>Login on New Device</h5>
-              <p>Once approved, you can login on this device. Your old device will be automatically deactivated.</p>
+              <h5>{{ $t('loginOnNewDevice') }}</h5>
+              <p>{{ $t('loginOnNewDeviceDesc') }}</p>
             </div>
           </div>
         </div>
@@ -74,23 +74,23 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Need Help?
+            {{ $t('needHelpQuestion') }}
           </h4>
           <p class="support-text">
-            If you don't have access to your registered device or need immediate assistance, please contact support.
+            {{ $t('needHelpDesc') }}
           </p>
           <div class="support-contact">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M3 8L7.89 12.26C8.22 12.52 8.78 12.52 9.11 12.26L21 8M5 19H19C20.1 19 21 18.1 21 17V7C21 5.9 20.1 5 19 5H5C3.9 5 3 5.9 3 7V17C3 18.1 3.9 19 5 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <a href="mailto:support@pre-group.com" class="support-link">support@pre-group.com</a>
+            <a href="mailto:support@pre-group.com" class="support-link">{{ $t('supportEmail') }}</a>
           </div>
         </div>
 
         <!-- Action Buttons -->
         <div class="action-buttons">
           <button @click="handleClose" class="action-btn primary">
-            Got It
+            {{ $t('gotIt') }}
           </button>
         </div>
       </div>

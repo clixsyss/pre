@@ -12,7 +12,7 @@
               <div class="dot"></div>
               <div class="dot"></div>
             </div>
-            <span>Loading projects...</span>
+            <span>{{ $t('loadingProjects') }}</span>
           </div>
           
           <!-- Restoring Project State -->
@@ -22,11 +22,11 @@
               <div class="dot"></div>
               <div class="dot"></div>
             </div>
-            <span>Restoring project...</span>
+            <span>{{ $t('restoringProject') }}</span>
           </div>
           
           <!-- Current Project Display -->
-          <button v-else-if="currentProject" @click="showProjectSwitcher = true" class="current-project" title="Switch Project">
+          <button v-else-if="currentProject" @click="showProjectSwitcher = true" class="current-project" :title="$t('switchProject')">
             <span class="project-name">{{ currentProject.name }}</span>
             <svg class="project-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
@@ -45,7 +45,7 @@
               </svg>
             </div>
             <!-- Always-visible subtle label -->
-            <span class="quick-actions-label">Quick Actions</span>
+            <span class="quick-actions-label">{{ $t('quickActions') }}</span>
           </button>
           
           <!-- Enhanced first-time hint with pointer -->
@@ -55,7 +55,7 @@
                 <svg class="hint-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor"/>
                 </svg>
-                <span>Tap here for quick navigation</span>
+                <span>{{ $t('tapHereQuickNav') }}</span>
               </div>
             </div>
           </transition>
@@ -64,7 +64,7 @@
         <!-- Gate Access Section (Right) -->
         <div class="header-right">
           <!-- Notification Bell -->
-          <button @click="openNotificationCenter" class="notification-bell-btn" title="Notifications">
+          <button @click="openNotificationCenter" class="notification-bell-btn" :title="$t('notifications')">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -72,7 +72,7 @@
             <span v-if="notificationUnreadCount > 0" class="notification-badge">{{ notificationUnreadCount }}</span>
           </button>
           
-          <router-link to="/access" class="gate-access-btn" title="Gate Access">
+          <router-link to="/access" class="gate-access-btn" :title="$t('gateAccess')">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <!-- QR Code outer border -->
               <rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="1.5" fill="none"/>
@@ -118,7 +118,7 @@
               <rect x="14" y="16" width="1" height="1" fill="currentColor"/>
               <rect x="18" y="16" width="1" height="1" fill="currentColor"/>
             </svg>
-            <span class="gate-access-text">Access</span>
+            <span class="gate-access-text">{{ $t('access') }}</span>
           </router-link>
         </div>
       </div>
@@ -128,7 +128,7 @@
     <div v-if="showProjectSwitcher" class="modal-overlay" @click="showProjectSwitcher = false">
       <div class="modal-content project-switcher-modal" @click.stop>
         <div class="modal-header">
-          <h3>Switch Project</h3>
+          <h3>{{ $t('switchProject') }}</h3>
           <button @click="showProjectSwitcher = false" class="close-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -591,7 +591,7 @@ const closeViolationNotification = () => {
 }
 
 const viewViolations = () => {
-  router.push('/profile')
+  router.push('/violations')
 }
 
 // Suspension check methods
@@ -1017,6 +1017,20 @@ onUnmounted(() => {
   gap: 16px;
 }
 
+/* RTL Support for Header */
+[dir="rtl"] .header-left {
+  justify-content: flex-end;
+}
+
+[dir="rtl"] .header-right {
+  justify-content: flex-start;
+}
+
+[dir="rtl"] .header-content {
+  grid-template-columns: 1fr auto 1fr;
+  direction: rtl;
+}
+
 /* Logo Button Styles */
 .logo-button {
   background: transparent;
@@ -1172,6 +1186,11 @@ onUnmounted(() => {
   animation: iconPulse 1.5s ease-in-out infinite;
 }
 
+/* RTL Support for Logo Hint */
+[dir="rtl"] .hint-content {
+  flex-direction: row-reverse;
+}
+
 @keyframes iconPulse {
   0%, 100% {
     transform: scale(1);
@@ -1285,6 +1304,12 @@ onUnmounted(() => {
   animation: badge-pulse 2s ease-in-out infinite;
 }
 
+/* RTL Support for Notification Badge */
+[dir="rtl"] .notification-badge {
+  right: auto;
+  left: -4px;
+}
+
 @keyframes badge-pulse {
   0%, 100% {
     transform: scale(1);
@@ -1333,6 +1358,11 @@ onUnmounted(() => {
 
 .gate-access-text {
   white-space: nowrap;
+}
+
+/* RTL Support for Gate Access Button */
+[dir="rtl"] .gate-access-btn {
+  flex-direction: row-reverse;
 }
 
 /* Loading State */
@@ -1430,6 +1460,15 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+/* RTL Support for Current Project Button */
+[dir="rtl"] .current-project {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .project-arrow {
+  transform: rotate(180deg);
+}
+
 .current-project:active .project-arrow {
   color: rgba(246, 246, 246, 0.8);
 }
@@ -1490,6 +1529,11 @@ onUnmounted(() => {
   /* iOS Safari fix */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
+}
+
+/* RTL Support for Bottom Navigation */
+[dir="rtl"] .bottom-navigation {
+  flex-direction: row-reverse;
 }
 
 .bottom-navigation.hidden {
@@ -1695,6 +1739,12 @@ body.hide-bottom-nav .bottom-navigation {
   border-color: rgba(175, 30, 35, 0.4);
 }
 
+/* RTL Support for Modal Header */
+[dir="rtl"] .modal-header {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
 .modal-body {
   padding: 16px 24px;
   max-height: 400px;
@@ -1763,6 +1813,19 @@ body.hide-bottom-nav .bottom-navigation {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* RTL Support for Project Options */
+[dir="rtl"] .project-option {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .project-info {
+  text-align: right;
+}
+
+[dir="rtl"] .project-actions {
+  flex-direction: row-reverse;
 }
 
 .current-badge {
@@ -2447,6 +2510,15 @@ body.hide-bottom-nav .bottom-navigation {
 .quick-menu-item.active .quick-menu-label {
   color: #AF1E23;
   font-weight: 700;
+}
+
+/* RTL Support for Quick Menu */
+[dir="rtl"] .quick-menu-grid {
+  direction: rtl;
+}
+
+[dir="rtl"] .quick-menu-item {
+  text-align: right;
 }
 
 /* Scrollbar styling */
