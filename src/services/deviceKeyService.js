@@ -242,24 +242,44 @@ class DeviceKeyService {
         return !requests.empty
       }
       
-      // Check all projects for approved requests
-      const projectsSnapshot = await firestoreService.getDocs('projects')
+      // Get user's projects first to avoid checking all projects (causes permission errors)
+      console.log('🔍 Getting user projects to check for approved reset requests...')
+      const userDoc = await firestoreService.getDoc(`users/${userId}`)
       
-      for (const projectDoc of projectsSnapshot.docs) {
-        const collectionPath = `projects/${projectDoc.id}/deviceKeyResetRequests`
+      if (!userDoc.exists()) {
+        console.log('❌ User document not found')
+        return false
+      }
+      
+      const userData = userDoc.data()
+      const userProjects = userData?.projects || []
+      
+      if (userProjects.length === 0) {
+        console.log('ℹ️ User has no projects, skipping reset request check')
+        return false
+      }
+      
+      console.log(`🔍 Checking ${userProjects.length} user projects for approved reset requests`)
+      
+      // Only check the user's actual projects
+      for (const project of userProjects) {
+        const projectId = project.projectId
+        const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
         try {
           const requests = await firestoreService.getDocs(collectionPath, [
             { field: 'userId', operator: '==', value: userId },
             { field: 'status', operator: '==', value: 'approved' }
           ])
           if (!requests.empty) {
+            console.log(`✅ Found approved reset request in project: ${projectId}`)
             return true
           }
         } catch (err) {
-          console.warn(`Error checking requests in project ${projectDoc.id}:`, err)
+          console.warn(`⚠️ Error checking requests in project ${projectId}:`, err.message || err)
         }
       }
       
+      console.log('ℹ️ No approved reset requests found in user projects')
       return false
     } catch (error) {
       console.error('Error checking reset requests:', error)
@@ -285,11 +305,28 @@ class DeviceKeyService {
           await firestoreService.deleteDoc(`${collectionPath}/${doc.id}`)
         }
       } else {
-        // Clear from all projects
-        const projectsSnapshot = await firestoreService.getDocs('projects')
+        // Get user's projects first to avoid checking all projects
+        const userDoc = await firestoreService.getDoc(`users/${userId}`)
         
-        for (const projectDoc of projectsSnapshot.docs) {
-          const collectionPath = `projects/${projectDoc.id}/deviceKeyResetRequests`
+        if (!userDoc.exists()) {
+          console.log('❌ User document not found, cannot clear reset requests')
+          return
+        }
+        
+        const userData = userDoc.data()
+        const userProjects = userData?.projects || []
+        
+        if (userProjects.length === 0) {
+          console.log('ℹ️ User has no projects, nothing to clear')
+          return
+        }
+        
+        console.log(`🔍 Clearing reset requests from ${userProjects.length} user projects`)
+        
+        // Only clear from the user's actual projects
+        for (const project of userProjects) {
+          const projectId = project.projectId
+          const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
           try {
             const requests = await firestoreService.getDocs(collectionPath, [
               { field: 'userId', operator: '==', value: userId },
@@ -300,7 +337,7 @@ class DeviceKeyService {
               await firestoreService.deleteDoc(`${collectionPath}/${doc.id}`)
             }
           } catch (err) {
-            console.warn(`Error clearing requests in project ${projectDoc.id}:`, err)
+            console.warn(`⚠️ Error clearing requests in project ${projectId}:`, err.message || err)
           }
         }
       }
