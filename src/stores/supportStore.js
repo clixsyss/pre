@@ -221,31 +221,57 @@ export const useSupportStore = defineStore('support', () => {
 
     return supportService.listenToSupportChat(projectId, chatId, (chat) => {
       if (chat) {
+        console.log('⚡ SupportStore: Real-time update received', {
+          chatId: chat.id,
+          hasMessages: !!chat.messages,
+          messageCount: chat.messages?.length || 0
+        });
+
         // Preserve temporary messages that haven't been confirmed yet
         const currentMessages = currentSupportChat.value?.messages || [];
         const tempMessages = currentMessages.filter(msg => msg.isTemporary);
         
-        // Update with real-time data
-        currentSupportChat.value = chat;
+        console.log('⚡ SupportStore: Current temp messages:', tempMessages.length);
+        
+        // Ensure messages array exists
+        const incomingMessages = chat.messages || [];
         
         // Remove temporary messages that now have real versions
-        if (tempMessages.length > 0 && chat.messages) {
-          const validTempMessages = tempMessages.filter(tempMsg => {
-            // Keep temp message only if no real message with same text exists
-            return !chat.messages.some(realMsg => 
-              !realMsg.isTemporary && 
-              realMsg.text === tempMsg.text &&
-              realMsg.senderType === 'user'
-            );
+        const validTempMessages = tempMessages.filter(tempMsg => {
+          // Keep temp message only if no real message with same text and timestamp close enough exists
+          const hasRealVersion = incomingMessages.some(realMsg => {
+            if (realMsg.isTemporary) return false;
+            
+            // Check if text matches
+            const textMatches = realMsg.text === tempMsg.text;
+            
+            // Check if it's a user message
+            const isUserMessage = realMsg.senderType === 'user';
+            
+            // Check if timestamps are close (within 5 seconds)
+            const tempTime = new Date(tempMsg.timestamp).getTime();
+            const realTime = realMsg.timestamp?.toDate ? realMsg.timestamp.toDate().getTime() : new Date(realMsg.timestamp).getTime();
+            const timeDiff = Math.abs(tempTime - realTime);
+            const timeIsClose = timeDiff < 5000; // 5 seconds
+            
+            return textMatches && isUserMessage && timeIsClose;
           });
           
-          // Add back remaining temp messages
-          if (validTempMessages.length > 0) {
-            currentSupportChat.value.messages = [...chat.messages, ...validTempMessages];
-          }
-        }
+          return !hasRealVersion;
+        });
         
-        console.log('⚡ SupportStore: Real-time chat update with', currentSupportChat.value.messages?.length, 'messages');
+        console.log('⚡ SupportStore: Valid temp messages to keep:', validTempMessages.length);
+        
+        // Merge real messages with remaining temp messages
+        const allMessages = [...incomingMessages, ...validTempMessages];
+        
+        // Update chat with merged messages
+        currentSupportChat.value = {
+          ...chat,
+          messages: allMessages
+        };
+        
+        console.log('⚡ SupportStore: Final message count:', currentSupportChat.value.messages?.length);
       } else {
         currentSupportChat.value = chat;
       }

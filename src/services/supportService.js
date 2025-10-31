@@ -160,7 +160,7 @@ export const addMessageToSupportChat = async (projectId, chatId, message) => {
         throw new Error('Support chat not found');
       }
 
-      const chatData = chatResult.data
+      const chatData = chatResult.data()
       const now = new Date()
       const newMessage = {
         id: Date.now().toString(),
@@ -238,7 +238,7 @@ export const listenToSupportChat = (projectId, chatId, callback) => {
     const docPath = `projects/${projectId}/supportChats/${chatId}`
     return firestoreService.onSnapshot(docPath, (doc) => {
       if (doc && doc.exists) {
-        callback({ id: doc.id, ...doc.data });
+        callback({ id: doc.id, ...doc.data() });
       } else {
         callback(null);
       }
@@ -259,7 +259,7 @@ export const listenToUserSupportChats = (projectId, userId, callback) => {
     return firestoreService.onSnapshot(collectionPath, (querySnapshot) => {
       const chats = querySnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data
+        ...doc.data()
       }));
       callback(chats);
     }, { filters, orderBy });
