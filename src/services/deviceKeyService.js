@@ -147,14 +147,25 @@ class DeviceKeyService {
         }
       }
 
-      // If no local key but there is a stored key, device doesn't match
+      // If no local key but there is a stored key, auto-heal by storing the server key locally
       if (!localKey) {
-        console.log('❌ No local key but user has registered device')
-        return {
-          valid: false,
-          isFirstLogin: false,
-          requiresRegistration: false,
-          message: 'This device is not registered. Please use your registered device or request a device key reset.'
+        console.log('🛠️ No local key but user has registered device - auto-recovering local key')
+        try {
+          this.saveLocalDeviceKey(storedKey)
+          return {
+            valid: true,
+            isFirstLogin: false,
+            requiresRegistration: false,
+            message: 'Recovered device key from server and validated'
+          }
+        } catch (e) {
+          console.error('❌ Failed to save recovered device key locally:', e)
+          return {
+            valid: false,
+            isFirstLogin: false,
+            requiresRegistration: false,
+            message: 'Unable to store device key locally. Please try again.'
+          }
         }
       }
 

@@ -953,7 +953,7 @@ onUnmounted(() => {
 
 <style scoped>
 .main-layout {
-  min-height: 100vh;
+  min-height: 100vh; 
   display: flex;
   flex-direction: column;
   background-color: #F6F6F6;
