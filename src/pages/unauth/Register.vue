@@ -1,17 +1,25 @@
 <template>
   <div class="register-page">
     <!-- Pending Approval Modal -->
-    <PendingApprovalModal
-      v-if="showPendingModal"
-      @close="router.push('/signin')"
-    />
+    <PendingApprovalModal v-if="showPendingModal" @close="router.push('/signin')" />
 
     <!-- Header -->
     <div class="header">
       <button @click="goToOnboarding" class="back-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 12H5M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round"
-            stroke-linejoin="round" />
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M19 12H5M12 19L5 12L12 5"
+            stroke="white"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
       </button>
       <h1 class="page-title">Registration</h1>
@@ -28,43 +36,114 @@
       <div class="progress-line"></div>
 
       <!-- Personal Step -->
-      <div class="progress-step"
-        :class="{ active: currentStep === 'personal' && !isPersonalDetailsCompleted, completed: currentStep === 'property' || currentStep === 'details' || isPersonalDetailsCompleted }">
+      <div
+        class="progress-step"
+        :class="{
+          active: currentStep === 'personal' && !isPersonalDetailsCompleted,
+          completed:
+            currentStep === 'property' || currentStep === 'details' || isPersonalDetailsCompleted,
+        }"
+      >
         <div class="step-icon">
-          <svg v-if="currentStep === 'personal' && !isPersonalDetailsCompleted" width="24" height="24"
-            viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg
+            v-if="currentStep === 'personal' && !isPersonalDetailsCompleted"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <path
               d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
-              stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            <circle cx="12" cy="7" r="4" stroke="white" stroke-width="2" stroke-linecap="round"
-              stroke-linejoin="round" />
+              stroke="white"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <circle
+              cx="12"
+              cy="7"
+              r="4"
+              stroke="white"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
-          <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 6L9 17L4 12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
-              stroke-linejoin="round" />
+          <svg
+            v-else
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M20 6L9 17L4 12"
+              stroke="#AF1E23"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </div>
         <span class="step-label">Personal</span>
       </div>
 
       <!-- Property Step -->
-      <div class="progress-step"
-        :class="{ active: currentStep === 'property' || isPersonalDetailsCompleted, completed: currentStep === 'details' }">
+      <div
+        class="progress-step"
+        :class="{
+          active: currentStep === 'property' || isPersonalDetailsCompleted,
+          completed: currentStep === 'details',
+        }"
+      >
         <div class="step-icon">
-          <svg v-if="currentStep === 'property' || isPersonalDetailsCompleted" width="24" height="24"
-            viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg
+            v-if="currentStep === 'property' || isPersonalDetailsCompleted"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <path
               d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
-              stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-              stroke-linejoin="round" />
+              stroke="white"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <polyline
+              points="9,22 9,12 15,12 15,22"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
-          <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg
+            v-else
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <path
               d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-              stroke-linejoin="round" />
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <polyline
+              points="9,22 9,12 15,12 15,22"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </div>
         <span class="step-label">Property</span>
@@ -75,19 +154,31 @@
     <div class="step-content">
       <!-- Personal Step -->
       <div v-if="currentStep === 'personal'" class="step-panel">
-
         <form @submit.prevent="handlePersonalSubmit" class="form">
           <div class="form-group">
             <label for="email" class="form-label">E-mail</label>
-            <input id="email" v-model="personalForm.email" type="email" class="form-input"
-              placeholder="Example@gmail.com" required />
+            <input
+              id="email"
+              v-model="personalForm.email"
+              type="email"
+              class="form-input"
+              placeholder="Example@gmail.com"
+              required
+            />
           </div>
 
           <div class="form-group">
             <label for="password" class="form-label">Password</label>
             <div class="password-input-wrapper">
-              <input id="password" v-model="personalForm.password" :type="showPassword ? 'text' : 'password'" class="form-input"
-                placeholder="Create a strong password" required minlength="8" />
+              <input
+                id="password"
+                v-model="personalForm.password"
+                :type="showPassword ? 'text' : 'password'"
+                class="form-input"
+                placeholder="Create a strong password"
+                required
+                minlength="8"
+              />
               <button type="button" @click="togglePassword" class="password-toggle">
                 <svg
                   v-if="showPassword"
@@ -154,8 +245,14 @@
           <div class="form-group">
             <label for="confirmPassword" class="form-label">Confirm Password</label>
             <div class="password-input-wrapper">
-              <input id="confirmPassword" v-model="personalForm.confirmPassword" :type="showConfirmPassword ? 'text' : 'password'" class="form-input"
-                placeholder="Confirm your password" required />
+              <input
+                id="confirmPassword"
+                v-model="personalForm.confirmPassword"
+                :type="showConfirmPassword ? 'text' : 'password'"
+                class="form-input"
+                placeholder="Confirm your password"
+                required
+              />
               <button type="button" @click="toggleConfirmPassword" class="password-toggle">
                 <svg
                   v-if="showConfirmPassword"
@@ -222,20 +319,14 @@
           </button>
         </form>
 
-
-
         <!-- Navigation Options -->
         <div class="step-navigation">
           <div class="nav-divider">
             <span>or</span>
           </div>
           <div class="nav-options">
-            <a @click="goToSignIn" class="nav-link">
-              Already have an account? Sign In
-            </a>
-            <a @click="goToOnboarding" class="nav-link">
-              Back to Onboarding
-            </a>
+            <a @click="goToSignIn" class="nav-link"> Already have an account? Sign In </a>
+            <a @click="goToOnboarding" class="nav-link"> Back to Onboarding </a>
           </div>
         </div>
 
@@ -276,16 +367,29 @@
         <form @submit.prevent="handlePropertySubmit" class="form">
           <div class="step-header">
             <h3 class="step-title">Property Selection</h3>
-            <p class="step-description">Select your primary property and optionally add additional properties.</p>
+            <p class="step-description">
+              Select your primary property and optionally add additional properties.
+            </p>
           </div>
 
           <!-- Primary Property Section -->
           <div v-if="selectedProjects.length === 0" class="property-section primary-property">
             <div class="section-header">
               <div class="section-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" />
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 2L2 7L12 12L22 7L12 2Z"
+                    stroke="#AF1E23"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
               </div>
               <h4 class="section-title">Primary Property</h4>
@@ -295,10 +399,19 @@
             <div class="form-group">
               <label for="project" class="form-label">Project *</label>
               <div class="select-wrapper">
-                <select id="project" v-model="propertyForm.selectedProject" class="form-input custom-select" required
-                  @change="onProjectChange">
+                <select
+                  id="project"
+                  v-model="propertyForm.selectedProject"
+                  class="form-input custom-select"
+                  required
+                  @change="onProjectChange"
+                >
                   <option value="" disabled>Select Project</option>
-                  <option v-for="project in availableProjects" :key="project.id" :value="project.id">
+                  <option
+                    v-for="project in availableProjects"
+                    :key="project.id"
+                    :value="project.id"
+                  >
                     {{ project.name }} - {{ project.type }} ({{ project.location }})
                   </option>
                 </select>
@@ -323,26 +436,70 @@
             <div class="form-group">
               <label class="form-label">Role *</label>
               <div class="role-buttons">
-                <button type="button" @click="propertyForm.role = 'owner'"
-                  :class="['role-btn', { active: propertyForm.role === 'owner' }]">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <button
+                  type="button"
+                  @click="propertyForm.role = 'owner'"
+                  :class="['role-btn', { active: propertyForm.role === 'owner' }]"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
                     <path
                       d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
-                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                      stroke-linejoin="round" />
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <circle
+                      cx="12"
+                      cy="7"
+                      r="4"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                   Owner
                 </button>
-                <button type="button" @click="propertyForm.role = 'family'"
-                  :class="['role-btn', { active: propertyForm.role === 'family' }]">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                      stroke-linejoin="round" />
-                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                      stroke-linejoin="round" />
-                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                      stroke-linejoin="round" />
+                <button
+                  type="button"
+                  @click="propertyForm.role = 'family'"
+                  :class="['role-btn', { active: propertyForm.role === 'family' }]"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12 2L2 7L12 12L22 7L12 2Z"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M2 17L12 22L22 17"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M2 12L12 17L22 12"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                   Family Member
                 </button>
@@ -351,10 +508,26 @@
 
             <!-- Add Project Button -->
             <div class="form-group">
-              <button type="button" @click="addProjectToSelection" class="add-project-btn" :disabled="!canAddProject">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" />
+              <button
+                type="button"
+                @click="addProjectToSelection"
+                class="add-project-btn"
+                :disabled="!canAddProject"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 5V19M5 12H19"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
                 Add This Property
               </button>
@@ -365,14 +538,26 @@
           <div v-if="selectedProjects.length > 0" class="property-section additional-properties">
             <div class="section-header">
               <div class="section-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
                   <path
                     d="M19 11H13V5C13 4.44772 12.5523 4 12 4C11.4477 4 11 4.44772 11 5V11H5C4.44772 11 4 11.4477 4 12C4 12.5523 4.44772 13 5 13H11V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V13H19C19.5523 13 20 12.5523 20 12C20 11.4477 19.5523 11 19 11Z"
-                    stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    stroke="#666"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
               </div>
               <h4 class="section-title">Additional Properties (Optional)</h4>
-              <p class="section-subtitle">You can add more properties if you own or have access to multiple units</p>
+              <p class="section-subtitle">
+                You can add more properties if you own or have access to multiple units
+              </p>
             </div>
 
             <div class="projects-list">
@@ -381,29 +566,72 @@
                   <div class="project-name">{{ getProjectName(project.projectId) }}</div>
                   <div class="project-details">
                     <span class="detail-item">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
                         <path
                           d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
-                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
                       </svg>
                       {{ project.unit }}
                     </span>
                     <span class="detail-item">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
                         <path
                           d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
-                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                          stroke-linejoin="round" />
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <circle
+                          cx="12"
+                          cy="7"
+                          r="4"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
                       </svg>
                       {{ project.role }}
                     </span>
                   </div>
                 </div>
-                <button type="button" @click="removeProject(index)" class="remove-project-btn" title="Remove property">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                      stroke-linejoin="round" />
+                <button
+                  type="button"
+                  @click="removeProject(index)"
+                  class="remove-project-btn"
+                  title="Remove property"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M18 6L6 18M6 6L18 18"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                 </button>
               </div>
@@ -411,11 +639,26 @@
 
             <!-- Add Another Property Button -->
             <div class="add-another-section">
-              <button type="button" @click="showAddAnotherForm = true" class="add-another-btn"
-                v-if="!showAddAnotherForm">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" />
+              <button
+                type="button"
+                @click="showAddAnotherForm = true"
+                class="add-another-btn"
+                v-if="!showAddAnotherForm"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 5V19M5 12H19"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
                 Add Another Property
               </button>
@@ -425,10 +668,18 @@
                 <div class="form-group">
                   <label for="additional-project" class="form-label">Project</label>
                   <div class="select-wrapper">
-                    <select id="additional-project" v-model="additionalPropertyForm.selectedProject"
-                      class="form-input custom-select" @change="onAdditionalProjectChange">
+                    <select
+                      id="additional-project"
+                      v-model="additionalPropertyForm.selectedProject"
+                      class="form-input custom-select"
+                      @change="onAdditionalProjectChange"
+                    >
                       <option value="" disabled>Select Project</option>
-                      <option v-for="project in availableProjects" :key="project.id" :value="project.id">
+                      <option
+                        v-for="project in availableProjects"
+                        :key="project.id"
+                        :value="project.id"
+                      >
                         {{ project.name }} - {{ project.type }} ({{ project.location }})
                       </option>
                     </select>
@@ -451,26 +702,70 @@
                 <div class="form-group">
                   <label class="form-label">Role</label>
                   <div class="role-buttons">
-                    <button type="button" @click="additionalPropertyForm.role = 'owner'"
-                      :class="['role-btn', { active: additionalPropertyForm.role === 'owner' }]">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <button
+                      type="button"
+                      @click="additionalPropertyForm.role = 'owner'"
+                      :class="['role-btn', { active: additionalPropertyForm.role === 'owner' }]"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
                         <path
                           d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
-                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                          stroke-linejoin="round" />
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <circle
+                          cx="12"
+                          cy="7"
+                          r="4"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
                       </svg>
                       Owner
                     </button>
-                    <button type="button" @click="additionalPropertyForm.role = 'family'"
-                      :class="['role-btn', { active: additionalPropertyForm.role === 'family' }]">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2"
-                          stroke-linecap="round" stroke-linejoin="round" />
-                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                          stroke-linejoin="round" />
-                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                          stroke-linejoin="round" />
+                    <button
+                      type="button"
+                      @click="additionalPropertyForm.role = 'family'"
+                      :class="['role-btn', { active: additionalPropertyForm.role === 'family' }]"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M12 2L2 7L12 12L22 7L12 2Z"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M2 17L12 22L22 17"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M2 12L12 17L22 12"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
                       </svg>
                       Family Member
                     </button>
@@ -478,11 +773,26 @@
                 </div>
 
                 <div class="additional-form-actions">
-                  <button type="button" @click="addAdditionalProperty" class="add-property-btn"
-                    :disabled="!canAddAdditionalProperty">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round" />
+                  <button
+                    type="button"
+                    @click="addAdditionalProperty"
+                    class="add-property-btn"
+                    :disabled="!canAddAdditionalProperty"
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M12 5V19M5 12H19"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
                     </svg>
                     Add Property
                   </button>
@@ -495,9 +805,7 @@
           </div>
 
           <div class="form-actions">
-            <button type="button" @click="goToPreviousStep" class="back-action-btn">
-              Back
-            </button>
+            <button type="button" @click="goToPreviousStep" class="back-action-btn">Back</button>
             <button type="submit" class="verify-btn" :disabled="loading || !canProceedToNext">
               <span v-if="loading">Saving...</span>
               <span v-else>Complete Registration</span>
@@ -516,14 +824,14 @@ import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '../../boot/firebase'
-import firebaseRestAuth from '../../services/firebaseRestAuth'
+import { db, auth } from '../../boot/firebase'
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
 import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
 import SearchableUnitDropdown from '../../components/SearchableUnitDropdown.vue'
 
 // Component name for ESLint
 defineOptions({
-  name: 'RegisterPage'
+  name: 'RegisterPage',
 })
 
 const router = useRouter()
@@ -539,19 +847,19 @@ const showPendingModal = ref(false)
 useFormKeyboard({
   scrollToInput: true,
   hideOnBackdropClick: true,
-  scrollOffset: 150
+  scrollOffset: 150,
 })
 
 const personalForm = reactive({
   email: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
 })
 
 const propertyForm = reactive({
   selectedProject: '', // Stores the ID of the selected project
   unit: '',
-  role: ''
+  role: '',
 })
 
 const availableProjects = ref([])
@@ -562,28 +870,28 @@ const projectUsers = ref([]) // For determining occupied units
 const additionalPropertyForm = reactive({
   selectedProject: '',
   unit: '',
-  role: ''
+  role: '',
 })
 
 // Function to fetch available projects from Firestore
 const fetchAvailableProjects = async () => {
   try {
     console.log('[Register] Fetching projects...')
-    
+
     const { Capacitor } = await import('@capacitor/core')
-    
+
     if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
       // Use Capacitor Firebase plugin for iOS
       console.log('[Register] Using Capacitor Firestore for iOS...')
       const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
-      
+
       const result = await FirebaseFirestore.getCollection({
-        reference: 'projects'
+        reference: 'projects',
       })
-      
-      availableProjects.value = result.documents.map(doc => ({
+
+      availableProjects.value = result.documents.map((doc) => ({
         id: doc.id,
-        ...doc.data
+        ...doc.data,
       }))
       console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects via Capacitor')
     } else {
@@ -591,9 +899,9 @@ const fetchAvailableProjects = async () => {
       console.log('[Register] Using Web SDK Firestore...')
       const projectsRef = collection(db, 'projects')
       const snapshot = await getDocs(projectsRef)
-      availableProjects.value = snapshot.docs.map(doc => ({
+      availableProjects.value = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }))
       console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects via Web SDK')
     }
@@ -613,47 +921,55 @@ const fetchProjectUsers = async (projectId) => {
 
   try {
     console.log('[Register] Fetching users for project:', projectId)
-    
+
     const { Capacitor } = await import('@capacitor/core')
-    
+
     if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
       // Use Capacitor Firebase plugin for iOS
       const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
-      
+
       const result = await FirebaseFirestore.getCollection({
-        reference: 'users'
+        reference: 'users',
       })
-      
+
       projectUsers.value = result.documents
-        .map(doc => ({
+        .map((doc) => ({
           id: doc.id,
-          ...doc.data
+          ...doc.data,
         }))
-        .filter(user => {
+        .filter((user) => {
           if (user.projects && Array.isArray(user.projects)) {
-            return user.projects.some(p => p.projectId === projectId)
+            return user.projects.some((p) => p.projectId === projectId)
           }
           return false
         })
-      
-      console.log('[Register] ✅ Fetched', projectUsers.value.length, 'users for project via Capacitor')
+
+      console.log(
+        '[Register] ✅ Fetched',
+        projectUsers.value.length,
+        'users for project via Capacitor',
+      )
     } else {
       // Use Web SDK for web/Android
       const usersRef = collection(db, 'users')
       const snapshot = await getDocs(usersRef)
       projectUsers.value = snapshot.docs
-        .map(doc => ({
+        .map((doc) => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         }))
-        .filter(user => {
+        .filter((user) => {
           if (user.projects && Array.isArray(user.projects)) {
-            return user.projects.some(p => p.projectId === projectId)
+            return user.projects.some((p) => p.projectId === projectId)
           }
           return false
         })
-      
-      console.log('[Register] ✅ Fetched', projectUsers.value.length, 'users for project via Web SDK')
+
+      console.log(
+        '[Register] ✅ Fetched',
+        projectUsers.value.length,
+        'users for project via Web SDK',
+      )
     }
   } catch (error) {
     console.error('[Register] Error fetching project users:', error)
@@ -663,7 +979,7 @@ const fetchProjectUsers = async (projectId) => {
 
 // Function to get project name by ID
 const getProjectName = (projectId) => {
-  const project = availableProjects.value.find(p => p.id === projectId)
+  const project = availableProjects.value.find((p) => p.id === projectId)
   return project ? `${project.name} - ${project.type}` : 'N/A'
 }
 
@@ -673,7 +989,7 @@ const addProjectToSelection = () => {
     selectedProjects.value.push({
       projectId: propertyForm.selectedProject,
       unit: propertyForm.unit,
-      role: propertyForm.role
+      role: propertyForm.role,
     })
     propertyForm.selectedProject = ''
     propertyForm.unit = ''
@@ -695,7 +1011,7 @@ const onProjectChange = () => {
   // Clear unit input when project changes
   propertyForm.unit = ''
   propertyForm.role = ''
-  
+
   // Fetch users for the selected project to determine occupied units
   if (propertyForm.selectedProject) {
     fetchProjectUsers(propertyForm.selectedProject)
@@ -707,7 +1023,7 @@ const onAdditionalProjectChange = () => {
   // Clear unit input when project changes
   additionalPropertyForm.unit = ''
   additionalPropertyForm.role = ''
-  
+
   // Fetch users for the selected project to determine occupied units
   if (additionalPropertyForm.selectedProject) {
     fetchProjectUsers(additionalPropertyForm.selectedProject)
@@ -716,11 +1032,15 @@ const onAdditionalProjectChange = () => {
 
 // Function to add additional property
 const addAdditionalProperty = () => {
-  if (additionalPropertyForm.selectedProject && additionalPropertyForm.unit && additionalPropertyForm.role) {
+  if (
+    additionalPropertyForm.selectedProject &&
+    additionalPropertyForm.unit &&
+    additionalPropertyForm.role
+  ) {
     selectedProjects.value.push({
       projectId: additionalPropertyForm.selectedProject,
       unit: additionalPropertyForm.unit,
-      role: additionalPropertyForm.role
+      role: additionalPropertyForm.role,
     })
 
     // Reset form
@@ -745,7 +1065,11 @@ const cancelAdditionalProperty = () => {
 
 // Computed property to check if additional property can be added
 const canAddAdditionalProperty = computed(() => {
-  return additionalPropertyForm.selectedProject && additionalPropertyForm.unit && additionalPropertyForm.role
+  return (
+    additionalPropertyForm.selectedProject &&
+    additionalPropertyForm.unit &&
+    additionalPropertyForm.role
+  )
 })
 
 // Firestore writes are now handled by iosRegistrationService for better iOS compatibility
@@ -807,17 +1131,24 @@ const canProceedToNext = computed(() => {
 // Check if personal details are completed
 const isPersonalDetailsCompleted = computed(() => {
   const userDetails = registrationStore.userDetails
-  return userDetails.firstName && userDetails.lastName && userDetails.mobile &&
-    userDetails.dateOfBirth && userDetails.nationalId
+  return (
+    userDetails.firstName &&
+    userDetails.lastName &&
+    userDetails.mobile &&
+    userDetails.dateOfBirth &&
+    userDetails.nationalId
+  )
 })
 
 const canProceed = computed(() => {
-  return personalForm.email &&
+  return (
+    personalForm.email &&
     personalForm.password &&
     personalForm.confirmPassword &&
     personalForm.password === personalForm.confirmPassword &&
     personalForm.password.length >= 8 &&
     !loading.value
+  )
 })
 
 const canAddProject = computed(() => {
@@ -854,16 +1185,44 @@ const handlePersonalSubmit = async () => {
     registrationStore.setPersonalData({ email: personalForm.email })
     registrationStore.setUserDetails({ password: personalForm.password })
 
-    console.log('[Register] STEP 2: Creating account via REST API...')
-    const authResult = await firebaseRestAuth.registerOrSignIn(personalForm.email, personalForm.password)
-    console.log('[Register] ✅ Auth successful:', authResult.uid)
+    console.log('[Register] STEP 2: Creating account...')
+
+    // Use Firebase Web SDK for better Android compatibility
+    let userCredential
+    try {
+      // Try to create user
+      console.log('[Register] Attempting to create user...')
+      userCredential = await createUserWithEmailAndPassword(
+        auth,
+        personalForm.email,
+        personalForm.password,
+      )
+      console.log('[Register] ✅ User created:', userCredential.user.uid)
+    } catch (createError) {
+      // If user already exists, sign them in
+      if (createError.code === 'auth/email-already-in-use') {
+        console.log('[Register] User exists, signing in...')
+        userCredential = await signInWithEmailAndPassword(
+          auth,
+          personalForm.email,
+          personalForm.password,
+        )
+        console.log('[Register] ✅ Signed in:', userCredential.user.uid)
+      } else {
+        throw createError
+      }
+    }
+
+    // Get ID token
+    const idToken = await userCredential.user.getIdToken()
+    console.log('[Register] ✅ Auth successful:', userCredential.user.uid)
 
     console.log('[Register] STEP 3: Storing user ID and token')
-    registrationStore.setTempUserId(authResult.uid)
+    registrationStore.setTempUserId(userCredential.user.uid)
     registrationStore.setUserDetails({
       password: personalForm.password,
-      authToken: authResult.idToken,
-      refreshToken: authResult.refreshToken
+      authToken: idToken,
+      refreshToken: userCredential.user.refreshToken,
     })
 
     console.log('[Register] STEP 4: Clearing password fields')
@@ -880,7 +1239,7 @@ const handlePersonalSubmit = async () => {
     console.error('[Register] Error message:', error?.message)
     console.error('[Register] Error stack:', error?.stack)
     console.error('[Register] Error keys:', Object.keys(error || {}))
-    
+
     let errorMessage = 'Registration failed'
     if (error?.code === 'auth/invalid-email') {
       errorMessage = 'Invalid email address'
@@ -908,23 +1267,23 @@ const handlePropertySubmit = async () => {
 
   try {
     console.log('[Register] Property submit - selected projects:', selectedProjects.value)
-    
+
     // Store property data in registration store
     registrationStore.setPropertyData({
       compound: '',
       unit: '',
       role: '',
-      projects: selectedProjects.value
+      projects: selectedProjects.value,
     })
 
     // Save COMPLETE user data to Firestore
     if (registrationStore.tempUserId) {
       console.log('[Register] Saving complete registration to Firestore...')
       console.log('[Register] Projects to save:', selectedProjects.value)
-      
+
       const userDetails = registrationStore.userDetails
       const now = new Date().toISOString()
-      
+
       const completeUserData = {
         // Personal info
         email: registrationStore.personalData.email,
@@ -935,30 +1294,30 @@ const handlePropertySubmit = async () => {
         gender: userDetails.gender,
         nationalId: userDetails.nationalId,
         fullName: `${userDetails.firstName} ${userDetails.lastName}`,
-        
+
         // Documents
         documents: userDetails.documents || {},
-        
+
         // Projects (with proper structure)
         projects: selectedProjects.value,
         compound: '',
         unit: '',
         role: '',
-        
+
         // Registration status
         registrationStep: 'completed',
         registrationStatus: 'completed',
         isProfileComplete: true,
-        
+
         // Approval status (auto-approve for now)
         approvalStatus: 'pending',
         approvedBy: 'system',
         approvedAt: now,
-        
+
         // Auth and verification
         authUid: registrationStore.tempUserId,
         emailVerified: false,
-        
+
         // Suspension fields (initialize as not suspended)
         isSuspended: false,
         suspendedAt: null,
@@ -968,22 +1327,26 @@ const handlePropertySubmit = async () => {
         suspensionEndDate: null,
         unsuspendedAt: null,
         unsuspendedBy: null,
-        
+
         // Timestamps
         createdAt: now,
         updatedAt: now,
-        lastLoginAt: now
+        lastLoginAt: now,
       }
-      
+
       // Use Web SDK for all platforms - more reliable
       console.log('[Register] Using Web SDK Firestore to save user data...')
-      await setDoc(doc(db, 'users', registrationStore.tempUserId), {
-        ...completeUserData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      }, { merge: true })
+      await setDoc(
+        doc(db, 'users', registrationStore.tempUserId),
+        {
+          ...completeUserData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      )
       console.log('[Register] ✅ Complete data saved via Web SDK')
-      
+
       // Clear password for security after successful save
       console.log('[Register] Clearing stored password for security')
       registrationStore.setUserDetails({ password: '', authToken: '', refreshToken: '' })
@@ -1003,7 +1366,7 @@ const handlePropertySubmit = async () => {
 
     console.log('[Register] Showing success notification')
     notificationStore.showSuccess('Registration completed!')
-    
+
     console.log('[Register] ✅ Registration complete - showing pending approval modal')
     // Show pending approval modal since all new registrations are pending by default
     showPendingModal.value = true
@@ -1031,7 +1394,6 @@ const togglePassword = () => {
 const toggleConfirmPassword = () => {
   showConfirmPassword.value = !showConfirmPassword.value
 }
-
 </script>
 
 <style scoped>
@@ -1048,7 +1410,7 @@ const toggleConfirmPassword = () => {
   align-items: center;
   justify-content: space-between;
   padding: 20px;
-  background-color: #231F20;
+  background-color: #231f20;
   color: white;
   margin-bottom: 0;
 }
@@ -1085,7 +1447,7 @@ const toggleConfirmPassword = () => {
 }
 
 .signin-header-btn {
-  background-color: #AF1E23;
+  background-color: #af1e23;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -1098,7 +1460,7 @@ const toggleConfirmPassword = () => {
 
 .separator-line {
   height: 3px;
-  background-color: #AF1E23;
+  background-color: #af1e23;
   margin: 0;
   width: 100%;
   margin-bottom: 0;
@@ -1183,15 +1545,15 @@ const toggleConfirmPassword = () => {
 }
 
 .progress-step.active .step-icon {
-  background-color: #231F20;
-  border-color: #231F20;
+  background-color: #231f20;
+  border-color: #231f20;
   color: white;
   width: 48px;
   height: 48px;
 }
 
 .progress-step.active .step-label {
-  color: #231F20;
+  color: #231f20;
   font-weight: 600;
   font-size: 1rem;
   margin-top: 12px;
@@ -1200,13 +1562,13 @@ const toggleConfirmPassword = () => {
 .progress-step.completed .step-icon {
   background-color: #e1e5e9;
   border-color: #e1e5e9;
-  color: #AF1E23;
+  color: #af1e23;
   width: 48px;
   height: 48px;
 }
 
 .progress-step.completed .step-label {
-  color: #AF1E23;
+  color: #af1e23;
   font-weight: 600;
   font-size: 1rem;
   margin-top: 12px;
@@ -1249,7 +1611,7 @@ const toggleConfirmPassword = () => {
 }
 
 .progress-step.completed .step-icon svg {
-  stroke: #AF1E23;
+  stroke: #af1e23;
 }
 
 .progress-step:not(.active):not(.completed) .step-icon svg {
@@ -1314,8 +1676,8 @@ const toggleConfirmPassword = () => {
 }
 
 .google-btn {
-  border-color: #AF1E23;
-  color: #AF1E23;
+  border-color: #af1e23;
+  color: #af1e23;
 }
 
 .google-btn svg {
@@ -1409,7 +1771,7 @@ const toggleConfirmPassword = () => {
 
 .form-input:focus {
   outline: none;
-  border-color: #AF1E23;
+  border-color: #af1e23;
   box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
 }
 
@@ -1446,12 +1808,10 @@ select.form-input:disabled {
   padding: 0;
 }
 
-
-
 .proceed-btn,
 .verify-btn {
   width: 100%;
-  background-color: #AF1E23;
+  background-color: #af1e23;
   color: white;
   border: none;
   padding: 16px;
@@ -1492,7 +1852,7 @@ select.form-input:disabled {
 
 .add-project-btn {
   width: 100%;
-  background-color: #AF1E23;
+  background-color: #af1e23;
   color: white;
   border: none;
   padding: 16px;
@@ -1512,8 +1872,6 @@ select.form-input:disabled {
   cursor: not-allowed;
 }
 
-
-
 .remove-project-btn {
   background: none;
   border: none;
@@ -1524,10 +1882,8 @@ select.form-input:disabled {
 }
 
 .remove-project-btn svg {
-  stroke: #AF1E23;
+  stroke: #af1e23;
 }
-
-
 
 .step-navigation {
   margin-top: 30px;
@@ -1614,15 +1970,15 @@ select.form-input:disabled {
 }
 
 .primary-property {
-  border-left: 4px solid #AF1E23;
+  border-left: 4px solid #af1e23;
 }
 
 .additional-properties {
-  border-left: 4px solid #AF1E23;
+  border-left: 4px solid #af1e23;
 }
 
 .primary-property-summary {
-  border-left: 4px solid #4CAF50;
+  border-left: 4px solid #4caf50;
   background-color: #f1f8e9;
 }
 
@@ -1631,7 +1987,7 @@ select.form-input:disabled {
 }
 
 .primary-property-summary .section-icon svg {
-  stroke: #4CAF50;
+  stroke: #4caf50;
 }
 
 .section-header {
@@ -1697,8 +2053,8 @@ select.form-input:disabled {
   transition: border-top-color 0.3s ease;
 }
 
-.custom-select:focus+.select-arrow {
-  border-top-color: #AF1E23;
+.custom-select:focus + .select-arrow {
+  border-top-color: #af1e23;
 }
 
 /* Enhanced Role Buttons */
@@ -1725,8 +2081,8 @@ select.form-input:disabled {
 }
 
 .role-btn.active {
-  border-color: #AF1E23;
-  background-color: #AF1E23;
+  border-color: #af1e23;
+  background-color: #af1e23;
   color: white;
 }
 
@@ -1796,8 +2152,8 @@ select.form-input:disabled {
 .add-another-btn {
   width: 100%;
   background-color: transparent;
-  color: #AF1E23;
-  border: 2px dashed #AF1E23;
+  color: #af1e23;
+  border: 2px dashed #af1e23;
   padding: 16px;
   border-radius: 8px;
   font-size: 1rem;
@@ -1826,7 +2182,7 @@ select.form-input:disabled {
 
 .add-property-btn {
   flex: 2;
-  background-color: #AF1E23;
+  background-color: #af1e23;
   color: white;
   border: none;
   padding: 14px;
@@ -1876,7 +2232,7 @@ select.form-input:disabled {
 }
 
 .property-card.primary {
-  border-color: #4CAF50;
+  border-color: #4caf50;
   background-color: #f8fff8;
 }
 
@@ -1901,7 +2257,7 @@ select.form-input:disabled {
 }
 
 .primary-badge {
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
 }
 
@@ -1943,7 +2299,6 @@ select.form-input:disabled {
 }
 
 @media (max-width: 768px) {
-
   .progress-indicator {
     gap: 50px;
   }

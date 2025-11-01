@@ -12,7 +12,15 @@ export default defineConfig((ctx) => {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
-    boot: ['i18n', 'axios', 'capacitorFirebase', 'firebase', 'smartMirrorFirebase', 'projectStore', 'fcm'],
+    boot: [
+      'i18n',
+      'axios',
+      'capacitorFirebase',
+      'firebase',
+      'smartMirrorFirebase',
+      'projectStore',
+      'fcm',
+    ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
     css: ['app.scss'],
@@ -58,17 +66,29 @@ export default defineConfig((ctx) => {
         // Configure Vite to handle Capacitor modules properly
         if (ctx.modeName === 'spa') {
           // Use stub modules for Capacitor in web builds
+          const capacitorCoreStub = fileURLToPath(
+            new URL('./src/stubs/capacitor-core.js', import.meta.url),
+          )
           viteConf.resolve.alias = {
             ...viteConf.resolve.alias,
-            '@capacitor/core': fileURLToPath(
-              new URL('./src/stubs/capacitor-core.js', import.meta.url),
-            ),
+            '@capacitor/core': capacitorCoreStub,
             '@capacitor/status-bar': fileURLToPath(
               new URL('./src/stubs/capacitor-status-bar.js', import.meta.url),
             ),
             '@capacitor/splash-screen': fileURLToPath(
               new URL('./src/stubs/capacitor-splash-screen.js', import.meta.url),
             ),
+            '@capawesome/capacitor-badge': capacitorCoreStub,
+            '@capacitor/haptics': capacitorCoreStub,
+            '@capacitor/device': capacitorCoreStub,
+            '@capacitor/keyboard': capacitorCoreStub,
+            '@capacitor/network': capacitorCoreStub,
+            '@capacitor/geolocation': capacitorCoreStub,
+            '@capacitor/camera': capacitorCoreStub,
+            '@capacitor/filesystem': capacitorCoreStub,
+            '@capacitor/share': capacitorCoreStub,
+            '@capacitor/motion': capacitorCoreStub,
+            '@capacitor/preferences': capacitorCoreStub,
           }
         }
       },
