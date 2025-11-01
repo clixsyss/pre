@@ -34,14 +34,33 @@ export function useBluetooth() {
 
           // Check if BLE is enabled
           try {
-            await bluetoothLE.initialize()
+            // Initialize with Android-specific options
+            const initOptions =
+              Capacitor.getPlatform() === 'android' ? { androidNeverForLocation: true } : {}
+
+            await bluetoothLE.initialize(initOptions)
             isBLESupported.value = true
             console.log('✅ Capacitor BLE initialized')
             return true
           } catch (initError) {
             console.error('❌ BLE initialization failed:', initError)
+            console.error('Error details:', {
+              message: initError.message,
+              code: initError.code,
+              stack: initError.stack,
+            })
             isBLESupported.value = false
-            lastError.value = 'BLE initialization failed. Please enable Bluetooth.'
+
+            // Provide more helpful error message
+            const errorMsg = initError.message || 'Unknown error'
+            if (errorMsg.includes('permission') || errorMsg.includes('Permission')) {
+              lastError.value =
+                'Bluetooth permission required. Please grant permissions in device settings.'
+            } else if (errorMsg.includes('not enabled') || errorMsg.includes('disabled')) {
+              lastError.value = 'Bluetooth is disabled. Please enable Bluetooth in device settings.'
+            } else {
+              lastError.value = `BLE initialization failed: ${errorMsg}`
+            }
             return false
           }
         } catch (importError) {
@@ -84,59 +103,24 @@ export function useBluetooth() {
       isScanning.value = true
       console.log('🔍 Scanning for BLE devices with service:', serviceUUID)
 
-      let selectedDevice = null
-      const scanTimeout = 10000 // 10 seconds scan timeout
-      const startTime = Date.now()
+      // Request device and connect
+      const device = await bluetoothLE.requestDevice({
+        services: [serviceUUID],
+        optionalServices: [serviceUUID],
+      })
 
-      // Start scanning for devices with the service UUID
-      await bluetoothLE.requestLEScan(
-        {
-          services: [serviceUUID],
-        },
-        (result) => {
-          // Called when a device is found
-          if (result.isConnectable && !selectedDevice) {
-            console.log('📱 Device found:', result)
-            selectedDevice = {
-              deviceId: result.device.deviceId,
-              name: result.device.name || result.device.deviceId,
-              rssi: result.rssi,
-            }
-          }
-        },
-      )
-
-      // Wait for a device to be found or timeout
-      while (!selectedDevice && Date.now() - startTime < scanTimeout) {
-        await new Promise((resolve) => setTimeout(resolve, 100))
-      }
-
-      // Stop scanning
-      try {
-        await bluetoothLE.stopLEScan()
-      } catch (stopError) {
-        console.warn('⚠️ Error stopping scan:', stopError)
-      }
-
-      isScanning.value = false
-
-      if (!selectedDevice) {
-        throw new Error(
-          'No device found with the specified service. Make sure the gate device is powered on and in range.',
-        )
-      }
-
-      console.log('📱 Connecting to device:', selectedDevice)
-      bleDevice = selectedDevice
+      console.log('📱 Device found:', device)
+      bleDevice = device
 
       // Connect to the device
-      await bluetoothLE.connect(selectedDevice.deviceId, (deviceId) => {
-        console.log('🔌 Device disconnected:', deviceId)
+      await bluetoothLE.connect(device.deviceId, () => {
+        console.log('🔌 Device disconnected')
         handleDisconnect()
       })
 
-      deviceName.value = selectedDevice.name || selectedDevice.deviceId
+      deviceName.value = device.name || device.deviceId
       isConnected.value = true
+      isScanning.value = false
       console.log('✅ Connected to device:', deviceName.value)
 
       Notify.create({
@@ -152,13 +136,6 @@ export function useBluetooth() {
       lastError.value = error.message
       isConnected.value = false
       isScanning.value = false
-
-      // Stop scanning if still active
-      try {
-        await bluetoothLE.stopLEScan()
-      } catch (stopError) {
-        // Ignore stop errors
-      }
 
       Notify.create({
         type: 'negative',
