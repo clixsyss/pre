@@ -21,18 +21,18 @@
             <img src="../../assets/logo.png" alt="PRE Group Logo" class="logo-image" />
           </div>
           <h1 class="welcome-title" data-aos="fade-up" data-aos-delay="200">
-            Welcome to<br />The New<br />
-            <span class="highlight">Community App</span>
+            {{ $t('welcomeToNew') }}<br />{{ $t('theNew') }}<br />
+            <span class="highlight">{{ $t('communityApp') }}</span>
           </h1>
           <p class="welcome-subtitle" data-aos="fade-up" data-aos-delay="400">
-            Your all-in-one platform for modern luxury living
+            {{ $t('allInOnePlatform') }}
           </p>
           <div class="feature-preview-grid" data-aos="fade-up" data-aos-delay="600">
             <div class="preview-card">
               <svg class="preview-icon" viewBox="0 0 24 24" fill="none">
                 <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor" />
               </svg>
-              <span>Smart Home</span>
+              <span>{{ $t('smartHome') }}</span>
             </div>
             <div class="preview-card">
               <svg class="preview-icon" viewBox="0 0 24 24" fill="none">
@@ -40,7 +40,7 @@
                   d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"
                   fill="currentColor" />
               </svg>
-              <span>Community</span>
+              <span>{{ $t('community') }}</span>
             </div>
             <div class="preview-card">
               <svg class="preview-icon" viewBox="0 0 24 24" fill="none">
@@ -48,7 +48,7 @@
                   d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"
                   fill="currentColor" />
               </svg>
-              <span>Services</span>
+              <span>{{ $t('services') }}</span>
             </div>
             <div class="preview-card">
               <svg class="preview-icon" viewBox="0 0 24 24" fill="none">
@@ -58,7 +58,7 @@
                   d="M12 13c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4zm7-2c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2z"
                   fill="currentColor" />
               </svg>
-              <span>Activities</span>
+              <span>{{ $t('activities') }}</span>
             </div>
           </div>
         </div>
@@ -81,11 +81,11 @@
             </div>
           </div>
           <h2 class="slide-title" data-aos="fade-up">
-            <span class="highlight">Smart Living</span><br />
-            Redefined
+            <span class="highlight">{{ $t('smartLivingRedefined') }}</span><br />
+            {{ $t('redefined') }}
           </h2>
           <p class="slide-description" data-aos="fade-up" data-aos-delay="200">
-            Control your home, manage access, and embrace the future of intelligent living
+            {{ $t('controlHomeManageAccess') }}
           </p>
           <div class="features-grid" data-aos="fade-up" data-aos-delay="400">
             <div class="feature-card">
@@ -94,8 +94,8 @@
                 <path d="M24 14l-10 8v14h6v-8h8v8h6V22l-10-8z" fill="#AF1E23" />
               </svg>
               <div class="feature-card-content">
-                <h4>Smart Devices</h4>
-                <p>Control lights, climate, and security</p>
+                <h4>{{ $t('smartDevices') }}</h4>
+                <p>{{ $t('controlLightsClimateSecurity') }}</p>
               </div>
             </div>
             <div class="feature-card">
@@ -106,8 +106,8 @@
                 <rect x="23" y="26" width="2" height="4" fill="#AF1E23" />
               </svg>
               <div class="feature-card-content">
-                <h4>Gate Access</h4>
-                <p>Remote control and guest passes</p>
+                <h4>{{ $t('gateAccess') }}</h4>
+                <p>{{ $t('remoteControlGuestPasses') }}</p>
               </div>
             </div>
             <div class="feature-card">
@@ -119,8 +119,8 @@
                 <path d="M24 12v4m0 16v4m12-12h-4m-16 0h-4" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" />
               </svg>
               <div class="feature-card-content">
-                <h4>Automation</h4>
-                <p>Create smart home routines</p>
+                <h4>{{ $t('automation') }}</h4>
+                <p>{{ $t('createSmartHomeRoutines') }}</p>
               </div>
             </div>
           </div>
@@ -145,11 +145,11 @@
             </div>
           </div>
           <h2 class="slide-title" data-aos="fade-up">
-            Everything You Need,<br />
-            <span class="highlight">One Tap Away</span>
+            {{ $t('everythingYouNeed') }}<br />
+            <span class="highlight">{{ $t('oneTapAway') }}</span>
           </h2>
           <p class="slide-description" data-aos="fade-up" data-aos-delay="200">
-            Book courts, order services, enjoy dining, and stay active in your community
+            {{ $t('everythingDesc') }}
           </p>
           <div class="services-showcase" data-aos="fade-up" data-aos-delay="400">
             <div class="service-category">
@@ -160,8 +160,8 @@
                   stroke-linecap="round" />
               </svg>
               <div class="service-category-content">
-                <h4>Sports & Activities</h4>
-                <p>Book courts and join academies</p>
+                <h4>{{ $t('sportsActivities') }}</h4>
+                <p>{{ $t('sportsDesc') }}</p>
               </div>
             </div>
             <div class="service-category">
@@ -172,8 +172,8 @@
                 <path d="M18 26h12l-2 10H20l-2-10z" stroke="#AF1E23" stroke-width="2" fill="none" />
               </svg>
               <div class="service-category-content">
-                <h4>Home Services</h4>
-                <p>Plumbing, electrical & more</p>
+                <h4>{{ $t('homeServices') }}</h4>
+                <p>{{ $t('homeServicesDesc') }}</p>
               </div>
             </div>
             <div class="service-category">
@@ -186,8 +186,8 @@
                 <line x1="27" y1="22" x2="27" y2="27" stroke="#AF1E23" stroke-width="1.5" />
               </svg>
               <div class="service-category-content">
-                <h4>Food & Dining</h4>
-                <p>Order from top restaurants</p>
+                <h4>{{ $t('foodDining') }}</h4>
+                <p>{{ $t('orderFromTopRestaurants') }}</p>
               </div>
             </div>
           </div>
@@ -206,11 +206,11 @@
             <img src="../../assets/logo.png" alt="PRE Group Logo" class="logo-image" />
           </div>
           <h1 class="final-title" data-aos="fade-up" data-aos-delay="200">
-            All That And<br />
-            <span class="highlight">Much More</span>
+            {{ $t('allThatAndMore') }}<br />
+            <span class="highlight">{{ $t('muchMore') }}</span>
           </h1>
           <p class="final-description" data-aos="fade-up" data-aos-delay="400">
-            Join our thriving community and experience luxury living redefined. Your perfect lifestyle awaits.
+            {{ $t('joinThrivingCommunity') }}
           </p>
           <div class="final-stats" data-aos="fade-up" data-aos-delay="500">
             <div class="stat-item">
@@ -220,14 +220,14 @@
                 <path d="M9 12l2 2 4-4" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
                   stroke-linejoin="round" />
               </svg>
-              <span>Secure & Private</span>
+              <span>{{ $t('securePrivate') }}</span>
             </div>
             <div class="stat-item">
               <svg viewBox="0 0 24 24" fill="none" class="stat-icon">
                 <circle cx="12" cy="12" r="10" fill="#AF1E23" opacity="0.2" />
                 <path d="M12 6v6l4 2" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" />
               </svg>
-              <span>24/7 Support</span>
+              <span>{{ $t('support247') }}</span>
             </div>
             <div class="stat-item">
               <svg viewBox="0 0 24 24" fill="none" class="stat-icon">
@@ -235,20 +235,20 @@
                 <path d="M9 11l3 3 6-6" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
                   stroke-linejoin="round" />
               </svg>
-              <span>Easy to Use</span>
+              <span>{{ $t('easyToUse') }}</span>
             </div>
           </div>
           <div class="final-actions" data-aos="fade-up" data-aos-delay="600">
             <button @click="goToRegister" class="primary-btn">
-              <span>Get Started</span>
+              <span>{{ $t('getStarted') }}</span>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
                 <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                   stroke-linejoin="round" />
               </svg>
             </button>
             <div class="signin-section">
-              <span class="signin-text">Already have an account?</span>
-              <button @click="goToSignIn" class="signin-link">Sign In</button>
+              <span class="signin-text">{{ $t('alreadyHaveAccount') }}</span>
+              <button @click="goToSignIn" class="signin-link">{{ $t('signInButton') }}</button>
             </div>
             <button @click="goToSupport" class="support-link">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
@@ -256,7 +256,7 @@
                 <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3m.08 4h.01" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" />
               </svg>
-              <span>Need Help?</span>
+              <span>{{ $t('needHelp') }}</span>
             </button>
           </div>
         </div>

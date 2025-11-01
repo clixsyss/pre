@@ -41,19 +41,19 @@
           >
             <div class="program-info">
               <h3>{{ program.name }}</h3>
-              <p class="program-sport">{{ program.sport }} Program</p>
+              <p class="program-sport">{{ program.sport }} {{ $t('program') }}</p>
               <div class="program-details">
                 <span class="detail-item">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
-                  {{ program.duration || 'Ongoing' }}
+                  {{ program.duration || $t('ongoing') }}
                 </span>
                 <span class="detail-item">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
-                  {{ program.price }} EGP
+                  {{ program.price }} {{ $t('currency') }}
                 </span>
                 <span v-if="program.ageGroup" class="detail-item">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -107,7 +107,7 @@
                 <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
                 <path d="M6 21V19C6 17.3431 7.34315 16 9 16H15C16.6569 16 18 17.3431 18 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
-              <span>Ages {{ selectedProgram.ageGroup }}</span>
+              <span>{{ $t('ages') }} {{ selectedProgram.ageGroup }}</span>
             </div>
           </div>
 
@@ -118,14 +118,14 @@
                 <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
                 <path d="M16 2V6M8 2V6M3 10H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
-              Schedule
+              {{ $t('schedule') }}
             </div>
             <div class="schedule-chips">
               <span v-for="(session, idx) in selectedProgram.schedule.slice(0, 3)" :key="idx" class="schedule-chip">
                 {{ session.day }} {{ session.time }}
               </span>
               <span v-if="selectedProgram.schedule.length > 3" class="schedule-chip more">
-                +{{ selectedProgram.schedule.length - 3 }} more
+                +{{ selectedProgram.schedule.length - 3 }} {{ $t('more') }}
               </span>
             </div>
           </div>
@@ -147,45 +147,45 @@
 
       <!-- Participant Information -->
       <div v-if="selectedProgram" class="participant-section">
-        <h2 class="section-title">Participant Information</h2>
+        <h2 class="section-title">{{ $t('participantInformation') }}</h2>
         <div class="participant-form">
           <div class="form-group">
-            <label for="participantName">Full Name</label>
+            <label for="participantName">{{ $t('participantFullName') }}</label>
             <input 
               id="participantName"
               v-model="participantData.fullName"
               type="text" 
-              placeholder="Enter participant's full name"
+              :placeholder="$t('enterFullName')"
               class="form-input"
             />
           </div>
           <div class="form-group">
-            <label for="participantEmail">Email</label>
+            <label for="participantEmail">{{ $t('participantEmail') }}</label>
             <input 
               id="participantEmail"
               v-model="participantData.email"
               type="email" 
-              placeholder="Enter participant's email"
+              :placeholder="$t('enterEmail')"
               class="form-input"
             />
           </div>
           <div class="form-group">
-            <label for="participantPhone">Phone</label>
+            <label for="participantPhone">{{ $t('participantPhone') }}</label>
             <input 
               id="participantPhone"
               v-model="participantData.phone"
               type="tel" 
-              placeholder="Enter participant's phone number"
+              :placeholder="$t('enterPhone')"
               class="form-input"
             />
           </div>
           <div class="form-group">
-            <label for="participantAge">Age</label>
+            <label for="participantAge">{{ $t('participantAge') }}</label>
             <input 
               id="participantAge"
               v-model="participantData.age"
               type="number" 
-              placeholder="Enter participant's age"
+              :placeholder="$t('enterAge')"
               class="form-input"
             />
           </div>
@@ -195,24 +195,24 @@
       <!-- Booking Confirmation -->
       <div v-if="canConfirmBooking" class="booking-confirmation">
         <div class="confirmation-header">
-          <h2>Confirm Enrollment</h2>
+          <h2>{{ $t('confirmEnrollment') }}</h2>
         </div>
         <div class="confirmation-content">
           <div class="confirmation-item">
-            <span class="label">Program:</span>
+            <span class="label">{{ $t('program') }}:</span>
             <span class="value">{{ selectedProgram.name }}</span>
           </div>
           <div class="confirmation-item">
-            <span class="label">Academy:</span>
+            <span class="label">{{ $t('academyTitle') }}:</span>
             <span class="value">{{ selectedAcademy.name }}</span>
           </div>
           <div class="confirmation-item">
-            <span class="label">Participant:</span>
+            <span class="label">{{ $t('participant') }}:</span>
             <span class="value">{{ participantData.fullName }}</span>
           </div>
           <div class="confirmation-item total">
-            <span class="label">Total Price:</span>
-            <span class="value">{{ selectedProgram.price }} EGP</span>
+            <span class="label">{{ $t('totalPrice') }}:</span>
+            <span class="value">{{ selectedProgram.price }} {{ $t('currency') }}</span>
           </div>
         </div>
         <button 
@@ -221,10 +221,10 @@
           :disabled="isSubmitting"
           @click="confirmEnrollment"
         >
-          <span v-if="!isSubmitting">Confirm Enrollment</span>
+          <span v-if="!isSubmitting">{{ $t('confirmEnrollment') }}</span>
           <span v-else class="btn-loading">
             <div class="btn-spinner"></div>
-            Enrolling...
+            {{ $t('enrolling') }}
           </span>
         </button>
       </div>
@@ -235,6 +235,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useFormKeyboard } from 'src/composables/useFormKeyboard';
 import { useAcademiesStore } from 'src/stores/academyStore';
 import { useProjectStore } from 'src/stores/projectStore';
@@ -242,6 +243,8 @@ import { useNotificationStore } from 'src/stores/notifications';
 import bookingService from 'src/services/bookingService';
 import optimizedAuthService from 'src/services/optimizedAuthService';
 import PageHeader from 'src/components/PageHeader.vue';
+
+const { t } = useI18n()
 
 // Component name for ESLint
 defineOptions({
@@ -306,7 +309,7 @@ const formatDuration = (program) => {
   if (program.duration) {
     return program.duration;
   }
-  return 'Ongoing program';
+  return t('ongoingProgram');
 };
 
 const confirmEnrollment = async () => {
@@ -317,7 +320,7 @@ const confirmEnrollment = async () => {
 
   try {
     if (!canConfirmBooking.value) {
-      notificationStore.showWarning('Please complete all required fields before confirming enrollment');
+      notificationStore.showWarning(t('completeAllRequiredFields'));
       return;
     }
 

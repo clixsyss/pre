@@ -10,10 +10,10 @@
             </svg>
           </button>
         </div>
-        <div v-if="showAll" class="news-count">{{ filteredNews.length }} {{ filteredNews.length === 1 ? 'item' : 'items' }}</div>
+        <div v-if="showAll" class="news-count">{{ filteredNews.length }} {{ filteredNews.length === 1 ? $t('item') : $t('items') }}</div>
       </div>
       <button v-if="!showAll" @click="navigateToAllNews" class="view-all-btn">
-        <span>View All News</span>
+        <span>{{ $t('viewAllNews') }}</span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
@@ -98,7 +98,7 @@
 
           <div class="news-actions">
             <button class="read-more-btn" @click.stop="openNewsDetail(item)">
-              Read More
+              {{ $t('readMore') }}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                   stroke-linejoin="round" />
@@ -121,8 +121,8 @@
             stroke-linejoin="round" />
         </svg>
       </div>
-      <h3>No news yet</h3>
-      <p>Check back later for updates from your community!</p>
+      <h3>{{ $t('noNewsYet') }}</h3>
+      <p>{{ $t('checkBackLater') }}</p>
     </div>
 
     <!-- News Modal - Matching MyBookings Design -->

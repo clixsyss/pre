@@ -7,7 +7,7 @@
           <path d="M19 12H5M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-      <h1 class="page-title">Support</h1>
+      <h1 class="page-title">{{ $t('support') }}</h1>
       <div class="placeholder"></div>
     </div>
 
@@ -19,8 +19,8 @@
             <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <h2>Need Help?</h2>
-        <p>We're here to help you with any questions or issues you might have.</p>
+        <h2>{{ $t('needHelp') }}</h2>
+        <p>{{ $t('supportHelpMessage') }}</p>
       </div>
 
       <div class="support-options">
@@ -31,8 +31,8 @@
               <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <h3>Email Support</h3>
-          <p>Send us an email and we'll get back to you within 24 hours.</p>
+          <h3>{{ $t('emailSupport') }}</h3>
+          <p>{{ $t('emailSupportDesc') }}</p>
           <a href="mailto:support@pre-group.com" class="support-link">support@pre-group.com</a>
         </div>
 
@@ -42,8 +42,8 @@
               <path d="M22 16.92V19.92C22.0011 20.1985 21.9441 20.4742 21.8325 20.7294C21.7209 20.9846 21.5573 21.2136 21.3521 21.4019C21.1469 21.5902 20.9046 21.7335 20.6408 21.8227C20.377 21.9119 20.0975 21.9452 19.82 21.92C16.7428 21.5856 13.787 20.5341 11.19 18.85C8.77382 17.3146 6.72533 15.2661 5.18999 12.85C3.49997 10.2412 2.44824 7.27099 2.11999 4.18C2.09494 3.90347 2.12787 3.62476 2.21649 3.36188C2.30512 3.09899 2.44756 2.85734 2.63491 2.65262C2.82226 2.4479 3.05009 2.28449 3.30401 2.17269C3.55793 2.0609 3.83249 2.00314 4.10999 2.003H7.10999C7.59519 1.99522 8.06574 2.16708 8.43373 2.48353C8.80171 2.79999 9.042 3.23944 9.10999 3.72C9.23662 4.68007 9.47144 5.62273 9.80999 6.53C9.94454 6.88792 9.97351 7.27675 9.89382 7.64918C9.81413 8.02161 9.62884 8.36233 9.35999 8.63L8.08999 9.9C9.51419 12.3826 11.6174 14.4858 14.1 15.91L15.37 14.64C15.6377 14.3712 15.9784 14.1859 16.3508 14.1062C16.7233 14.0265 17.1121 14.0555 17.47 14.19C18.3773 14.5286 19.3199 14.7634 20.28 14.89C20.7658 14.9585 21.2094 15.2032 21.5265 15.5765C21.8437 15.9498 22.0125 16.4258 22 16.92Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <h3>Phone Support</h3>
-          <p>Call us directly for immediate assistance.</p>
+          <h3>{{ $t('phoneSupport') }}</h3>
+          <p>{{ $t('phoneSupportDesc') }}</p>
           <a href="tel:+1234567890" class="support-link">+1 (234) 567-890</a>
         </div>
 
@@ -54,66 +54,66 @@
               <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <h3>FAQ</h3>
-          <p>Find answers to commonly asked questions.</p>
-          <button @click="showFAQ = true" class="support-link">View FAQ</button>
+          <h3>{{ $t('faqTitle') }}</h3>
+          <p>{{ $t('faqDesc') }}</p>
+          <button @click="showFAQ = true" class="support-link">{{ $t('viewFAQ') }}</button>
         </div>
       </div>
 
       <div class="contact-form">
-        <h3>Send us a Message</h3>
+        <h3>{{ $t('sendUsMessage') }}</h3>
         <form @submit.prevent="handleSubmit" class="form">
           <div class="form-group">
-            <label for="name" class="form-label">Name</label>
+            <label for="name" class="form-label">{{ $t('nameLabel') }}</label>
             <input
               id="name"
               v-model="formData.name"
               type="text"
               class="form-input"
-              placeholder="Your name"
+              :placeholder="$t('namePlaceholder')"
               required
             />
           </div>
 
           <div class="form-group">
-            <label for="email" class="form-label">Email</label>
+            <label for="email" class="form-label">{{ $t('email') }}</label>
             <input
               id="email"
               v-model="formData.email"
               type="email"
               class="form-input"
-              placeholder="Your email"
+              :placeholder="$t('emailPlaceholderSupport')"
               required
             />
           </div>
 
           <div class="form-group">
-            <label for="subject" class="form-label">Subject</label>
+            <label for="subject" class="form-label">{{ $t('subject') }}</label>
             <select id="subject" v-model="formData.subject" class="form-input" required>
-              <option value="" disabled>Select a subject</option>
-              <option value="general">General Inquiry</option>
-              <option value="technical">Technical Support</option>
-              <option value="billing">Billing Question</option>
-              <option value="feature">Feature Request</option>
-              <option value="other">Other</option>
+              <option value="" disabled>{{ $t('selectSubject') }}</option>
+              <option value="general">{{ $t('generalInquiry') }}</option>
+              <option value="technical">{{ $t('technicalSupportOption') }}</option>
+              <option value="billing">{{ $t('billingQuestion') }}</option>
+              <option value="feature">{{ $t('featureRequest') }}</option>
+              <option value="other">{{ $t('otherSubject') }}</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="message" class="form-label">Message</label>
+            <label for="message" class="form-label">{{ $t('messageLabel') || $t('description') }}</label>
             <textarea
               id="message"
               v-model="formData.message"
               class="form-input"
               rows="5"
-              placeholder="Describe your issue or question"
+              :placeholder="$t('messagePlaceholderSupport')"
               required
             ></textarea>
           </div>
 
           <button type="submit" class="submit-btn" :disabled="loading">
-            <span v-if="loading">Sending...</span>
-            <span v-else>Send Message</span>
+            <span v-if="loading">{{ $t('sending') }}</span>
+            <span v-else>{{ $t('sendMessage') }}</span>
           </button>
         </form>
       </div>
@@ -123,7 +123,7 @@
     <div v-if="showFAQ" class="faq-modal" @click="showFAQ = false">
       <div class="faq-content" @click.stop>
         <div class="faq-header">
-          <h3>Frequently Asked Questions</h3>
+          <h3>{{ $t('frequentlyAskedQuestions') }}</h3>
           <button @click="showFAQ = false" class="close-btn">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -152,6 +152,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useNotificationStore } from '../../stores/notifications'
 
@@ -162,6 +163,7 @@ defineOptions({
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
+const { t } = useI18n()
 const loading = ref(false)
 const showFAQ = ref(false)
 
@@ -181,23 +183,23 @@ const formData = reactive({
 
 const faqs = ref([
   {
-    question: 'How do I create an account?',
-    answer: 'You can create an account by clicking the "Register" button on the onboarding screen and following the registration process.',
+    question: t('howDoICreateAccount'),
+    answer: t('howDoICreateAccountAnswer'),
     open: false
   },
   {
-    question: 'What if I forgot my password?',
-    answer: 'You can reset your password by clicking "Forgot Password?" on the sign-in page.',
+    question: t('whatIfForgotPassword'),
+    answer: t('whatIfForgotPasswordAnswer'),
     open: false
   },
   {
-    question: 'How do I contact support?',
-    answer: 'You can contact support through email, phone, or by filling out the contact form on this page.',
+    question: t('howDoIContactSupport'),
+    answer: t('howDoIContactSupportAnswer'),
     open: false
   },
   {
-    question: 'What services does PRE Group provide?',
-    answer: 'PRE Group provides property management solutions including community management, emergency notifications, and general news updates.',
+    question: t('whatServicesPreGroup'),
+    answer: t('whatServicesPreGroupAnswer'),
     open: false
   }
 ])
@@ -222,7 +224,7 @@ const handleSubmit = async () => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000))
     
-    notificationStore.showSuccess('Message sent successfully! We\'ll get back to you soon.')
+    notificationStore.showSuccess(t('messageSentSuccess'))
     
     // Reset form
     Object.keys(formData).forEach(key => {
@@ -230,7 +232,7 @@ const handleSubmit = async () => {
     })
   } catch (error) {
     console.error('Submit error:', error)
-    notificationStore.showError('Failed to send message: ' + error.message)
+    notificationStore.showError(t('failedToSendMessage') + ': ' + error.message)
   } finally {
     loading.value = false
   }

@@ -58,6 +58,11 @@ export default {
   box-shadow: 0 4px 20px rgba(255, 107, 53, 0.2);
 }
 
+/* RTL Support */
+[dir="rtl"] .page-header {
+  direction: rtl;
+}
+
 .header-content {
   display: flex;
   justify-content: space-between;
@@ -72,6 +77,10 @@ export default {
   flex: 1;
 }
 
+[dir="rtl"] .header-left {
+  flex-direction: row-reverse;
+}
+
 .back-button {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -84,6 +93,10 @@ export default {
   justify-content: center;
   color: #F6F6F6;
   flex-shrink: 0;
+}
+
+[dir="rtl"] .back-button svg {
+  transform: scaleX(-1);
 }
 
 /* Mobile app - hover effects disabled */
@@ -103,6 +116,10 @@ export default {
   gap: 4px;
   min-width: 0;
   flex: 1;
+}
+
+[dir="rtl"] .header-text {
+  text-align: right;
 }
 
 .header-title {

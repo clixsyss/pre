@@ -64,7 +64,7 @@
       <div v-else-if="activeTab === 'open'" class="requests-content">
         <div v-if="loadingRequests" class="loading-container">
           <div class="loading-spinner"></div>
-          <p>Loading open requests...</p>
+          <p>{{ $t('loadingOpenRequests') }}</p>
         </div>
         
         <div v-else-if="openRequests.length === 0" class="empty-state">
@@ -74,8 +74,8 @@
               <path d="M12 8V12L15 15" stroke="#ccc" stroke-width="2" stroke-linecap="round" />
             </svg>
           </div>
-          <h3>No Open Requests</h3>
-          <p>You don't have any open requests at the moment.</p>
+          <h3>{{ $t('noOpenRequests') }}</h3>
+          <p>{{ $t('noOpenRequestsMessage') }}</p>
         </div>
         
         <div v-else class="requests-list">
@@ -98,7 +98,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                Chat
+                {{ $t('chat') }}
               </button>
             </div>
           </div>
@@ -109,7 +109,7 @@
       <div v-else-if="activeTab === 'closed'" class="requests-content">
         <div v-if="loadingRequests" class="loading-container">
           <div class="loading-spinner"></div>
-          <p>Loading closed requests...</p>
+          <p>{{ $t('loadingClosedRequests') }}</p>
         </div>
         
         <div v-else-if="closedRequests.length === 0" class="empty-state">
@@ -120,8 +120,8 @@
                 stroke-linejoin="round" />
             </svg>
           </div>
-          <h3>No Closed Requests</h3>
-          <p>You don't have any closed requests yet.</p>
+          <h3>{{ $t('noClosedRequests') }}</h3>
+          <p>{{ $t('noClosedRequestsMessage') }}</p>
         </div>
         
         <div v-else class="requests-list">
@@ -144,7 +144,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                Chat
+                {{ $t('chat') }}
               </button>
             </div>
           </div>
@@ -159,6 +159,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useRequestCategoriesStore } from '../../stores/requestCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
 import requestSubmissionService from '../../services/requestSubmissionService';
@@ -182,21 +183,23 @@ const closedRequests = ref([]);
 // Modal state removed; navigation is used instead
 
 // Computed properties
+const { t } = useI18n();
+
 const tabs = computed(() => [
   {
     id: 'requests',
-    label: 'Requests',
+    label: t('requests'),
     icon: ''
   },
   {
     id: 'open',
-    label: 'Open',
+    label: t('open'),
     icon: '',
     count: openRequests.value.length
   },
   {
     id: 'closed',
-    label: 'Closed',
+    label: t('closed'),
     icon: '',
     count: closedRequests.value.length
   }
@@ -273,7 +276,7 @@ const openRequestChat = (request) => {
 };
 
 const formatDate = (timestamp) => {
-  if (!timestamp) return 'Unknown date';
+  if (!timestamp) return t('unknownDate');
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -286,10 +289,10 @@ const formatDate = (timestamp) => {
 
 const formatStatus = (status) => {
   const statusMap = {
-    'pending': 'Pending',
-    'in_progress': 'In Progress',
-    'completed': 'Completed',
-    'rejected': 'Rejected'
+    'pending': t('pending'),
+    'in_progress': t('inProgress'),
+    'completed': t('completed'),
+    'rejected': t('rejected')
   };
   return statusMap[status] || status;
 };
@@ -301,7 +304,7 @@ const getRequestPreview = (request) => {
       return `${firstField}: ${request.formData[firstField]}`;
     }
   }
-  return 'Request submitted';
+  return t('requestSubmitted');
 };
 </script>
 

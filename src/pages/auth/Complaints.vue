@@ -26,7 +26,7 @@
       <!-- Loading State -->
       <div v-if="complaintStore.categoriesLoading" class="categories-loading">
         <div class="spinner-small"></div>
-        <p>Loading categories...</p>
+        <p>{{ $t('loadingCategories') }}</p>
       </div>
       
       <!-- Empty State - No Categories -->
@@ -38,22 +38,22 @@
             <circle cx="12" cy="17" r="1" fill="currentColor"/>
           </svg>
         </div>
-        <h4>No Categories Available</h4>
-        <p>The admin hasn't created any complaint categories yet. Please contact support or try the manual complaint form below.</p>
+        <h4>{{ $t('noCategoriesAvailable') }}</h4>
+        <p>{{ $t('adminHasntCreatedCategories') }}</p>
         <button @click="showNewComplaintModal = true" class="btn-primary">
-          Start Manual Complaint
+          {{ $t('startManualComplaint') }}
         </button>
       </div>
       
       <!-- Categories Dropdown -->
       <div v-else class="category-dropdown-container">
-        <label class="dropdown-label">Select complaint category:</label>
+        <label class="dropdown-label">{{ $t('selectComplaintCategory') }}</label>
         <select 
           @change="handleCategorySelect" 
           class="category-dropdown"
           v-model="selectedCategoryId"
         >
-          <option value="">Choose a category...</option>
+          <option value="">{{ $t('chooseCategory') }}</option>
           <option 
             v-for="category in complaintStore.complaintCategories" 
             :key="category.id"

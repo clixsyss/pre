@@ -4,8 +4,8 @@
       <!-- Header -->
       <div class="guidelines-header">
         <div class="header-content">
-          <h2 class="guidelines-title">Project Guidelines</h2>
-          <p class="guidelines-subtitle">Important rules and procedures for our community</p>
+          <h2 class="guidelines-title">{{ t('projectGuidelines') }}</h2>
+          <p class="guidelines-subtitle">{{ t('projectGuidelinesDesc') }}</p>
         </div>
         <!-- <button @click="closeDialog" class="close-btn">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -17,7 +17,7 @@
       <!-- Loading State -->
       <div v-if="loading" class="loading-container">
         <div class="loading-spinner"></div>
-        <p>Loading guidelines...</p>
+          <p>{{ t('loadingGuidelines') }}</p>
       </div>
 
       <!-- Error State -->
@@ -26,9 +26,9 @@
           <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
           <path d="M15 9L9 15M9 9L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <h3>Failed to load guidelines</h3>
+        <h3>{{ t('failedToLoadGuidelines') }}</h3>
         <p>{{ error }}</p>
-        <button @click="fetchGuidelines" class="retry-btn">Try Again</button>
+        <button @click="fetchGuidelines" class="retry-btn">{{ t('tryAgain') }}</button>
       </div>
 
       <!-- Guidelines Content -->
@@ -40,7 +40,7 @@
               <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            PDF Guidelines
+            {{ t('pdfGuidelines') }}
           </h4>
           
           <div class="pdf-guidelines-list">
@@ -65,7 +65,7 @@
                     <line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </h5>
-                <p class="pdf-description">{{ pdfGuideline.description || 'Project guidelines document' }}</p>
+                <p class="pdf-description">{{ pdfGuideline.description || t('projectGuidelinesDocument') }}</p>
                 <div class="pdf-meta">
                   <span class="pdf-size" v-if="pdfGuideline.fileSize">{{ formatFileSize(pdfGuideline.fileSize) }}</span>
                   <span class="pdf-date">{{ formatDate(pdfGuideline.createdAt) }}</span>
@@ -91,7 +91,7 @@
               <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Text Guidelines
+            {{ t('textGuidelines') }}
           </h4>
           
           <div class="guidelines-articles">
@@ -114,8 +114,8 @@
             <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <h3>No guidelines available</h3>
-          <p>No guidelines have been added for this project yet.</p>
+          <h3>{{ t('noGuidelinesAvailable') }}</h3>
+          <p>{{ t('noGuidelinesMessage') }}</p>
         </div>
       </div>
     </div>
@@ -134,9 +134,12 @@
 
 <script setup>
 import { computed, watch, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useProjectGuidelinesStore } from '../stores/projectGuidelinesStore';
 import { useProjectStore } from '../stores/projectStore';
 import PDFViewer from './PDFViewer.vue';
+
+const { t } = useI18n();
 
 const props = defineProps({
   isOpen: {

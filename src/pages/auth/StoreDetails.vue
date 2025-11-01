@@ -50,7 +50,7 @@
             </div>
             <span class="rating-value">{{ (store.rating || 0).toFixed(1) }}</span>
             <span class="rating-count">
-              {{ (store.reviewCount || 0) === 0 ? 'No reviews yet' : `(${store.reviewCount} reviews)` }}
+              {{ (store.reviewCount || 0) === 0 ? $t('noReviewsYet') : `(${store.reviewCount} ${store.reviewCount === 1 ? $t('review') : $t('reviews')})` }}
             </span>
           </div>
         </div>
@@ -74,7 +74,7 @@
         <input
           v-model="searchTerm"
           type="text"
-          placeholder="Search products..."
+          :placeholder="$t('searchProducts')"
           class="search-input"
         />
       </div>
@@ -90,7 +90,7 @@
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M20 7L10 17L5 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <p>No products found</p>
+        <p>{{ $t('noProductsFound') }}</p>
       </div>
 
       <div v-else class="products-grid">
