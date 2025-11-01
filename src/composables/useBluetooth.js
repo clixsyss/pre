@@ -26,26 +26,44 @@ export function useBluetooth() {
    */
   const checkBLESupport = async () => {
     try {
+      console.log('🔍 Checking BLE support...')
+      console.log('📱 Platform:', Capacitor.getPlatform())
+      console.log('📱 Is Native:', Capacitor.isNativePlatform())
+      
       if (Capacitor.isNativePlatform()) {
         // For Capacitor, check if bluetooth-le plugin is available
         try {
+          console.log('📦 Attempting to import BLE plugin...')
           const { BleClient } = await import('@capacitor-community/bluetooth-le')
+          console.log('✅ BLE plugin imported successfully')
+          console.log('📦 BleClient:', BleClient)
           bluetoothLE = BleClient
 
           // Check if BLE is enabled
           try {
+            console.log('🔧 Attempting to initialize BLE...')
             await bluetoothLE.initialize()
+            console.log('✅ Capacitor BLE initialized successfully')
             isBLESupported.value = true
-            console.log('✅ Capacitor BLE initialized')
             return true
           } catch (initError) {
-            console.error('❌ BLE initialization failed:', initError)
+            console.error('❌ BLE initialization failed!')
+            console.error('Error type:', typeof initError)
+            console.error('Error:', initError)
+            console.error('Error message:', initError?.message)
+            console.error('Error code:', initError?.code)
+            console.error('Error stack:', initError?.stack)
+            if (initError.toString) {
+              console.error('Error toString:', initError.toString())
+            }
             isBLESupported.value = false
-            lastError.value = 'BLE initialization failed. Please enable Bluetooth.'
+            lastError.value = initError?.message || 'BLE initialization failed. Please enable Bluetooth.'
             return false
           }
         } catch (importError) {
-          console.error('❌ BLE plugin not found:', importError)
+          console.error('❌ BLE plugin import failed!')
+          console.error('Import error:', importError)
+          console.error('Import error message:', importError?.message)
           isBLESupported.value = false
           lastError.value =
             'BLE plugin not installed. Please install @capacitor-community/bluetooth-le'
@@ -53,6 +71,7 @@ export function useBluetooth() {
         }
       } else {
         // For web, check if Web Bluetooth API is available
+        console.log('🌐 Checking Web Bluetooth API...')
         if (navigator.bluetooth) {
           isBLESupported.value = true
           console.log('✅ Web Bluetooth API available')
@@ -65,8 +84,13 @@ export function useBluetooth() {
         }
       }
     } catch (error) {
-      console.error('❌ Error checking BLE support:', error)
-      lastError.value = error.message || 'Unknown error checking BLE support'
+      console.error('❌ Unexpected error checking BLE support:', error)
+      console.error('Error details:', {
+        message: error?.message,
+        name: error?.name,
+        stack: error?.stack,
+      })
+      lastError.value = error?.message || 'Unknown error checking BLE support'
       isBLESupported.value = false
       return false
     }
