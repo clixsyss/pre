@@ -722,8 +722,13 @@ async function buildMessages(notification, tokens, projectId) {
               body: notification.body_en
             },
             sound: 'default',
-            badge: badgeCount
+            badge: badgeCount,
+            'interruption-level': 'time-sensitive'
           }
+        },
+        headers: {
+          'apns-priority': '10',
+          'apns-push-type': 'alert'
         }
       }
     }
@@ -980,8 +985,13 @@ exports.processPushNotifications = functions.pubsub
                     aps: {
                       sound: 'default',
                       badge: 1,
-                      'content-available': 1
+                      'content-available': 1,
+                      'interruption-level': 'time-sensitive'
                     }
+                  },
+                  headers: {
+                    'apns-priority': '10',
+                    'apns-push-type': 'alert'
                   }
                 }
               };
@@ -1167,8 +1177,13 @@ exports.sendImmediatePushNotification = functions.https.onCall(async (data, cont
               aps: {
                 sound: 'default',
                 badge: 1,
-                'content-available': 1
+                'content-available': 1,
+                'interruption-level': 'time-sensitive'
               }
+            },
+            headers: {
+              'apns-priority': '10',
+              'apns-push-type': 'alert'
             }
           }
         };

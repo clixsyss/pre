@@ -296,7 +296,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onActivated, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
@@ -415,8 +415,17 @@ onMounted(() => {
     }
   }
   
+  // Check if we should show the device key error modal
+  checkAndShowDeviceKeyError()
+  
   // Load projects for device key reset modal
   loadAvailableProjects()
+})
+
+// Also check when component is activated (for keep-alive scenarios)
+onActivated(() => {
+  console.log('[SignIn] Component activated, checking for device key error...')
+  checkAndShowDeviceKeyError()
 })
 
 const goBack = () => {
@@ -428,9 +437,40 @@ const handlePageClick = async () => {
   // No need for manual handling
 }
 
+// Helper function to check and show device key error modal from localStorage
+const checkAndShowDeviceKeyError = () => {
+  const savedDeviceKeyError = localStorage.getItem('showDeviceKeyError')
+  console.log('[SignIn] 🔍 checkAndShowDeviceKeyError called, savedDeviceKeyError:', savedDeviceKeyError)
+  console.log('[SignIn] 🔍 Current modal state BEFORE:', {
+    showDeviceKeyErrorModal: showDeviceKeyErrorModal.value,
+    deviceKeyErrorMessage: deviceKeyErrorMessage.value
+  })
+  
+  if (savedDeviceKeyError) {
+    console.log('[SignIn] 🔴 Found device key error in localStorage:', savedDeviceKeyError)
+    localStorage.removeItem('showDeviceKeyError')
+    deviceKeyErrorMessage.value = savedDeviceKeyError
+    showDeviceKeyErrorModal.value = true
+    
+    // Use nextTick to ensure Vue has updated the DOM
+    nextTick(() => {
+      console.log('[SignIn] 🔴 Device key error modal displayed (after nextTick)')
+      console.log('[SignIn] 🔴 Modal state AFTER:', {
+        showDeviceKeyErrorModal: showDeviceKeyErrorModal.value,
+        deviceKeyErrorMessage: deviceKeyErrorMessage.value,
+        messageLength: deviceKeyErrorMessage.value?.length
+      })
+    })
+  } else {
+    console.log('[SignIn] ℹ️ No device key error found in localStorage')
+  }
+}
+
 const handleDeviceKeyModalClose = () => {
   showDeviceKeyErrorModal.value = false
   deviceKeyErrorMessage.value = ''
+  console.log('[SignIn] 🔍 Device key modal closed by user')
+  // Note: User is already signed out automatically
 }
 
 const togglePassword = () => {
@@ -565,12 +605,28 @@ const handleSignIn = async () => {
     
     if (!deviceCheck.allowed) {
       console.log('[SignIn] ❌ Device key check failed:', deviceCheck.message)
+      
+      // Save error message to localStorage to persist across navigation
+      localStorage.setItem('showDeviceKeyError', deviceCheck.message)
+      console.log('[SignIn] 💾 Saved device key error to localStorage')
+      
       // Sign out the user
-      await optimizedAuthService.signOut()
-      // Show device key error modal instead of toast
-      deviceKeyErrorMessage.value = deviceCheck.message
-      showDeviceKeyErrorModal.value = true
+      console.log('[SignIn] 🚪 Signing out user with device key error...')
       loading.value = false
+      try {
+        await optimizedAuthService.signOut()
+        console.log('[SignIn] ✅ User signed out after device key error')
+        
+        // Wait a moment for the auth state to fully clear
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        // Check and show the modal immediately (in case we stayed on /signin)
+        console.log('[SignIn] 🔍 Checking for device key error to display modal...')
+        checkAndShowDeviceKeyError()
+      } catch (err) {
+        console.error('[SignIn] ❌ Error during device key signout:', err)
+      }
+      
       return
     }
     
@@ -621,6 +677,17 @@ const handleSignIn = async () => {
     }
 
     console.log('✅ User is approved, proceeding to home')
+
+    // Register FCM token for push notifications
+    console.log('[SignIn] 📱 Registering FCM token for notifications...')
+    try {
+      const fcmService = (await import('../../services/fcmService')).default
+      await fcmService.initialize()
+      console.log('[SignIn] ✅ FCM token registered successfully')
+    } catch (fcmError) {
+      console.warn('[SignIn] ⚠️ FCM registration failed (non-critical):', fcmError)
+      // Don't block login if FCM fails
+    }
 
     // Wait a bit to ensure auth state is fully established
     await new Promise((resolve) => setTimeout(resolve, 500))
