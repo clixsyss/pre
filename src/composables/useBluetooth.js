@@ -156,7 +156,7 @@ export function useBluetooth() {
       // Stop scanning if still active
       try {
         await bluetoothLE.stopLEScan()
-      } catch (stopError) {
+      } catch {
         // Ignore stop errors
       }
 
