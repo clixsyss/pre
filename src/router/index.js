@@ -125,7 +125,7 @@ const routes = [
   {
     path: '/facilities',
     name: 'Facilities',
-    component: () => import('../pages/auth/Requests.vue'),
+    component: () => import('../pages/auth/Facilities.vue'),
     meta: { requiresAuth: true },
   },
   {

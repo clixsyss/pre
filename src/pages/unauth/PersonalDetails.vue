@@ -7,9 +7,9 @@
           <path d="M19 12H5M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-      <h1 class="page-title">Registration</h1>
+      <h1 class="page-title">{{ $t('registration') }}</h1>
       <div class="header-actions">
-        <button @click="goToSignIn" class="signin-header-btn">Sign In</button>
+        <button @click="goToSignIn" class="signin-header-btn">{{ $t('signInButton') }}</button>
       </div>
     </div>
 
@@ -27,7 +27,7 @@
             <path d="M20 6L9 17L4 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
-        <span class="step-label">Personal</span>
+        <span class="step-label">{{ $t('personal') }}</span>
       </div>
 
       <!-- Property Step -->
@@ -41,7 +41,7 @@
               stroke-linejoin="round" />
           </svg>
         </div>
-        <span class="step-label">Property</span>
+        <span class="step-label">{{ $t('property') }}</span>
       </div>
     </div>
 
@@ -71,26 +71,26 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="firstName" class="form-label">First Name</label>
+            <label for="firstName" class="form-label">{{ $t('firstName') }}</label>
             <input
               id="firstName"
               v-model="formData.firstName"
               type="text"
               class="form-input"
-              placeholder="First Name"
+              :placeholder="$t('firstNamePlaceholder')"
               required
               @input="saveToStore"
             />
           </div>
 
           <div class="form-group">
-            <label for="lastName" class="form-label">Last Name</label>
+            <label for="lastName" class="form-label">{{ $t('lastName') }}</label>
             <input
               id="lastName"
               v-model="formData.lastName"
               type="text"
               class="form-input"
-              placeholder="Last Name"
+              :placeholder="$t('lastNamePlaceholder')"
               required
               @input="saveToStore"
             />
@@ -98,20 +98,20 @@
         </div>
 
         <div class="form-group">
-          <label for="mobile" class="form-label">Mobile Number</label>
+          <label for="mobile" class="form-label">{{ $t('mobileNumber') }}</label>
                       <input
               id="mobile"
               v-model="formData.mobile"
               type="tel"
               class="form-input"
-              placeholder="Mobile Number"
+              :placeholder="$t('mobileNumberPlaceholder')"
               required
               @input="saveToStore"
             />
         </div>
 
         <div class="form-group">
-          <label for="dateOfBirth" class="form-label">Date of Birth</label>
+          <label for="dateOfBirth" class="form-label">{{ $t('dateOfBirth') }}</label>
           <div class="date-input-wrapper">
             <input
               id="dateOfBirth"
@@ -138,33 +138,33 @@
                 @click="() => { formData.gender = 'male'; saveToStore(); }"
                 :class="['gender-btn', { active: formData.gender === 'male' }]"
               >
-                Male
+                {{ $t('male') }}
               </button>
                           <button 
                 type="button"
                 @click="() => { formData.gender = 'female'; saveToStore(); }"
                 :class="['gender-btn', { active: formData.gender === 'female' }]"
               >
-                Female
+                {{ $t('female') }}
               </button>
           </div>
         </div>
 
         <div class="form-group">
-          <label for="nationalId" class="form-label">National ID</label>
+          <label for="nationalId" class="form-label">{{ $t('nationalId') }}</label>
                       <input
               id="nationalId"
               v-model="formData.nationalId"
               type="text"
               class="form-input"
-              placeholder="National ID"
+              :placeholder="$t('nationalIdPlaceholder')"
               required
               @input="saveToStore"
             />
         </div>
 
         <div class="form-group">
-          <label class="form-label">Profile Picture (Optional)</label>
+          <label class="form-label">{{ $t('profilePictureOptional') }}</label>
           <div class="media-upload-options">
             <button type="button" @click="selectProfilePicture" class="upload-option-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -172,7 +172,7 @@
                 <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
                 <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              Upload an image or file
+              {{ $t('uploadImageOrFile') }}
             </button>
           </div>
           <input
@@ -183,14 +183,14 @@
             style="display: none"
           />
           <div v-if="profilePictureFile" class="file-preview">
-            <img :src="profilePicturePreview" alt="Profile Picture Preview" class="preview-image" />
-            <button type="button" @click="removeProfilePicture" class="remove-file-btn">✕ Remove</button>
+            <img :src="profilePicturePreview" :alt="$t('profilePicturePreview')" class="preview-image" />
+            <button type="button" @click="removeProfilePicture" class="remove-file-btn">✕ {{ $t('remove') }}</button>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Front National ID Picture <span class="required">*</span></label>
+            <label class="form-label">{{ $t('frontNationalIdPicture') }} <span class="required">*</span></label>
             <div class="media-upload-options">
               <button type="button" @click="selectFrontIdFromGallery" class="upload-option-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -198,7 +198,7 @@
                   <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
                   <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                Upload an image or file
+                {{ $t('uploadImageOrFile') }}
               </button>
             </div>
             <input
@@ -209,13 +209,13 @@
               style="display: none"
             />
             <div v-if="frontIdFile" class="file-preview">
-              <img :src="frontIdPreview" alt="Front ID Preview" class="preview-image" />
-              <button type="button" @click="removeFrontId" class="remove-file-btn">✕ Remove</button>
+              <img :src="frontIdPreview" :alt="$t('frontIdPreview')" class="preview-image" />
+              <button type="button" @click="removeFrontId" class="remove-file-btn">✕ {{ $t('remove') }}</button>
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Back National ID Picture <span class="required">*</span></label>
+            <label class="form-label">{{ $t('backNationalIdPicture') }} <span class="required">*</span></label>
             <div class="media-upload-options">
               <button type="button" @click="selectBackIdFromGallery" class="upload-option-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -223,7 +223,7 @@
                   <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
                   <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                Upload an image or file
+                {{ $t('uploadImageOrFile') }}
               </button>
             </div>
             <input
@@ -234,15 +234,15 @@
               style="display: none"
             />
             <div v-if="backIdFile" class="file-preview">
-              <img :src="backIdPreview" alt="Back ID Preview" class="preview-image" />
-              <button type="button" @click="removeBackId" class="remove-file-btn">✕ Remove</button>
+              <img :src="backIdPreview" :alt="$t('backIdPreview')" class="preview-image" />
+              <button type="button" @click="removeBackId" class="remove-file-btn">✕ {{ $t('remove') }}</button>
             </div>
           </div>
         </div>
 
         <button type="submit" class="continue-btn" :disabled="loading">
-          <span v-if="loading">Creating Account...</span>
-          <span v-else>Continue</span>
+          <span v-if="loading">{{ $t('creatingAccount') }}</span>
+          <span v-else>{{ $t('continue') }}</span>
         </button>
       </form>
     </div>

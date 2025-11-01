@@ -19,7 +19,7 @@
           />
         </svg>
       </button>
-      <h1 class="page-title">Sign In</h1>
+      <h1 class="page-title">{{ $t('signInButton') }}</h1>
       <div class="placeholder"></div>
     </div>
 
@@ -40,31 +40,31 @@
     <!-- Content -->
     <div class="content">
       <div class="welcome-section">
-        <h2 class="welcome-title">Welcome Back!</h2>
+        <h2 class="welcome-title">{{ $t('welcomeBack') }}</h2>
       </div>
 
       <form @submit.prevent="handleSignIn" class="signin-form" @click.stop>
         <div class="form-group">
-          <label for="email" class="form-label">Email</label>
+          <label for="email" class="form-label">{{ $t('email') }}</label>
           <input
             id="email"
             v-model="formData.email"
             type="email"
             class="form-input"
-            placeholder="Enter your email"
+            :placeholder="$t('enterYourEmail')"
             required
           />
         </div>
 
         <div class="form-group">
-          <label for="password" class="form-label">Password</label>
+          <label for="password" class="form-label">{{ $t('passwordField') }}</label>
           <div class="password-input-wrapper">
             <input
               id="password"
               v-model="formData.password"
               :type="showPassword ? 'text' : 'password'"
               class="form-input"
-              placeholder="Enter your password"
+              :placeholder="$t('enterYourPassword')"
               required
             />
             <button type="button" @click="togglePassword" class="password-toggle">
@@ -131,21 +131,21 @@
           <label class="checkbox-wrapper">
             <input type="checkbox" v-model="formData.rememberMe" class="checkbox" />
             <span class="checkmark"></span>
-            Remember me
+            {{ $t('rememberMe') }}
           </label>
           <button type="button" @click="forgotPassword" class="forgot-link">
-            Forgot Password?
+            {{ $t('forgotPassword') }}
           </button>
         </div>
 
         <button type="submit" class="signin-btn" :disabled="loading">
-          <span v-if="loading">Signing In...</span>
-          <span v-else>Sign In</span>
+          <span v-if="loading">{{ $t('signingIn') }}</span>
+          <span v-else>{{ $t('signInButton') }}</span>
         </button>
       </form>
 
       <div class="divider">
-        <span>or</span>
+        <span>{{ $t('orDivider') }}</span>
       </div>
 <!-- 
       <div class="google-signin-section">
@@ -179,8 +179,8 @@
       </div> -->
 
       <div class="signup-prompt">
-        <span>Don't have an account?</span>
-        <button @click="goToSignUp" class="signup-link">Sign up</button>
+        <span>{{ $t('dontHaveAccount') }}</span>
+        <button @click="goToSignUp" class="signup-link">{{ $t('signUp') }}</button>
       </div>
 
       <div class="device-key-reset-link">
@@ -190,7 +190,7 @@
             <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          New Device? Request Device Key Reset
+          {{ $t('newDeviceRequestReset') }}
         </button>
       </div>
     </div>
@@ -199,7 +199,7 @@
     <div v-if="showDeviceKeyResetModal" class="modal-overlay" @click="closeDeviceKeyResetModal">
       <div class="modal-content device-key-reset-modal" @click.stop>
         <div class="modal-header">
-          <h3>Device Key Reset Request</h3>
+          <h3>{{ $t('deviceKeyResetRequest') }}</h3>
           <button @click="closeDeviceKeyResetModal" class="close-btn">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -209,45 +209,45 @@
 
         <div class="modal-body">
           <p class="modal-description">
-            If you're trying to sign in from a new device, submit a reset request. Our admin will review and approve it.
+            {{ $t('deviceKeyResetDesc') }}
           </p>
 
           <form @submit.prevent="handleDeviceKeyResetSubmit">
             <div class="form-group">
-              <label class="form-label">Email *</label>
+              <label class="form-label">{{ $t('email') }} *</label>
               <input
                 v-model="deviceKeyResetForm.email"
                 type="email"
                 class="form-input"
-                placeholder="Enter your registered email"
+                :placeholder="$t('enterRegisteredEmail')"
                 required
               />
             </div>
 
             <div class="form-group">
-              <label class="form-label">National ID *</label>
+              <label class="form-label">{{ $t('nationalId') }} *</label>
               <input
                 v-model="deviceKeyResetForm.nationalId"
                 type="text"
                 class="form-input"
-                placeholder="Enter your national ID"
+                :placeholder="$t('enterNationalId')"
                 required
               />
             </div>
 
             <div class="form-group">
-              <label class="form-label">Mobile Number *</label>
+              <label class="form-label">{{ $t('phoneNumber') }} *</label>
               <input
                 v-model="deviceKeyResetForm.mobile"
                 type="tel"
                 class="form-input"
-                placeholder="Enter your mobile number"
+                :placeholder="$t('enterMobileNumber')"
                 required
               />
             </div>
 
             <div class="form-group">
-              <label class="form-label">Your Project *</label>
+              <label class="form-label">{{ $t('yourProject') }} *</label>
               <select
                 v-model="deviceKeyResetForm.projectId"
                 class="form-input"
@@ -255,23 +255,23 @@
                 @change="onResetProjectChange"
                 :disabled="loadingProjects"
               >
-                <option value="" v-if="loadingProjects">Loading projects...</option>
-                <option value="" v-else-if="availableProjects.length === 0">No projects available</option>
-                <option value="" v-else>Select your project</option>
+                <option value="" v-if="loadingProjects">{{ $t('loading') }}</option>
+                <option value="" v-else-if="availableProjects.length === 0">{{ $t('noProjectsAvailable') }}</option>
+                <option value="" v-else>{{ $t('selectProjectForReset') }}</option>
                 <option v-for="project in availableProjects" :key="project.id" :value="project.id">
                   {{ project.name }}
                 </option>
               </select>
-              <span v-if="loadingProjects" class="loading-text">⏳ Loading projects...</span>
-              <span v-else-if="availableProjects.length === 0" class="error-text">⚠️ No active projects found. Please contact support.</span>
+              <span v-if="loadingProjects" class="loading-text">⏳ {{ $t('loading') }}...</span>
+              <span v-else-if="availableProjects.length === 0" class="error-text">⚠️ {{ $t('noActiveProjectsFound') }}</span>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Reason for Reset *</label>
+              <label class="form-label">{{ $t('reasonForReset') }}</label>
               <textarea
                 v-model="deviceKeyResetForm.reason"
                 class="form-textarea"
-                placeholder="Please explain why you need a device key reset (e.g., new phone, lost device)..."
+                :placeholder="$t('reasonPlaceholder')"
                 rows="4"
                 maxlength="500"
                 required
@@ -281,11 +281,11 @@
 
             <div class="modal-actions">
               <button type="button" @click="closeDeviceKeyResetModal" class="cancel-btn" :disabled="submittingDeviceKeyReset">
-                Cancel
+                {{ $t('cancel') }}
               </button>
               <button type="submit" class="submit-btn" :disabled="submittingDeviceKeyReset">
-                <span v-if="submittingDeviceKeyReset">Submitting...</span>
-                <span v-else>Submit Request</span>
+                <span v-if="submittingDeviceKeyReset">{{ $t('submitting') }}</span>
+                <span v-else>{{ $t('submitRequest') }}</span>
               </button>
             </div>
           </form>
@@ -1189,6 +1189,12 @@ const handleDeviceKeyResetSubmit = async () => {
   color: #666;
   cursor: pointer;
   padding: 0;
+}
+
+/* Move eye icon to left for RTL languages */
+[dir="rtl"] .password-toggle {
+  right: auto;
+  left: 15px;
 }
 
 .form-options {

@@ -58,35 +58,35 @@
             <option value="food">{{ $t('foodBeverage') }}</option>
             <option value="drinks">{{ $t('drinks') }}</option>
             <option value="desserts">{{ $t('desserts') }}</option>
-            <option value="snacks">Snacks</option>
-            <option value="meals">Meals</option>
-            <option value="other">Other</option>
+            <option value="snacks">{{ $t('snacks') }}</option>
+            <option value="meals">{{ $t('meals') }}</option>
+            <option value="other">{{ $t('other') }}</option>
           </select>
           
           <select v-model="sortBy" class="filter-select">
-            <option value="rating">Best Rated</option>
-            <option value="delivery">Fastest Delivery</option>
-            <option value="name">Name A-Z</option>
+            <option value="rating">{{ $t('bestRated') }}</option>
+            <option value="delivery">{{ $t('fastestDelivery') }}</option>
+            <option value="name">{{ $t('nameAZ') }}</option>
           </select>
         </div>
       </div>
 
       <!-- Stores Grid -->
       <div class="stores-section">
-        <h2 class="section-title">Available Stores</h2>
+        <h2 class="section-title">{{ $t('availableStores') }}</h2>
         
         
         <div v-if="loading" class="loading-state">
           <div class="spinner"></div>
-          <p>Loading stores...</p>
+          <p>{{ $t('loadingStores') }}</p>
         </div>
 
         <div v-else-if="filteredStores.length === 0" class="empty-state">
           <svg class="empty-icon" width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <h3>No stores found</h3>
-          <p>Try adjusting your search or filters</p>
+          <h3>{{ $t('noStoresFound') }}</h3>
+          <p>{{ $t('tryAdjustingSearchFilters') }}</p>
         </div>
 
         <div v-else class="stores-grid">
@@ -115,7 +115,7 @@
                 :class="store.status"
               >
                 <div class="status-dot"></div>
-                <span>{{ store.status === 'inactive' ? 'CLOSED' : 'MAINTENANCE' }}</span>
+                <span>{{ store.status === 'inactive' ? $t('closed') : $t('maintenance') }}</span>
               </div>
               
               <!-- Quick Actions -->
@@ -149,7 +149,7 @@
                   <div class="rating-info">
                     <span class="rating-text">{{ (store.rating || 0).toFixed(1) }}</span>
                     <span class="review-count">
-                      {{ (store.reviewCount || 0) === 0 ? 'No reviews yet' : `(${store.reviewCount} reviews)` }}
+                      {{ (store.reviewCount || 0) === 0 ? $t('noReviewsYet') : `(${store.reviewCount} ${$t('reviews')})` }}
                     </span>
                   </div>
                 </div>
@@ -177,14 +177,14 @@
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
-                  <span>EGP{{ store.deliveryFee }}</span>
+                  <span>{{ $t('currency') }}{{ formatNumber(store.deliveryFee) }}</span>
                 </div>
                 
                 <div class="meta-item free-delivery" v-else>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
-                  <span>Free delivery</span>
+                  <span>{{ $t('freeDelivery') }}</span>
                 </div>
               </div>
               
@@ -211,13 +211,13 @@
     <div v-show="activeTab === 'orders'" class="tab-content">
       <div class="orders-section">
         <div class="orders-header">
-          <h2 class="section-title">Order History</h2>
+          <h2 class="section-title">{{ $t('orderHistory') }}</h2>
           <button @click="refreshOrders" class="refresh-btn" :disabled="ordersLoading">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <span v-if="!ordersLoading">Refresh</span>
-            <span v-else>Refreshing...</span>
+            <span v-if="!ordersLoading">{{ $t('refresh') }}</span>
+            <span v-else>{{ $t('refreshing') }}</span>
           </button>
         </div>
 
@@ -232,7 +232,7 @@
             </div>
             <div class="stat-content">
               <span class="stat-number">{{ getOrdersByStatus('pending').length }}</span>
-              <span class="stat-label">Pending</span>
+              <span class="stat-label">{{ $t('pending') }}</span>
             </div>
           </div>
 
@@ -244,7 +244,7 @@
             </div>
             <div class="stat-content">
               <span class="stat-number">{{ getOrdersByStatus('processing').length }}</span>
-              <span class="stat-label">Processing</span>
+              <span class="stat-label">{{ $t('processing') }}</span>
             </div>
           </div>
 
@@ -256,7 +256,7 @@
             </div>
             <div class="stat-content">
               <span class="stat-number">{{ getOrdersByStatus('delivered').length }}</span>
-              <span class="stat-label">Delivered</span>
+              <span class="stat-label">{{ $t('delivered') }}</span>
             </div>
           </div>
         </div>
@@ -265,7 +265,7 @@
         <div class="orders-list">
           <div v-if="ordersLoading" class="loading-state">
             <div class="spinner"></div>
-            <p>Loading orders...</p>
+            <p>{{ $t('loadingOrders') }}</p>
           </div>
 
           <div v-else-if="userOrders.length === 0" class="empty-orders">
@@ -274,10 +274,10 @@
                 <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <h3>No orders yet</h3>
-            <p>Start shopping to see your order history here</p>
+            <h3>{{ $t('noOrdersYet') }}</h3>
+            <p>{{ $t('startShoppingMessage') }}</p>
             <button @click="activeTab = 'stores'" class="start-shopping-btn">
-              Browse Stores
+              {{ $t('browseStores') }}
             </button>
           </div>
 
@@ -303,8 +303,8 @@
               <div class="order-content">
                 <div class="order-items">
                   <div class="items-preview">
-                    <span class="items-count">{{ order.items?.length || 0 }} items</span>
-                    <span class="items-total">EGP{{ (order.total || 0).toFixed(2) }}</span>
+                    <span class="items-count">{{ order.items?.length || 0 }} {{ $t('items') }}</span>
+                    <span class="items-total">{{ $t('currency') }}{{ formatNumber(order.total || 0) }}</span>
                   </div>
                   <div class="store-name" v-if="order.storeName">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -323,7 +323,7 @@
                           <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                       </div>
-                      <span class="step-label">Ordered</span>
+                      <span class="step-label">{{ $t('ordered') }}</span>
                     </div>
                     
                     <div class="progress-step" :class="{ completed: isStepCompleted(order.status, 'processing') }">
@@ -332,7 +332,7 @@
                           <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                       </div>
-                      <span class="step-label">Processing</span>
+                      <span class="step-label">{{ $t('processing') }}</span>
                     </div>
                     
                     <div class="progress-step" :class="{ completed: isStepCompleted(order.status, 'delivered') }">
@@ -341,7 +341,7 @@
                           <path d="M20 7L10 17L5 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                       </div>
-                      <span class="step-label">Delivered</span>
+                      <span class="step-label">{{ $t('delivered') }}</span>
                     </div>
                   </div>
                 </div>
@@ -361,10 +361,10 @@
                     <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    {{ requiresStoreCall(order) ? 'Call Store to Cancel' : 'Cancel Order' }}
+                    {{ requiresStoreCall(order) ? $t('callStoreToCancel') : $t('cancelOrder') }}
                   </button>
                   <button class="view-details-btn" @click="viewOrderDetails(order)">
-                    View Details
+                    {{ $t('viewDetails') }}
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
@@ -378,12 +378,13 @@
     </div>
 
     <!-- Order Details Modal -->
-    <div v-if="showOrderModal" class="modal-overlay" @click="closeOrderModal">
-      <div class="modal-content" @click.stop>
+    <template v-if="shouldShowOrderDetailsModal">
+      <div class="modal-overlay" @click="closeOrderModal">
+        <div class="modal-content" @click.stop>
         <!-- Modal Header -->
         <div class="modal-header">
           <div class="header-content">
-            <h2>Order Details</h2>
+            <h2>{{ $t('orderDetails') }}</h2>
             <p class="order-id">#{{ selectedOrder?.orderNumber || selectedOrder?.id?.slice(-6) }}</p>
           </div>
           <button class="close-btn" @click="closeOrderModal">
@@ -393,7 +394,7 @@
           </button>
         </div>
 
-        <div v-if="selectedOrder" class="modal-body">
+        <div class="modal-body">
           <!-- Order Status Card -->
           <div class="status-card">
             <div class="status-info">
@@ -432,7 +433,7 @@
                 </svg>
               </div>
               <div class="card-content">
-                <span class="card-label">Items</span>
+                <span class="card-label">{{ $t('items') }}</span>
                 <span class="card-value">{{ selectedOrder.items?.length || 0 }}</span>
               </div>
             </div>
@@ -444,8 +445,8 @@
                 </svg>
               </div>
               <div class="card-content">
-                <span class="card-label">Subtotal</span>
-                <span class="card-value">EGP{{ (selectedOrder.subtotal || 0).toFixed(2) }}</span>
+                <span class="card-label">{{ $t('subtotal') }}</span>
+                <span class="card-value">{{ $t('currency') }}{{ formatNumber((selectedOrder.subtotal || 0)) }}</span>
               </div>
             </div>
 
@@ -456,8 +457,8 @@
                 </svg>
               </div>
               <div class="card-content">
-                <span class="card-label">Delivery</span>
-                <span class="card-value">{{ selectedOrder.deliveryFee ? `EGP${selectedOrder.deliveryFee.toFixed(2)}` : 'Free' }}</span>
+                <span class="card-label">{{ $t('delivery') }}</span>
+                <span class="card-value">{{ selectedOrder.deliveryFee ? `${$t('currency')}${formatNumber(selectedOrder.deliveryFee)}` : $t('free') }}</span>
               </div>
             </div>
 
@@ -468,8 +469,8 @@
                 </svg>
               </div>
               <div class="card-content">
-                <span class="card-label">Total</span>
-                <span class="card-value">${{ (selectedOrder.total || 0).toFixed(2) }}</span>
+                <span class="card-label">{{ $t('total') }}</span>
+                <span class="card-value">{{ $t('currency') }}{{ formatNumber((selectedOrder.total || 0)) }}</span>
               </div>
             </div>
           </div>
@@ -480,15 +481,15 @@
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              Store Information
+              {{ $t('storeInformation') }}
             </h3>
             <div class="info-card">
               <div class="info-item">
-                <span class="info-label">Store Name</span>
+                <span class="info-label">{{ $t('storeName') }}</span>
                 <span class="info-value">{{ selectedOrder.storeName }}</span>
               </div>
               <div class="info-item" v-if="selectedOrder.location">
-                <span class="info-label">Location</span>
+                <span class="info-label">{{ $t('locationLabel') }}</span>
                 <span class="info-value">{{ selectedOrder.location }}</span>
               </div>
             </div>
@@ -500,7 +501,7 @@
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              Order Items
+              {{ $t('orderItems') }}
             </h3>
             <div class="items-container">
               <div 
@@ -510,11 +511,11 @@
               >
                 <div class="item-main">
                   <div class="item-name">{{ item.productName }}</div>
-                  <div class="item-price">EGP {{ (item.price || 0).toFixed(2) }}</div>
+                  <div class="item-price">{{ $t('currency') }} {{ formatNumber((item.price || 0)) }}</div>
                 </div>
                 <div class="item-details">
-                  <span class="quantity">Qty: {{ item.quantity }}</span>
-                  <span class="item-total">EGP {{ ((item.price || 0) * (item.quantity || 0)).toFixed(2) }}</span>
+                  <span class="quantity">{{ $t('qty') }}: {{ item.quantity }}</span>
+                  <span class="item-total">{{ $t('currency') }} {{ formatNumber(((item.price || 0) * (item.quantity || 0))) }}</span>
                 </div>
               </div>
             </div>
@@ -527,7 +528,7 @@
                 <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
                 <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
               </svg>
-              Order Progress
+              {{ $t('orderProgress') }}
             </h3>
             <div class="timeline-container">
               <div class="timeline-item completed">
@@ -537,7 +538,7 @@
                   </svg>
                 </div>
                 <div class="timeline-content">
-                  <div class="timeline-title">Order Placed</div>
+                  <div class="timeline-title">{{ $t('orderPlaced') }}</div>
                   <div class="timeline-time">{{ formatOrderDate(selectedOrder.createdAt) }}</div>
                 </div>
               </div>
@@ -549,8 +550,8 @@
                   </svg>
                 </div>
                 <div class="timeline-content">
-                  <div class="timeline-title">Processing</div>
-                  <div class="timeline-time">In progress</div>
+                  <div class="timeline-title">{{ $t('processing') }}</div>
+                  <div class="timeline-time">{{ $t('inProgress') }}</div>
                 </div>
               </div>
               
@@ -561,22 +562,23 @@
                   </svg>
                 </div>
                 <div class="timeline-content">
-                  <div class="timeline-title">Delivered</div>
-                  <div class="timeline-time">Estimated: {{ selectedOrder.estimatedDelivery || 'TBD' }}</div>
+                  <div class="timeline-title">{{ $t('delivered') }}</div>
+                  <div class="timeline-time">{{ $t('estimated') }}: {{ selectedOrder.estimatedDelivery || $t('tbd') }}</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </template>
 
     <!-- Order Cancellation Modal -->
     <div v-if="showCancelModal" class="modal-overlay" @click="closeCancelModal">
       <div class="modal-content cancel-modal" @click.stop>
         <div class="modal-header">
           <div class="header-content">
-            <h2>Cancel Order</h2>
+            <h2>{{ $t('cancelOrder') }}</h2>
             <p class="order-id">#{{ orderToCancel?.orderNumber || orderToCancel?.id?.slice(-6) }}</p>
           </div>
           <button class="close-btn" @click="closeCancelModal">
@@ -595,8 +597,8 @@
               </svg>
             </div>
             <div class="warning-content">
-              <h3>Are you sure you want to cancel this order?</h3>
-              <p>This action cannot be undone. Please select a reason for cancellation.</p>
+              <h3>{{ $t('areYouSureCancel') }}</h3>
+              <p>{{ $t('cannotBeUndone') }}</p>
             </div>
           </div>
 
@@ -608,14 +610,14 @@
               </svg>
             </div>
             <div class="warning-content">
-              <h3>Order is being processed</h3>
-              <p>This order is currently being prepared by the store. To cancel, please call the store directly.</p>
+              <h3>{{ $t('orderBeingProcessed') }}</h3>
+              <p>{{ $t('orderBeingProcessedMessage') }}</p>
             </div>
           </div>
 
           <!-- Store Contact Information -->
           <div v-if="requiresStoreCall(orderToCancel)" class="store-contact">
-            <h4>Store Contact Information</h4>
+            <h4>{{ $t('storeContactInformation') }}</h4>
             <div class="contact-card">
               <div class="contact-item">
                 <div class="contact-icon">
@@ -624,8 +626,8 @@
                   </svg>
                 </div>
                 <div class="contact-details">
-                  <span class="contact-label">Store Name</span>
-                  <span class="contact-value">{{ orderToCancel.storeName || 'Loading...' }}</span>
+                  <span class="contact-label">{{ $t('storeName') }}</span>
+                  <span class="contact-value">{{ orderToCancel.storeName || $t('loading') + '...' }}</span>
                 </div>
               </div>
               
@@ -636,7 +638,7 @@
                   </svg>
                 </div>
                 <div class="contact-details">
-                  <span class="contact-label">Phone Number</span>
+                  <span class="contact-label">{{ $t('phoneNumber') }}</span>
                   <a 
                     v-if="orderToCancel.storePhone" 
                     :href="`tel:${orderToCancel.storePhone}`" 
@@ -645,7 +647,7 @@
                     {{ orderToCancel.storePhone }}
                   </a>
                   <span v-else class="contact-value no-phone">
-                    Phone number not available
+                    {{ $t('phoneNumberNotAvailable') }}
                   </span>
                 </div>
               </div>
@@ -658,15 +660,15 @@
                   </svg>
                 </div>
                 <div class="contact-details">
-                  <span class="contact-label">Location</span>
-                  <span class="contact-value">{{ orderToCancel.storeLocation || orderToCancel.storeAddress || 'Location not available' }}</span>
+                  <span class="contact-label">{{ $t('locationLabel') }}</span>
+                  <span class="contact-value">{{ orderToCancel.storeLocation || orderToCancel.storeAddress || $t('locationNotAvailable') }}</span>
                 </div>
               </div>
             </div>
           </div>
 
           <div class="cancel-reasons">
-            <h4>Reason for cancellation:</h4>
+            <h4>{{ $t('reasonForCancellation') }}</h4>
             <div class="reasons-list">
               <label 
                 v-for="reason in cancellationReasons" 
@@ -689,11 +691,11 @@
           </div>
 
           <div class="custom-reason" v-if="selectedReason === 'other'">
-            <label for="customReason">Please specify:</label>
+            <label for="customReason">{{ $t('pleaseSpecify') }}</label>
             <textarea 
               id="customReason"
               v-model="customReasonText" 
-              placeholder="Tell us why you're cancelling this order..."
+              :placeholder="$t('tellUsWhyCancelling')"
               class="custom-reason-input"
               rows="3"
             ></textarea>
@@ -701,29 +703,31 @@
 
           <div class="modal-actions">
             <button @click="closeCancelModal" class="cancel-action-btn">
-              {{ requiresStoreCall(orderToCancel) ? 'Close' : 'Keep Order' }}
+              {{ requiresStoreCall(orderToCancel) ? $t('close') : $t('keepOrder') }}
             </button>
-            <button 
-              v-if="canCancelDirectly(orderToCancel)"
-              @click="confirmCancellation" 
-              class="confirm-cancel-btn"
-              :disabled="!selectedReason || (selectedReason === 'other' && !customReasonText.trim())"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              Cancel Order
-            </button>
-            <a 
-              v-else-if="requiresStoreCall(orderToCancel) && orderToCancel.storePhone"
-              :href="`tel:${orderToCancel.storePhone}`" 
-              class="call-store-btn"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              Call Store
-            </a>
+            <template v-if="canCancelDirectly(orderToCancel)">
+              <button 
+                @click="confirmCancellation" 
+                class="confirm-cancel-btn"
+                :disabled="!selectedReason || (selectedReason === 'other' && !customReasonText.trim())"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                {{ $t('cancelOrder') }}
+              </button>
+            </template>
+            <template v-else-if="requiresStoreCall(orderToCancel) && orderToCancel.storePhone">
+              <a 
+                :href="`tel:${orderToCancel.storePhone}`" 
+                class="call-store-btn"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                {{ $t('callStore') }}
+              </a>
+            </template>
           </div>
         </div>
       </div>
@@ -733,6 +737,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter, useRoute } from 'vue-router';
 import firestoreService from 'src/services/firestoreService';
 import optimizedAuthService from 'src/services/optimizedAuthService';
@@ -768,36 +773,51 @@ const showCancelModal = ref(false);
 const orderToCancel = ref(null);
 const selectedReason = ref('');
 const customReasonText = ref('');
-const cancellationReasons = ref([
+
+const { t, locale } = useI18n()
+
+// Helper function to format numbers with proper locale
+const formatNumber = (number) => {
+  if (number === null || number === undefined) return '';
+  const num = typeof number === 'string' ? parseFloat(number) : number;
+  if (isNaN(num)) return '';
+  const localeCode = locale.value === 'ar-SA' ? 'ar-EG' : 'en-US';
+  return new Intl.NumberFormat(localeCode, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(num);
+};
+
+const cancellationReasons = computed(() => [
   {
     id: 'changed_mind',
-    title: 'Changed my mind',
-    description: 'I no longer want this order'
+    title: t('changedMyMind'),
+    description: t('noLongerWantOrder')
   },
   {
     id: 'found_elsewhere',
-    title: 'Found it elsewhere',
-    description: 'I found the same items at a better price'
+    title: t('foundElsewhere'),
+    description: t('foundSameItemsBetterPrice')
   },
   {
     id: 'delivery_issue',
-    title: 'Delivery issue',
-    description: 'There\'s a problem with delivery timing'
+    title: t('deliveryIssue'),
+    description: t('problemWithDeliveryTiming')
   },
   {
     id: 'wrong_order',
-    title: 'Wrong order',
-    description: 'I placed the wrong order by mistake'
+    title: t('wrongOrder'),
+    description: t('placedWrongOrderMistake')
   },
   {
     id: 'price_issue',
-    title: 'Price issue',
-    description: 'The price is different than expected'
+    title: t('priceIssue'),
+    description: t('priceDifferentThanExpected')
   },
   {
     id: 'other',
-    title: 'Other reason',
-    description: 'Please specify below'
+    title: t('otherReason'),
+    description: t('pleaseSpecifyBelow')
   }
 ]);
 
@@ -850,6 +870,10 @@ const ordersCount = computed(() => {
   );
   console.log('Active orders count:', activeOrders.length, 'All orders:', userOrders.value);
   return activeOrders.length;
+});
+
+const shouldShowOrderDetailsModal = computed(() => {
+  return showOrderModal.value && selectedOrder.value !== null;
 });
 
 // Methods
@@ -1315,13 +1339,13 @@ const getStatusClass = (status) => {
 
 const getStatusText = (status) => {
   const statusTexts = {
-    'pending': 'Pending',
-    'processing': 'Processing',
-    'shipped': 'Shipped',
-    'delivered': 'Delivered',
-    'cancelled': 'Cancelled'
+    'pending': t('pending'),
+    'processing': t('processing'),
+    'shipped': t('shipped'),
+    'delivered': t('delivered'),
+    'cancelled': t('cancelled')
   };
-  return statusTexts[status] || 'Pending';
+  return statusTexts[status] || t('pending');
 };
 
 const isStepCompleted = (orderStatus, stepStatus) => {
@@ -1332,17 +1356,19 @@ const isStepCompleted = (orderStatus, stepStatus) => {
 };
 
 const formatOrderDate = (timestamp) => {
-  if (!timestamp) return 'Unknown date';
+  if (!timestamp) return t('unknownDate');
   
   try {
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('en-US', {
+    const localeCode = locale.value === 'ar-SA' ? 'ar-EG' : 'en-US';
+    return date.toLocaleDateString(localeCode, {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
+      calendar: 'gregory'
     });
   } catch {
-    return 'Unknown date';
+    return t('unknownDate');
   }
 };
 
@@ -2793,7 +2819,7 @@ watch(() => route.query.tab, (newTab) => {
   border-color: #f59e0b;
   color: white;
 }
-/* 
+
 /* Mobile app - hover effects disabled */
 /* .cancel-btn.processing-cancel:hover {
   background: #d97706;
@@ -3147,6 +3173,177 @@ watch(() => route.query.tab, (newTab) => {
   .confirm-cancel-btn {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* RTL Support for Arabic */
+[dir="rtl"] .stores-shopping-page {
+  direction: rtl;
+}
+
+[dir="rtl"] .tab-buttons {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .tab-btn {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .search-icon {
+  left: auto;
+  right: 16px;
+}
+
+[dir="rtl"] .search-input {
+  padding: 16px 48px 16px 16px;
+}
+
+[dir="rtl"] .filters {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .filter-select {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .store-card {
+  direction: rtl;
+}
+
+[dir="rtl"] .quick-actions {
+  left: 12px;
+  right: auto;
+}
+
+[dir="rtl"] .store-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .rating {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+[dir="rtl"] .store-meta {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .orders-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .order-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .order-info {
+  text-align: right;
+}
+
+[dir="rtl"] .items-preview {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .order-progress {
+  direction: rtl;
+}
+
+[dir="rtl"] .progress-track {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .progress-track::before {
+  left: auto;
+  right: 0;
+}
+
+[dir="rtl"] .order-footer {
+  justify-content: flex-start;
+}
+
+[dir="rtl"] .order-actions {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .modal-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .header-content {
+  text-align: right;
+}
+
+[dir="rtl"] .status-card {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .status-info {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .summary-card {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .info-item {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .info-label {
+  text-align: right;
+}
+
+[dir="rtl"] .item-main {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .item-details {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .item-name {
+  margin-right: 0;
+  margin-left: 12px;
+}
+
+[dir="rtl"] .timeline-container {
+  direction: rtl;
+}
+
+[dir="rtl"] .timeline-container::before {
+  left: auto;
+  right: 32px;
+}
+
+[dir="rtl"] .timeline-item {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .cancel-warning,
+[dir="rtl"] .store-call-warning {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .contact-item {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .contact-details {
+  text-align: right;
+}
+
+[dir="rtl"] .reason-option {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .modal-actions {
+  flex-direction: row-reverse;
+}
+
+@media (max-width: 768px) {
+  [dir="rtl"] .timeline-container::before {
+    right: 37px;
   }
 }
 </style>

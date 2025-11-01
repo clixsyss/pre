@@ -514,6 +514,11 @@ onActivated(async () => {
   width: 100%;
 }
 
+/* RTL: Flip flex direction for hero content */
+[dir="rtl"] .hero-content {
+  flex-direction: row-reverse;
+}
+
 .hero-text {
   display: flex;
   flex-direction: column;
@@ -525,6 +530,17 @@ onActivated(async () => {
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.02em;
+}
+
+/* RTL Alignment for Welcome Back */
+[dir="rtl"] .hero-text {
+  text-align: right;
+  align-items: flex-end;
+}
+
+[dir="ltr"] .hero-text {
+  text-align: left;
+  align-items: flex-start;
 }
 
 .hero-subtitle {

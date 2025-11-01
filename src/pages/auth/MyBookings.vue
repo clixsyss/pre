@@ -137,7 +137,7 @@
                 v-if="(isAcademyBooking(booking) && booking.studentName) || (isCourtBooking(booking) && booking.courtLocation)"
                 class="additional-info">
                 <span v-if="isAcademyBooking(booking) && booking.studentName" class="info-tag">
-                  Student: {{ booking.studentName }}
+                  {{ $t('student') }} {{ booking.studentName }}
                 </span>
                 <span v-if="isCourtBooking(booking) && booking.courtLocation" class="info-tag">
                   {{ booking.courtLocation }}

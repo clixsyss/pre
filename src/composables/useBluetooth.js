@@ -34,33 +34,14 @@ export function useBluetooth() {
 
           // Check if BLE is enabled
           try {
-            // Initialize with Android-specific options
-            const initOptions =
-              Capacitor.getPlatform() === 'android' ? { androidNeverForLocation: true } : {}
-
-            await bluetoothLE.initialize(initOptions)
+            await bluetoothLE.initialize()
             isBLESupported.value = true
             console.log('✅ Capacitor BLE initialized')
             return true
           } catch (initError) {
             console.error('❌ BLE initialization failed:', initError)
-            console.error('Error details:', {
-              message: initError.message,
-              code: initError.code,
-              stack: initError.stack,
-            })
             isBLESupported.value = false
-
-            // Provide more helpful error message
-            const errorMsg = initError.message || 'Unknown error'
-            if (errorMsg.includes('permission') || errorMsg.includes('Permission')) {
-              lastError.value =
-                'Bluetooth permission required. Please grant permissions in device settings.'
-            } else if (errorMsg.includes('not enabled') || errorMsg.includes('disabled')) {
-              lastError.value = 'Bluetooth is disabled. Please enable Bluetooth in device settings.'
-            } else {
-              lastError.value = `BLE initialization failed: ${errorMsg}`
-            }
+            lastError.value = 'BLE initialization failed. Please enable Bluetooth.'
             return false
           }
         } catch (importError) {

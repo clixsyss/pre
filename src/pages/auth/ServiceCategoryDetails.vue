@@ -1,8 +1,7 @@
 <template>
   <div class="service-category-details">
     <!-- Page Header -->
-    <PageHeader :title="category?.englishTitle || $t('loadingLabel')" />
-    <!-- :subtitle="category?.arabicTitle || ''"  -->
+    <PageHeader :title="getLocalizedTitle(category) || $t('loadingLabel')" />
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
@@ -26,9 +25,9 @@
         @click="openBookingDialog(service)"
       >
         <div class="service-info">
-          <h4 class="service-name">{{ service.englishTitle }}</h4>
-          <p class="service-description">{{ service.englishDescription }}</p>
-          <div class="service-price">EGP {{ service.price }}</div>
+          <h4 class="service-name">{{ getLocalizedTitle(service) }}</h4>
+          <p class="service-description">{{ getLocalizedDescription(service) }}</p>
+          <div class="service-price">{{ $t('currency') }} {{ service.price }}</div>
         </div>
         <div class="service-arrow">
           <svg
@@ -83,15 +82,15 @@
           />
         </svg>
       </div>
-      <h3>No Services Available</h3>
-      <p>There are no services available in this category yet.</p>
+      <h3>{{ $t('noServicesAvailable') }}</h3>
+      <p>{{ $t('noServicesInCategory') }}</p>
     </div>
 
     <!-- Booking Dialog -->
     <div v-if="showBookingDialog" class="booking-dialog-overlay" @click="closeBookingDialog">
       <div class="booking-dialog" @click.stop>
         <div class="dialog-header">
-          <h3 class="dialog-title">Book Service</h3>
+          <h3 class="dialog-title">{{ $t('bookService') }}</h3>
           <button @click="closeBookingDialog" class="close-btn">
             <svg
               width="24"
@@ -147,11 +146,11 @@
                 </svg>
               </div>
               <div class="service-details">
-                <h4 class="service-name">{{ selectedService?.englishTitle }}</h4>
-                <p class="service-description">{{ selectedService?.englishDescription }}</p>
+                <h4 class="service-name">{{ getLocalizedTitle(selectedService) }}</h4>
+                <p class="service-description">{{ getLocalizedDescription(selectedService) }}</p>
               </div>
               <div class="service-price-badge">
-                <span class="price-amount">EGP {{ selectedService?.price }}</span>
+                <span class="price-amount">{{ $t('currency') }} {{ selectedService?.price }}</span>
               </div>
             </div>
           </div>
@@ -165,8 +164,8 @@
                 <div class="step-line"></div>
               </div>
               <div class="step-content">
-                <h4 class="step-title">Select Date</h4>
-                <p class="step-subtitle">Choose your preferred date</p>
+                <h4 class="step-title">{{ $t('selectDate') }}</h4>
+                <p class="step-subtitle">{{ $t('choosePreferredDate') }}</p>
                 <div class="dropdown-container">
                   <select
                     v-model="selectedDate"
@@ -174,7 +173,7 @@
                     class="modern-dropdown"
                     :disabled="loadingTimeSlots"
                   >
-                    <option value="" disabled>Choose a date...</option>
+                    <option value="" disabled>{{ $t('chooseDate') }}</option>
                     <option
                       v-for="day in availableDays"
                       :key="day.fullDate"
@@ -182,7 +181,7 @@
                       :disabled="!day.available"
                     >
                       {{ day.name }} - {{ day.date }}
-                      {{ day.available ? `(${day.timeRange})` : '(Unavailable)' }}
+                      {{ day.available ? `(${day.timeRange})` : `(${$t('unavailable')})` }}
                     </option>
                   </select>
                   <div class="dropdown-icon">
@@ -217,8 +216,8 @@
                 <div class="step-line"></div>
               </div>
               <div class="step-content">
-                <h4 class="step-title">Select Time</h4>
-                <p class="step-subtitle">Pick your preferred time slot</p>
+                <h4 class="step-title">{{ $t('selectTime') }}</h4>
+                <p class="step-subtitle">{{ $t('pickPreferredTimeSlot') }}</p>
                 <div class="dropdown-container">
                   <select
                     v-model="selectedTime"
@@ -226,14 +225,14 @@
                     class="modern-dropdown"
                     :disabled="loadingTimeSlots || availableTimeSlots.length === 0"
                   >
-                    <option value="" disabled>Choose a time...</option>
+                    <option value="" disabled>{{ $t('chooseTime') }}</option>
                     <option
                       v-for="slot in availableTimeSlots"
                       :key="slot.time"
                       :value="slot.time"
                       :disabled="slot.isReserved"
                     >
-                      {{ slot.time }} {{ slot.isReserved ? '(Booked)' : '' }}
+                      {{ slot.time }} {{ slot.isReserved ? `(${$t('booked')})` : '' }}
                     </option>
                   </select>
                   <div class="dropdown-icon">
@@ -258,7 +257,7 @@
                 <!-- Loading State -->
                 <div v-if="loadingTimeSlots" class="loading-state">
                   <div class="loading-spinner"></div>
-                  <p>Loading available time slots...</p>
+                  <p>{{ $t('loadingTimeSlots') }}</p>
                 </div>
 
                 <!-- No Time Slots -->
@@ -276,7 +275,7 @@
                       <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" />
                     </svg>
                   </div>
-                  <p>No time slots available for this date</p>
+                  <p>{{ $t('noTimeSlotsAvailable') }}</p>
                 </div>
               </div>
             </div>
@@ -285,31 +284,31 @@
           <!-- Booking Summary -->
           <div v-if="selectedDate && selectedTime" class="booking-summary">
             <div class="summary-header">
-              <h4>Booking Summary</h4>
+              <h4>{{ $t('bookingSummary') }}</h4>
             </div>
             <div class="summary-content">
               <div class="summary-item">
-                <span class="summary-label">Service:</span>
-                <span class="summary-value">{{ selectedService?.englishTitle }}</span>
+                <span class="summary-label">{{ $t('service') }}:</span>
+                <span class="summary-value">{{ getLocalizedTitle(selectedService) }}</span>
               </div>
               <div class="summary-item">
-                <span class="summary-label">Date:</span>
+                <span class="summary-label">{{ $t('date') }}:</span>
                 <span class="summary-value">{{ formatSelectedDate(selectedDate) }}</span>
               </div>
               <div class="summary-item">
-                <span class="summary-label">Time:</span>
+                <span class="summary-label">{{ $t('time') }}:</span>
                 <span class="summary-value">{{ selectedTime }}</span>
               </div>
               <div class="summary-item total">
-                <span class="summary-label">Total:</span>
-                <span class="summary-value">EGP {{ selectedService?.price }}</span>
+                <span class="summary-label">{{ $t('total') }}:</span>
+                <span class="summary-value">{{ $t('currency') }} {{ selectedService?.price }}</span>
               </div>
             </div>
           </div>
 
           <!-- Action Buttons -->
           <div class="booking-actions">
-            <button @click="closeBookingDialog" class="cancel-btn">Cancel</button>
+            <button @click="closeBookingDialog" class="cancel-btn">{{ $t('cancel') }}</button>
             <button
               @click="confirmBooking"
               :disabled="!selectedDate || !selectedTime || isBookingInProgress"
@@ -332,11 +331,11 @@
                     stroke-linejoin="round"
                   />
                 </svg>
-                Confirm Booking
+                {{ $t('confirmBooking') }}
               </span>
               <span v-else class="btn-content">
                 <div class="btn-spinner"></div>
-                Booking...
+                {{ $t('booking') }}
               </span>
             </button>
           </div>
@@ -349,6 +348,7 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useModalState } from '../../composables/useModalState'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore'
@@ -372,11 +372,98 @@ useFormKeyboard({
 })
 
 const route = useRoute()
+const { locale } = useI18n()
 const serviceCategoriesStore = useServiceCategoriesStore()
 const projectStore = useProjectStore()
 const notificationStore = useNotificationStore()
 const serviceBookingStore = useServiceBookingStore()
 const { openModal, closeModal } = useModalState()
+
+// Helper function to get localized text
+const getLocalizedTitle = (item) => {
+  if (!item) return ''
+  const isArabic = locale.value === 'ar-SA' || locale.value.startsWith('ar')
+  
+  if (isArabic) {
+    // Check if arabicTitle exists and is valid
+    if (item.arabicTitle) {
+      // Clean up corrupted text
+      const cleaned = item.arabicTitle
+        .replace(/\s*arabic\s*$/i, '')
+        .replace(/\s*ararbic\s*$/i, '')
+        .trim()
+      
+      // Only use if it's actually Arabic text
+      if (cleaned && /[\u0600-\u06FF]/.test(cleaned)) {
+        return cleaned
+      }
+    }
+    
+    // Translate common service/category names if no valid Arabic title
+    const englishTitle = (item.englishTitle || item.name || '').toLowerCase().trim()
+    const translations = {
+      'home maintenance': 'صيانة المنزل',
+      'plumbing': 'السباكة',
+      'electrical': 'الكهرباء',
+      'electricity': 'الكهرباء',
+      'electricity meter': 'عداد الكهرباء',
+      'cleaning': 'التنظيف',
+      'painting': 'الدهان',
+      'carpentry': 'النجارة',
+      'air conditioning': 'التكييف',
+      'pest control': 'مكافحة الحشرات',
+      'landscaping': 'تنسيق الحدائق',
+      'handyman': 'خدمات عامة',
+      'hvac': 'التدفئة والتهوية',
+      'locksmith': 'الأقفال',
+      'appliance repair': 'إصلاح الأجهزة'
+    }
+    
+    if (translations[englishTitle]) {
+      return translations[englishTitle]
+    }
+  }
+  
+  return item.englishTitle || item.name || ''
+}
+
+const getLocalizedDescription = (item) => {
+  if (!item) return ''
+  const isArabic = locale.value === 'ar-SA' || locale.value.startsWith('ar')
+  
+  if (isArabic) {
+    if (item.arabicDescription) {
+      const cleaned = item.arabicDescription
+        .replace(/\s*arabic\s*$/i, '')
+        .replace(/\s*ararbic\s*$/i, '')
+        .trim()
+      
+      if (cleaned && /[\u0600-\u06FF]/.test(cleaned)) {
+        return cleaned
+      }
+    }
+    
+    // Provide generic Arabic descriptions for common services if none exist
+    const englishDesc = (item.englishDescription || item.description || '').toLowerCase().trim()
+    const englishTitle = (item.englishTitle || item.name || '').toLowerCase().trim()
+    
+    // Generic descriptions based on service type
+    if (englishTitle.includes('plumbing') || englishDesc.includes('plumbing')) {
+      return 'خدمات السباكة والإصلاحات'
+    }
+    if (englishTitle.includes('electric') || englishDesc.includes('electric')) {
+      return 'خدمات الكهرباء والصيانة'
+    }
+    if (englishTitle.includes('meter')) {
+      return 'قراءة وصيانة العدادات'
+    }
+    if (englishTitle.includes('cleaning')) {
+      return 'خدمات التنظيف والتعقيم'
+    }
+  }
+  
+  return item.englishDescription || item.description || ''
+}
 
 // State
 const category = ref(null)
@@ -465,19 +552,22 @@ const generateAvailableDays = () => {
 
   const days = []
   const today = new Date()
+  const isArabic = locale.value === 'ar-SA' || locale.value.startsWith('ar')
+  // Use en-US calendar with Arabic text (Gregorian calendar, not Hijri)
+  const dateLocale = isArabic ? 'ar-EG' : 'en-US'
 
   // Generate next 14 days
   for (let i = 0; i < 14; i++) {
     const date = new Date(today)
     date.setDate(today.getDate() + i)
 
-    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' })
-    const dayKey = dayName.toLowerCase()
+    const dayName = date.toLocaleDateString(dateLocale, { weekday: 'long', calendar: 'gregory' })
+    const dayKey = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
     const availability = category.value.availability[dayKey]
 
     const dayInfo = {
       name: dayName,
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      date: date.toLocaleDateString(dateLocale, { month: 'short', day: 'numeric', year: 'numeric', calendar: 'gregory' }),
       fullDate: date.toISOString().split('T')[0],
       available: availability?.available || false,
       timeRange: availability?.available
@@ -512,11 +602,16 @@ const onTimeChange = (event) => {
 const formatSelectedDate = (dateString) => {
   if (!dateString) return ''
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', {
+  const isArabic = locale.value === 'ar-SA' || locale.value.startsWith('ar')
+  // Use Gregorian calendar with Arabic text, not Hijri
+  const dateLocale = isArabic ? 'ar-EG' : 'en-US'
+  
+  return date.toLocaleDateString(dateLocale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+    calendar: 'gregory'
   })
 }
 
@@ -639,6 +734,11 @@ const confirmBooking = async () => {
   min-height: 100%;
 }
 
+/* RTL Support */
+[dir="rtl"] .service-category-details {
+  direction: rtl;
+}
+
 /* Category Info */
 .category-info {
   background: white;
@@ -758,6 +858,10 @@ const confirmBooking = async () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+[dir="rtl"] .services-list {
+  text-align: right;
+}
+
 .section-title {
   font-size: 1.25rem;
   font-weight: 600;
@@ -773,6 +877,10 @@ const confirmBooking = async () => {
   border-bottom: 1px solid #f3f4f6;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+[dir="rtl"] .service-item {
+  text-align: right;
 }
 
 .service-item:last-child {
@@ -818,6 +926,10 @@ const confirmBooking = async () => {
   justify-content: center;
   flex-shrink: 0;
   transition: all 0.2s ease;
+}
+
+[dir="rtl"] .service-arrow {
+  transform: scaleX(-1);
 }
 
 /* Mobile app - hover effects disabled */
@@ -898,6 +1010,10 @@ const confirmBooking = async () => {
   border-bottom: 1px solid #e5e7eb;
 }
 
+[dir="rtl"] .dialog-header {
+  flex-direction: row-reverse;
+}
+
 .dialog-title {
   font-size: 1.25rem;
   font-weight: 600;
@@ -925,6 +1041,10 @@ const confirmBooking = async () => {
   padding: 20px;
   pointer-events: auto;
   position: relative;
+}
+
+[dir="rtl"] .dialog-content {
+  text-align: right;
 }
 
 .dialog-content .service-info {
@@ -986,6 +1106,11 @@ const confirmBooking = async () => {
   gap: 16px;
 }
 
+[dir="rtl"] .service-header {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
 .service-icon {
   width: 48px;
   height: 48px;
@@ -1033,12 +1158,20 @@ const confirmBooking = async () => {
   margin-bottom: 32px;
 }
 
+[dir="rtl"] .booking-steps {
+  direction: rtl;
+}
+
 .booking-step {
   display: flex;
   gap: 20px;
   margin-bottom: 32px;
   opacity: 0.6;
   transition: opacity 0.3s ease;
+}
+
+[dir="rtl"] .booking-step {
+  flex-direction: row-reverse;
 }
 
 .booking-step.active {
@@ -1107,6 +1240,10 @@ const confirmBooking = async () => {
   padding-top: 8px;
 }
 
+[dir="rtl"] .step-content {
+  text-align: right;
+}
+
 .step-title {
   font-size: 1.125rem;
   font-weight: 600;
@@ -1143,6 +1280,11 @@ const confirmBooking = async () => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+[dir="rtl"] .modern-dropdown {
+  padding: 16px 16px 16px 48px;
+  text-align: right;
+}
+
 .modern-dropdown:focus {
   outline: none;
   border-color: #af1e23;
@@ -1177,6 +1319,11 @@ const confirmBooking = async () => {
   color: #64748b;
   pointer-events: none;
   transition: all 0.3s ease;
+}
+
+[dir="rtl"] .dropdown-icon {
+  right: auto;
+  left: 16px;
 }
 
 .dropdown-container:focus-within .dropdown-icon {
@@ -1230,6 +1377,10 @@ const confirmBooking = async () => {
   margin-bottom: 32px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.2s ease;
+}
+
+[dir="rtl"] .booking-summary {
+  text-align: right;
 }
 
 .booking-summary:hover {
@@ -1321,6 +1472,10 @@ const confirmBooking = async () => {
   pointer-events: auto;
   position: relative;
   z-index: 10;
+}
+
+[dir="rtl"] .booking-actions {
+  flex-direction: row-reverse;
 }
 
 .cancel-btn {

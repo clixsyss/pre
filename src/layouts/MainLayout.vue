@@ -151,10 +151,10 @@
               </div>
               
               <div class="project-actions">
-                <span v-if="project.id === currentProjectId" class="current-badge">Current</span>
+                <span v-if="project.id === currentProjectId" class="current-badge">{{ $t('currentBadge') }}</span>
                 <div v-else class="switch-indicator">
                   <div v-if="projectStore.loading" class="loading-spinner"></div>
-                  <span v-else class="switch-text">Tap to switch</span>
+                  <span v-else class="switch-text">{{ $t('tapToSwitch') }}</span>
                 </div>
               </div>
             </div>
@@ -166,7 +166,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Add New Project
+            {{ $t('addNewProject') }}
           </button>
         </div>
       </div>
@@ -185,7 +185,7 @@
         <div class="nav-icon">
           <img src="../assets/ic_round-home.svg" alt="Home" width="24" height="24" />
         </div>
-        <span class="nav-label">Home</span>
+        <span class="nav-label">{{ $t('home') }}</span>
       </router-link>
 
 
@@ -193,14 +193,14 @@
         <div class="nav-icon">
           <img src="../assets/Services.svg" alt="Services" width="24" height="24" />
         </div>
-        <span class="nav-label">Services</span>
+        <span class="nav-label">{{ $t('services') }}</span>
       </router-link>
 
       <router-link to="/facilities" class="nav-item" :class="{ active: isActiveTab('facilities') }">
         <div class="nav-icon">
           <img src="../assets/request.svg" alt="Requests" width="24" height="24" />
         </div>
-        <span class="nav-label">Requests</span>
+        <span class="nav-label">{{ $t('requests') }}</span>
       </router-link>
 
 
@@ -208,7 +208,7 @@
         <div class="nav-icon">
           <img src="../assets/profile.svg" alt="Profile" width="24" height="24" />
         </div>
-        <span class="nav-label">Profile</span>
+        <span class="nav-label">{{ $t('profile') }}</span>
       </router-link>
     </nav>
 
@@ -270,6 +270,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useProjectStore } from '../stores/projectStore'
 import { useSmartMirrorStore } from '../stores/smartMirrorStore'
 import { useNotificationCenterStore } from '../stores/notificationCenter'
@@ -294,6 +295,7 @@ defineOptions({
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 const projectStore = useProjectStore()
 const smartMirrorStore = useSmartMirrorStore()
 const notificationCenterStore = useNotificationCenterStore()
@@ -397,58 +399,58 @@ const shouldHideBottomNav = computed(() => {
 })
 
 // Quick menu items
-const quickMenuItems = [
+const quickMenuItems = computed(() => [
   {
     path: '/home',
-    label: 'Home',
+    label: t('home'),
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   },
   {
     path: '/services',
-    label: 'Services',
+    label: t('services'),
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   },
   {
     path: '/access',
-    label: 'Gate Access',
+    label: t('gateAccess'),
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="1.5" fill="none"/><rect x="4" y="4" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none"/><rect x="5" y="5" width="4" height="4" fill="currentColor"/></svg>'
   },
   {
     path: '/my-bookings',
-    label: 'My Bookings',
+    label: t('myBookings'),
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/></svg>'
   },
   {
     path: '/calendar',
-    label: 'Calendar',
+    label: t('calendar'),
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 2V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3 10H21" stroke="currentColor" stroke-width="2"/></svg>'
   },
   {
     path: '/smart-devices',
-    label: 'Smart Devices',
+    label: t('smartDevices'),
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 21C9 21.5523 9.44772 22 10 22H14C14.5523 22 15 21.5523 15 21V20H9V21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   },
   {
     path: '/stores-shopping',
-    label: 'Stores',
+    label: t('stores'),
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   },
   {
     path: '/news',
-    label: 'News',
+    label: t('news'),
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2"/><path d="M22 6L12 13L2 6" stroke="currentColor" stroke-width="2"/></svg>'
   },
   {
     path: '/facilities',
-    label: 'Requests',
+    label: t('requests'),
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   },
   {
     path: '/profile',
-    label: 'Profile',
+    label: t('profile'),
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   }
-]
+])
 
 // Methods
 const toggleQuickMenu = () => {

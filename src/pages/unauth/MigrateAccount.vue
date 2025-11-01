@@ -637,6 +637,12 @@ const handleDirectMigration = async () => {
   padding: 0;
 }
 
+/* Move eye icon to left for RTL languages */
+[dir="rtl"] .password-toggle {
+  right: auto;
+  left: 15px;
+}
+
 .password-requirements {
   margin-top: 5px;
   color: #666;
