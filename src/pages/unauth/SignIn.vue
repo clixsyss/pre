@@ -678,6 +678,17 @@ const handleSignIn = async () => {
 
     console.log('✅ User is approved, proceeding to home')
 
+    // Register FCM token for push notifications
+    console.log('[SignIn] 📱 Registering FCM token for notifications...')
+    try {
+      const fcmService = (await import('../../services/fcmService')).default
+      await fcmService.initialize()
+      console.log('[SignIn] ✅ FCM token registered successfully')
+    } catch (fcmError) {
+      console.warn('[SignIn] ⚠️ FCM registration failed (non-critical):', fcmError)
+      // Don't block login if FCM fails
+    }
+
     // Wait a bit to ensure auth state is fully established
     await new Promise((resolve) => setTimeout(resolve, 500))
 

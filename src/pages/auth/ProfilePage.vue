@@ -1647,8 +1647,27 @@ const loadFamilyMembers = async () => {
       }))
     }
 
-    // Combine both arrays and remove duplicates
+    // If current user is a family member (has a parent), also fetch the parent user
+    let parentUser = null
+    if (parentId !== currentUser.uid) {
+      try {
+        const parentDoc = await firestoreService.getDoc('users', parentId)
+        if (parentDoc.exists()) {
+          parentUser = {
+            id: parentDoc.id,
+            ...parentDoc.data()
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching parent user:', error)
+      }
+    }
+
+    // Combine all arrays and remove duplicates
     const allPotentialMembers = [...potentialFamilyMembers, ...childrenOfCurrentUser]
+    if (parentUser) {
+      allPotentialMembers.push(parentUser)
+    }
     const uniqueMembers = allPotentialMembers.filter((user, index, self) =>
       index === self.findIndex(u => u.id === user.id)
     )

@@ -989,6 +989,17 @@ const handlePropertySubmit = async () => {
       registrationStore.setUserDetails({ password: '', authToken: '', refreshToken: '' })
     }
 
+    // Register FCM token for push notifications
+    console.log('[Register] 📱 Registering FCM token for notifications...')
+    try {
+      const fcmService = (await import('../../services/fcmService')).default
+      await fcmService.initialize()
+      console.log('[Register] ✅ FCM token registered successfully')
+    } catch (fcmError) {
+      console.warn('[Register] ⚠️ FCM registration failed (non-critical):', fcmError)
+      // Don't block registration if FCM fails
+    }
+
     console.log('[Register] Showing success notification')
     notificationStore.showSuccess('Registration completed!')
     
