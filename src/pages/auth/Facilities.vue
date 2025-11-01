@@ -3,8 +3,8 @@
     <div class="hero-section">
       <div class="hero-content">
         <div class="hero-text">
-          <h1 class="hero-title">Facilities</h1>
-          <p class="hero-subtitle">Book courts, join academies, and shop at our facilities</p>
+          <h1 class="hero-title">{{ $t('facilities') }}</h1>
+          <p class="hero-subtitle">{{ $t('facilitiesSubtitle') }}</p>
         </div>
       </div>
     </div>
@@ -19,8 +19,8 @@
           </svg>
         </div>
         <div class="facility-content">
-          <h3 class="facility-name">Court Booking</h3>
-          <p class="facility-description">Book tennis, basketball, and other sports courts</p>
+          <h3 class="facility-name">{{ $t('courtBooking') }}</h3>
+          <p class="facility-description">{{ $t('courtBookingDesc') }}</p>
         </div>
         <div class="facility-arrow">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -40,8 +40,8 @@
           </svg>
         </div>
         <div class="facility-content">
-          <h3 class="facility-name">Academy Programs</h3>
-          <p class="facility-description">Join sports academies and training programs</p>
+          <h3 class="facility-name">{{ $t('academyPrograms') }}</h3>
+          <p class="facility-description">{{ $t('academyProgramsDesc') }}</p>
         </div>
         <div class="facility-arrow">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -60,8 +60,8 @@
           </svg>
         </div>
         <div class="facility-content">
-          <h3 class="facility-name">Shopping</h3>
-          <p class="facility-description">Browse and shop at our retail stores</p>
+          <h3 class="facility-name">{{ $t('shopping') }}</h3>
+          <p class="facility-description">{{ $t('shoppingDesc') }}</p>
         </div>
         <div class="facility-arrow">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -205,6 +205,19 @@ const navigateToStores = () => {
 .facility-card:hover .facility-arrow {
   color: #AF1E23;
   transform: translateX(4px);
+}
+
+/* RTL Support for Arabic */
+[dir="rtl"] .facility-card {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .facility-card:hover .facility-arrow {
+  transform: translateX(-4px);
+}
+
+[dir="rtl"] .facility-arrow svg {
+  transform: scaleX(-1);
 }
 
 /* Tablet and Desktop */

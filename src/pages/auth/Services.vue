@@ -57,7 +57,7 @@
               </svg>
             </div>
             <div class="service-content">
-              <h3 class="service-name">{{ category.englishTitle }}</h3>
+              <h3 class="service-name">{{ getCategoryTitle(category) }}</h3>
             </div>
             <div class="service-arrow">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -271,8 +271,8 @@
               <path d="M12 8V12L15 15" stroke="#ccc" stroke-width="2" stroke-linecap="round" />
             </svg>
           </div>
-          <h3>No Open Bookings</h3>
-          <p>You don't have any open service bookings at the moment.</p>
+          <h3>{{ $t('noOpenBookings') }}</h3>
+          <p>{{ $t('noOpenBookingsMessage') }}</p>
         </div>
         <div v-else class="bookings-list">
           <div v-for="booking in openBookings" :key="booking.id" class="booking-card"
@@ -305,7 +305,7 @@
       <div v-else-if="activeTab === 'closed'" class="bookings-content">
         <div v-if="loadingBookings" class="loading-container">
           <div class="loading-spinner"></div>
-          <p>Loading closed bookings...</p>
+          <p>{{ $t('loadingClosedBookings') }}</p>
         </div>
         <div v-else-if="closedBookings.length === 0" class="empty-state">
           <div class="empty-icon">
@@ -315,8 +315,8 @@
                 stroke-linejoin="round" />
             </svg>
           </div>
-          <h3>No Closed Bookings</h3>
-          <p>You don't have any closed service bookings yet.</p>
+          <h3>{{ $t('noClosedBookings') }}</h3>
+          <p>{{ $t('noClosedBookingsMessage') }}</p>
         </div>
         <div v-else class="bookings-list">
           <div v-for="booking in closedBookings" :key="booking.id" class="booking-card"
@@ -355,6 +355,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import optimizedAuthService from 'src/services/optimizedAuthService';
 import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
@@ -367,8 +368,60 @@ defineOptions({
 });
 
 const router = useRouter();
+const { t, locale } = useI18n();
 const serviceCategoriesStore = useServiceCategoriesStore();
 const projectStore = useProjectStore();
+
+// Helper function to get localized category title
+const getCategoryTitle = (category) => {
+  if (!category) return '';
+  
+  const isArabic = locale.value === 'ar-SA' || locale.value.startsWith('ar');
+  
+  // If Arabic mode
+  if (isArabic) {
+    // Check if arabicTitle exists and is valid
+    if (category.arabicTitle) {
+      // Clean up corrupted text like "Home maintenance arabic" or "صيانة المنزل arabic"
+      const cleaned = category.arabicTitle
+        .replace(/\s*arabic\s*$/i, '')
+        .replace(/\s*ararbic\s*$/i, '')
+        .trim();
+      
+      // Only use if it's actually Arabic text (contains Arabic characters)
+      if (cleaned && /[\u0600-\u06FF]/.test(cleaned)) {
+        return cleaned;
+      }
+    }
+    
+    // Translate common service names to Arabic if no valid arabicTitle
+    const englishTitle = (category.englishTitle || category.name || '').toLowerCase();
+    const translations = {
+      'home maintenance': 'صيانة المنزل',
+      'plumbing': 'السباكة',
+      'electrical': 'الكهرباء',
+      'cleaning': 'التنظيف',
+      'painting': 'الدهان',
+      'carpentry': 'النجارة',
+      'air conditioning': 'التكييف',
+      'pest control': 'مكافحة الحشرات',
+      'landscaping': 'تنسيق الحدائق',
+      'handyman': 'خدمات عامة'
+    };
+    
+    if (translations[englishTitle]) {
+      return translations[englishTitle];
+    }
+  }
+  
+  // For English mode or if no translation available, use English title
+  if (category.englishTitle) {
+    return category.englishTitle;
+  }
+  
+  // Fallback to any name field
+  return category.name || '';
+};
 
 // Reactive state
 const activeTab = ref('services');
@@ -382,18 +435,18 @@ const selectedBooking = ref(null);
 const tabs = computed(() => [
   {
     id: 'services',
-    label: 'Services',
+    label: t('services'),
     icon: ''
   },
   {
     id: 'open',
-    label: 'Open',
+    label: t('open'),
     icon: '',
     count: openBookings.value.length
   },
   {
     id: 'closed',
-    label: 'Closed',
+    label: t('closed'),
     icon: '',
     count: closedBookings.value.length
   }
@@ -678,6 +731,11 @@ const getLastMessagePreview = (booking) => {
   margin: 0 auto;
 }
 
+/* RTL Support */
+[dir="rtl"] .services-grid {
+  direction: rtl;
+}
+
 .service-card {
   background: white;
   border: 1px solid #e8e8e8;
@@ -689,6 +747,10 @@ const getLastMessagePreview = (booking) => {
   align-items: center;
   gap: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+[dir="rtl"] .service-card {
+  text-align: right;
 }
 
 /* Mobile app - hover effects disabled */
@@ -738,6 +800,10 @@ const getLastMessagePreview = (booking) => {
   justify-content: center;
   flex-shrink: 0;
   transition: all 0.2s ease;
+}
+
+[dir="rtl"] .service-arrow {
+  transform: scaleX(-1);
 }
 
 /* Mobile app - hover effects disabled */
@@ -896,6 +962,10 @@ const getLastMessagePreview = (booking) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+[dir="rtl"] .tabs-nav {
+  direction: rtl;
+}
+
 .tab-btn {
   flex: 1;
   display: flex;
@@ -973,6 +1043,10 @@ const getLastMessagePreview = (booking) => {
   margin: 0 auto;
 }
 
+[dir="rtl"] .bookings-list {
+  direction: rtl;
+}
+
 .booking-card {
   background: white;
   border: 1px solid #e8e8e8;
@@ -981,6 +1055,10 @@ const getLastMessagePreview = (booking) => {
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+[dir="rtl"] .booking-card {
+  text-align: right;
 }
 
 /* Mobile app - hover effects disabled */
@@ -1086,6 +1164,11 @@ const getLastMessagePreview = (booking) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+[dir="rtl"] .last-message {
+  margin-right: 0;
+  margin-left: 12px;
 }
 
 .booking-time {
@@ -1200,6 +1283,10 @@ const getLastMessagePreview = (booking) => {
   margin: 0 auto;
 }
 
+[dir="rtl"] .facilities-grid {
+  direction: rtl;
+}
+
 .facility-card {
   background: white;
   border: 1px solid #e8e8e8;
@@ -1211,6 +1298,10 @@ const getLastMessagePreview = (booking) => {
   align-items: center;
   gap: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+[dir="rtl"] .facility-card {
+  text-align: right;
 }
 
 /* Mobile app - hover effects disabled */
@@ -1255,6 +1346,10 @@ const getLastMessagePreview = (booking) => {
   justify-content: center;
   flex-shrink: 0;
   transition: all 0.2s ease;
+}
+
+[dir="rtl"] .facility-arrow {
+  transform: scaleX(-1);
 }
 
 /* Mobile app - hover effects disabled */

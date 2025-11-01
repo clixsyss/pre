@@ -1,14 +1,14 @@
 <template>
   <div class="upcoming-bookings-card" @click="goToBookings">
     <div class="card-header">
-      <h3>Upcoming Bookings</h3>
+      <h3>{{ $t('upcomingBookings') }}</h3>
     </div>
 
     <div class="card-content">
       <!-- Loading State -->
       <div v-if="loading" class="loading-state">
         <div class="loading-spinner"></div>
-        <p>Loading bookings...</p>
+        <p>{{ $t('loadingBookings') }}</p>
       </div>
 
       <!-- Bookings List -->
@@ -38,7 +38,7 @@
             <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
             <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
-          <span>{{ upcomingBookings.length - 4 }} more booking{{ upcomingBookings.length - 4 > 1 ? 's' : '' }}</span>
+          <span>{{ upcomingBookings.length - 4 }} {{ $t('moreBookings') }}</span>
         </div>
       </div>
 
@@ -50,7 +50,7 @@
             <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#ccc" stroke-width="2"/>
           </svg>
         </div>
-        <p>No upcoming bookings</p>
+        <p>{{ $t('noUpcomingBookings') }}</p>
       </div>
     </div>
   </div>
@@ -59,6 +59,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useAcademiesStore } from 'src/stores/academyStore';
 import { useServiceBookingStore } from 'src/stores/serviceBookingStore';
 import { useProjectStore } from 'src/stores/projectStore';
@@ -70,6 +71,7 @@ defineOptions({
 });
 
 const router = useRouter();
+const { t } = useI18n();
 const academiesStore = useAcademiesStore();
 const serviceBookingStore = useServiceBookingStore();
 const projectStore = useProjectStore();
@@ -151,15 +153,15 @@ const getBookingTitle = (booking) => {
   if (booking.type === 'court') {
     return `${booking.sport} - ${booking.courtName}`;
   } else if (booking.type === 'academy') {
-    return booking.programName || 'Academy Program';
+    return booking.programName || t('academyProgram');
   } else if (booking.type === 'service') {
-    return booking.serviceName || booking.categoryName || 'Service Request';
+    return booking.serviceName || booking.categoryName || t('serviceRequest');
   }
-  return 'Booking';
+  return t('booking');
 };
 
 const formatDate = (dateString) => {
-  if (!dateString) return "Ongoing";
+  if (!dateString) return t('ongoing');
   return new Date(dateString).toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
@@ -170,16 +172,16 @@ const formatDate = (dateString) => {
 const getStatusLabel = (booking) => {
   if (booking.type === 'service') {
     // Support both old and new status values from dashboard
-    if (booking.status === 'open' || booking.status === 'pending') return 'Pending';
-    if (booking.status === 'processing' || booking.status === 'confirmed') return 'In Progress';
-    if (booking.status === 'closed' || booking.status === 'completed') return 'Completed';
-    if (booking.status === 'rejected' || booking.status === 'cancelled') return 'Rejected';
+    if (booking.status === 'open' || booking.status === 'pending') return t('pending');
+    if (booking.status === 'processing' || booking.status === 'confirmed') return t('inProgress');
+    if (booking.status === 'closed' || booking.status === 'completed') return t('completed');
+    if (booking.status === 'rejected' || booking.status === 'cancelled') return t('rejected');
   } else if (booking.type === 'court') {
-    return 'Upcoming';
+    return t('upcoming');
   } else if (booking.type === 'academy') {
-    return 'Enrolled';
+    return t('enrolled');
   }
-  return 'Upcoming';
+  return t('upcoming');
 };
 
 const getStatusClass = (booking) => {

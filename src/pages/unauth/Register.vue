@@ -14,9 +14,9 @@
             stroke-linejoin="round" />
         </svg>
       </button>
-      <h1 class="page-title">Registration</h1>
+      <h1 class="page-title">{{ $t('registration') }}</h1>
       <div class="header-actions">
-        <button @click="goToSignIn" class="signin-header-btn">Sign In</button>
+        <button @click="goToSignIn" class="signin-header-btn">{{ $t('signIn') }}</button>
       </div>
     </div>
 
@@ -44,7 +44,7 @@
               stroke-linejoin="round" />
           </svg>
         </div>
-        <span class="step-label">Personal</span>
+        <span class="step-label">{{ $t('personal') }}</span>
       </div>
 
       <!-- Property Step -->
@@ -67,7 +67,7 @@
               stroke-linejoin="round" />
           </svg>
         </div>
-        <span class="step-label">Property</span>
+        <span class="step-label">{{ $t('property') }}</span>
       </div>
     </div>
 
@@ -78,16 +78,16 @@
 
         <form @submit.prevent="handlePersonalSubmit" class="form">
           <div class="form-group">
-            <label for="email" class="form-label">E-mail</label>
+            <label for="email" class="form-label">{{ $t('emailField') }}</label>
             <input id="email" v-model="personalForm.email" type="email" class="form-input"
-              placeholder="Example@gmail.com" required />
+              :placeholder="$t('emailPlaceholderReg')" required />
           </div>
 
           <div class="form-group">
-            <label for="password" class="form-label">Password</label>
+            <label for="password" class="form-label">{{ $t('passwordField') }}</label>
             <div class="password-input-wrapper">
               <input id="password" v-model="personalForm.password" :type="showPassword ? 'text' : 'password'" class="form-input"
-                placeholder="Create a strong password" required minlength="8" />
+                :placeholder="$t('passwordPlaceholder')" required minlength="8" />
               <button type="button" @click="togglePassword" class="password-toggle">
                 <svg
                   v-if="showPassword"
@@ -147,15 +147,15 @@
               </button>
             </div>
             <div class="password-requirements">
-              <small>Password must be at least 8 characters long</small>
+              <small>{{ $t('passwordRequirements') }}</small>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="confirmPassword" class="form-label">Confirm Password</label>
+            <label for="confirmPassword" class="form-label">{{ $t('confirmPasswordField') }}</label>
             <div class="password-input-wrapper">
               <input id="confirmPassword" v-model="personalForm.confirmPassword" :type="showConfirmPassword ? 'text' : 'password'" class="form-input"
-                placeholder="Confirm your password" required />
+                :placeholder="$t('confirmPasswordPlaceholder')" required />
               <button type="button" @click="toggleConfirmPassword" class="password-toggle">
                 <svg
                   v-if="showConfirmPassword"
@@ -217,8 +217,8 @@
           </div>
 
           <button type="submit" class="proceed-btn" :disabled="loading || !canProceed">
-            <span v-if="loading">Processing...</span>
-            <span v-else>Proceed</span>
+            <span v-if="loading">{{ $t('processing') }}</span>
+            <span v-else>{{ $t('proceed') }}</span>
           </button>
         </form>
 
@@ -227,14 +227,14 @@
         <!-- Navigation Options -->
         <div class="step-navigation">
           <div class="nav-divider">
-            <span>or</span>
+            <span>{{ $t('orDivider') }}</span>
           </div>
           <div class="nav-options">
             <a @click="goToSignIn" class="nav-link">
-              Already have an account? Sign In
+              {{ $t('alreadyHaveAccount') }}
             </a>
             <a @click="goToOnboarding" class="nav-link">
-              Back to Onboarding
+              {{ $t('backToOnboarding') }}
             </a>
           </div>
         </div>
@@ -275,8 +275,8 @@
         <!-- Project Selection Form -->
         <form @submit.prevent="handlePropertySubmit" class="form">
           <div class="step-header">
-            <h3 class="step-title">Property Selection</h3>
-            <p class="step-description">Select your primary property and optionally add additional properties.</p>
+            <h3 class="step-title">{{ $t('propertySelection') }}</h3>
+            <p class="step-description">{{ $t('propertySelectionDesc') }}</p>
           </div>
 
           <!-- Primary Property Section -->
@@ -288,16 +288,16 @@
                     stroke-linejoin="round" />
                 </svg>
               </div>
-              <h4 class="section-title">Primary Property</h4>
+              <h4 class="section-title">{{ $t('primaryProperty') }}</h4>
             </div>
 
             <!-- Project Selection -->
             <div class="form-group">
-              <label for="project" class="form-label">Project *</label>
+              <label for="project" class="form-label">{{ $t('projectLabel') }}</label>
               <div class="select-wrapper">
                 <select id="project" v-model="propertyForm.selectedProject" class="form-input custom-select" required
                   @change="onProjectChange">
-                  <option value="" disabled>Select Project</option>
+                  <option value="" disabled>{{ $t('selectProject') }}</option>
                   <option v-for="project in availableProjects" :key="project.id" :value="project.id">
                     {{ project.name }} - {{ project.type }} ({{ project.location }})
                   </option>
@@ -312,16 +312,16 @@
                 v-model="propertyForm.unit"
                 :project-id="propertyForm.selectedProject"
                 :project-users="projectUsers"
-                label="Unit Number/Name *"
-                placeholder="Select your unit..."
-                search-placeholder="Search units (e.g., D1A-1, D2A)..."
+                :label="$t('unitNumberName')"
+                :placeholder="$t('selectUnit')"
+                :search-placeholder="$t('searchUnitPlaceholder')"
                 :disabled="!propertyForm.selectedProject"
               />
             </div>
 
             <!-- Role Selection -->
             <div class="form-group">
-              <label class="form-label">Role *</label>
+              <label class="form-label">{{ $t('roleLabel') }}</label>
               <div class="role-buttons">
                 <button type="button" @click="propertyForm.role = 'owner'"
                   :class="['role-btn', { active: propertyForm.role === 'owner' }]">
@@ -332,7 +332,7 @@
                     <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                       stroke-linejoin="round" />
                   </svg>
-                  Owner
+                  {{ $t('ownerRole') }}
                 </button>
                 <button type="button" @click="propertyForm.role = 'family'"
                   :class="['role-btn', { active: propertyForm.role === 'family' }]">
@@ -344,7 +344,7 @@
                     <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                       stroke-linejoin="round" />
                   </svg>
-                  Family Member
+                  {{ $t('familyMember') }}
                 </button>
               </div>
             </div>
@@ -356,7 +356,7 @@
                   <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round" />
                 </svg>
-                Add This Property
+                {{ $t('addThisProperty') }}
               </button>
             </div>
           </div>
@@ -371,8 +371,8 @@
                     stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
-              <h4 class="section-title">Additional Properties (Optional)</h4>
-              <p class="section-subtitle">You can add more properties if you own or have access to multiple units</p>
+              <h4 class="section-title">{{ $t('additionalProperties') }}</h4>
+              <p class="section-subtitle">{{ $t('additionalPropertiesDesc') }}</p>
             </div>
 
             <div class="projects-list">
@@ -396,11 +396,11 @@
                         <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                           stroke-linejoin="round" />
                       </svg>
-                      {{ project.role }}
+                      {{ project.role === 'owner' ? $t('ownerRole') : $t('familyMember') }}
                     </span>
                   </div>
                 </div>
-                <button type="button" @click="removeProject(index)" class="remove-project-btn" title="Remove property">
+                <button type="button" @click="removeProject(index)" class="remove-project-btn" :title="$t('remove')">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                       stroke-linejoin="round" />
@@ -1432,6 +1432,12 @@ select.form-input:disabled {
   color: #666;
   cursor: pointer;
   padding: 0;
+}
+
+/* Move eye icon to left for RTL languages */
+[dir="rtl"] .password-toggle {
+  right: auto;
+  left: 15px;
 }
 
 

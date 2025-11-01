@@ -4,7 +4,7 @@
     <div class="notification-details-modal" @click.stop>
       <!-- Header -->
       <div class="details-header">
-        <h3>Notification Details</h3>
+        <h3>{{ $t('notificationDetails') }}</h3>
         <button @click="closeDetails" class="close-btn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -23,7 +23,7 @@
         
         <div class="details-meta">
           <span class="details-time">{{ formatTime(selectedNotification.createdAt) }}</span>
-          <span class="details-type">{{ selectedNotification.type || 'General' }}</span>
+          <span class="details-type">{{ selectedNotification.type || $t('general') }}</span>
         </div>
         
         <!-- Image if available -->
@@ -31,7 +31,7 @@
         
         <!-- Action button if available -->
         <button v-if="selectedNotification.meta?.deepLink || selectedNotification.actionUrl" @click="handleDetailsAction" class="details-action-btn">
-          View Details
+          {{ $t('viewDetails') }}
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -49,7 +49,7 @@
             <path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <h3>Notifications</h3>
+          <h3>{{ $t('notifications') }}</h3>
         </div>
         <button @click="closeNotificationCenter" class="close-btn" title="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -75,9 +75,9 @@
             <path d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.7088 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98232 16.07 2.85999" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <span>{{ isMarkingAsRead ? 'Marking...' : 'Mark all as read' }}</span>
+          <span>{{ isMarkingAsRead ? $t('marking') : $t('markAllAsRead') }}</span>
         </button>
-        <span class="unread-badge">{{ unreadCount }} unread</span>
+        <span class="unread-badge">{{ unreadCount }} {{ $t('unread') }}</span>
       </div>
 
       <!-- Notifications List -->
@@ -85,7 +85,7 @@
         <!-- Loading State -->
         <div v-if="isLoading" class="loading-state">
           <div class="loading-spinner"></div>
-          <p>Loading notifications...</p>
+          <p>{{ $t('loadingNotifications') }}</p>
         </div>
 
         <!-- Empty State -->
@@ -94,8 +94,8 @@
             <path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <h4>No notifications</h4>
-          <p>You're all caught up! No notifications from the past month.</p>
+          <h4>{{ $t('noNotifications') }}</h4>
+          <p>{{ $t('noNotificationsMessage') }}</p>
         </div>
 
         <!-- Notifications -->
@@ -133,7 +133,7 @@
 
       <!-- Footer -->
       <div class="notification-footer">
-        <p class="footer-text">Showing notifications from the past 30 days</p>
+        <p class="footer-text">{{ $t('notificationsFooter') }}</p>
       </div>
     </div>
   </div>

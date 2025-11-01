@@ -4,11 +4,11 @@
     :messages="messages"
     :loading="loading"
     chat-type="request"
-    default-title="Request Chat"
-    error-title="Request Not Found"
-    error-message="The request you're looking for doesn't exist or has been deleted."
-    closed-message="This request has been closed. You can view the conversation but cannot send new messages."
-    closed-placeholder="This request is closed"
+    :default-title="t('requestChat')"
+    :error-title="t('requestNotFound')"
+    :error-message="t('requestNotFoundMessage')"
+    :closed-message="t('requestClosedMessage')"
+    :closed-placeholder="t('requestClosed')"
     :on-send-message="handleSendMessage"
     :on-image-upload="handleImageUpload"
     @back="goBack"
@@ -20,6 +20,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import optimizedAuthService from '../services/optimizedAuthService';
 import { useProjectStore } from '../stores/projectStore';
 import UnifiedChat from './UnifiedChat.vue';
@@ -39,6 +40,7 @@ const props = defineProps({
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const projectStore = useProjectStore();
 
 // Get requestId and projectId from props or route
@@ -76,8 +78,8 @@ const loadRequestData = async () => {
       const data = requestSnap.data();
       requestData.value = {
         id: requestSnap.id,
-        title: data.title || data.description || 'Request Chat',
-        categoryName: data.categoryName || data.category || 'Request',
+        title: data.title || data.description || t('requestChat'),
+        categoryName: data.categoryName || data.category || t('request'),
         status: data.status || 'pending',
         ...data
       };

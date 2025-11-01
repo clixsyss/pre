@@ -53,10 +53,10 @@
             </div>
             <div class="service-details">
               <h4 class="service-name">{{ selectedCourt.name }}</h4>
-              <p class="service-description">{{ selectedCourt.location }} • {{ selectedSport }}</p>
+              <p class="service-description">{{ selectedCourt.location }} • {{ translateSport(selectedSport) }}</p>
             </div>
             <div class="service-price-badge">
-              <span class="price-amount">{{ selectedCourt.hourlyRate }} EGP/hr</span>
+              <span class="price-amount">{{ formatNumber(selectedCourt.hourlyRate) }} {{ $t('currency') }}/{{ $t('hr') }}</span>
             </div>
           </div>
         </div>
@@ -70,21 +70,21 @@
               <div class="step-line"></div>
             </div>
             <div class="step-content">
-              <h4 class="step-title">Select Sport</h4>
-              <p class="step-subtitle">Choose the sport you want to play</p>
+              <h4 class="step-title">{{ $t('selectSport') }}</h4>
+              <p class="step-subtitle">{{ $t('chooseSportYouWant') }}</p>
               <div class="dropdown-container">
                 <select
                   v-model="selectedSport"
                   @change="onSportChange"
                   class="modern-dropdown"
                 >
-                  <option value="" disabled>Choose a sport...</option>
+                  <option value="" disabled>{{ $t('chooseSport') }}</option>
                   <option
                     v-for="sport in sportsOptions"
                     :key="sport"
                     :value="sport"
                   >
-                    {{ sport }} ({{ sportsStore.getCourtsForSport(sport).length }} court{{ sportsStore.getCourtsForSport(sport).length > 1 ? 's' : '' }})
+                    {{ translateSport(sport) }} ({{ sportsStore.getCourtsForSport(sport).length }} {{ sportsStore.getCourtsForSport(sport).length > 1 ? $t('courts') : $t('court') }})
                   </option>
                 </select>
                 <div class="dropdown-icon">
@@ -103,21 +103,21 @@
               <div class="step-line"></div>
             </div>
             <div class="step-content">
-              <h4 class="step-title">Select Court</h4>
-              <p class="step-subtitle">Choose from available courts</p>
+              <h4 class="step-title">{{ $t('selectCourt') }}</h4>
+              <p class="step-subtitle">{{ $t('chooseFromAvailableCourts') }}</p>
               <div class="dropdown-container">
                 <select
                   v-model="selectedCourtId"
                   @change="onCourtChange"
                   class="modern-dropdown"
                 >
-                  <option value="" disabled>Choose a court...</option>
+                  <option value="" disabled>{{ $t('chooseCourt') }}</option>
                   <option
                     v-for="court in availableCourts"
                     :key="court.id"
                     :value="court.id"
                   >
-                    {{ court.name }} - {{ court.hourlyRate }} EGP/hr ({{ court.location }})
+                    {{ court.name }} - {{ formatNumber(court.hourlyRate) }} {{ $t('currency') }}/{{ $t('hr') }} ({{ court.location }})
                   </option>
                 </select>
                 <div class="dropdown-icon">
@@ -136,22 +136,22 @@
               <div class="step-line"></div>
             </div>
             <div class="step-content">
-              <h4 class="step-title">Select Date</h4>
-              <p class="step-subtitle">Choose your preferred date</p>
+              <h4 class="step-title">{{ $t('selectDate') }}</h4>
+              <p class="step-subtitle">{{ $t('choosePreferredDate') }}</p>
               <div class="dropdown-container">
                 <select
                   v-model="selectedDayStr"
                   @change="onDateChange"
                   class="modern-dropdown"
                 >
-                  <option value="" disabled>Choose a date...</option>
+                  <option value="" disabled>{{ $t('chooseDate') }}</option>
                   <option
                     v-for="dayObj in availableDays"
                     :key="dayObj.date.toISOString()"
                     :value="dayObj.date.toISOString()"
                     :disabled="!dayObj.enabled"
                   >
-                    {{ formatDateForDropdown(dayObj.date) }} {{ !dayObj.enabled ? '(Closed)' : '' }}
+                    {{ formatDateForDropdown(dayObj.date) }} {{ !dayObj.enabled ? `(${$t('closed')})` : '' }}
                   </option>
                 </select>
                 <div class="dropdown-icon">
@@ -170,13 +170,13 @@
               <div class="step-line"></div>
             </div>
             <div class="step-content">
-              <h4 class="step-title">Select Time Slots</h4>
-              <p class="step-subtitle">Pick one or more time slots</p>
+              <h4 class="step-title">{{ $t('selectTimeSlots') }}</h4>
+              <p class="step-subtitle">{{ $t('pickTimeSlots') }}</p>
               
               <!-- Loading State -->
               <div v-if="loadingTimeSlots" class="loading-state">
                 <div class="loading-spinner"></div>
-                <p>Loading available time slots...</p>
+                <p>{{ $t('loadingTimeSlots') }}</p>
               </div>
 
               <!-- No Time Slots -->
@@ -188,7 +188,7 @@
                     <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
                   </svg>
                 </div>
-                <p>No time slots available for this date</p>
+                <p>{{ $t('noTimeSlotsAvailable') }}</p>
               </div>
 
               <!-- Time Slots Grid -->
@@ -204,7 +204,7 @@
                   @click="!slot.isReserved && toggleSlotSelection(slot.time)"
                 >
                   {{ slot.time }}
-                  <span v-if="slot.isReserved" class="reserved-badge">Booked</span>
+                  <span v-if="slot.isReserved" class="reserved-badge">{{ $t('booked') }}</span>
                 </div>
               </div>
             </div>
@@ -214,39 +214,39 @@
         <!-- Booking Summary -->
         <div v-if="selectedSlots.length > 0" class="booking-summary">
           <div class="summary-header">
-            <h4>Booking Summary</h4>
+            <h4>{{ $t('bookingSummary') }}</h4>
           </div>
           <div class="summary-content">
             <div class="summary-item">
-              <span class="summary-label">Sport:</span>
-              <span class="summary-value">{{ selectedSport }}</span>
+              <span class="summary-label">{{ $t('bookingSummarySport') }}:</span>
+              <span class="summary-value">{{ translateSport(selectedSport) }}</span>
             </div>
             <div class="summary-item">
-              <span class="summary-label">Court:</span>
+              <span class="summary-label">{{ $t('bookingSummaryCourt') }}:</span>
               <span class="summary-value">{{ selectedCourt?.name }}</span>
             </div>
             <div class="summary-item">
-              <span class="summary-label">Date:</span>
+              <span class="summary-label">{{ $t('bookingSummaryDate') }}:</span>
               <span class="summary-value">{{ formatSelectedDate(selectedDay) }}</span>
             </div>
             <div class="summary-item">
-              <span class="summary-label">Time Slots:</span>
+              <span class="summary-label">{{ $t('bookingSummaryTimeSlots') }}:</span>
               <span class="summary-value">{{ selectedSlots.join(', ') }}</span>
             </div>
             <div class="summary-item">
-              <span class="summary-label">Duration:</span>
-              <span class="summary-value">{{ selectedSlots.length }} hour(s)</span>
+              <span class="summary-label">{{ $t('bookingSummaryDuration') }}:</span>
+              <span class="summary-value">{{ selectedSlots.length }} {{ $t('hours') }}</span>
             </div>
             <div class="summary-item total">
-              <span class="summary-label">Total:</span>
-              <span class="summary-value">EGP {{ totalPrice }}</span>
+              <span class="summary-label">{{ $t('bookingSummaryTotal') }}:</span>
+              <span class="summary-value">{{ $t('currency') }} {{ formatNumber(totalPrice) }}</span>
             </div>
           </div>
         </div>
 
         <!-- Action Buttons -->
         <div class="booking-actions">
-          <button @click="resetBooking" class="cancel-btn">Reset</button>
+          <button @click="resetBooking" class="cancel-btn">{{ $t('reset') }}</button>
           <button
             @click="confirmBooking"
             :disabled="!selectedSport || !selectedCourt || !selectedDay || selectedSlots.length === 0 || isSubmitting"
@@ -257,11 +257,11 @@
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              Confirm Booking
+              {{ $t('confirmBooking') }}
             </span>
             <span v-else class="btn-content">
               <div class="btn-spinner"></div>
-              Booking...
+              {{ $t('booking') }}
             </span>
           </button>
         </div>
@@ -281,6 +281,8 @@ import bookingService from 'src/services/bookingService';
 import optimizedAuthService from 'src/services/optimizedAuthService';
 import PageHeader from '../../components/PageHeader.vue';
 import { useFormKeyboard } from '../../composables/useFormKeyboard';
+import { useDateFormat } from '../../composables/useDateFormat';
+import { useI18n } from 'vue-i18n';
 
 // Component name for ESLint
 defineOptions({
@@ -299,6 +301,47 @@ const sportsStore = useSportsStore();
 const projectStore = useProjectStore();
 const notificationStore = useNotificationStore();
 const academiesStore = useAcademiesStore();
+const { formatDateWithWeekday } = useDateFormat();
+const { t, locale } = useI18n();
+
+// Helper function to translate sport names
+const translateSport = (sportName) => {
+  if (!sportName) return '';
+  // Normalize sport name (case-insensitive, trim spaces)
+  const normalizedSport = sportName.trim().toLowerCase();
+  
+  // Map common sport names to translation keys
+  const sportMap = {
+    'tennis': 'sportTennis',
+    'basketball': 'sportBasketball',
+    'swimming': 'sportSwimming',
+    'football': 'sportFootball',
+    'soccer': 'sportSoccer',
+    'volleyball': 'sportVolleyball',
+    'badminton': 'sportBadminton',
+    'squash': 'sportSquash',
+    'padel': 'sportPadel',
+    'table tennis': 'sportTableTennis',
+    'table-tennis': 'sportTableTennis',
+    'tabletennis': 'sportTableTennis',
+    'handball': 'sportHandball',
+  };
+  
+  const translationKey = sportMap[normalizedSport];
+  if (translationKey && t(translationKey)) {
+    return t(translationKey);
+  }
+  
+  // If no translation found, return original name
+  return sportName;
+};
+
+// Helper function to format numbers with proper locale
+const formatNumber = (number) => {
+  if (number === null || number === undefined) return '';
+  const localeCode = locale.value === 'ar-SA' ? 'ar-EG' : 'en-US';
+  return new Intl.NumberFormat(localeCode).format(number);
+};
 
 // Reactive data
 const selectedSport = ref('');
@@ -426,23 +469,13 @@ const toggleSlotSelection = (time) => {
   }
 };
 
+// formatDateForDropdown and formatSelectedDate now use useDateFormat composable
 const formatDateForDropdown = (date) => {
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
+  return formatDateWithWeekday(date) || '';
 };
 
 const formatSelectedDate = (date) => {
-  if (!date) return '';
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  return formatDateWithWeekday(date) || '';
 };
 
 const resetBooking = () => {
@@ -828,6 +861,9 @@ onMounted(async () => {
 .dropdown-container {
   position: relative;
   margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  width: 100%;
 }
 
 .modern-dropdown {
@@ -840,11 +876,12 @@ onMounted(async () => {
   font-weight: 500;
   color: #1e293b;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  flex: 1;
 }
 
 .modern-dropdown:focus {
@@ -853,7 +890,6 @@ onMounted(async () => {
   box-shadow:
     0 0 0 3px rgba(175, 30, 35, 0.1),
     0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
 }
 
 .modern-dropdown:disabled {
@@ -880,7 +916,11 @@ onMounted(async () => {
   transform: translateY(-50%);
   color: #64748b;
   pointer-events: none;
-  transition: all 0.3s ease;
+  transition: color 0.3s ease, transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
 }
 
 .dropdown-container:focus-within .dropdown-icon {
@@ -1034,24 +1074,31 @@ onMounted(async () => {
 /* Action Buttons */
 .booking-actions {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   padding-top: 24px;
   border-top: 1px solid #e2e8f0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .cancel-btn {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   background: #f8fafc;
   color: #64748b;
   border: 2px solid #e2e8f0;
-  padding: 16px 24px;
+  padding: 14px 16px;
   border-radius: 12px;
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
   touch-action: manipulation;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 
 .cancel-btn:active {
@@ -1060,13 +1107,14 @@ onMounted(async () => {
 }
 
 .book-btn {
-  flex: 2;
+  flex: 2 1 0;
+  min-width: 0;
   background: linear-gradient(135deg, #af1e23 0%, #dc2626 100%);
   color: white;
   border: none;
-  padding: 16px 24px;
+  padding: 14px 16px;
   border-radius: 12px;
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1075,6 +1123,8 @@ onMounted(async () => {
   position: relative;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.3);
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .book-btn:active:not(:disabled) {
@@ -1162,12 +1212,15 @@ onMounted(async () => {
   .booking-actions {
     flex-direction: column;
     gap: 12px;
+    padding-top: 20px;
   }
 
   .cancel-btn,
   .book-btn {
     flex: none;
     width: 100%;
+    min-width: auto;
+    padding: 14px 16px;
   }
 }
 
@@ -1187,5 +1240,67 @@ onMounted(async () => {
   .booking-summary {
     padding: 16px;
   }
+
+  .booking-actions {
+    gap: 10px;
+    padding-top: 16px;
+  }
+
+  .cancel-btn,
+  .book-btn {
+    padding: 12px 14px;
+    font-size: 0.875rem;
+  }
+
+  .btn-content {
+    gap: 6px;
+  }
+
+  .btn-content svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* RTL Support for Arabic */
+[dir="rtl"] .service-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .booking-step {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .dropdown-container {
+  direction: rtl;
+}
+
+[dir="rtl"] .dropdown-icon {
+  right: auto;
+  left: 16px;
+}
+
+[dir="rtl"] .modern-dropdown {
+  padding: 16px 16px 16px 48px;
+  direction: rtl;
+}
+
+[dir="rtl"] .booking-actions {
+  flex-direction: row-reverse;
+}
+
+/* Ensure buttons fit properly in RTL mode */
+@media (max-width: 768px) {
+  [dir="rtl"] .booking-actions {
+    flex-direction: column;
+  }
+}
+
+[dir="rtl"] .summary-item {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .summary-item.total {
+  flex-direction: row-reverse;
 }
 </style>

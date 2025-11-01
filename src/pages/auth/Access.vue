@@ -668,7 +668,7 @@
               </div>
               <div>
                 <h2 class="modal-title-pro">{{ $t('generateNewPass') || 'New Guest Pass' }}</h2>
-                <p class="modal-subtitle-pro">Generate QR code for gate access</p>
+                <p class="modal-subtitle-pro">{{ $t('generateQRCodeForGate') || 'Generate QR code for gate access' }}</p>
               </div>
             </div>
             <button class="modal-close-pro" @click="showGenerateDialog = false">
@@ -687,14 +687,14 @@
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
                 </svg>
-                <span>Guest Name</span>
+                <span>{{ $t('guestName') || 'Guest Name' }}</span>
                 <span class="required-star">*</span>
               </label>
               <input
                 v-model="newPass.guestName"
                 type="text"
                 class="form-input-pro"
-                placeholder="Enter guest's full name"
+                :placeholder="$t('enterGuestFullName') || 'Enter guest\'s full name'"
                 required
               />
             </div>
@@ -706,8 +706,8 @@
                 <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
               </svg>
               <p style="color: #7f1d1d;">
-                <strong>Location verification required.</strong><br/>
-                You must be within the project premises. The app will request location access when you generate the pass.
+                <strong>{{ $t('locationVerificationRequired') || 'Location verification required.' }}</strong><br/>
+                {{ $t('mustBeWithinProjectPremises') || 'You must be within the project premises. The app will request location access when you generate the pass.' }}
               </p>
             </div>
           </div>
@@ -730,7 +730,7 @@
                 <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
                 <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
               </svg>
-              <span>{{ isValidatingLocation ? 'Checking Location...' : ($t('generate') || 'Generate & Share') }}</span>
+              <span>{{ isValidatingLocation ? ($t('checkingLocation') || 'Checking Location...') : ($t('generateAndShare') || 'Generate & Share') }}</span>
             </button>
           </div>
         </div>
@@ -770,6 +770,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { Capacitor } from '@capacitor/core'
+import { useI18n } from 'vue-i18n'
 import { useBluetooth } from '../../composables/useBluetooth'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useModalState } from '../../composables/useModalState'
@@ -793,6 +794,7 @@ useFormKeyboard({
   hideOnBackdropClick: true,
 })
 
+const { t, locale } = useI18n()
 const notificationStore = useNotificationStore()
 const projectStore = useProjectStore()
 const { openModal, closeModal } = useModalState()
@@ -904,21 +906,21 @@ const handleConnect = async () => {
       }
       localStorage.setItem('lastGateDevice', JSON.stringify(lastConnectedDevice.value))
 
-      statusMessage.value = 'Successfully connected to gate device'
+      statusMessage.value = t('successfullyConnected') || 'Successfully connected to gate device'
       statusMessageType.value = 'success'
 
       setTimeout(() => {
-        if (statusMessage.value === 'Successfully connected to gate device') {
+        if (statusMessage.value === (t('successfullyConnected') || 'Successfully connected to gate device')) {
           statusMessage.value = ''
         }
       }, 3000)
     } else {
-      statusMessage.value = 'Failed to connect. Please try again.'
+      statusMessage.value = t('failedToConnect') || 'Failed to connect. Please try again.'
       statusMessageType.value = 'error'
     }
   } catch (error) {
     console.error('❌ Connection error:', error)
-    statusMessage.value = error.message || 'Connection failed'
+    statusMessage.value = error.message || t('connectionFailed') || 'Connection failed'
     statusMessageType.value = 'error'
   }
 }
@@ -926,25 +928,25 @@ const handleConnect = async () => {
 const quickOpenGate = async () => {
   try {
     autoConnecting.value = true
-    statusMessage.value = 'Connecting to gate...'
+    statusMessage.value = t('connectingToGate') || 'Connecting to gate...'
     statusMessageType.value = 'info'
 
     const connected = await connect(SERVICE_UUID)
 
     if (!connected) {
       autoConnecting.value = false
-      statusMessage.value = 'Failed to connect. Please try again.'
+      statusMessage.value = t('failedToConnect') || 'Failed to connect. Please try again.'
       statusMessageType.value = 'error'
       return
     }
 
     isOpening.value = true
-    statusMessage.value = 'Opening gate...'
+    statusMessage.value = t('openingGate') || 'Opening gate...'
 
     const success = await write(SERVICE_UUID, CHARACTERISTIC_UUID, GATE_PASSWORD)
 
     if (success) {
-      statusMessage.value = 'Gate opened successfully! 🎉'
+      statusMessage.value = t('gateOpenedSuccessfully') || 'Gate opened successfully! 🎉'
       statusMessageType.value = 'success'
 
       setTimeout(async () => {
@@ -952,12 +954,12 @@ const quickOpenGate = async () => {
         statusMessage.value = ''
       }, 3000)
     } else {
-      statusMessage.value = 'Failed to open gate. Please try again.'
+      statusMessage.value = t('failedToOpenGate') || 'Failed to open gate. Please try again.'
       statusMessageType.value = 'error'
     }
   } catch (error) {
     console.error('❌ Quick open error:', error)
-    statusMessage.value = error.message || 'Quick open failed'
+    statusMessage.value = error.message || t('quickOpenFailed') || 'Quick open failed'
     statusMessageType.value = 'error'
   } finally {
     autoConnecting.value = false
@@ -985,21 +987,21 @@ const handleOpenGate = async () => {
     const success = await write(SERVICE_UUID, CHARACTERISTIC_UUID, GATE_PASSWORD)
 
     if (success) {
-      statusMessage.value = 'Gate opened successfully! 🎉'
+      statusMessage.value = t('gateOpenedSuccessfully') || 'Gate opened successfully! 🎉'
       statusMessageType.value = 'success'
 
       setTimeout(() => {
-        if (statusMessage.value.includes('Gate opened successfully')) {
+        if (statusMessage.value.includes(t('gateOpenedSuccessfully') || 'Gate opened successfully')) {
           statusMessage.value = ''
         }
       }, 5000)
     } else {
-      statusMessage.value = 'Failed to open gate. Please try again.'
+      statusMessage.value = t('failedToOpenGate') || 'Failed to open gate. Please try again.'
       statusMessageType.value = 'error'
     }
   } catch (error) {
     console.error('❌ Error opening gate:', error)
-    statusMessage.value = error.message || 'Failed to open gate'
+    statusMessage.value = error.message || t('failedToOpenGate') || 'Failed to open gate'
     statusMessageType.value = 'error'
   } finally {
     isOpening.value = false
@@ -1628,17 +1630,23 @@ const generateQRCode = async (pass) => {
 }
 
 const drawGatePass = (ctx, qrImg, pass, canvasWidth) => {
-  // Set font properties
+  // Determine if Arabic mode
+  const isArabic = locale.value === 'ar-SA' || locale.value.startsWith('ar')
+  const dateLocale = isArabic ? 'ar-EG' : 'en-GB'
+  
+  // Set font properties with Arabic support
   ctx.fillStyle = '#000000'
   ctx.textAlign = 'center'
 
   // Draw title "Gate Pass" - larger and bolder
   ctx.font = 'bold 32px Arial, sans-serif'
-  ctx.fillText('Gate Pass', canvasWidth / 2, 40)
+  const titleText = isArabic ? 'تصريح الدخول' : 'Gate Pass'
+  ctx.fillText(titleText, canvasWidth / 2, 40)
 
   // Draw subtitle "One Time Pass" - smaller
   ctx.font = '16px Arial, sans-serif'
-  ctx.fillText('One Time Pass', canvasWidth / 2, 65)
+  const subtitleText = isArabic ? 'تصريح لمرة واحدة' : 'One Time Pass'
+  ctx.fillText(subtitleText, canvasWidth / 2, 65)
 
   // Draw QR code in center - much larger
   const qrSize = 280
@@ -1660,44 +1668,84 @@ const drawGatePass = (ctx, qrImg, pass, canvasWidth) => {
   ctx.lineWidth = 1
   ctx.strokeRect(0, infoBarY, canvasWidth, infoBarHeight)
 
-  // Left side - Unit and Visitor info
-  ctx.textAlign = 'left'
   ctx.fillStyle = '#000000'
 
-  // Unit info
-  ctx.font = 'bold 13px Arial, sans-serif'
-  ctx.fillText('Unit', infoBarPadding, infoBarY + 25)
-  ctx.font = '13px Arial, sans-serif'
-  const unitInfo = getUserUnitInfo() // Get unit info from user account
-  ctx.fillText(unitInfo, infoBarPadding, infoBarY + 42)
-
-  // Visitor info
-  ctx.font = 'bold 13px Arial, sans-serif'
-  ctx.fillText('Visitor', infoBarPadding, infoBarY + 62)
-  ctx.font = '13px Arial, sans-serif'
-  ctx.fillText(pass.guestName, infoBarPadding, infoBarY + 79)
-
-  // Right side - Date and Inviter info
-  ctx.textAlign = 'right'
-
-  // Date info
-  ctx.font = 'bold 13px Arial, sans-serif'
-  ctx.fillText('Date', canvasWidth - infoBarPadding, infoBarY + 25)
-  ctx.font = '13px Arial, sans-serif'
-  const validDate = new Date(pass.validUntil).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
-  ctx.fillText(validDate, canvasWidth - infoBarPadding, infoBarY + 42)
-
-  // Inviter info
-  ctx.font = 'bold 13px Arial, sans-serif'
-  ctx.fillText('Inviter', canvasWidth - infoBarPadding, infoBarY + 62)
-  ctx.font = '13px Arial, sans-serif'
-  // Get inviter name from pass data or fallback
-  const inviterName = pass.userName || 'Unknown User'
-  ctx.fillText(inviterName, canvasWidth - infoBarPadding, infoBarY + 79)
+  if (isArabic) {
+    // RTL layout for Arabic - Right side: Unit and Visitor info
+    ctx.textAlign = 'right'
+    
+    // Unit info
+    ctx.font = 'bold 13px Arial, sans-serif'
+    ctx.fillText('الوحدة', canvasWidth - infoBarPadding, infoBarY + 25)
+    ctx.font = '13px Arial, sans-serif'
+    const unitInfo = getUserUnitInfo()
+    ctx.fillText(unitInfo, canvasWidth - infoBarPadding, infoBarY + 42)
+    
+    // Visitor info
+    ctx.font = 'bold 13px Arial, sans-serif'
+    ctx.fillText('الزائر', canvasWidth - infoBarPadding, infoBarY + 62)
+    ctx.font = '13px Arial, sans-serif'
+    ctx.fillText(pass.guestName, canvasWidth - infoBarPadding, infoBarY + 79)
+    
+    // Left side: Date and Inviter info
+    ctx.textAlign = 'left'
+    
+    // Date info
+    ctx.font = 'bold 13px Arial, sans-serif'
+    ctx.fillText('التاريخ', infoBarPadding, infoBarY + 25)
+    ctx.font = '13px Arial, sans-serif'
+    const validDate = new Date(pass.validUntil).toLocaleDateString(dateLocale, {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      calendar: 'gregory'
+    })
+    ctx.fillText(validDate, infoBarPadding, infoBarY + 42)
+    
+    // Inviter info
+    ctx.font = 'bold 13px Arial, sans-serif'
+    ctx.fillText('المُضيف', infoBarPadding, infoBarY + 62)
+    ctx.font = '13px Arial, sans-serif'
+    const inviterName = pass.userName || 'مستخدم غير معروف'
+    ctx.fillText(inviterName, infoBarPadding, infoBarY + 79)
+  } else {
+    // LTR layout for English - Left side: Unit and Visitor info
+    ctx.textAlign = 'left'
+    
+    // Unit info
+    ctx.font = 'bold 13px Arial, sans-serif'
+    ctx.fillText('Unit', infoBarPadding, infoBarY + 25)
+    ctx.font = '13px Arial, sans-serif'
+    const unitInfo = getUserUnitInfo()
+    ctx.fillText(unitInfo, infoBarPadding, infoBarY + 42)
+    
+    // Visitor info
+    ctx.font = 'bold 13px Arial, sans-serif'
+    ctx.fillText('Visitor', infoBarPadding, infoBarY + 62)
+    ctx.font = '13px Arial, sans-serif'
+    ctx.fillText(pass.guestName, infoBarPadding, infoBarY + 79)
+    
+    // Right side: Date and Inviter info
+    ctx.textAlign = 'right'
+    
+    // Date info
+    ctx.font = 'bold 13px Arial, sans-serif'
+    ctx.fillText('Date', canvasWidth - infoBarPadding, infoBarY + 25)
+    ctx.font = '13px Arial, sans-serif'
+    const validDate = new Date(pass.validUntil).toLocaleDateString(dateLocale, {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+    ctx.fillText(validDate, canvasWidth - infoBarPadding, infoBarY + 42)
+    
+    // Inviter info
+    ctx.font = 'bold 13px Arial, sans-serif'
+    ctx.fillText('Inviter', canvasWidth - infoBarPadding, infoBarY + 62)
+    ctx.font = '13px Arial, sans-serif'
+    const inviterName = pass.userName || 'Unknown User'
+    ctx.fillText(inviterName, canvasWidth - infoBarPadding, infoBarY + 79)
+  }
 }
 
 const deletePass = (passId) => {
@@ -1978,7 +2026,7 @@ onMounted(async () => {
   cursor: pointer;
   font-weight: 600;
   font-size: 0.95rem;
-  color: #666;
+  color: rgba(0, 0, 0, 0.6);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   z-index: 2;
@@ -1990,10 +2038,12 @@ onMounted(async () => {
 
 .tab-icon {
   transition: transform 0.3s ease;
+  color: rgba(0, 0, 0, 0.6);
 }
 
 .tab-button.active .tab-icon {
   transform: scale(1.1);
+  color: white;
 }
 
 .tab-indicator {
@@ -3686,5 +3736,127 @@ onMounted(async () => {
     padding: 12px 16px;
     font-size: 0.875rem;
   }
+}
+
+/* RTL Support for Arabic */
+[dir="rtl"] .access-page {
+  direction: rtl;
+}
+
+[dir="rtl"] .tabs-container {
+  direction: ltr;
+}
+
+[dir="rtl"] .tabs-wrapper {
+  direction: ltr;
+  flex-direction: row;
+}
+
+[dir="rtl"] .tab-button {
+  flex-direction: row-reverse;
+  direction: rtl;
+}
+
+[dir="rtl"] .tab-icon {
+  transform: scaleX(1) !important;
+}
+
+[dir="rtl"] .tab-button.active .tab-icon {
+  transform: scale(1.1) !important;
+}
+
+[dir="rtl"] .tab-label {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .modal-header-content {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .modal-close-pro {
+  margin-right: auto;
+  margin-left: 0;
+}
+
+[dir="rtl"] .form-label-pro {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+[dir="rtl"] .required-star {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+[dir="rtl"] .form-input-pro {
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="rtl"] .info-box-pro {
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="rtl"] .info-box-pro svg {
+  margin-left: 12px;
+  margin-right: 0;
+}
+
+[dir="rtl"] .modal-footer-pro {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .modal-btn-generate {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .pass-compact-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .pass-info-compact {
+  text-align: right;
+}
+
+[dir="rtl"] .pass-meta-compact {
+  direction: rtl;
+}
+
+[dir="rtl"] .pass-actions-compact {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .ble-panel {
+  direction: rtl;
+}
+
+[dir="rtl"] .status-card {
+  text-align: center;
+}
+
+[dir="rtl"] .control-buttons {
+  direction: rtl;
+}
+
+[dir="rtl"] .action-button {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .status-message {
+  direction: rtl;
+  text-align: right;
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .warning-banner {
+  direction: rtl;
+  text-align: right;
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .warning-content {
+  text-align: right;
 }
 </style>

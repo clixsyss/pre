@@ -38,7 +38,7 @@
       <div v-if="smartMirrorStore.rooms.length > 1" class="room-selector">
         <div class="room-selector-header">
           <h3>{{ $t('selectRoom') }}</h3>
-          <span class="room-count">{{ smartMirrorStore.rooms.length }} rooms available</span>
+          <span class="room-count">{{ smartMirrorStore.rooms.length }} {{ $t('roomsAvailable') }}</span>
         </div>
         <div class="room-tabs">
           <button 
@@ -49,7 +49,7 @@
           >
             <div class="room-tab-content">
               <span class="room-name">{{ room.name }}</span>
-              <span class="room-device-count">{{ getRoomDeviceCount(room.id) }} devices</span>
+              <span class="room-device-count">{{ getRoomDeviceCount(room.id) }} {{ $t('devices') }}</span>
             </div>
           </button>
         </div>
@@ -69,8 +69,8 @@
                 </svg>
               </div>
               <div class="section-text">
-                <h3>Lights</h3>
-                <span class="device-count">{{ roomLights.length }} device{{ roomLights.length !== 1 ? 's' : '' }}</span>
+                <h3>{{ $t('lights') }}</h3>
+                <span class="device-count">{{ roomLights.length }} {{ roomLights.length === 1 ? $t('device') : $t('devices') }}</span>
               </div>
             </div>
             <div class="section-actions">
@@ -96,7 +96,7 @@
                 </div>
                 <div class="device-status" :class="{ on: light.state, off: !light.state }">
                   <div class="status-indicator"></div>
-                  <span class="status-text">{{ light.state ? 'ON' : 'OFF' }}</span>
+                  <span class="status-text">{{ light.state ? $t('on') : $t('off') }}</span>
                 </div>
               </div>
               
@@ -113,12 +113,12 @@
                       <div v-if="lightLoading === light.id" class="loading-spinner-small"></div>
                     </span>
                   </label>
-                  <span class="toggle-label">{{ light.state ? 'ON' : 'OFF' }}</span>
+                  <span class="toggle-label">{{ light.state ? $t('on') : $t('off') }}</span>
                 </div>
                 
                 <div v-if="light.state" class="brightness-control">
                   <div class="control-header">
-                    <label>Brightness</label>
+                    <label>{{ $t('brightness') }}</label>
                     <span class="brightness-value">{{ light.brightness || 0 }}%</span>
                   </div>
                   <input 
@@ -146,8 +146,8 @@
                 </svg>
               </div>
               <div class="section-text">
-                <h3>Climate Control</h3>
-                <span class="device-count">{{ roomClimateDevices.length }} device{{ roomClimateDevices.length !== 1 ? 's' : '' }}</span>
+                <h3>{{ $t('climateControl') }}</h3>
+                <span class="device-count">{{ roomClimateDevices.length }} {{ roomClimateDevices.length === 1 ? $t('device') : $t('devices') }}</span>
               </div>
             </div>
             <div class="section-actions">

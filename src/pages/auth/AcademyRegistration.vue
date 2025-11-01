@@ -28,8 +28,8 @@
             <div class="academy-tag">📍 {{ academy.name }}</div>
           </div>
           <div class="price-hero">
-            <div class="total-price">{{ totalCost }} EGP</div>
-            <div class="price-note">Total Cost</div>
+            <div class="total-price">{{ totalCost }} {{ $t('currency') }}</div>
+            <div class="price-note">{{ $t('totalCost') }}</div>
           </div>
         </div>
         
@@ -39,7 +39,7 @@
           <span v-if="program.duration && (program.pricingType === 'per-month' || program.pricingType === 'per-week' || program.pricingType === 'per-term')" class="sum-pill">
             ⏱️ {{ program.duration }} {{ getDurationUnit(program.pricingType) }}
           </span>
-          <span v-if="program.maxCapacity" class="sum-pill">{{ program.maxCapacity }} spots</span>
+          <span v-if="program.maxCapacity" class="sum-pill">{{ program.maxCapacity }} {{ program.maxCapacity === 1 ? $t('spot') : $t('spots') }}</span>
         </div>
       </div>
 
@@ -156,6 +156,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useFormKeyboard } from 'src/composables/useFormKeyboard';
 import { useAcademiesStore } from 'src/stores/academyStore';
 import { useProjectStore } from 'src/stores/projectStore';
@@ -171,6 +172,7 @@ defineOptions({
 
 const router = useRouter();
 const route = useRoute();
+const { t } = useI18n();
 const academiesStore = useAcademiesStore();
 const projectStore = useProjectStore();
 
@@ -369,7 +371,7 @@ const submitRegistration = async () => {
     
   } catch (err) {
     console.error('Error submitting registration:', err);
-    error.value = 'Failed to submit registration. Please try again. Error: ' + err.message;
+    error.value = t('failedToSubmitRegistration') + ' Error: ' + err.message;
   } finally {
     isSubmitting.value = false;
   }
@@ -377,11 +379,11 @@ const submitRegistration = async () => {
 
 const getDurationUnit = (pricingType) => {
   const units = {
-    'per-week': 'weeks',
-    'per-month': 'months',
-    'per-term': 'terms'
+    'per-week': t('weeks'),
+    'per-month': t('months'),
+    'per-term': t('terms')
   };
-  return units[pricingType] || 'months';
+  return units[pricingType] || t('months');
 };
 
 // Lifecycle
@@ -389,7 +391,7 @@ onMounted(() => {
   if (currentProject.value?.id && academyId.value && programId.value) {
     loadProgramDetails();
   } else {
-    error.value = 'Missing required information. Please select a project first.';
+    error.value = t('missingInfoSelectProject');
   }
 });
 </script>

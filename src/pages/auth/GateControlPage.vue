@@ -139,17 +139,17 @@
 
       <!-- Technical Details (for debugging) -->
       <div v-if="showDebug" class="debug-section">
-        <q-expansion-item icon="bug_report" label="Debug Info" header-class="text-grey">
+          <q-expansion-item icon="bug_report" :label="$t('debugInfo')" header-class="text-grey">
           <q-card class="debug-card">
             <q-card-section>
               <div class="debug-info">
-                <p><strong>Platform:</strong> {{ platform }}</p>
-                <p><strong>BLE Supported:</strong> {{ isBLESupported }}</p>
-                <p><strong>Connected:</strong> {{ isConnected }}</p>
-                <p><strong>Device:</strong> {{ deviceName || 'None' }}</p>
-                <p><strong>Service UUID:</strong> {{ SERVICE_UUID }}</p>
-                <p><strong>Characteristic UUID:</strong> {{ CHARACTERISTIC_UUID }}</p>
-                <p><strong>Last Error:</strong> {{ lastError || 'None' }}</p>
+                <p><strong>{{ $t('platform') }}:</strong> {{ platform }}</p>
+                <p><strong>{{ $t('bleSupported') }}:</strong> {{ isBLESupported }}</p>
+                <p><strong>{{ $t('connected') }}:</strong> {{ isConnected }}</p>
+                <p><strong>{{ $t('device') }}:</strong> {{ deviceName || $t('none') }}</p>
+                <p><strong>{{ $t('serviceUuid') }}:</strong> {{ SERVICE_UUID }}</p>
+                <p><strong>{{ $t('characteristicUuid') }}:</strong> {{ CHARACTERISTIC_UUID }}</p>
+                <p><strong>{{ $t('lastError') }}:</strong> {{ lastError || $t('none') }}</p>
               </div>
             </q-card-section>
           </q-card>

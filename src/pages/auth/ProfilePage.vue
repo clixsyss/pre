@@ -237,15 +237,15 @@
               <div class="violations-stats">
                 <div class="stat-item">
                   <span class="stat-number">{{ violationStats.total }}</span>
-                  <span class="stat-label">Total</span>
+                  <span class="stat-label">{{ $t('total') }}</span>
                 </div>
                 <div class="stat-item">
                   <span class="stat-number">{{ violationStats.pending }}</span>
-                  <span class="stat-label">Pending</span>
+                  <span class="stat-label">{{ $t('pendingFines') }}</span>
                 </div>
                 <div class="stat-item">
                   <span class="stat-number">{{ violationStats.paid }}</span>
-                  <span class="stat-label">Paid</span>
+                  <span class="stat-label">{{ $t('paidFines') }}</span>
                 </div>
               </div>
             </div>
@@ -313,15 +313,15 @@
               <div class="complaints-stats">
                 <div class="stat-item">
                   <span class="stat-number">{{ complaintStats.total }}</span>
-                  <span class="stat-label">Total</span>
+                  <span class="stat-label">{{ $t('total') }}</span>
                 </div>
                 <div class="stat-item">
                   <span class="stat-number">{{ complaintStats.open }}</span>
-                  <span class="stat-label">Open</span>
+                  <span class="stat-label">{{ $t('open') }}</span>
                 </div>
                 <div class="stat-item">
                   <span class="stat-number">{{ complaintStats.resolved }}</span>
-                  <span class="stat-label">Resolved</span>
+                  <span class="stat-label">{{ $t('resolved') }}</span>
                 </div>
               </div>
             </div>
@@ -399,8 +399,8 @@
               </svg>
             </div>
             <div class="section-text">
-              <h3>Manage Units</h3>
-              <p>Manage your project memberships and smart home connections</p>
+              <h3>{{ $t('manageUnits') }}</h3>
+              <p>{{ $t('manageUnitsDesc') }}</p>
             </div>
           </div>
           <div class="accordion-arrow">
@@ -418,7 +418,7 @@
                 <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                   stroke-linejoin="round" />
               </svg>
-              Add aUnit
+              {{ $t('addUnit') }}
             </button>
           </div>
 
@@ -430,19 +430,19 @@
               <div class="project-header">
                 <div class="project-main-info">
                   <div class="project-title-section">
-                    <h4 class="project-name">{{ project.name || 'Unnamed Project' }}</h4>
-                    <p class="project-location">{{ project.location || 'Location not set' }}</p>
+                    <h4 class="project-name">{{ project.name || $t('unnamedProject') }}</h4>
+                    <p class="project-location">{{ project.location || $t('locationNotSet') }}</p>
                   </div>
                   <div class="project-status-badges">
-                    <span class="project-status" :class="project.status">{{ project.status || 'active' }}</span>
-                    <span v-if="project.approvalStatus === 'pending'" class="approval-status-badge pending">Pending Approval</span>
-                    <span v-else-if="project.approvalStatus === 'approved'" class="approval-status-badge approved">Approved</span>
-                    <span v-if="project.id === currentProjectId" class="current-badge">Current</span>
+                    <span class="project-status" :class="project.status">{{ $t(project.status) || $t('active') }}</span>
+                    <span v-if="project.approvalStatus === 'pending'" class="approval-status-badge pending">{{ $t('pendingApproval') }}</span>
+                    <span v-else-if="project.approvalStatus === 'approved'" class="approval-status-badge approved">{{ $t('approved') }}</span>
+                    <span v-if="project.id === currentProjectId" class="current-badge">{{ $t('currentBadge') }}</span>
                   </div>
                 </div>
                 <div class="project-role-info">
-                  <span class="project-unit">Unit {{ project.userUnit || 'N/A' }}</span>
-                  <span class="project-role">{{ project.userRole || 'Member' }}</span>
+                  <span class="project-unit">{{ $t('unit') }} {{ project.userUnit || $t('notAvailable') }}</span>
+                  <span class="project-role">{{ formatRole(project.userRole) || $t('member') }}</span>
                 </div>
               </div>
 
@@ -458,7 +458,7 @@
                       <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round" />
                     </svg>
-                    <span>Smart Home</span>
+                    <span>{{ $t('smartHome') }}</span>
                   </div>
                   <div class="smart-mirror-status">
                     <span v-if="isProjectSmartHomeConnected(project.id)" class="status-badge connected">
@@ -466,7 +466,7 @@
                         <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                           stroke-linejoin="round" />
                       </svg>
-                      Connected
+                      {{ $t('connected') }}
                     </span>
                     <span v-else class="status-badge disconnected">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -475,15 +475,15 @@
                         <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                           stroke-linejoin="round" />
                       </svg>
-                      Not Connected
+                      {{ $t('notConnected') }}
                     </span>
                   </div>
                 </div>
 
                 <div v-if="isProjectSmartHomeConnected(project.id)" class="smart-mirror-connected">
                   <div class="device-summary">
-                    <span class="device-count">{{ getProjectDeviceCount(project.id) }} devices</span>
-                    <span class="device-types">Lights, Climate, Plugs</span>
+                    <span class="device-count">{{ getProjectDeviceCount(project.id) }} {{ $t('devices') }}</span>
+                    <span class="device-types">{{ $t('lights') }}, {{ $t('climateControl') }}, {{ $t('plugs') }}</span>
                   </div>
                   <div class="smart-mirror-actions">
                     <button @click="goToDevices" class="control-devices-btn">
@@ -495,7 +495,7 @@
                         <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                           stroke-linejoin="round" />
                       </svg>
-                      Control Devices
+                      {{ $t('controlDevices') }}
                     </button>
                     <button @click="disconnectSmartMirror(project.id)" class="disconnect-btn"
                       :disabled="disconnectingProject === project.id">
@@ -511,13 +511,13 @@
                           d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9"
                           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                       </svg>
-                      {{ disconnectingProject === project.id ? 'Disconnecting...' : 'Disconnect' }}
+                      {{ disconnectingProject === project.id ? $t('disconnecting') : $t('disconnect') }}
                     </button>
                   </div>
                 </div>
 
                 <div v-else class="smart-mirror-disconnected">
-                  <p class="disconnected-message">Connect your smart home devices to control them from this app!</p>
+                  <p class="disconnected-message">{{ $t('connectSmartHomeDevices') }}</p>
                   <button @click="showLoginModal(project.id)" class="connect-smart-mirror-btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -527,7 +527,7 @@
                       <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round" />
                     </svg>
-                    Connect Smart Home
+                    {{ $t('connectSmartHome') }}
                   </button>
                 </div>
               </div>
@@ -537,7 +537,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 11c-.55 0-1-.45-1-1V8c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1zm1 4h-2v-2h2v2z" fill="currentColor"/>
                 </svg>
-                <span>This unit is awaiting admin approval. You'll be able to access it once approved.</span>
+                <span>{{ $t('unitAwaitingApproval') }}</span>
               </div>
 
               <!-- Project Actions -->
@@ -556,7 +556,7 @@
                     <path d="M16 13L20 17L16 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                       stroke-linejoin="round" />
                   </svg>
-                  Switch to Project
+                  {{ $t('switchToThisProject') }}
                 </button>
               </div>
             </div>
@@ -565,9 +565,9 @@
           <!-- No Projects State -->
           <div v-else class="no-projects">
             <div class="no-projects-icon">🏠</div>
-            <p>You don't have any projects yet.</p>
+            <p>{{ $t('youDontHaveProjects') }}</p>
             <button @click="showAddProjectModal = true" class="add-first-project-btn">
-              Join Your First Project
+              {{ $t('joinYourFirstProject') }}
             </button>
           </div>
         </div>
@@ -590,8 +590,8 @@
               </svg>
             </div>
             <div class="section-text">
-              <h3>Account Information</h3>
-              <p>Your account status and verification details</p>
+              <h3>{{ $t('accountInformation') }}</h3>
+              <p>{{ $t('accountInformationDesc') }}</p>
             </div>
           </div>
           <div class="accordion-arrow">
@@ -614,10 +614,10 @@
                 </svg>
               </div>
               <div class="info-content">
-                <label>Email Verified</label>
+                <label>{{ $t('emailVerified') }}</label>
                 <span class="verification-status"
                   :class="{ verified: userProfile.emailVerified, unverified: !userProfile.emailVerified }">
-                  {{ userProfile.emailVerified ? 'Verified' : 'Not Verified' }}
+                  {{ userProfile.emailVerified ? $t('verified') : $t('notVerified') }}
                 </span>
               </div>
             </div>
@@ -631,8 +631,8 @@
                 </svg>
               </div>
               <div class="info-content">
-                <label>Member Since</label>
-                <span>{{ formatDate(userProfile.createdAt) || 'Not available' }}</span>
+                <label>{{ $t('memberSince') }}</label>
+                <span>{{ formatDate(userProfile.createdAt) || $t('notAvailable') }}</span>
               </div>
             </div>
             <div class="info-card">
@@ -645,8 +645,8 @@
                 </svg>
               </div>
               <div class="info-content">
-                <label>Last Updated</label>
-                <span>{{ formatDate(userProfile.updatedAt) || 'Not available' }}</span>
+                <label>{{ $t('lastUpdated') }}</label>
+                <span>{{ formatDate(userProfile.updatedAt) || $t('notAvailable') }}</span>
               </div>
             </div>
             <div class="info-card">
@@ -660,10 +660,10 @@
                 </svg>
               </div>
               <div class="info-content">
-                <label>Profile Complete</label>
+                <label>{{ $t('profileComplete') }}</label>
                 <span class="completion-status"
                   :class="{ complete: userProfile.isProfileComplete, incomplete: !userProfile.isProfileComplete }">
-                  {{ userProfile.isProfileComplete ? 'Complete' : 'Incomplete' }}
+                  {{ userProfile.isProfileComplete ? $t('complete') : $t('incomplete') }}
                 </span>
               </div>
             </div>
@@ -687,8 +687,8 @@
               </svg>
             </div>
             <div class="section-text">
-              <h3>Smart Home Settings</h3>
-              <p>Manage your connected devices and home automation preferences</p>
+              <h3>{{ $t('smartHomeSettings') }}</h3>
+              <p>{{ $t('manageConnectedDevices') }}</p>
             </div>
           </div>
           <div class="accordion-arrow">
@@ -712,8 +712,8 @@
                 </svg>
               </div>
               <div class="settings-content">
-                <h4>Device Management</h4>
-                <p>Choose which devices appear on your home page dashboard</p>
+                <h4>{{ $t('deviceManagement') }}</h4>
+                <p>{{ $t('deviceManagementDesc') }}</p>
                 <button @click="openDeviceManagementModal" class="manage-devices-btn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -723,7 +723,7 @@
                     <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                       stroke-linejoin="round" />
                   </svg>
-                  Manage Devices
+                  {{ $t('ManageDevices') }}
                 </button>
               </div>
             </div>
@@ -748,7 +748,7 @@
             </div>
             <div class="section-text">
               <h3>{{ $t('settings') }}</h3>
-              <p>Customize your app experience</p>
+              <p>{{ $t('customizeExperience') }}</p>
             </div>
           </div>
           <div class="accordion-arrow">
@@ -772,7 +772,7 @@
                 </div>
                 <div class="settings-title">
                   <h4>{{ $t('language') }}</h4>
-                  <p>Choose your preferred language</p>
+                  <p>{{ $t('choosePreferredLanguage') }}</p>
                 </div>
               </div>
               <div class="settings-options">
@@ -791,8 +791,8 @@
               </div>
             </div>
 
-            <!-- Theme Settings -->
-            <div class="settings-group">
+            <!-- Theme Settings - COMMENTED OUT -->
+            <!-- <div class="settings-group">
               <div class="settings-header">
                 <div class="settings-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -803,7 +803,7 @@
                 </div>
                 <div class="settings-title">
                   <h4>{{ $t('theme') }}</h4>
-                  <p>Choose your preferred appearance</p>
+                  <p>{{ $t('selectTheme') }}</p>
                 </div>
               </div>
               <div class="settings-options">
@@ -820,7 +820,7 @@
                   </div>
                 </div>
               </div>
-            </div>
+            </div> -->
 
             <!-- Shake Detection Settings -->
             <div class="settings-group">
@@ -832,16 +832,16 @@
                   </svg>
                 </div>
                 <div class="settings-title">
-                  <h4>Shake to Open Gate</h4>
-                  <p>Quick access to gate by shaking your phone</p>
+                  <h4>{{ $t('shakeToOpenGate') }}</h4>
+                  <p>{{ $t('shakeToOpenGateDesc') }}</p>
                 </div>
               </div>
               
               <!-- Shake Toggle -->
               <div class="settings-toggle">
                 <div class="toggle-info">
-                  <span class="toggle-label">Enable Shake Gesture</span>
-                  <span class="toggle-description">{{ appSettingsStore.shakeEnabled ? 'Enabled' : 'Disabled' }}</span>
+                  <span class="toggle-label">{{ $t('enableShakeGesture') }}</span>
+                  <span class="toggle-description">{{ appSettingsStore.shakeEnabled ? $t('enabled') : $t('disabled') }}</span>
                 </div>
                 <button 
                   class="toggle-switch" 
@@ -855,11 +855,11 @@
               <!-- Sensitivity Slider (only show when enabled) -->
               <div v-if="appSettingsStore.shakeEnabled" class="settings-slider">
                 <div class="slider-header">
-                  <span class="slider-label">Sensitivity</span>
+                  <span class="slider-label">{{ $t('sensitivity') }}</span>
                   <span class="slider-value">{{ appSettingsStore.getSensitivityLabel(appSettingsStore.shakeSensitivity) }}</span>
                 </div>
                 <div class="slider-container">
-                  <span class="slider-mark">More</span>
+                  <span class="slider-mark">{{ $t('moreSlider') }}</span>
                   <input 
                     type="range" 
                     min="5" 
@@ -869,13 +869,13 @@
                     @input="appSettingsStore.setShakeSensitivity(parseInt($event.target.value))"
                     class="slider-input"
                   />
-                  <span class="slider-mark">Less</span>
+                  <span class="slider-mark">{{ $t('lessSlider') }}</span>
                 </div>
                 <div class="slider-ticks">
-                  <span>Very Sensitive</span>
-                  <span>Normal</span>
-                  <span>Less</span>
-                  <span>Least</span>
+                  <span>{{ $t('verySensitive') }}</span>
+                  <span>{{ $t('normalSlider') }}</span>
+                  <span>{{ $t('lessSlider') }}</span>
+                  <span>{{ $t('least') }}</span>
                 </div>
               </div>
             </div>
@@ -897,8 +897,8 @@
               </svg>
             </div>
             <div class="section-text">
-              <h3>Project Guidelines</h3>
-              <p>Important rules and procedures for our community</p>
+              <h3>{{ $t('projectGuidelines') }}</h3>
+              <p>{{ $t('projectGuidelinesDesc') }}</p>
             </div>
           </div>
           <button @click="showGuidelinesDialog = true" class="guidelines-btn">
@@ -906,7 +906,7 @@
               <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
             </svg>
-            View Guidelines
+            {{ $t('viewGuidelines') }}
           </button>
         </div>
       </div>
@@ -922,8 +922,8 @@
               </svg>
             </div>
             <div class="section-text">
-              <h3>Device Key Reset</h3>
-              <p>Request to reset your device authentication</p>
+              <h3>{{ $t('deviceKeyReset') }}</h3>
+              <p>{{ $t('deviceKeyResetDesc') }}</p>
             </div>
           </div>
           <div class="accordion-arrow">
@@ -941,13 +941,13 @@
                 <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
                 <path d="M12 16V12M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
-              <p>If you're experiencing issues with device authentication or need to use your account on a new device, submit a reset request. An admin will review your request.</p>
+              <p>{{ $t('deviceKeyResetInfo') }}</p>
             </div>
 
             <!-- Latest request status -->
             <div v-if="latestDeviceKeyRequest" class="latest-request">
               <div class="request-header">
-                <h4>Latest Request</h4>
+                <h4>{{ $t('latestRequest') }}</h4>
                 <span class="request-status" :style="{ 
                   color: getDeviceKeyStatusDisplay(latestDeviceKeyRequest.status).color,
                   backgroundColor: getDeviceKeyStatusDisplay(latestDeviceKeyRequest.status).color + '20'
@@ -957,15 +957,15 @@
               </div>
               <div class="request-details">
                 <div class="request-info-item">
-                  <span class="label">Reason:</span>
+                  <span class="label">{{ $t('reason') }}:</span>
                   <span class="value">{{ latestDeviceKeyRequest.reason }}</span>
                 </div>
                 <div class="request-info-item">
-                  <span class="label">Requested:</span>
+                  <span class="label">{{ $t('requested') }}:</span>
                   <span class="value">{{ formatDeviceKeyRequestDate(latestDeviceKeyRequest.requestedAt) }}</span>
                 </div>
                 <div v-if="latestDeviceKeyRequest.status === 'rejected' && latestDeviceKeyRequest.adminNotes" class="request-info-item">
-                  <span class="label">Admin Notes:</span>
+                  <span class="label">{{ $t('adminNotes') }}:</span>
                   <span class="value rejection-note">{{ latestDeviceKeyRequest.adminNotes }}</span>
                 </div>
               </div>
@@ -974,11 +974,11 @@
             <!-- Request form -->
             <div v-if="!hasPendingDeviceKeyRequest" class="device-key-form">
               <div class="form-group">
-                <label for="resetReason">Reason for Reset Request <span class="required">*</span></label>
+                <label for="resetReason">{{ $t('reasonForResetRequest') }} <span class="required">*</span></label>
                 <textarea
                   id="resetReason"
                   v-model="deviceKeyResetReason"
-                  placeholder="Please explain why you need a device key reset..."
+                  :placeholder="$t('deviceKeyResetReasonPlaceholder')"
                   rows="4"
                   class="form-textarea"
                   :disabled="submittingDeviceKeyRequest"
@@ -998,7 +998,7 @@
                   <path d="M21 2L19 4M19 4L15.5 7.5M19 4L17 6M15.5 7.5L13 10L15 12L10 17H7V14L12 9L14.5 11.5L15.5 7.5ZM7 14L4.18 16.82C3.39 17.61 3 18.33 3 19.05C3 20.12 3.88 21 5 21C5.72 21 6.44 20.61 7.23 19.82L10 17L7 14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <div v-else class="button-spinner-small"></div>
-                <span>{{ submittingDeviceKeyRequest ? 'Submitting...' : 'Submit Request' }}</span>
+                <span>{{ submittingDeviceKeyRequest ? $t('submitting') : $t('submitRequest') }}</span>
               </button>
             </div>
 
@@ -1008,8 +1008,8 @@
                 <circle cx="12" cy="12" r="10" stroke="#f59e0b" stroke-width="2"/>
                 <path d="M12 6V12L16 14" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
               </svg>
-              <h4>Request Pending</h4>
-              <p>You have a pending device key reset request. Please wait for an admin to review it.</p>
+              <h4>{{ $t('requestPending') }}</h4>
+              <p>{{ $t('deviceKeyResetPendingMessage') }}</p>
             </div>
           </div>
         </div>
@@ -1027,7 +1027,7 @@
                 d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            Edit Profile
+            {{ $t('editProfile') }}
           </button> -->
 
           <button @click="showLogoutConfirm = true" class="compact-btn secondary">
@@ -1036,7 +1036,7 @@
                 d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            Logout
+            {{ $t('logout') }}
           </button>
         </div>
       </div>
@@ -1072,17 +1072,17 @@
     <div v-if="showLogoutConfirm" class="modal-overlay" @click="showLogoutConfirm = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>Confirm Logout</h3>
+          <h3>{{ $t('confirmLogout') }}</h3>
         </div>
         <div class="modal-body">
-          <p>Are you sure you want to logout?</p>
-          <p class="modal-subtitle">You'll need to sign in again to access your account.</p>
+          <p>{{ $t('confirmLogoutMessage') }}</p>
+          <p class="modal-subtitle">{{ $t('logoutSubtitle') }}</p>
         </div>
         <div class="modal-actions">
-          <button @click="showLogoutConfirm = false" class="cancel-btn">Cancel</button>
+          <button @click="showLogoutConfirm = false" class="cancel-btn">{{ $t('cancel') }}</button>
           <button @click="handleLogout" class="confirm-btn" :disabled="logoutLoading">
-            <span v-if="logoutLoading">Logging out...</span>
-            <span v-else>Logout</span>
+            <span v-if="logoutLoading">{{ $t('loggingOut') }}</span>
+            <span v-else>{{ $t('logout') }}</span>
           </button>
         </div>
       </div>
@@ -1092,16 +1092,16 @@
     <div v-if="showAddProjectModal" class="modal-overlay" @click="showAddProjectModal = false">
       <div class="modal-content add-project-modal" @click.stop>
         <div class="modal-header">
-          <h3>Join Existing Project</h3>
+          <h3>{{ $t('joinExistingProject') }}</h3>
         </div>
         <div class="modal-body">
           <form @submit.prevent="addNewProject" class="add-project-form">
             <div class="form-group">
-              <label for="projectSelection">Select Project</label>
+              <label for="projectSelection">{{ $t('selectProject') }}</label>
               <select id="projectSelection" v-model="newProject.projectId" required @change="onProjectChange"
                 :disabled="loadingAvailableProjects">
                 <option value="">
-                  {{ loadingAvailableProjects ? 'Loading projects...' : 'Choose a project to join' }}
+                  {{ loadingAvailableProjects ? $t('loadingProjects') : $t('chooseProjectToJoin') }}
                 </option>
                 <option v-for="project in availableProjects" :key="project.id" :value="project.id">
                   {{ project.name }} - {{ project.location }}
@@ -1121,19 +1121,19 @@
                 v-model="newProject.userUnit"
                 :project-id="newProject.projectId"
                 :project-users="profileProjectUsers"
-                label="Your Unit"
-                placeholder="Select your unit..."
-                search-placeholder="Search units (e.g., D1A-1, D2A)..."
+                :label="$t('yourUnit')"
+                :placeholder="$t('selectYourUnit')"
+                :search-placeholder="$t('searchUnits')"
                 :disabled="!newProject.projectId"
               />
             </div>
 
             <div class="form-group">
-              <label for="userRole">Your Role</label>
+              <label for="userRole">{{ $t('yourRole') }}</label>
               <select id="userRole" v-model="newProject.userRole" required>
-                <option value="">Select your role</option>
-                <option value="owner">Owner</option>
-                <option value="family">Family Member</option>
+                <option value="">{{ $t('selectYourRole') }}</option>
+                <option value="owner">{{ $t('owner') }}</option>
+                <option value="family">{{ $t('familyMember') }}</option>
               </select>
             </div>
           </form>
@@ -1141,16 +1141,16 @@
         <!-- Success State -->
         <div v-if="projectJoinSuccess" class="success-state">
           <div class="success-icon">✅</div>
-          <h3>Successfully Joined Project!</h3>
-          <p>You can now access your new project from the home page.</p>
+          <h3>{{ $t('successfullyJoinedProject') }}</h3>
+          <p>{{ $t('canAccessNewProject') }}</p>
         </div>
 
         <!-- Form Actions -->
         <div v-else class="modal-actions">
-          <button @click="showAddProjectModal = false" class="cancel-btn">Cancel</button>
+          <button @click="showAddProjectModal = false" class="cancel-btn">{{ $t('cancel') }}</button>
           <button @click="addNewProject" class="confirm-btn" :disabled="addProjectLoading || !newProject.projectId">
-            <span v-if="addProjectLoading">Joining Project...</span>
-            <span v-else>Join Project</span>
+            <span v-if="addProjectLoading">{{ $t('joiningProject') }}</span>
+            <span v-else>{{ $t('joinProject') }}</span>
           </button>
         </div>
       </div>
@@ -1164,8 +1164,8 @@
           <div class="modal-header">
             <div class="header-content">
               <div class="header-text">
-                <h3>Connect Smart Home Account</h3>
-                <p>Link your smart home devices to {{userProjects.find(p => p.id === selectedProjectId)?.name || 'thisproject' }}</p>
+                <h3>{{ $t('connectSmartHomeAccount') }}</h3>
+                <p>{{ $t('linkSmartHomeDevices') }} {{userProjects.find(p => p.id === selectedProjectId)?.name || $t('thisProject') }}</p>
               </div>
             </div>
             <button class="close-btn" @click="closeLoginModal" :disabled="smartMirrorStore.isConnecting">
@@ -1254,7 +1254,7 @@
           <!-- Modal Footer -->
           <div class="modal-footer">
             <button @click="closeLoginModal" class="cancel-btn" :disabled="smartMirrorStore.isConnecting" type="button">
-              Cancel
+              {{ $t('cancel') }}
             </button>
             <button @click="handleLogin" class="connect-btn"
               :disabled="smartMirrorStore.isConnecting || !loginForm.email || !loginForm.password" type="submit">
@@ -1271,8 +1271,8 @@
       <div v-if="showDeviceManagementModal" class="modal-overlay" @click="closeDeviceManagementModal">
         <div class="modal-content device-management-modal" @click.stop>
           <div class="modal-header">
-            <h3>Manage Home Page Devices</h3>
-            <p>Select which devices to display on your home page dashboard</p>
+            <h3>{{ $t('manageHomePageDevices') }}</h3>
+            <p>{{ $t('deviceManagementDesc') }}</p>
           </div>
 
           <div class="modal-body">
@@ -1326,13 +1326,13 @@
                     stroke-linejoin="round" />
                 </svg>
               </div>
-              <h4>No Devices Available</h4>
-              <p>No smart home devices are currently connected to this project.</p>
+              <h4>{{ $t('noDevicesAvailable') }}</h4>
+              <p>{{ $t('noSmartHomeDevicesConnected') }}</p>
             </div>
           </div>
 
           <div class="modal-actions">
-            <button @click="closeDeviceManagementModal" class="cancel-btn">Cancel</button>
+            <button @click="closeDeviceManagementModal" class="cancel-btn">{{ $t('cancel') }}</button>
             <button @click="saveDeviceSettings" class="save-btn" :disabled="savingSettings">
               <svg v-if="savingSettings" width="16" height="16" viewBox="0 0 24 24" fill="none"
                 xmlns="http://www.w3.org/2000/svg" class="spinning">
@@ -1347,7 +1347,7 @@
                 <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                   stroke-linejoin="round" />
               </svg>
-              {{ savingSettings ? 'Saving...' : 'Save' }}
+              {{ savingSettings ? $t('saving') : $t('save') }}
             </button>
           </div>
         </div>
@@ -1359,6 +1359,7 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
 import { smartMirrorService } from '../../services/smartMirrorService'
@@ -1369,6 +1370,7 @@ import { useSettingsStore } from '../../stores/settingsStore'
 import { useAppSettingsStore } from '../../stores/appSettings'
 import { useModalState } from '../../composables/useModalState'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
+import { useDateFormat } from '../../composables/useDateFormat'
 import ProjectGuidelinesDialog from '../../components/ProjectGuidelinesDialog.vue'
 import EditProfileDialog from '../../components/EditProfileDialog.vue'
 import ViolationsModal from '../../components/ViolationsModal.vue'
@@ -1390,12 +1392,14 @@ useFormKeyboard({
 })
 
 const router = useRouter()
+const { t } = useI18n()
 const notificationStore = useNotificationStore()
 const projectStore = useProjectStore()
 const smartMirrorStore = useSmartMirrorStore()
 const settingsStore = useSettingsStore()
 const appSettingsStore = useAppSettingsStore()
 const { openModal, closeModal } = useModalState()
+const { formatDate, formatDateTime } = useDateFormat()
 
 // Reactive state
 const loading = ref(true)
@@ -2041,50 +2045,26 @@ const getStatusClass = (status) => {
   return classMap[status] || 'status-unknown'
 }
 
-const formatDate = (date) => {
-  if (!date) return null
-
-  try {
-    if (date.toDate) {
-      // Firestore timestamp
-      return date.toDate().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    } else if (typeof date === 'string') {
-      // String date
-      return new Date(date).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    }
-  } catch (err) {
-    console.warn('Error formatting date:', err)
-  }
-
-  return date
-}
+// formatDate is now from useDateFormat composable
 
 const formatGender = (gender) => {
   if (!gender) return null
 
   const genderMap = {
-    'male': 'Male',
-    'female': 'Female',
-    'other': 'Other'
+    'male': t('male'),
+    'female': t('female'),
+    'other': t('other')
   }
 
   return genderMap[gender] || gender
 }
 
 const formatRole = (role) => {
-  if (!role || role === 'owner') return 'Owner'
-  if (role === 'family') return 'Family Member'
+  if (!role || role === 'owner') return t('owner')
+  if (role === 'family') return t('familyMember')
 
   // Default to Family Member for any other role in family context
-  return 'Family Member'
+  return t('familyMember')
 }
 
 // Device management methods
@@ -2392,22 +2372,11 @@ const getDeviceKeyStatusDisplay = (status) => {
   return deviceKeyResetService.getStatusDisplay(status)
 }
 
+// formatDeviceKeyRequestDate uses formatDateTime from useDateFormat composable
 const formatDeviceKeyRequestDate = (timestamp) => {
-  if (!timestamp) return 'N/A'
-  
-  try {
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  } catch (error) {
-    console.error('Error formatting date:', error)
-    return 'Invalid date'
-  }
+  if (!timestamp) return '-'
+  const result = formatDateTime(timestamp)
+  return result || t('invalidDate')
 }
 
 // Explicit handlers for textarea focus/blur to ensure bottom nav hides on iOS
@@ -5652,6 +5621,87 @@ input:checked+.toggle-slider:before {
 
 [dir="rtl"] .option-check {
   order: -1;
+}
+
+/* RTL: Fix project-main-info layout for Arabic */
+[dir="rtl"] .project-main-info {
+  flex-direction: row-reverse;
+}
+
+/* RTL: Fix project-header arrows for Arabic */
+[dir="rtl"] .violations-btn-arrow svg,
+[dir="rtl"] .complaints-btn-arrow svg {
+  transform: scaleX(-1);
+}
+
+/* RTL: Flip hero content */
+[dir="rtl"] .hero-content {
+  flex-direction: row-reverse;
+}
+
+/* RTL: Flip accordion headers */
+[dir="rtl"] .accordion-header {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+/* RTL: Flip accordion title */
+[dir="rtl"] .accordion-title {
+  flex-direction: row-reverse;
+}
+
+/* RTL: Flip accordion arrow */
+[dir="rtl"] .accordion-header.active .accordion-arrow {
+  transform: rotate(-180deg);
+}
+
+/* RTL: Flip info cards */
+[dir="rtl"] .info-card {
+  flex-direction: row-reverse;
+}
+
+/* RTL: Flip family member cards */
+[dir="rtl"] .family-member-card {
+  flex-direction: row-reverse;
+}
+
+/* RTL: Flip smart mirror section */
+[dir="rtl"] .smart-mirror-header,
+[dir="rtl"] .smart-mirror-actions,
+[dir="rtl"] .project-actions,
+[dir="rtl"] .device-key-container,
+[dir="rtl"] .latest-request,
+[dir="rtl"] .request-header,
+[dir="rtl"] .device-key-form {
+  direction: rtl;
+}
+
+/* RTL: Flip violations and complaints buttons */
+[dir="rtl"] .violations-btn-content,
+[dir="rtl"] .complaints-btn-content {
+  flex-direction: row-reverse;
+}
+
+/* RTL: Flip violations and complaints stats */
+[dir="rtl"] .violations-stats,
+[dir="rtl"] .complaints-stats {
+  flex-direction: row-reverse;
+}
+
+/* RTL: Flip violations and complaints buttons */
+[dir="rtl"] .violations-btn,
+[dir="rtl"] .complaints-btn {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+/* RTL: Fix accordion arrow direction */
+[dir="rtl"] .accordion-arrow svg {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] .accordion-header.active .accordion-arrow svg {
+  transform: scaleX(-1) rotate(180deg);
 }
 
 /* Dark Mode Support for Settings */
