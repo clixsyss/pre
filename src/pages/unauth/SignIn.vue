@@ -682,7 +682,8 @@ const handleSignIn = async () => {
     console.log('[SignIn] 📱 Registering FCM token for notifications...')
     try {
       const fcmService = (await import('../../services/fcmService')).default
-      await fcmService.initialize()
+      // Pass the userId explicitly to ensure token is saved correctly
+      await fcmService.initialize(userId)
       console.log('[SignIn] ✅ FCM token registered successfully')
     } catch (fcmError) {
       console.warn('[SignIn] ⚠️ FCM registration failed (non-critical):', fcmError)

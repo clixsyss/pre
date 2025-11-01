@@ -45,9 +45,16 @@ class FCMService {
 
   /**
    * Initialize FCM based on platform
+   * @param {string} userId - Optional user ID to use for token registration (useful when auth state isn't ready yet)
    */
-  async initialize() {
+  async initialize(userId = null) {
     try {
+      // Store userId if provided (for cases where auth state isn't ready yet)
+      if (userId) {
+        this.explicitUserId = userId;
+        console.log('FCMService: Using explicit user ID:', userId);
+      }
+      
       // Prevent duplicate initialization
       if (this.isInitialized) {
         console.log('FCMService: Already initialized, skipping...');
@@ -143,19 +150,24 @@ class FCMService {
    */
   async saveTokenWithRetry(token, platform, retryCount = 0) {
     try {
-      // On native platforms, use Capacitor Firebase Auth to check current user
-      let currentUserId = null;
+      // First, check if we have an explicit userId (passed during initialization)
+      let currentUserId = this.explicitUserId;
       
-      if (this.isNative) {
-        // Use Capacitor Firebase Authentication
-        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
-        const { user } = await FirebaseAuthentication.getCurrentUser();
-        currentUserId = user?.uid;
-        console.log('🔍 FCMService: Capacitor Auth check - User ID:', currentUserId);
+      // If no explicit userId, try to get it from auth
+      if (!currentUserId) {
+        if (this.isNative) {
+          // Use Capacitor Firebase Authentication
+          const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+          const { user } = await FirebaseAuthentication.getCurrentUser();
+          currentUserId = user?.uid;
+          console.log('🔍 FCMService: Capacitor Auth check - User ID:', currentUserId);
+        } else {
+          // Use Web SDK for web platform
+          currentUserId = auth.currentUser?.uid;
+          console.log('🔍 FCMService: Web Auth check - User ID:', currentUserId);
+        }
       } else {
-        // Use Web SDK for web platform
-        currentUserId = auth.currentUser?.uid;
-        console.log('🔍 FCMService: Web Auth check - User ID:', currentUserId);
+        console.log('🔍 FCMService: Using explicit User ID:', currentUserId);
       }
       
       if (currentUserId) {
@@ -497,19 +509,24 @@ class FCMService {
    */
   async saveTokenToFirestore(token, platform) {
     try {
-      // Get current user - use Capacitor plugin on native, Web SDK on web
-      let userId = null;
+      // First, check if we have an explicit userId (passed during initialization)
+      let userId = this.explicitUserId;
       
-      if (this.isNative) {
-        // Use Capacitor Firebase Authentication on native platforms
-        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
-        const { user } = await FirebaseAuthentication.getCurrentUser();
-        userId = user?.uid;
-        console.log('🔍 FCMService: Getting user from Capacitor Auth:', userId);
+      // If no explicit userId, try to get it from auth
+      if (!userId) {
+        if (this.isNative) {
+          // Use Capacitor Firebase Authentication on native platforms
+          const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+          const { user } = await FirebaseAuthentication.getCurrentUser();
+          userId = user?.uid;
+          console.log('🔍 FCMService: Getting user from Capacitor Auth:', userId);
+        } else {
+          // Use Web SDK for web platform
+          userId = auth.currentUser?.uid;
+          console.log('🔍 FCMService: Getting user from Web SDK:', userId);
+        }
       } else {
-        // Use Web SDK for web platform
-        userId = auth.currentUser?.uid;
-        console.log('🔍 FCMService: Getting user from Web SDK:', userId);
+        console.log('🔍 FCMService: Using explicit userId:', userId);
       }
       
       if (!userId) {

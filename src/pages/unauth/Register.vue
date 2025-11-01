@@ -993,7 +993,8 @@ const handlePropertySubmit = async () => {
     console.log('[Register] 📱 Registering FCM token for notifications...')
     try {
       const fcmService = (await import('../../services/fcmService')).default
-      await fcmService.initialize()
+      // Pass the userId explicitly since user is created via REST API (not signed into Firebase Auth yet)
+      await fcmService.initialize(registrationStore.tempUserId)
       console.log('[Register] ✅ FCM token registered successfully')
     } catch (fcmError) {
       console.warn('[Register] ⚠️ FCM registration failed (non-critical):', fcmError)
