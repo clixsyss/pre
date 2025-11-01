@@ -11,7 +11,6 @@
  */
 
 import { getMessaging, getToken, onMessage, deleteToken } from 'firebase/messaging';
-import { Capacitor } from '@capacitor/core';
 import { 
   collection, 
   doc, 
@@ -22,14 +21,14 @@ import {
   getDocs,
   updateDoc
 } from 'firebase/firestore';
-import { db, auth } from 'src/boot/firebase';
+import { db, auth, detectPlatformFromUrl } from 'src/boot/firebase';
 import { Notify } from 'quasar';
 
 class FCMService {
   constructor() {
     this.messaging = null;
-    this.isNative = Capacitor.isNativePlatform();
-    this.platform = Capacitor.getPlatform();
+    this.isNative = null; // Will be set during initialize()
+    this.platform = null; // Will be set during initialize()
     this.currentToken = null;
     this.notificationHandlers = [];
     this.FirebaseMessaging = null; // Will be loaded dynamically
@@ -40,19 +39,20 @@ class FCMService {
     // VAPID key for web push - uses environment variable with fallback
     this.vapidKey = import.meta.env.VITE_FCM_VAPID_KEY || 'BDL03mUP_fsEjpZLMLwj-EW0XGFUPXDu8alAQgAKrlcGrHe39yxSF8DH1yn75Y93vOYc-5nNcRctEhMoBPvQatQ';
     
-    console.log('FCMService: Initialized', { isNative: this.isNative, platform: this.platform });
+    console.log('FCMService: Constructor called (platform detection deferred)');
   }
 
   /**
    * Initialize FCM based on platform
-   * @param {string} userId - Optional user ID to use for token registration (useful when auth state isn't ready yet)
    */
-  async initialize(userId = null) {
+  async initialize() {
     try {
-      // Store userId if provided (for cases where auth state isn't ready yet)
-      if (userId) {
-        this.explicitUserId = userId;
-        console.log('FCMService: Using explicit user ID:', userId);
+      // Detect platform using reliable URL-based detection (same as firebase.js)
+      if (this.isNative === null || this.platform === null) {
+        const platformInfo = detectPlatformFromUrl();
+        this.isNative = platformInfo.isNative;
+        this.platform = platformInfo.platform;
+        console.log('FCMService: Platform detected', { isNative: this.isNative, platform: this.platform });
       }
       
       // Prevent duplicate initialization
@@ -85,10 +85,18 @@ class FCMService {
     console.log('FCMService: Initializing native Firebase Messaging...');
     
     try {
-      // Import FirebaseMessaging plugin
-      const { FirebaseMessaging } = await import('@capacitor-firebase/messaging');
+      // Ensure the plugin module is loaded (registers the plugin)
+      await import('@capacitor-firebase/messaging');
+      
+      // Access the NATIVE plugin from window.Capacitor (where iOS bridge registers it)
+      if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.FirebaseMessaging) {
+        throw new Error('FirebaseMessaging plugin not available in window.Capacitor.Plugins');
+      }
+      
+      const FirebaseMessaging = window.Capacitor.Plugins.FirebaseMessaging;
       this.FirebaseMessaging = FirebaseMessaging;
-      console.log('FCMService: FirebaseMessaging plugin loaded');
+      console.log('FCMService: FirebaseMessaging plugin loaded from window.Capacitor.Plugins');
+      console.log('FCMService: Has requestPermissions?', typeof FirebaseMessaging?.requestPermissions);
       
       // Request permissions
       console.log('FCMService: Requesting notification permissions...');
@@ -150,25 +158,9 @@ class FCMService {
    */
   async saveTokenWithRetry(token, platform, retryCount = 0) {
     try {
-      // First, check if we have an explicit userId (passed during initialization)
-      let currentUserId = this.explicitUserId;
-      
-      // If no explicit userId, try to get it from auth
-      if (!currentUserId) {
-        if (this.isNative) {
-          // Use Capacitor Firebase Authentication
-          const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
-          const { user } = await FirebaseAuthentication.getCurrentUser();
-          currentUserId = user?.uid;
-          console.log('🔍 FCMService: Capacitor Auth check - User ID:', currentUserId);
-        } else {
-          // Use Web SDK for web platform
-          currentUserId = auth.currentUser?.uid;
-          console.log('🔍 FCMService: Web Auth check - User ID:', currentUserId);
-        }
-      } else {
-        console.log('🔍 FCMService: Using explicit User ID:', currentUserId);
-      }
+      // Use getCurrentUserId which handles Web SDK auth with wait logic
+      console.log(`🔍 FCMService: Getting user ID (attempt ${retryCount + 1}/10)...`);
+      const currentUserId = await this.getCurrentUserId();
       
       if (currentUserId) {
         console.log('🎉 FCMService: Saving token to Firestore for user:', currentUserId);
@@ -182,11 +174,12 @@ class FCMService {
         throw new Error('Failed to save token: No authenticated user');
       }
     } catch (error) {
-      console.error('❌ FCMService: Error in saveTokenWithRetry:', error);
+      console.error('❌ FCMService: Error in saveTokenWithRetry:', error, 'Message:', error?.message, 'Stack:', error?.stack);
       if (retryCount < 10) {
         console.log(`⚠️ FCMService: Retrying after error... (attempt ${retryCount + 1}/10)`);
         setTimeout(() => this.saveTokenWithRetry(token, platform, retryCount + 1), 1000);
       } else {
+        console.error('❌ FCMService: Max retries reached, giving up');
         throw error;
       }
     }
@@ -509,107 +502,52 @@ class FCMService {
    */
   async saveTokenToFirestore(token, platform) {
     try {
-      // First, check if we have an explicit userId (passed during initialization)
-      let userId = this.explicitUserId;
-      
-      // If no explicit userId, try to get it from auth
-      if (!userId) {
-        if (this.isNative) {
-          // Use Capacitor Firebase Authentication on native platforms
-          const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
-          const { user } = await FirebaseAuthentication.getCurrentUser();
-          userId = user?.uid;
-          console.log('🔍 FCMService: Getting user from Capacitor Auth:', userId);
-        } else {
-          // Use Web SDK for web platform
-          userId = auth.currentUser?.uid;
-          console.log('🔍 FCMService: Getting user from Web SDK:', userId);
-        }
-      } else {
-        console.log('🔍 FCMService: Using explicit userId:', userId);
-      }
+      // Use getCurrentUserId which handles Web SDK auth for all platforms
+      const userId = await this.getCurrentUserId();
       
       if (!userId) {
-        console.warn('FCMService: No authenticated user, skipping token save');
-        return;
+        console.error('FCMService: No authenticated user, cannot save token');
+        throw new Error('No authenticated user');
       }
 
       console.log('💾 FCMService: Preparing to save token to Firestore:', { token, platform, userId });
 
       // Create a unique ID for this token
       const tokenId = this.hashToken(token);
-      const tokenPath = `users/${userId}/tokens/${tokenId}`;
       
-      console.log('📍 FCMService: Token path:', tokenPath);
-      
-      // On iOS, use Capacitor Firestore plugin for better compatibility
-      if (this.isNative) {
-        console.log('📱 FCMService: Using Capacitor Firestore plugin to save token...');
-        const { FirebaseFirestore } = await import('@capacitor-firebase/firestore');
+      // Use Web SDK Firestore for all platforms (consistent with auth)
+      console.log('🌐 FCMService: Using Web SDK to save token...');
+      const tokenRef = doc(db, 'users', userId, 'tokens', tokenId);
         
-        const tokenData = {
-          token,
-          platform,
-          isActive: true,
-          createdAt: new Date().toISOString(), // Capacitor plugin uses ISO strings
-          lastSeenAt: new Date().toISOString(),
-          deviceInfo: {
-            userAgent: navigator.userAgent || 'Unknown',
+      await setDoc(tokenRef, {
+        token,
+        platform,
+        isActive: true,
+        createdAt: serverTimestamp(),
+        lastSeenAt: serverTimestamp(),
+        deviceInfo: {
+          userAgent: navigator.userAgent || 'Unknown',
             isNative: this.isNative,
             platformType: this.platform
           }
-        };
+      }, { merge: true });
         
-        console.log('📤 FCMService: Calling Capacitor setDocument...');
-        await FirebaseFirestore.setDocument({
-          reference: tokenPath,
-          data: tokenData,
-          merge: true
-        });
-        
-        console.log('✅ FCMService: Token saved successfully via Capacitor Firestore!');
-        // Mirror orange-pharmacies: also store flat fcmToken on the user document
-        try {
-          await FirebaseFirestore.setDocument({
-            reference: `users/${userId}`,
-            data: { fcmToken: token },
-            merge: true
-          });
-          console.log('✅ FCMService: User fcmToken updated (native)');
-        } catch (e) {
-          console.warn('⚠️ FCMService: Failed to set flat fcmToken (native):', e);
-        }
-      } else {
-        // Use Web SDK for web platform
-        console.log('🌐 FCMService: Using Web SDK to save token...');
-        const tokenRef = doc(db, 'users', userId, 'tokens', tokenId);
-        
-        await setDoc(tokenRef, {
-          token,
-          platform,
-          isActive: true,
-          createdAt: serverTimestamp(),
-          lastSeenAt: serverTimestamp(),
-          deviceInfo: {
-            userAgent: navigator.userAgent || 'Unknown',
-            isNative: this.isNative,
-            platformType: this.platform
-          }
-        }, { merge: true });
-        
-        console.log('✅ FCMService: Token saved successfully via Web SDK!');
-        // Mirror orange-pharmacies: also store flat fcmToken on the user document
-        try {
-          const userRef = doc(db, 'users', userId);
-          await updateDoc(userRef, { fcmToken: token });
-          console.log('✅ FCMService: User fcmToken updated (web)');
-        } catch (e) {
-          console.warn('⚠️ FCMService: Failed to set flat fcmToken (web):', e);
-        }
+      console.log('✅ FCMService: Token saved successfully to subcollection!');
+      
+      // Also store flat fcmToken on the user document for compatibility
+      try {
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, { fcmToken: token });
+        console.log('✅ FCMService: User fcmToken field updated');
+      } catch (e) {
+        console.warn('⚠️ FCMService: Failed to set flat fcmToken:', e?.message || e);
       }
+      
+      // Store current token in memory
+      this.currentToken = token;
+      
     } catch (error) {
-      console.error('❌ FCMService: Error saving token:', error);
-      console.error('❌ FCMService: Error details:', error.message, error.code);
+      console.error('❌ FCMService: Error saving token:', error, 'Message:', error?.message, 'Code:', error?.code);
       throw error;
     }
   }
@@ -619,15 +557,34 @@ class FCMService {
    */
   async getCurrentUserId() {
     try {
-      if (this.isNative) {
-        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
-        const { user } = await FirebaseAuthentication.getCurrentUser();
-        return user?.uid;
-      } else {
-        return auth.currentUser?.uid;
+      // Always use Web SDK auth (matches optimizedAuthService behavior)
+      // The app uses Web SDK for authentication on all platforms
+      
+      // Wait for auth to be ready (with timeout)
+      let userId = auth.currentUser?.uid;
+      
+      if (!userId) {
+        console.log('FCMService: Waiting for auth.currentUser to be available...');
+        // Wait up to 3 seconds for auth to be ready
+        for (let i = 0; i < 30; i++) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          userId = auth.currentUser?.uid;
+          if (userId) {
+            console.log(`FCMService: Auth ready after ${(i + 1) * 100}ms`);
+            break;
+          }
+        }
       }
+      
+      if (!userId) {
+        console.error('FCMService: No authenticated user found after waiting');
+        return null;
+      }
+      
+      console.log(`FCMService: Got user ID: ${userId}`);
+      return userId;
     } catch (error) {
-      console.error('FCMService: Error getting current user:', error);
+      console.error('FCMService: Error getting current user:', error, error?.message, error?.stack);
       return null;
     }
   }
