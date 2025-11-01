@@ -84,24 +84,59 @@ export function useBluetooth() {
       isScanning.value = true
       console.log('🔍 Scanning for BLE devices with service:', serviceUUID)
 
-      // Request device and connect
-      const device = await bluetoothLE.requestDevice({
-        services: [serviceUUID],
-        optionalServices: [serviceUUID],
-      })
+      let selectedDevice = null
+      const scanTimeout = 10000 // 10 seconds scan timeout
+      const startTime = Date.now()
 
-      console.log('📱 Device found:', device)
-      bleDevice = device
+      // Start scanning for devices with the service UUID
+      await bluetoothLE.requestLEScan(
+        {
+          services: [serviceUUID],
+        },
+        (result) => {
+          // Called when a device is found
+          if (result.isConnectable && !selectedDevice) {
+            console.log('📱 Device found:', result)
+            selectedDevice = {
+              deviceId: result.device.deviceId,
+              name: result.device.name || result.device.deviceId,
+              rssi: result.rssi,
+            }
+          }
+        },
+      )
+
+      // Wait for a device to be found or timeout
+      while (!selectedDevice && Date.now() - startTime < scanTimeout) {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+
+      // Stop scanning
+      try {
+        await bluetoothLE.stopLEScan()
+      } catch (stopError) {
+        console.warn('⚠️ Error stopping scan:', stopError)
+      }
+
+      isScanning.value = false
+
+      if (!selectedDevice) {
+        throw new Error(
+          'No device found with the specified service. Make sure the gate device is powered on and in range.',
+        )
+      }
+
+      console.log('📱 Connecting to device:', selectedDevice)
+      bleDevice = selectedDevice
 
       // Connect to the device
-      await bluetoothLE.connect(device.deviceId, () => {
-        console.log('🔌 Device disconnected')
+      await bluetoothLE.connect(selectedDevice.deviceId, (deviceId) => {
+        console.log('🔌 Device disconnected:', deviceId)
         handleDisconnect()
       })
 
-      deviceName.value = device.name || device.deviceId
+      deviceName.value = selectedDevice.name || selectedDevice.deviceId
       isConnected.value = true
-      isScanning.value = false
       console.log('✅ Connected to device:', deviceName.value)
 
       Notify.create({
@@ -117,6 +152,13 @@ export function useBluetooth() {
       lastError.value = error.message
       isConnected.value = false
       isScanning.value = false
+
+      // Stop scanning if still active
+      try {
+        await bluetoothLE.stopLEScan()
+      } catch (stopError) {
+        // Ignore stop errors
+      }
 
       Notify.create({
         type: 'negative',
