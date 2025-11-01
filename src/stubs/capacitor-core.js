@@ -45,4 +45,68 @@ export class CapacitorException extends Error {
   }
 }
 
+// Additional stub exports for specific plugins
+export const Network = {
+  getStatus: async () => ({ connected: true, connectionType: 'wifi' }),
+  addListener: () => ({ remove: () => {} }),
+  removeAllListeners: () => {},
+}
+
+export const Haptics = {
+  impact: async () => {},
+  notification: async () => {},
+  vibrate: async () => {},
+  selectionStart: async () => {},
+  selectionChanged: async () => {},
+  selectionEnd: async () => {},
+}
+
+export const Badge = {
+  set: async () => {},
+  get: async () => ({ count: 0 }),
+  clear: async () => {},
+  check: async () => ({ isSupported: false }),
+  increase: async () => {},
+  decrease: async () => {},
+}
+
+export const Keyboard = {
+  show: async () => {},
+  hide: async () => {},
+  setAccessoryBarVisible: async () => {},
+  setStyle: async () => {},
+  setScroll: async () => {},
+  setResize: async () => {},
+  addListener: () => ({ remove: () => {} }),
+  removeAllListeners: () => {},
+}
+
+export const Geolocation = {
+  getCurrentPosition: async () => ({ latitude: 0, longitude: 0 }),
+  watchPosition: async () => ({ id: '0' }),
+  clearWatch: async () => {},
+  checkPermissions: async () => ({ location: 'granted' }),
+  requestPermissions: async () => ({ location: 'granted' }),
+}
+
+export const Camera = {
+  getPhoto: async () => ({ webPath: '', format: 'jpeg' }),
+  pickImages: async () => ({ images: [] }),
+  pickLimitedLibraryPhotos: async () => ({ photos: [] }),
+  checkPermissions: async () => ({ camera: 'granted', photos: 'granted' }),
+  requestPermissions: async () => ({ camera: 'granted', photos: 'granted' }),
+}
+
+export const CameraResultType = {
+  Uri: 'uri',
+  Base64: 'base64',
+  DataUrl: 'dataUrl',
+}
+
+export const CameraSource = {
+  Prompt: 'prompt',
+  Camera: 'camera',
+  Photos: 'photos',
+}
+
 export default Capacitor
