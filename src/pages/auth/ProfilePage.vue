@@ -1596,6 +1596,28 @@ const loadComplaintStats = async () => {
   }
 }
 
+// Helper function to check if parentAccountId system is being used in the app
+const checkIfParentAccountIdSystemExists = async () => {
+  try {
+    // Quick check: sample a few users to see if any have parentAccountId
+    const sampleSnapshot = await firestoreService.getDocs('users', {
+      limit: 10,
+      timeoutMs: 3000
+    })
+    
+    const hasParentAccountId = sampleSnapshot.docs.some(doc => {
+      const data = doc.data()
+      return data.parentAccountId !== undefined && data.parentAccountId !== null
+    })
+    
+    console.log('👨‍👩‍👧‍👦 ParentAccountId system exists:', hasParentAccountId)
+    return hasParentAccountId
+  } catch (error) {
+    console.error('Error checking parentAccountId system:', error)
+    return false // Default to unit-based fallback
+  }
+}
+
 // Load family members
 const loadFamilyMembers = async () => {
   const currentUser = await optimizedAuthService.getCurrentUser()
@@ -1616,58 +1638,91 @@ const loadFamilyMembers = async () => {
       return
     }
 
-    // Check if user is a family member (has parentAccountId) or is a parent (others have their ID as parentAccountId)
-    const parentId = userProfile.value.parentAccountId || currentUser.uid
+    // Check if parentAccountId system is being used
+    const hasParentAccountId = userProfile.value.parentAccountId !== undefined && userProfile.value.parentAccountId !== null
+    
+    let allPotentialMembers = []
+    
+    if (hasParentAccountId || await checkIfParentAccountIdSystemExists()) {
+      // Use parentAccountId-based system
+      console.log('👨‍👩‍👧‍👦 Using parentAccountId system')
+      const parentId = userProfile.value.parentAccountId || currentUser.uid
 
-    // Use filtered query instead of loading all 5003 users!
-    const usersSnapshot = await firestoreService.getDocs('users', {
-      filters: [
-        { field: 'parentAccountId', operator: '==', value: parentId }
-      ],
-      timeoutMs: 6000
-    })
-
-    const potentialFamilyMembers = usersSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }))
-
-    // Also get users who have current user as parent (if different from parentId)
-    let childrenOfCurrentUser = []
-    if (parentId !== currentUser.uid) {
-      const childrenSnapshot = await firestoreService.getDocs('users', {
+      // Query users who have this parent ID
+      const usersSnapshot = await firestoreService.getDocs('users', {
         filters: [
-          { field: 'parentAccountId', operator: '==', value: currentUser.uid }
+          { field: 'parentAccountId', operator: '==', value: parentId }
         ],
         timeoutMs: 6000
       })
-      childrenOfCurrentUser = childrenSnapshot.docs.map(doc => ({
+
+      const potentialFamilyMembers = usersSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }))
-    }
 
-    // If current user is a family member (has a parent), also fetch the parent user
-    let parentUser = null
-    if (parentId !== currentUser.uid) {
-      try {
-        const parentDoc = await firestoreService.getDoc('users', parentId)
-        if (parentDoc.exists()) {
-          parentUser = {
-            id: parentDoc.id,
-            ...parentDoc.data()
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching parent user:', error)
+      // Also get users who have current user as parent (if different from parentId)
+      let childrenOfCurrentUser = []
+      if (parentId !== currentUser.uid) {
+        const childrenSnapshot = await firestoreService.getDocs('users', {
+          filters: [
+            { field: 'parentAccountId', operator: '==', value: currentUser.uid }
+          ],
+          timeoutMs: 6000
+        })
+        childrenOfCurrentUser = childrenSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
       }
-    }
 
-    // Combine all arrays and remove duplicates
-    const allPotentialMembers = [...potentialFamilyMembers, ...childrenOfCurrentUser]
-    if (parentUser) {
-      allPotentialMembers.push(parentUser)
+      // If current user is a family member (has a parent), also fetch the parent user
+      let parentUser = null
+      if (parentId !== currentUser.uid) {
+        try {
+          const parentDoc = await firestoreService.getDoc('users', parentId)
+          if (parentDoc.exists()) {
+            parentUser = {
+              id: parentDoc.id,
+              ...parentDoc.data()
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching parent user:', error)
+        }
+      }
+
+      // Combine all arrays
+      allPotentialMembers = [...potentialFamilyMembers, ...childrenOfCurrentUser]
+      if (parentUser) {
+        allPotentialMembers.push(parentUser)
+      }
+    } else {
+      // FALLBACK: Find all users in the same unit (no parentAccountId system)
+      console.log('👨‍👩‍👧‍👦 Using unit-based fallback (no parentAccountId system)')
+      
+      // Query all users, but we'll filter on the client side
+      // This is not ideal but necessary without parentAccountId
+      const allUsersSnapshot = await firestoreService.getDocs('users', {
+        timeoutMs: 8000
+      })
+      
+      allPotentialMembers = allUsersSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(user => {
+          // Don't include self
+          if (user.id === currentUser.uid) return false
+          
+          // Check if user has access to the same project and same unit
+          const userProjectData = user.projects?.find(p => p.projectId === projectStore.selectedProject.id)
+          if (!userProjectData) return false
+          
+          // Must be in the same unit
+          return userProjectData.unit === currentUserUnit
+        })
     }
+    
+    // Remove duplicates
     const uniqueMembers = allPotentialMembers.filter((user, index, self) =>
       index === self.findIndex(u => u.id === user.id)
     )
