@@ -861,11 +861,11 @@ const locationRestriction = ref({
   loading: false,
 })
 
-// Pass limits
+// Pass limits (per-unit, shared by all family members)
 const passLimits = ref({
-  monthlyLimit: 10,
+  monthlyLimit: 30,
   usedThisMonth: 0,
-  remainingQuota: 10,
+  remainingQuota: 30,
 })
 
 // Computed: Filter passes by current project
@@ -1052,14 +1052,16 @@ const getUserUnitInfo = () => {
 /**
  * Load passes from Firebase AND calculate limits
  * 
- * NEW Per-Project Limit Hierarchy:
- * 1. Fetch global limit from guestPassSettings/{projectId} (set by admin in dashboard)
- * 2. Check if user has custom limit in projects/{projectId}/userGuestPassSettings/{userId}.monthlyLimit
- * 3. Use per-project user limit if exists, otherwise use global limit
- * 4. Fallback to 10 if both fail
+ * NEW Per-Unit Limit Hierarchy:
+ * 1. Check if project-wide blocking is enabled (blockAllUsers) → block everyone
+ * 2. Fetch global limit from guestPassSettings/{projectId} (set by admin in dashboard)
+ * 3. Check if unit is blocked in projects/{projectId}/unitGuestPassSettings/{unit}.blocked
+ * 4. Check if unit has custom limit in projects/{projectId}/unitGuestPassSettings/{unit}.monthlyLimit
+ * 5. Use per-unit custom limit if exists, otherwise use global limit
+ * 6. Fallback to 30 if both fail
  * 
- * This allows the same user to have different limits per project!
- * Example: User has 10 in Project A, 100 in Project B, blocked in Project C
+ * All family members in the same unit share ONE limit!
+ * Example: Unit A has 20 passes/month (shared by all family), Unit B has 50, Unit C is blocked
  */
 const loadPassesFromFirebase = async () => {
   try {
@@ -1070,9 +1072,9 @@ const loadPassesFromFirebase = async () => {
       console.log('👤 No user or project, skipping pass load')
       passes.value = []
       passLimits.value = {
-        monthlyLimit: 10,
+        monthlyLimit: 30,
         usedThisMonth: 0,
-        remainingQuota: 10,
+        remainingQuota: 30,
       }
       return
     }
@@ -1080,19 +1082,18 @@ const loadPassesFromFirebase = async () => {
     console.log('📥 Loading passes from Firebase for project:', projectId)
     console.log('👤 User ID:', user.uid)
 
-    // Get per-project user settings
-    let userProjectSettings = {}
-    try {
-      const settingsResult = await firestoreService.getDoc(`projects/${projectId}/userGuestPassSettings/${user.uid}`)
-      userProjectSettings = settingsResult.data ? settingsResult.data() : settingsResult
-      console.log('📋 Per-project user settings:', userProjectSettings)
-    } catch {
-      console.log('ℹ️ No per-project settings found, will use defaults')
-    }
+    // Get user's unit from project data
+    const cachedUserData = await firestoreService.getDoc(`users/${user.uid}`)
+    const userData = cachedUserData.data ? cachedUserData.data() : cachedUserData
+    const projectInfo = userData?.projects?.find(p => p.projectId === projectId)
+    const userUnit = projectInfo?.unit || userData?.unit || ''
     
-    // Check for global settings
-    let globalMonthlyLimit = 10
+    console.log('🏠 User unit:', userUnit)
+    
+    // Check for global settings first
+    let globalMonthlyLimit = 30
     let globalBlockAllUsers = false
+    let globalBlockFamilyMembers = false
     let globalSettingsDoc = null
     
     try {
@@ -1107,47 +1108,77 @@ const loadPassesFromFirebase = async () => {
         console.log('🌐 Global monthly limit from settings:', globalMonthlyLimit, '(type:', typeof globalSettingsDoc.monthlyLimit, ')')
       }
       globalBlockAllUsers = globalSettingsDoc?.blockAllUsers || false
+      globalBlockFamilyMembers = globalSettingsDoc?.blockFamilyMembers || false
     } catch (settingsError) {
       console.warn('⚠️ Could not fetch global settings, using defaults:', settingsError)
     }
     
-    // Use per-project user limit if set, otherwise use global limit
+    // Check user role for family member blocking
+    const userRole = projectInfo?.role || userData?.role || ''
+    console.log('👥 User role in project:', userRole)
+    const isFamilyMember = userRole === 'family'
+    const isFamilyBlocked = globalBlockFamilyMembers && isFamilyMember
+    
+    // Get per-UNIT settings (NEW structure)
+    let unitSettings = {}
+    let unitBlocked = false
+    if (userUnit) {
+      try {
+        const unitSettingsResult = await firestoreService.getDoc(`projects/${projectId}/unitGuestPassSettings/${userUnit}`)
+        unitSettings = unitSettingsResult.data ? unitSettingsResult.data() : unitSettingsResult
+        console.log('🏠 Per-unit settings for unit', userUnit + ':', unitSettings)
+        unitBlocked = unitSettings?.blocked || false
+      } catch {
+        console.log('ℹ️ No per-unit settings found for unit', userUnit)
+      }
+    }
+    
+    // Use per-unit limit if set, otherwise use global limit
     let monthlyLimit = globalMonthlyLimit
-    if (userProjectSettings.monthlyLimit !== undefined && userProjectSettings.monthlyLimit !== null) {
-      // Handle both string and number values for per-project user limit
-      monthlyLimit = typeof userProjectSettings.monthlyLimit === 'string'
-        ? parseInt(userProjectSettings.monthlyLimit, 10)
-        : userProjectSettings.monthlyLimit
+    if (unitSettings?.monthlyLimit !== undefined && unitSettings?.monthlyLimit !== null) {
+      // Handle both string and number values for per-unit limit
+      monthlyLimit = typeof unitSettings.monthlyLimit === 'string'
+        ? parseInt(unitSettings.monthlyLimit, 10)
+        : unitSettings.monthlyLimit
     }
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('📊 GUEST PASS LIMIT CALCULATION (PER-PROJECT)')
+    console.log('📊 GUEST PASS LIMIT CALCULATION (PER-UNIT)')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('🏢 Project ID:', projectId)
-    console.log('📋 Per-project user settings:', userProjectSettings)
+    console.log('🏠 Unit:', userUnit)
+    console.log('👥 User Role:', userRole)
+    console.log('📋 Per-unit settings:', unitSettings)
     console.log('🌐 Global limit for this project:', globalMonthlyLimit)
-    console.log('🎯 Per-project user limit:', userProjectSettings.monthlyLimit || 'NOT SET (will use global)')
+    console.log('🎯 Per-unit custom limit:', unitSettings?.monthlyLimit || 'NOT SET (will use global)')
     console.log('📊 Final monthly limit:', monthlyLimit)
-    console.log('💡 Limit source:', userProjectSettings.monthlyLimit !== undefined && userProjectSettings.monthlyLimit !== null ? '🎯 CUSTOM LIMIT FOR THIS PROJECT ONLY' : '🌐 GLOBAL DEFAULT FOR THIS PROJECT')
+    console.log('💡 Limit source:', unitSettings?.monthlyLimit !== undefined && unitSettings?.monthlyLimit !== null ? '🎯 CUSTOM LIMIT FOR THIS UNIT ONLY' : '🌐 GLOBAL DEFAULT FOR THIS PROJECT')
     console.log('🔒 Global block all users:', globalBlockAllUsers)
+    console.log('🔒 Global block family members:', globalBlockFamilyMembers)
+    console.log('🔒 Is family member:', isFamilyMember)
+    console.log('🔒 Family blocked:', isFamilyBlocked)
+    console.log('🔒 Unit blocked:', unitBlocked)
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     
-    // Update user blocking status based on global and per-project settings
-    const isBlockedInProject = userProjectSettings.blocked || false
+    // Update user blocking status based on global, role-based, and per-unit settings
     userBlockingStatus.value = {
-      isBlocked: isBlockedInProject || globalBlockAllUsers,
+      isBlocked: unitBlocked || globalBlockAllUsers || isFamilyBlocked,
       blockingDetails: globalBlockAllUsers 
         ? { reason: 'Guest pass generation has been temporarily disabled by administration', global: true }
-        : (isBlockedInProject ? { reason: 'You are blocked from generating guest passes in this project', individual: true, projectSpecific: true } : null),
+        : isFamilyBlocked
+        ? { reason: 'Guest pass generation is currently disabled for family members. Only property owners can generate passes.', roleBlocked: true }
+        : (unitBlocked ? { reason: 'Guest pass generation is blocked for your unit', unit: userUnit } : null),
       loading: false,
     }
 
-    // Query ALL passes for this user in this project
-    console.log('⏳ Loading ALL guest passes...')
+    // Query ALL passes for this UNIT in this project (or user if no unit)
+    console.log('⏳ Loading ALL guest passes for unit:', userUnit || 'NO UNIT (using userId)')
     const allPassesResult = await firestoreService.getDocs(
       `projects/${projectId}/guestPasses`,
       {
-        filters: [
+        filters: userUnit ? [
+          { field: 'unit', operator: '==', value: userUnit }
+        ] : [
           { field: 'userId', operator: '==', value: user.uid }
         ],
         orderBy: [
@@ -1225,9 +1256,9 @@ const loadPassesFromFirebase = async () => {
     console.error('❌ Error message:', error?.message)
     passes.value = []
     passLimits.value = {
-      monthlyLimit: 10,
+      monthlyLimit: 30,
       usedThisMonth: 0,
-      remainingQuota: 10,
+      remainingQuota: 30,
     }
   }
 }

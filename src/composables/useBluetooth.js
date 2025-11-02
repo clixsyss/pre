@@ -22,51 +22,74 @@ export function useBluetooth() {
   let bluetoothLE = null
 
   /**
+   * Check if we're actually running on a native platform
+   * More reliable than just Capacitor.isNativePlatform()
+   */
+  const isReallyNative = () => {
+    const platform = Capacitor.getPlatform()
+    const isNative = Capacitor.isNativePlatform()
+    
+    // Also check if we're in a capacitor:// scheme
+    const isCapacitorScheme = window.location.protocol === 'capacitor:'
+    
+    console.log('🔍 Platform detection:', {
+      platform,
+      isNative,
+      protocol: window.location.protocol,
+      isCapacitorScheme,
+    })
+    
+    // Consider it native if any of these are true
+    return isNative || isCapacitorScheme || platform === 'ios' || platform === 'android'
+  }
+
+  /**
    * Check if BLE is supported on the current platform
    */
   const checkBLESupport = async () => {
     try {
       console.log('🔍 Checking BLE support...')
       console.log('📱 Platform:', Capacitor.getPlatform())
-      console.log('📱 Is Native:', Capacitor.isNativePlatform())
+      console.log('📱 Is Native (standard):', Capacitor.isNativePlatform())
+      console.log('📱 Protocol:', window.location.protocol)
       
-      if (Capacitor.isNativePlatform()) {
-        // For Capacitor, check if bluetooth-le plugin is available
+      const isNative = isReallyNative()
+      console.log('📱 Is Native (enhanced):', isNative)
+      
+      if (isNative) {
+        // For Capacitor, dynamically import the BLE plugin
         try {
-          console.log('📦 Attempting to import BLE plugin...')
+          console.log('📦 Dynamically importing BLE plugin...')
           const { BleClient } = await import('@capacitor-community/bluetooth-le')
-          console.log('✅ BLE plugin imported successfully')
-          console.log('📦 BleClient:', BleClient)
           bluetoothLE = BleClient
-
-          // Check if BLE is enabled
-          try {
-            console.log('🔧 Attempting to initialize BLE...')
-            await bluetoothLE.initialize()
-            console.log('✅ Capacitor BLE initialized successfully')
-            isBLESupported.value = true
-            return true
-          } catch (initError) {
-            console.error('❌ BLE initialization failed!')
-            console.error('Error type:', typeof initError)
-            console.error('Error:', initError)
-            console.error('Error message:', initError?.message)
-            console.error('Error code:', initError?.code)
-            console.error('Error stack:', initError?.stack)
-            if (initError.toString) {
-              console.error('Error toString:', initError.toString())
-            }
-            isBLESupported.value = false
-            lastError.value = initError?.message || 'BLE initialization failed. Please enable Bluetooth.'
-            return false
-          }
+          console.log('✅ BLE plugin imported successfully')
         } catch (importError) {
           console.error('❌ BLE plugin import failed!')
           console.error('Import error:', importError)
-          console.error('Import error message:', importError?.message)
           isBLESupported.value = false
-          lastError.value =
-            'BLE plugin not installed. Please install @capacitor-community/bluetooth-le'
+          lastError.value = 'BLE plugin not installed. Please install @capacitor-community/bluetooth-le'
+          return false
+        }
+
+        // Check if BLE is enabled and initialize
+        try {
+          console.log('🔧 Attempting to initialize BLE...')
+          await bluetoothLE.initialize()
+          console.log('✅ Capacitor BLE initialized successfully')
+          isBLESupported.value = true
+          return true
+        } catch (initError) {
+          console.error('❌ BLE initialization failed!')
+          console.error('Error type:', typeof initError)
+          console.error('Error:', initError)
+          console.error('Error message:', initError?.message)
+          console.error('Error code:', initError?.code)
+          console.error('Error stack:', initError?.stack)
+          if (initError.toString) {
+            console.error('Error toString:', initError.toString())
+          }
+          isBLESupported.value = false
+          lastError.value = initError?.message || 'BLE initialization failed. Please enable Bluetooth.'
           return false
         }
       } else {
@@ -243,7 +266,7 @@ export function useBluetooth() {
     }
 
     // Use appropriate connection method
-    if (Capacitor.isNativePlatform()) {
+    if (isReallyNative()) {
       return await connectCapacitor(serviceUUID)
     } else {
       return await connectWebBluetooth(serviceUUID)
@@ -355,7 +378,7 @@ export function useBluetooth() {
       return false
     }
 
-    if (Capacitor.isNativePlatform()) {
+    if (isReallyNative()) {
       return await writeCapacitor(serviceUUID, characteristicUUID, data)
     } else {
       return await writeWebBluetooth(serviceUUID, characteristicUUID, data)
@@ -374,7 +397,7 @@ export function useBluetooth() {
 
       console.log('🔌 Disconnecting from device...')
 
-      if (Capacitor.isNativePlatform()) {
+      if (isReallyNative()) {
         await bluetoothLE.disconnect(bleDevice.deviceId)
       } else {
         if (bleDevice.gatt.connected) {

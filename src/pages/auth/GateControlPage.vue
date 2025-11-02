@@ -46,7 +46,7 @@
           <p>
             {{
               $t('bleNotSupportedDesc') ||
-              'Your device or browser does not support Bluetooth Low Energy. Please use a compatible device or enable Bluetooth.'
+              'Your device does not support Bluetooth Low Energy. Please use a compatible device or enable Bluetooth.'
             }}
           </p>
         </div>
