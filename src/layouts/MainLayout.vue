@@ -981,6 +981,8 @@ onUnmounted(() => {
   transform: translateZ(0);
   transition: opacity 0.2s ease, visibility 0.2s ease;
   padding-bottom: 5px;
+  /* Force header to always be LTR, even in Arabic */
+  direction: ltr !important;
 }
 
 /* Hide header when modal is open - iOS fix */
@@ -996,6 +998,8 @@ onUnmounted(() => {
   align-items: center;
   width: 100%;
   gap: 16px;
+  /* Keep header content LTR */
+  direction: ltr !important;
 }
 
 .header-left {
@@ -1019,18 +1023,19 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-/* RTL Support for Header */
+/* RTL Support for Header - DISABLED to keep header always LTR */
+/* Header will always maintain LTR layout regardless of app language */
 [dir="rtl"] .header-left {
-  justify-content: flex-end;
+  justify-content: flex-start !important; /* Keep left aligned */
 }
 
 [dir="rtl"] .header-right {
-  justify-content: flex-start;
+  justify-content: flex-end !important; /* Keep right aligned */
 }
 
 [dir="rtl"] .header-content {
   grid-template-columns: 1fr auto 1fr;
-  direction: rtl;
+  direction: ltr !important; /* Force LTR */
 }
 
 /* Logo Button Styles */
