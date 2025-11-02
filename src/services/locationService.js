@@ -72,6 +72,15 @@ export async function getCurrentPosition() {
       maximumAge: 10000, // Accept cached position up to 10 seconds old
     })
 
+    console.log('📍 Raw position object:', position)
+
+    // Validate position object structure
+    if (!position || !position.coords) {
+      const error = new Error('Invalid position object returned from Geolocation')
+      error.code = 'INVALID_POSITION'
+      throw error
+    }
+
     console.log('📍 Position obtained:', {
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
@@ -87,8 +96,11 @@ export async function getCurrentPosition() {
   } catch (error) {
     console.error('❌ Error getting current position:', error)
     
+    const errorMessage = error?.message || String(error) || 'Unknown error'
+    const errorCode = error?.code
+    
     // Provide user-friendly error messages
-    if (error.code === 'PERMISSION_DENIED' || error.message.includes('permission')) {
+    if (errorCode === 'PERMISSION_DENIED' || errorMessage.includes('permission')) {
       const friendlyError = new Error(
         'Location access required. Please enable location permissions in Settings → PRE Group → Location.'
       )
@@ -96,7 +108,7 @@ export async function getCurrentPosition() {
       throw friendlyError
     }
     
-    if (error.code === 1 || error.message.includes('denied')) {
+    if (errorCode === 1 || errorMessage.includes('denied')) {
       const friendlyError = new Error(
         'Location permission denied. Please enable location services to generate guest passes.'
       )
@@ -104,7 +116,7 @@ export async function getCurrentPosition() {
       throw friendlyError
     }
     
-    if (error.code === 2 || error.message.includes('unavailable')) {
+    if (errorCode === 2 || errorMessage.includes('unavailable')) {
       const friendlyError = new Error(
         'Location currently unavailable. Please check that location services are enabled on your device.'
       )
@@ -112,11 +124,19 @@ export async function getCurrentPosition() {
       throw friendlyError
     }
     
-    if (error.code === 3 || error.message.includes('timeout')) {
+    if (errorCode === 3 || errorMessage.includes('timeout')) {
       const friendlyError = new Error(
         'Location request timed out. Please ensure you have a clear view of the sky and try again.'
       )
       friendlyError.code = 'TIMEOUT'
+      throw friendlyError
+    }
+    
+    if (errorCode === 'INVALID_POSITION') {
+      const friendlyError = new Error(
+        'Invalid location data received. Please try again.'
+      )
+      friendlyError.code = 'INVALID_POSITION'
       throw friendlyError
     }
     

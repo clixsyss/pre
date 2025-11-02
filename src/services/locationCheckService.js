@@ -46,12 +46,13 @@ export async function validateGuestPassLocation() {
       )
     } catch (locationError) {
       console.error('❌ Failed to get user location:', locationError)
+      const errorMessage = locationError?.message || String(locationError) || 'Unknown location error'
       return {
         success: false,
         allowed: false,
         reason: 'location_unavailable',
         message: 'Unable to determine your location. Please enable location services.',
-        error: locationError.message,
+        error: errorMessage,
       }
     }
 
