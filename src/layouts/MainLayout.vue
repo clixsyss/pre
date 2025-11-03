@@ -196,7 +196,7 @@
         <span class="nav-label">{{ $t('services') }}</span>
       </router-link>
 
-      <router-link to="/facilities" class="nav-item" :class="{ active: isActiveTab('facilities') }">
+      <router-link to="/requests" class="nav-item" :class="{ active: isActiveTab('requests') }">
         <div class="nav-icon">
           <img src="../assets/request.svg" alt="Requests" width="24" height="24" />
         </div>
@@ -380,7 +380,7 @@ const transitionDirection = ref('slide-left')
 const previousRoute = ref(null)
 
 // Tab order for determining transition direction
-const tabOrder = ['/home', '/services', '/facilities', '/profile']
+const tabOrder = ['/home', '/services', '/requests', '/profile']
 
 // Computed properties
 const currentProject = computed(() => projectStore.selectedProject)
@@ -441,7 +441,7 @@ const quickMenuItems = computed(() => [
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2"/><path d="M22 6L12 13L2 6" stroke="currentColor" stroke-width="2"/></svg>'
   },
   {
-    path: '/facilities',
+    path: '/requests',
     label: t('requests'),
     icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.7 6.3A1 1 0 0 0 14 7H9.5L8.5 8L9.5 9H14A1 1 0 0 0 14.7 9.7L18.3 13.3A1 1 0 0 0 19.7 11.7L16.1 8.1L14.7 6.3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.3 17.7A1 1 0 0 0 10 17H14.5L15.5 16L14.5 15H10A1 1 0 0 0 9.3 14.3L5.7 10.7A1 1 0 0 0 4.3 12.3L7.9 15.9L9.3 17.7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   },
@@ -677,12 +677,11 @@ const isActiveTab = (tabName) => {
              currentPath.startsWith('/store/') ||
              currentPath.startsWith('/academy-details/')
     
-    case 'facilities':
+    case 'requests':
       // Requests tab is active for request categories and submissions
-      return currentPath === '/facilities' ||
+      return currentPath === '/requests' ||
              currentPath.startsWith('/request-chat/') ||
-             currentPath.startsWith('/request-category/') ||
-             currentPath.startsWith('//request-category/:id/')
+             currentPath.startsWith('/request-category/')
     
     default:
       return false

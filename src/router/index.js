@@ -123,6 +123,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/requests',
+    name: 'Requests',
+    component: () => import('../pages/auth/Requests.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/facilities',
     name: 'Facilities',
     component: () => import('../pages/auth/Facilities.vue'),

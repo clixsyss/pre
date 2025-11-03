@@ -209,6 +209,7 @@ const authenticatedRoutes = [
   '/home',
   '/access', 
   '/services',
+  '/requests',
   '/stores-shopping',
   '/shopping-cart',
   '/court-booking',
