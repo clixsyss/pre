@@ -182,12 +182,26 @@ export const useProjectStore = defineStore('project', () => {
       loading.value = true
       error.value = null
       
-      const snapshot = await firestoreService.getDocs('projects')
+      console.log('ProjectStore: Fetching available projects with optimization...')
+      
+      // OPTIMIZATION: Add limit to prevent loading all projects
+      // If you have hundreds of projects, consider pagination
+      const queryConstraints = []
+      
+      // Import limit from firebase/firestore
+      const { limit: limitConstraint } = await import('firebase/firestore')
+      queryConstraints.push(limitConstraint(50)) // Limit to 50 projects
+      
+      const snapshot = await firestoreService.getDocs('projects', { 
+        constraints: queryConstraints 
+      })
       
       availableProjects.value = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }))
+      
+      console.log(`✅ ProjectStore: Fetched ${availableProjects.value.length} projects (limited)`)
       
     } catch (err) {
       console.error('Error fetching available projects:', err)

@@ -1705,11 +1705,14 @@ const loadFamilyMembers = async () => {
       // FALLBACK: Find all users in the same unit (no parentAccountId system)
       console.log('👨‍👩‍👧‍👦 Using unit-based fallback (no parentAccountId system)')
       
-      // Query all users, but we'll filter on the client side
-      // This is not ideal but necessary without parentAccountId
+      // OPTIMIZATION: Query limited users, filter on client side
+      console.log('📊 ProfilePage: Fetching users with limit for family members...')
+      const { limit } = await import('firebase/firestore')
       const allUsersSnapshot = await firestoreService.getDocs('users', {
-        timeoutMs: 8000
+        timeoutMs: 8000,
+        constraints: [limit(1000)]
       })
+      console.log(`✅ ProfilePage: Fetched ${allUsersSnapshot.docs.length} users (limited)`)
       
       allPotentialMembers = allUsersSnapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
@@ -1805,7 +1808,12 @@ const toggleAccordion = (section) => {
 const fetchAvailableProjects = async () => {
   try {
     loadingAvailableProjects.value = true
-    const snapshot = await firestoreService.getDocs('projects')
+    console.log('📊 ProfilePage: Fetching projects with limit...')
+    const { limit } = await import('firebase/firestore')
+    const snapshot = await firestoreService.getDocs('projects', {
+      constraints: [limit(50)]
+    })
+    console.log(`✅ ProfilePage: Fetched ${snapshot.docs.length} projects (limited)`)
 
     availableProjects.value = snapshot.docs.map(doc => ({
       id: doc.id,
@@ -1947,7 +1955,12 @@ const fetchProfileProjectUsers = async (projectId) => {
       console.log('[ProfilePage] ✅ Fetched', profileProjectUsers.value.length, 'users for project via Capacitor')
     } else {
       // Use Web SDK for web/Android
-      const usersSnapshot = await firestoreService.getDocs('users')
+      console.log('📊 ProfilePage: Fetching users with limit (Web SDK)...')
+      const { limit } = await import('firebase/firestore')
+      const usersSnapshot = await firestoreService.getDocs('users', {
+        constraints: [limit(1000)]
+      })
+      console.log(`✅ ProfilePage: Fetched ${usersSnapshot.docs.length} users (limited)`)
       profileProjectUsers.value = usersSnapshot.docs
         .map(doc => ({
           id: doc.id,

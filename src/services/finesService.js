@@ -380,12 +380,18 @@ export const deleteFineImage = async (imageUrl) => {
 // Search users for fine assignment
 export const searchUsers = async (projectId, searchTerm) => {
   try {
-    // Fetch all users from global collection
-    const result = await firestoreService.getDocs('users', { timeoutMs: 8000 });
+    console.log('📊 FinesService: Searching users with limit...');
+    // OPTIMIZATION: Fetch limited users from global collection
+    const { limit } = await import('firebase/firestore');
+    const result = await firestoreService.getDocs('users', { 
+      timeoutMs: 8000,
+      constraints: [limit(1000)] // Limit to 1000 users
+    });
     const usersData = result.docs.map(doc => ({
       id: doc.id,
       ...doc.data
     }));
+    console.log(`✅ FinesService: Fetched ${usersData.length} users (limited)`);
 
     // Filter users who belong to this specific project
     const projectUsersData = usersData.filter(user => {

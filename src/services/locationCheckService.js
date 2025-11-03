@@ -14,8 +14,11 @@ export async function validateGuestPassLocation() {
   try {
     console.log('🔍 Validating location for guest pass generation...')
 
-    // Fetch all projects from Firestore
-    const projectsSnapshot = await firestoreService.getDocs('projects')
+    // OPTIMIZATION: Fetch projects with limit
+    const { limit } = await import('firebase/firestore')
+    const projectsSnapshot = await firestoreService.getDocs('projects', {
+      constraints: [limit(50)]
+    })
     const projects = projectsSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
@@ -97,8 +100,11 @@ export async function validateGuestPassLocation() {
  */
 export async function getLocationRestrictionStatus() {
   try {
-    // Fetch all projects
-    const projectsSnapshot = await firestoreService.getDocs('projects')
+    // OPTIMIZATION: Fetch projects with limit
+    const { limit } = await import('firebase/firestore')
+    const projectsSnapshot = await firestoreService.getDocs('projects', {
+      constraints: [limit(50)]
+    })
     const projects = projectsSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),

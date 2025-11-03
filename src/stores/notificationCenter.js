@@ -10,7 +10,8 @@ import {
   setDoc,
   getDocs,
   writeBatch,
-  Timestamp
+  Timestamp,
+  limit
 } from 'firebase/firestore'
 import { db, detectPlatformFromUrl } from '../boot/firebase'
 
@@ -108,11 +109,15 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
       
       // Query for notifications - dashboard notifications don't have userId field
       // They have audience.all or audience.uids array, so we need to fetch all and filter
+      // OPTIMIZATION: Added limit to prevent loading too many notifications
       const q = query(
         notificationsRef,
         where('createdAt', '>=', oneMonthAgoTimestamp),
-        orderBy('createdAt', 'desc')
+        orderBy('createdAt', 'desc'),
+        limit(100) // Limit to 100 most recent notifications
       )
+      
+      console.log('NotificationCenter: ⚡ Query optimized with limit(100) to reduce Firebase reads')
       
       console.log('NotificationCenter: Query created, setting up listener...')
 

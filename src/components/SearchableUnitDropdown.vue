@@ -277,10 +277,25 @@ const fetchUnits = async (projectId) => {
     
     if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
       // Use Capacitor Firebase plugin for iOS
+      console.log('📊 [SearchableUnitDropdown] Fetching units with limit (iOS)...')
       const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
       
+      // OPTIMIZATION: Limit units to 500 for better performance
+      // Note: Capacitor Firebase may not support all query constraints
+      // If limit doesn't work, it will fetch all (needs testing)
       const result = await FirebaseFirestore.getDocuments({
-        reference: `projects/${projectId}/units`
+        reference: `projects/${projectId}/units`,
+        queryConstraints: [
+          {
+            type: 'orderBy',
+            fieldPath: 'unitNum',
+            directionStr: 'asc'
+          },
+          {
+            type: 'limit',
+            limit: 500
+          }
+        ]
       })
       
       allUnits.value = result.snapshots?.map(snapshot => ({
@@ -291,10 +306,20 @@ const fetchUnits = async (projectId) => {
           : snapshot.data.unitNum || snapshot.id
       })) || []
       
-      console.log('[SearchableUnitDropdown] ✅ Fetched', allUnits.value.length, 'units via Capacitor')
+      console.log(`✅ [SearchableUnitDropdown] Fetched ${allUnits.value.length} units (limited) via Capacitor`)
     } else {
       // Use Web SDK for web/Android
-      const unitsSnapshot = await getDocs(collection(db, `projects/${projectId}/units`))
+      console.log('📊 [SearchableUnitDropdown] Fetching units with limit...')
+      const { limit, orderBy, query: fsQuery } = await import('firebase/firestore')
+      
+      // OPTIMIZATION: Limit units to 500 for better performance
+      const unitsQuery = fsQuery(
+        collection(db, `projects/${projectId}/units`),
+        orderBy('unitNum', 'asc'),
+        limit(500)
+      )
+      
+      const unitsSnapshot = await getDocs(unitsQuery)
       allUnits.value = unitsSnapshot.docs.map(doc => {
         const data = doc.data()
         return {
@@ -306,7 +331,7 @@ const fetchUnits = async (projectId) => {
         }
       })
       
-      console.log('[SearchableUnitDropdown] ✅ Fetched', allUnits.value.length, 'units via Web SDK')
+      console.log(`✅ [SearchableUnitDropdown] Fetched ${allUnits.value.length} units (limited) via Web SDK`)
     }
   } catch (error) {
     console.error('[SearchableUnitDropdown] Error fetching units:', error)

@@ -87,8 +87,11 @@ const deviceKeyResetService = {
       }
       
       // Otherwise, query all projects' subcollections for this user
-      // Get all projects first
-      const projectsSnapshot = await firestoreService.getDocs('projects')
+      // OPTIMIZATION: Get projects with limit
+      const { limit } = await import('firebase/firestore')
+      const projectsSnapshot = await firestoreService.getDocs('projects', {
+        constraints: [limit(50)]
+      })
       const allRequests = []
       
       for (const projectDoc of projectsSnapshot.docs) {
