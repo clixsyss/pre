@@ -146,6 +146,8 @@ export default {
   requestsTitle: 'Requests',
   submitRequestsDesc: 'Submit requests for various services and assistance',
   loadingRequests: 'Loading requests...',
+  noRequestsAvailable: 'No Requests Available',
+  noRequestsAvailableMessage: 'There are no available request types for this project at the moment.',
 
   // Academy Programs
   joinAcademiesIn: 'Join academies in',

@@ -142,6 +142,8 @@ export default {
   requestsTitle: 'الطلبات',
   submitRequestsDesc: 'قدم طلبات للخدمات والمساعدة',
   loadingRequests: 'جاري تحميل الطلبات...',
+  noRequestsAvailable: 'لا توجد طلبات متاحة',
+  noRequestsAvailableMessage: 'لا توجد أنواع طلبات متاحة لهذا المشروع في الوقت الحالي.',
 
   // Academy Programs
   joinAcademiesIn: 'انضم للأكاديميات في',
