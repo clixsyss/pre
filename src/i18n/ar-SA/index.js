@@ -1120,4 +1120,15 @@ export default {
   quantity: 'الكمية',
   qty: 'الكمية',
   free: 'مجاني',
+  
+  // Account Deletion (Apple App Store Requirement)
+  deleteAccount: 'حذف الحساب',
+  deleteAccountWarning: 'حذف حسابك وجميع بياناتك نهائياً',
+  deleteAccountTitle: 'حذف الحساب؟',
+  deleteAccountWarningMessage: 'سيتم حذف حسابك وجميع البيانات المرتبطة به نهائياً.',
+  deleteAccountFinal: 'لا يمكن التراجع عن هذا الإجراء.',
+  deleteAccountConfirmPrompt: 'اكتب DELETE للتأكيد:',
+  typeDELETE: 'DELETE',
+  deleteMyAccount: 'حذف حسابي',
+  deleting: 'جاري الحذف',
 }

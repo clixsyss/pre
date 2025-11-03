@@ -8,11 +8,11 @@
 import { ref, computed, watch } from 'vue'
 import firestoreService from '../services/firestoreService'
 
-// ============= GLOBAL CACHE =============
+// ============= GLOBAL CACHE ============= (Extended for cost optimization)
 const CACHE_DURATION = {
-  users: 10 * 60 * 1000, // 10 minutes
-  projects: 15 * 60 * 1000, // 15 minutes
-  units: 10 * 60 * 1000 // 10 minutes
+  users: 24 * 60 * 60 * 1000, // 24 hours
+  projects: 7 * 24 * 60 * 60 * 1000, // 7 days (projects rarely change)
+  units: 7 * 24 * 60 * 60 * 1000 // 7 days (units rarely change)
 }
 
 // Shared cache across all component instances

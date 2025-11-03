@@ -59,12 +59,23 @@
           <span>Loading units...</span>
         </div>
 
-        <!-- Empty State -->
-        <div v-else-if="allUnits.length === 0" class="empty-state">
+        <!-- Empty State - Prompt to search -->
+        <div v-else-if="allUnits.length === 0 && !searchTerm" class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+            <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <p>Search by unit or building</p>
+          <small>Try: "101", "D1A", or "D1A-1"</small>
+        </div>
+        
+        <!-- Empty State - No units available -->
+        <div v-else-if="allUnits.length === 0 && searchTerm && searchTerm.length < 2" class="empty-state">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <p>No units available</p>
+          <p>Type at least 2 characters</p>
+          <small>Keep typing to search...</small>
         </div>
 
         <!-- No Results -->
@@ -73,8 +84,8 @@
             <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
             <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
-          <p>No units match "{{ searchTerm }}"</p>
-          <small>Try searching with a different term</small>
+          <p>No units found for "{{ searchTerm }}"</p>
+          <small>Try unit number (101) or building (D1A)</small>
         </div>
 
         <!-- Units List -->
@@ -164,7 +175,7 @@ const props = defineProps({
   },
   searchPlaceholder: {
     type: String,
-    default: 'Search units (e.g., D1A-1, D2A)...'
+    default: 'Search by unit number or building (e.g., D1A-1, D2A, or just D1A)...'
   },
   disabled: {
     type: Boolean,
@@ -247,55 +258,71 @@ const occupiedUnits = computed(() => {
   })
 })
 
-// Fetch units when project changes
-watch(() => props.projectId, async (newProjectId) => {
-  if (newProjectId) {
-    await fetchUnits(newProjectId)
+// Search units when user types in search box
+watch(searchTerm, (newValue) => {
+  if (newValue && newValue.length >= 2) {
+    searchUnits(newValue)
   } else {
     allUnits.value = []
   }
-}, { immediate: true })
+})
+
+// Clear units when project changes
+watch(() => props.projectId, () => {
+  allUnits.value = []
+  searchTerm.value = ''
+})
 
 // Watch modelValue changes from parent
 watch(() => props.modelValue, (newValue) => {
   selectedUnit.value = newValue
 })
 
-// Fetch units from Firestore
-const fetchUnits = async (projectId) => {
-  if (!projectId) {
+// Search units from Firestore based on user input
+let searchTimeout = null
+const searchUnits = async (searchQuery) => {
+  if (!props.projectId || !searchQuery || searchQuery.length < 2) {
+    // Don't search if query is too short (less than 2 characters)
     allUnits.value = []
     return
   }
 
+  // Debounce search - wait 300ms after user stops typing
+  clearTimeout(searchTimeout)
+  
+  searchTimeout = setTimeout(async () => {
   loading.value = true
   try {
-    console.log('[SearchableUnitDropdown] Fetching units for project:', projectId)
+      console.log(`🔍 [SearchableUnitDropdown] Searching units for: "${searchQuery}"`)
     
     // Detect platform
     const { Capacitor } = await import('@capacitor/core')
     
     if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
-      // Use Capacitor Firebase plugin for iOS
-      console.log('📊 [SearchableUnitDropdown] Fetching units with limit (iOS)...')
+        // iOS - Use Capacitor Firebase plugin
       const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
       
-      // OPTIMIZATION: Limit units to 500 for better performance
-      // Note: Capacitor Firebase may not support all query constraints
-      // If limit doesn't work, it will fetch all (needs testing)
+        // Search by unitNum field
       const result = await FirebaseFirestore.getDocuments({
-        reference: `projects/${projectId}/units`,
-        queryConstraints: [
-          {
-            type: 'orderBy',
-            fieldPath: 'unitNum',
-            directionStr: 'asc'
-          },
-          {
-            type: 'limit',
-            limit: 500
-          }
-        ]
+          reference: `projects/${props.projectId}/units`,
+          queryConstraints: [
+            {
+              type: 'where',
+              fieldPath: 'unitNum',
+              opStr: '>=',
+              value: searchQuery
+            },
+            {
+              type: 'where',
+              fieldPath: 'unitNum',
+              opStr: '<=',
+              value: searchQuery + '\uf8ff' // Unicode trick for "startsWith"
+            },
+            {
+              type: 'limit',
+              limit: 20 // Only return top 20 matches
+            }
+          ]
       })
       
       allUnits.value = result.snapshots?.map(snapshot => ({
@@ -306,20 +333,20 @@ const fetchUnits = async (projectId) => {
           : snapshot.data.unitNum || snapshot.id
       })) || []
       
-      console.log(`✅ [SearchableUnitDropdown] Fetched ${allUnits.value.length} units (limited) via Capacitor`)
     } else {
-      // Use Web SDK for web/Android
-      console.log('📊 [SearchableUnitDropdown] Fetching units with limit...')
-      const { limit, orderBy, query: fsQuery } = await import('firebase/firestore')
-      
-      // OPTIMIZATION: Limit units to 500 for better performance
-      const unitsQuery = fsQuery(
-        collection(db, `projects/${projectId}/units`),
-        orderBy('unitNum', 'asc'),
-        limit(500)
-      )
-      
-      const unitsSnapshot = await getDocs(unitsQuery)
+        // Web/Android - Use Web SDK with range query
+        const { where, orderBy, query: fsQuery, limit: fsLimit } = await import('firebase/firestore')
+        
+        // Query for units that start with the search term
+        const unitsQuery = fsQuery(
+          collection(db, `projects/${props.projectId}/units`),
+          where('unitNum', '>=', searchQuery),
+          where('unitNum', '<=', searchQuery + '\uf8ff'),
+          orderBy('unitNum', 'asc'),
+          fsLimit(20) // Only return top 20 matches
+        )
+        
+        const unitsSnapshot = await getDocs(unitsQuery)
       allUnits.value = unitsSnapshot.docs.map(doc => {
         const data = doc.data()
         return {
@@ -330,16 +357,47 @@ const fetchUnits = async (projectId) => {
             : data.unitNum || doc.id
         }
       })
+      }
       
-      console.log(`✅ [SearchableUnitDropdown] Fetched ${allUnits.value.length} units (limited) via Web SDK`)
+      // Also search by building number if no results
+      if (allUnits.value.length === 0 && !isNaN(searchQuery)) {
+        try {
+          const { where, orderBy, query: fsQuery, limit: fsLimit } = await import('firebase/firestore')
+          
+          const buildingQuery = fsQuery(
+            collection(db, `projects/${props.projectId}/units`),
+            where('buildingNum', '==', searchQuery),
+            orderBy('unitNum', 'asc'),
+            fsLimit(20)
+          )
+          
+          const buildingSnapshot = await getDocs(buildingQuery)
+          allUnits.value = buildingSnapshot.docs.map(doc => {
+            const data = doc.data()
+            return {
+              id: doc.id,
+              ...data,
+              unitIdentifier: data.buildingNum && data.unitNum 
+                ? `${data.buildingNum}-${data.unitNum}`
+                : data.unitNum || doc.id
+            }
+          })
+        } catch {
+          console.log('Building number search not available')
     }
+      }
+      
+      console.log(`✅ [SearchableUnitDropdown] Found ${allUnits.value.length} matching units`)
   } catch (error) {
-    console.error('[SearchableUnitDropdown] Error fetching units:', error)
+      console.error('[SearchableUnitDropdown] Error searching units:', error)
     allUnits.value = []
   } finally {
     loading.value = false
   }
+  }, 300) // 300ms debounce
 }
+
+// No longer need fetchUnits - using search-as-you-type instead
 
 // Toggle dropdown
 const toggleDropdown = () => {

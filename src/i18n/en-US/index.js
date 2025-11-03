@@ -1084,4 +1084,15 @@ export default {
   quantity: 'Qty',
   qty: 'Qty',
   free: 'Free',
+  
+  // Account Deletion (Apple App Store Requirement)
+  deleteAccount: 'Delete Account',
+  deleteAccountWarning: 'Permanently delete your account and all data',
+  deleteAccountTitle: 'Delete Account?',
+  deleteAccountWarningMessage: 'This will permanently delete your account and all associated data.',
+  deleteAccountFinal: 'This action cannot be undone.',
+  deleteAccountConfirmPrompt: 'Type DELETE to confirm:',
+  typeDELETE: 'DELETE',
+  deleteMyAccount: 'Delete Account',
+  deleting: 'Deleting',
 }

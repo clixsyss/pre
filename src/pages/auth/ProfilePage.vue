@@ -668,6 +668,22 @@
               </div>
             </div>
           </div>
+          
+          <!-- Delete Account Card (Apple App Store Requirement) -->
+          <div class="info-card delete-account-card">
+            <div class="info-icon delete-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 6H5H21M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V6M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="info-content delete-content">
+              <label>{{ $t('deleteAccount') || 'Delete Account' }}</label>
+              <span class="delete-description">{{ $t('deleteAccountWarning') || 'Permanently delete your account and all data' }}</span>
+              <button @click="showDeleteAccountConfirm = true" class="delete-account-btn">
+                {{ $t('deleteMyAccount') || 'Delete My Account' }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1088,6 +1104,48 @@
       </div>
     </div>
 
+    <!-- Delete Account Confirmation Modal (Apple App Store Requirement) -->
+    <div v-if="showDeleteAccountConfirm" class="modal-overlay" :class="{ 'keyboard-open': isKeyboardOpen }" @click.self="showDeleteAccountConfirm = false; deleteConfirmText = ''">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>{{ $t('deleteAccountTitle') }}</h3>
+        </div>
+        <div class="modal-body">
+          <p class="modal-subtitle">{{ $t('deleteAccountWarningMessage') }}</p>
+          
+          <div class="delete-warning-text">
+            <p><strong>{{ $t('deleteAccountFinal') }}</strong></p>
+          </div>
+          
+          <div class="confirmation-input">
+            <label>{{ $t('deleteAccountConfirmPrompt') }}</label>
+            <input 
+              v-model="deleteConfirmText" 
+              type="text" 
+              :placeholder="$t('typeDELETE')"
+              class="confirm-input"
+              @input="deleteConfirmText = deleteConfirmText.toUpperCase()"
+              @focus="isKeyboardOpen = true"
+              @blur="isKeyboardOpen = false"
+            />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button @click="showDeleteAccountConfirm = false; deleteConfirmText = ''; isKeyboardOpen = false" class="cancel-btn">
+            {{ $t('cancel') }}
+          </button>
+          <button 
+            @click="handleDeleteAccount" 
+            class="confirm-btn delete-confirm-btn" 
+            :disabled="deleteAccountLoading || deleteConfirmText !== 'DELETE'"
+          >
+            <span v-if="deleteAccountLoading">{{ $t('deleting') }}...</span>
+            <span v-else>{{ $t('deleteMyAccount') }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Add Project Modal -->
     <div v-if="showAddProjectModal" class="modal-overlay" @click="showAddProjectModal = false">
       <div class="modal-content add-project-modal" @click.stop>
@@ -1412,6 +1470,12 @@ const showEditProfileDialog = ref(false)
 const showAddProjectModal = ref(false)
 const addProjectLoading = ref(false)
 const projectJoinSuccess = ref(false)
+
+// Delete account state (Apple App Store Requirement)
+const showDeleteAccountConfirm = ref(false)
+const deleteAccountLoading = ref(false)
+const deleteConfirmText = ref('')
+const isKeyboardOpen = ref(false)
 
 // New project form data
 const newProject = ref({
@@ -1781,6 +1845,73 @@ const handleLogout = async () => {
   } finally {
     logoutLoading.value = false
     showLogoutConfirm.value = false
+  }
+}
+
+// Handle account deletion (SOFT DELETE - Apple App Store Requirement)
+const handleDeleteAccount = async () => {
+  try {
+    deleteAccountLoading.value = true
+    console.log('🗑️ [ProfilePage] Starting account deletion process...')
+
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    if (!currentUser) {
+      throw new Error('No user found')
+    }
+
+    // SOFT DELETE: Mark user as deleted instead of removing from database
+    // This preserves data for compliance, audit trails, and potential recovery
+    const deletionData = {
+      isDeleted: true,
+      deletedAt: new Date().toISOString(),
+      deletedReason: 'User requested account deletion',
+      // Anonymize personal data
+      firstName: 'DELETED',
+      lastName: 'USER',
+      mobile: 'DELETED',
+      nationalId: 'DELETED',
+      // Keep email for potential recovery but mark as deleted
+      deletedEmail: userProfile.value.email,
+      // Remove FCM token to stop notifications
+      fcmToken: null,
+      // Clear documents
+      documents: {
+        profilePictureUrl: null,
+        frontIdUrl: null,
+        backIdUrl: null
+      },
+      // Clear projects access
+      projects: [],
+      // Mark status
+      registrationStatus: 'deleted',
+      updatedAt: new Date().toISOString()
+    }
+
+    console.log('📝 [ProfilePage] Updating user document with soft delete...')
+    
+    // Update user document in Firestore
+    await firestoreService.updateDoc(`users/${currentUser.uid}`, deletionData)
+
+    console.log('✅ [ProfilePage] User document soft deleted')
+
+    // Sign out the user from Firebase Auth
+    console.log('🚪 [ProfilePage] Signing out user...')
+    await optimizedAuthService.signOut()
+
+    // Show success message
+    notificationStore.showSuccess('Account deleted successfully')
+
+    // Redirect to onboarding/welcome page
+    console.log('↩️ [ProfilePage] Redirecting to onboarding...')
+    router.push('/onboarding')
+
+  } catch (err) {
+    console.error('❌ [ProfilePage] Delete account error:', err)
+    notificationStore.showError('Failed to delete account. Please try again or contact support.')
+  } finally {
+    deleteAccountLoading.value = false
+    showDeleteAccountConfirm.value = false
+    deleteConfirmText.value = ''
   }
 }
 
@@ -5835,6 +5966,114 @@ input:checked+.toggle-slider:before {
 
 .dark .option-item.active .option-label {
   color: #f9fafb;
+}
+
+/* Delete Account Card - Matches existing info-card style */
+.delete-account-card {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  margin-top: 16px;
+}
+
+.delete-icon {
+  background: #fee2e2;
+  color: #AF1E23;
+}
+
+.delete-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.delete-description {
+  color: #6b7280;
+  font-size: 13px;
+  margin-top: -4px;
+}
+
+.delete-account-btn {
+  margin-top: 8px;
+  padding: 10px 16px;
+  background: #AF1E23;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  align-self: flex-start;
+}
+
+.delete-account-btn:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* Delete Account Modal - Matches existing modal style */
+.modal-overlay.keyboard-open {
+  padding-bottom: 0;
+  align-items: flex-start;
+  padding-top: 20px;
+}
+
+.delete-warning-text {
+  margin: 16px 0;
+  padding: 12px;
+  background: #fef2f2;
+  border-radius: 8px;
+  border-left: 3px solid #AF1E23;
+}
+
+.delete-warning-text p {
+  margin: 0;
+  color: #374151;
+  font-size: 13px;
+}
+
+.delete-warning-text strong {
+  color: #AF1E23;
+}
+
+.confirmation-input {
+  margin-top: 20px;
+}
+
+.confirmation-input label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 14px;
+}
+
+.confirm-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+
+.confirm-input:focus {
+  outline: none;
+  border-color: #AF1E23;
+  background: #fef2f2;
+}
+
+.delete-confirm-btn {
+  background: #AF1E23;
+}
+
+.delete-confirm-btn:disabled {
+  background: #ccc;
+  opacity: 0.6;
 }
 
 /* Mobile optimizations for settings */

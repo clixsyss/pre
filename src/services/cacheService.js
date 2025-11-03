@@ -6,8 +6,8 @@
 class CacheService {
   constructor() {
     this.cache = new Map()
-    this.defaultTTL = 5 * 60 * 1000 // 5 minutes default TTL
-    this.maxCacheSize = 100 // Maximum number of cached items
+    this.defaultTTL = 24 * 60 * 60 * 1000 // 24 hours default TTL (extended for cost optimization)
+    this.maxCacheSize = 200 // Maximum number of cached items (increased for longer cache)
   }
 
   /**
@@ -140,7 +140,7 @@ class CacheService {
    */
   setUserDocument(userId, userData) {
     const key = this.generateKey(`users/${userId}`)
-    this.set(key, userData, 10 * 60 * 1000) // 10 minutes for user data
+    this.set(key, userData, 24 * 60 * 60 * 1000) // 24 hours for user data
   }
 
   /**
@@ -156,7 +156,7 @@ class CacheService {
    */
   setProjectDocument(projectId, projectData) {
     const key = this.generateKey(`projects/${projectId}`)
-    this.set(key, projectData, 15 * 60 * 1000) // 15 minutes for project data
+    this.set(key, projectData, 7 * 24 * 60 * 60 * 1000) // 7 days for project data
   }
 
   /**
@@ -172,7 +172,7 @@ class CacheService {
    */
   setCollectionData(collectionPath, query, data) {
     const key = this.generateKey(collectionPath, query)
-    this.set(key, data, 2 * 60 * 1000) // 2 minutes for collection data
+    this.set(key, data, 2 * 60 * 60 * 1000) // 2 hours for collection data
   }
 
   /**
@@ -220,9 +220,9 @@ class CacheService {
 // Create singleton instance
 const cacheService = new CacheService()
 
-// Clean up expired items every 5 minutes
+// Clean up expired items every 2 hours (less frequent with longer cache)
 setInterval(() => {
   cacheService.cleanup()
-}, 5 * 60 * 1000)
+}, 2 * 60 * 60 * 1000)
 
 export default cacheService

@@ -11,9 +11,9 @@ export const useProjectStore = defineStore('project', () => {
   const loading = ref(false)
   const error = ref(null)
   
-  // Cache management
+  // Cache management (Extended for cost optimization)
   const lastFetchTime = ref(0)
-  const cacheDuration = 5 * 60 * 1000 // 5 minutes
+  const cacheDuration = 24 * 60 * 60 * 1000 // 24 hours
 
   // Getters
   const hasMultipleProjects = computed(() => userProjects.value.length > 1)

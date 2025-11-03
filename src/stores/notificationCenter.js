@@ -24,6 +24,7 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   const unsubscribeReadStatus = ref(null)
   const isModalOpen = ref(false)
   const readStatusMap = ref(new Map()) // Store read status for persistence
+  // Note: pollingInterval and lastFetchTime reserved for future polling optimization
 
   // Computed
   const unreadNotifications = computed(() => 
