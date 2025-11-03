@@ -5,7 +5,7 @@ import {
   query, 
   where, 
   orderBy, 
-  onSnapshot,
+  // onSnapshot removed - using polling instead for cost optimization
   doc,
   setDoc,
   getDocs,
@@ -24,7 +24,10 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   const unsubscribeReadStatus = ref(null)
   const isModalOpen = ref(false)
   const readStatusMap = ref(new Map()) // Store read status for persistence
-  // Note: pollingInterval and lastFetchTime reserved for future polling optimization
+  const pollingInterval = ref(null) // Polling interval for periodic updates
+  const lastFetchTime = ref(null) // Track last fetch to prevent duplicate fetches
+  const POLLING_INTERVAL_MS = 5 * 60 * 1000 // Poll every 5 minutes (reduced from real-time)
+  const CACHE_DURATION_MS = 2 * 60 * 1000 // Cache for 2 minutes
 
   // Computed
   const unreadNotifications = computed(() => 
@@ -74,7 +77,132 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   )
 
   /**
-   * Subscribe to user notifications from the last month
+   * Fetch notifications manually (polling-based, not real-time)
+   * COST OPTIMIZATION: Replaces onSnapshot with periodic getDocs calls
+   * @param {string} userId - The user's ID
+   * @param {string} projectId - The current project ID
+   */
+  const fetchNotifications = async (userId, projectId) => {
+    if (!userId || !projectId) {
+      console.warn('NotificationCenter: Cannot fetch without userId and projectId')
+      return
+    }
+
+    // Check cache to prevent duplicate fetches
+    if (lastFetchTime.value && Date.now() - lastFetchTime.value < CACHE_DURATION_MS) {
+      console.log('NotificationCenter: ⚡ Using cached data (fetched', Math.round((Date.now() - lastFetchTime.value) / 1000), 'seconds ago)')
+      return
+    }
+
+    isLoading.value = true
+
+    try {
+      console.log('NotificationCenter: 📊 Fetching notifications (polling mode)...', { userId, projectId })
+      
+      // Calculate date 1 month ago
+      const oneMonthAgo = new Date()
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+      const oneMonthAgoTimestamp = Timestamp.fromDate(oneMonthAgo)
+
+      // Create query for notifications - Using project-specific collection
+      const notificationsRef = collection(db, `projects/${projectId}/notifications`)
+      
+      // Query for notifications - AGGRESSIVE OPTIMIZATION with limit
+      const q = query(
+        notificationsRef,
+        where('createdAt', '>=', oneMonthAgoTimestamp),
+        orderBy('createdAt', 'desc'),
+        limit(50) // AGGRESSIVE: Limit to 50 most recent notifications
+      )
+      
+      console.log('NotificationCenter: ⚡ Fetching with limit(50) to reduce Firebase reads')
+      
+      // FETCH 1: Get notifications (1 read = 50 documents max)
+      const notificationsSnapshot = await getDocs(q)
+      console.log(`NotificationCenter: Fetched ${notificationsSnapshot.size} notifications [Reads: ${notificationsSnapshot.size}]`)
+      
+      // FETCH 2: Get user's read status from subcollection (LIMITED to 100 most recent)
+      // CRITICAL FIX: Add limit to prevent reading thousands of read status documents
+      const readStatusRef = collection(db, `users/${userId}/notificationReadStatus`)
+      const readStatusQuery = query(readStatusRef, limit(100)) // LIMIT to 100 most recent read statuses
+      const readStatusSnapshot = await getDocs(readStatusQuery).catch(err => {
+        console.log('NotificationCenter: Error fetching read status, assuming all unread:', err)
+        return { docs: [] }
+      })
+      
+      // Update read status map
+      readStatusMap.value = new Map()
+      readStatusSnapshot.docs.forEach(doc => {
+        readStatusMap.value.set(doc.id, doc.data())
+      })
+      console.log(`NotificationCenter: Fetched read status for ${readStatusMap.value.size} notifications [Reads: ${readStatusSnapshot.size}]`)
+      
+      // Process notifications
+      if (notificationsSnapshot.empty) {
+        notifications.value = []
+        unreadCount.value = 0
+        isLoading.value = false
+        lastFetchTime.value = Date.now()
+        console.log('NotificationCenter: No notifications found')
+        return
+      }
+      
+      const notificationsList = []
+      let unreadCounter = 0
+
+      notificationsSnapshot.forEach((doc) => {
+        const data = doc.data()
+        const readStatus = readStatusMap.value.get(doc.id)
+        const isRead = readStatus?.read || false
+        
+        // Filter notifications based on audience targeting
+        let isForCurrentUser = false
+        
+        // Check if this is a dashboard notification (has audience field)
+        if (data.audience) {
+          // Check if sent to all users
+          if (data.audience.all) {
+            isForCurrentUser = true
+          }
+          // Check if sent to specific users
+          else if (data.audience.uids && Array.isArray(data.audience.uids)) {
+            isForCurrentUser = data.audience.uids.includes(userId)
+          }
+        }
+        // Check if this is an in-app notification (has userId field)
+        else if (data.userId === userId) {
+          isForCurrentUser = true
+        }
+        
+        // Only include notifications meant for this user
+        if (isForCurrentUser) {
+          notificationsList.push({
+            id: doc.id,
+            ...data,
+            read: isRead
+          })
+          
+          if (!isRead) {
+            unreadCounter++
+          }
+        }
+      })
+
+      notifications.value = notificationsList
+      unreadCount.value = unreadCounter
+      lastFetchTime.value = Date.now()
+      isLoading.value = false
+
+      console.log(`NotificationCenter: ✅ Loaded ${notificationsList.length} notifications (${notificationsSnapshot.size} total), ${unreadCounter} unread [Total Reads: ${notificationsSnapshot.size + readStatusSnapshot.size}]`)
+    } catch (error) {
+      console.error('NotificationCenter: ❌ Error fetching notifications:', error)
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * Subscribe to user notifications using POLLING (not real-time)
+   * COST OPTIMIZATION: Replaces onSnapshot with periodic getDocs calls
    * @param {string} userId - The user's ID
    * @param {string} projectId - The current project ID
    */
@@ -84,151 +212,24 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
       return
     }
 
-    // Unsubscribe from previous listeners if exist
-    if (unsubscribe.value) {
-      unsubscribe.value()
-    }
-    if (unsubscribeReadStatus.value) {
-      unsubscribeReadStatus.value()
+    // Stop any existing polling
+    if (pollingInterval.value) {
+      clearInterval(pollingInterval.value)
+      pollingInterval.value = null
     }
 
-    isLoading.value = true
-
-    try {
-      console.log('NotificationCenter: Setting up subscription...', { userId, projectId })
-      
-      // Calculate date 1 month ago
-      const oneMonthAgo = new Date()
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
-      const oneMonthAgoTimestamp = Timestamp.fromDate(oneMonthAgo)
-      
-      console.log('NotificationCenter: Date filter - from:', oneMonthAgo.toISOString())
-
-      // Create query for notifications - Using project-specific collection
-      const notificationsRef = collection(db, `projects/${projectId}/notifications`)
-      console.log('NotificationCenter: Collection ref created for path:', `projects/${projectId}/notifications`)
-      
-      // Query for notifications - dashboard notifications don't have userId field
-      // They have audience.all or audience.uids array, so we need to fetch all and filter
-      // OPTIMIZATION: Added limit to prevent loading too many notifications
-      const q = query(
-        notificationsRef,
-        where('createdAt', '>=', oneMonthAgoTimestamp),
-        orderBy('createdAt', 'desc'),
-        limit(100) // Limit to 100 most recent notifications
-      )
-      
-      console.log('NotificationCenter: ⚡ Query optimized with limit(100) to reduce Firebase reads')
-      
-      console.log('NotificationCenter: Query created, setting up listener...')
-
-      // Use Web SDK for all platforms - simpler and more reliable
-      // Fetch read status once, then use real-time listener
-      console.log('NotificationCenter: Using Web SDK with real-time listener (all platforms)')
-      
-      // First, fetch user's read status from subcollection
-      console.log('NotificationCenter: Fetching read status for user:', userId)
-      const readStatusRef = collection(db, `users/${userId}/notificationReadStatus`)
-      const readStatusSnapshot = await getDocs(readStatusRef).catch(err => {
-        console.log('NotificationCenter: Error fetching read status, assuming all unread:', err)
-        return { docs: [] }
-      })
-      
-      // Store in reactive ref for updates
-      readStatusMap.value = new Map()
-      readStatusSnapshot.docs.forEach(doc => {
-        readStatusMap.value.set(doc.id, doc.data())
-      })
-      console.log('NotificationCenter: Fetched read status for', readStatusMap.value.size, 'notifications')
-      
-      // Set up real-time listener for read status changes
-      unsubscribeReadStatus.value = onSnapshot(readStatusRef, (snapshot) => {
-        console.log('NotificationCenter: Read status update received:', snapshot.size, 'documents')
-        snapshot.forEach((doc) => {
-          readStatusMap.value.set(doc.id, doc.data())
-        })
-        console.log('NotificationCenter: Read status map updated, total:', readStatusMap.value.size)
-      })
-      
-      // Now set up listener
-      unsubscribe.value = onSnapshot(q, 
-        (snapshot) => {
-          console.log('NotificationCenter: Snapshot received!', { size: snapshot.size, empty: snapshot.empty })
-          
-          // If empty, set loading to false immediately
-          if (snapshot.empty) {
-            notifications.value = []
-            unreadCount.value = 0
-            isLoading.value = false
-            console.log('NotificationCenter: No notifications found (empty collection)')
-            return
-          }
-          
-          const notificationsList = []
-          let unreadCounter = 0
-
-          snapshot.forEach((doc) => {
-            const data = doc.data()
-            const readStatus = readStatusMap.value.get(doc.id)
-            const isRead = readStatus?.read || false
-            
-            // Filter notifications based on audience targeting
-            let isForCurrentUser = false
-            
-            // Check if this is a dashboard notification (has audience field)
-            if (data.audience) {
-              // Check if sent to all users
-              if (data.audience.all) {
-                isForCurrentUser = true
-              }
-              // Check if sent to specific users
-              else if (data.audience.uids && Array.isArray(data.audience.uids)) {
-                isForCurrentUser = data.audience.uids.includes(userId)
-              }
-            }
-            // Check if this is an in-app notification (has userId field)
-            else if (data.userId === userId) {
-              isForCurrentUser = true
-            }
-            
-            // Only include notifications meant for this user
-            if (isForCurrentUser) {
-              console.log('NotificationCenter: Processing notification:', { id: doc.id, read: isRead, title: data.title_en || data.title })
-              notificationsList.push({
-                id: doc.id,
-                ...data,
-                read: isRead // Use read status from user subcollection
-              })
-              
-              if (!isRead) {
-                unreadCounter++
-              }
-            }
-          })
-
-          notifications.value = notificationsList
-          unreadCount.value = unreadCounter
-          isLoading.value = false
-
-          console.log(`NotificationCenter: ✅ Loaded ${notificationsList.length} notifications (${snapshot.size} total, filtered by audience), ${unreadCounter} unread`)
-        }, 
-        (error) => {
-          console.error('NotificationCenter: ❌ onSnapshot error:', error)
-          console.error('NotificationCenter: Error code:', error?.code)
-          console.error('NotificationCenter: Error message:', error?.message)
-          // Set empty state on error
-          notifications.value = []
-          unreadCount.value = 0
-          isLoading.value = false
-        }
-      )
-      
-      console.log('NotificationCenter: Listener attached successfully')
-    } catch (error) {
-      console.error('NotificationCenter: Error setting up subscription:', error)
-      console.error('NotificationCenter: Error details:', error?.message, error?.code)
-      isLoading.value = false
-    }
+    console.log('NotificationCenter: 🔄 Starting polling mode (every 5 minutes) to reduce costs')
+    
+    // Initial fetch
+    await fetchNotifications(userId, projectId)
+    
+    // Set up polling interval
+    pollingInterval.value = setInterval(async () => {
+      console.log('NotificationCenter: 🔄 Polling for new notifications...')
+      await fetchNotifications(userId, projectId)
+    }, POLLING_INTERVAL_MS)
+    
+    console.log('NotificationCenter: ✅ Polling started successfully')
   }
 
   /**
@@ -448,18 +449,22 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   }
 
   /**
-   * Unsubscribe from notifications
+   * Unsubscribe from notifications (stop polling)
    */
   const unsubscribeFromNotifications = () => {
+    if (pollingInterval.value) {
+      clearInterval(pollingInterval.value)
+      pollingInterval.value = null
+      console.log('NotificationCenter: Stopped polling')
+    }
+    // Legacy cleanup (kept for backwards compatibility)
     if (unsubscribe.value) {
       unsubscribe.value()
       unsubscribe.value = null
-      console.log('NotificationCenter: Unsubscribed from notifications')
     }
     if (unsubscribeReadStatus.value) {
       unsubscribeReadStatus.value()
       unsubscribeReadStatus.value = null
-      console.log('NotificationCenter: Unsubscribed from read status')
     }
   }
 
@@ -523,6 +528,7 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
     
     // Methods
     subscribeToNotifications,
+    fetchNotifications, // Manual refresh function
     markAsRead,
     markAllAsRead,
     unsubscribeFromNotifications,
