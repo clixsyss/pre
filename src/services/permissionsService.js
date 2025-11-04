@@ -9,8 +9,18 @@ import { Capacitor } from '@capacitor/core'
 
 class PermissionsService {
   constructor() {
-    this.platform = Capacitor.getPlatform()
+    // Enhanced platform detection for iOS
+    const protocol = window.location.protocol
+    const hasIOSBridge = window.webkit?.messageHandlers !== undefined
+    
+    if (protocol === 'capacitor:' || hasIOSBridge) {
+      this.platform = 'ios'
+    } else {
+      this.platform = Capacitor.getPlatform()
+    }
+    
     this.permissionsRequested = false
+    console.log('🔍 PermissionsService: Platform detected:', this.platform)
   }
 
   /**
@@ -86,36 +96,62 @@ class PermissionsService {
    */
   async requestBluetoothPermission() {
     try {
-      // Only request on native platforms
-      if (!Capacitor.isNativePlatform()) {
-        console.log('📱 Not a native platform, skipping Bluetooth permission')
-        return true
-      }
-
-      console.log('📱 Checking Bluetooth permissions...')
+      console.log('📱 Requesting Bluetooth permissions...')
+      console.log('📱 Platform:', this.platform)
       
       // Dynamically import BLE plugin
-      const { BleClient } = await import('@capacitor-community/bluetooth-le')
+      console.log('📱 Importing @capacitor-community/bluetooth-le...')
+      const bleModule = await import('@capacitor-community/bluetooth-le')
+      console.log('📱 BLE module imported:', bleModule)
       
-      // Check if BLE is available
-      const isAvailable = await BleClient.isEnabled()
-      console.log('📱 Bluetooth enabled:', isAvailable)
-      
-      // On Android, we need to request location permission for BLE scanning
-      if (this.platform === 'android') {
-        console.log('📱 Android detected - location permission needed for BLE')
-        // Location permission already requested above
+      // Access BleClient from module
+      const BleClient = bleModule.BleClient
+      if (!BleClient) {
+        console.error('❌ BleClient not found in module')
+        return false
       }
       
-      // Request Bluetooth permissions by initializing BLE
-      // This will trigger the permission dialog on first use
-      await BleClient.initialize()
-      console.log('✅ Bluetooth permissions initialized')
+      console.log('📱 BleClient found:', typeof BleClient)
+      console.log('📱 BleClient.initialize exists:', typeof BleClient.initialize)
       
+      // Initialize BLE - this will request permissions on first use
+      console.log('📱 Initializing BLE client...')
+      await BleClient.initialize()
+      console.log('✅ BLE client initialized successfully')
+      
+      // Check if BLE is available/enabled
+      try {
+        const isEnabled = await BleClient.isEnabled()
+        console.log('📱 Bluetooth enabled on device:', isEnabled)
+        
+        if (!isEnabled) {
+          console.log('⚠️ Bluetooth is not enabled on device')
+          if (this.platform === 'ios') {
+            console.log('💡 User needs to turn on Bluetooth in Control Center')
+          } else {
+            console.log('💡 User needs to enable Bluetooth in Settings')
+          }
+        }
+      } catch (enableError) {
+        console.warn('⚠️ Could not check if Bluetooth is enabled:', enableError)
+      }
+      
+      // On Android, location permission is required for BLE scanning (Android OS requirement)
+      if (this.platform === 'android') {
+        console.log('📱 Android: Location permission needed for BLE scanning (already requested)')
+      }
+      
+      console.log('✅ Bluetooth permissions requested')
       return true
     } catch (error) {
       console.error('❌ Error requesting Bluetooth permission:', error)
-      // Don't fail if Bluetooth is not available or user doesn't have BLE hardware
+      console.error('❌ Error details:', {
+        message: error?.message,
+        code: error?.code,
+        stack: error?.stack,
+        type: typeof error
+      })
+      // Don't fail - gate control features will handle missing permissions
       return false
     }
   }
@@ -129,13 +165,14 @@ class PermissionsService {
       const locationPermission = await Geolocation.checkPermissions()
       
       let bluetoothAvailable = false
-      if (Capacitor.isNativePlatform()) {
-        try {
-          const { BleClient } = await import('@capacitor-community/bluetooth-le')
+      try {
+        const bleModule = await import('@capacitor-community/bluetooth-le')
+        const BleClient = bleModule.BleClient
+        if (BleClient) {
           bluetoothAvailable = await BleClient.isEnabled()
-        } catch (error) {
-          console.warn('Bluetooth check failed:', error)
         }
+      } catch (error) {
+        console.warn('Bluetooth check failed:', error)
       }
       
       return {
@@ -156,15 +193,13 @@ class PermissionsService {
    * @param {string} permissionType - Type of permission (location, bluetooth)
    */
   getPermissionInstructions(permissionType) {
-    const isIOS = this.platform === 'ios'
-    
     const instructions = {
-      location: isIOS
-        ? 'Go to Settings → PRE Group → Location → Select "While Using the App"'
-        : 'Go to Settings → Apps → PRE Group → Permissions → Location → Allow',
-      bluetooth: isIOS
-        ? 'Go to Settings → PRE Group → Bluetooth → Enable'
-        : 'Go to Settings → Apps → PRE Group → Permissions → Nearby devices → Allow',
+      location: this.platform === 'ios'
+        ? 'Settings → PRE Group → Location → Select "While Using the App"'
+        : 'Settings → Apps → PRE Group → Permissions → Location → Allow',
+      bluetooth: this.platform === 'ios'
+        ? 'Settings → PRE Group → Bluetooth → Enable'
+        : 'Settings → Apps → PRE Group → Permissions → Nearby devices → Allow',
     }
     
     return instructions[permissionType] || 'Please enable permissions in your device settings.'

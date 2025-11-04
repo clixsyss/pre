@@ -89,11 +89,29 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
         // Called when the app was launched with a url.
+        
+        // If this is a guest-pass URL or firebaseapp.com, open it in Safari instead of the app
+        if url.absoluteString.contains("/guest-pass/") || url.host?.contains("firebaseapp.com") == true {
+            print("🔗 Guest pass link detected - opening in Safari instead of app")
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            return true
+        }
+        
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         // Called when the app was launched with an activity, including Universal Links.
+        
+        // If this is a guest-pass URL or firebaseapp.com, open it in Safari instead of the app
+        if userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+           let url = userActivity.webpageURL,
+           (url.absoluteString.contains("/guest-pass/") || url.host?.contains("firebaseapp.com") == true) {
+            print("🔗 Guest pass link detected - opening in Safari instead of app")
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            return true
+        }
+        
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 }

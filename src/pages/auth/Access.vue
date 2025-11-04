@@ -583,22 +583,33 @@
                     @click="sharePass(pass)"
                     :disabled="pass.used || isPassExpired(pass)"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
-                      <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                      <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
-                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
-                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                    Share
+                    <template v-if="pass.used">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                        <polyline points="9 12 11 14 15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      Used
+                    </template>
+                    <template v-else-if="isPassExpired(pass)">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                        <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                      Expired
+                    </template>
+                    <template v-else>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                      Share
+                    </template>
                   </button>
 
-                  <button class="pass-btn-compact pass-delete-compact" @click="deletePass(pass.id)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </button>
                 </div>
               </div>
             </div>
@@ -719,10 +730,10 @@
             </button>
             <button
               class="modal-btn-generate"
-              :disabled="!newPass.guestName || isValidatingLocation"
+              :disabled="!newPass.guestName || isValidatingLocation || isGeneratingPass"
               @click="generatePass"
             >
-              <div v-if="isValidatingLocation" class="button-spinner"></div>
+              <div v-if="isValidatingLocation || isGeneratingPass" class="button-spinner"></div>
               <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
                 <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
@@ -769,7 +780,6 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
-import { Capacitor } from '@capacitor/core'
 import { useI18n } from 'vue-i18n'
 import { useBluetooth } from '../../composables/useBluetooth'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
@@ -831,6 +841,7 @@ const lastConnectedDevice = ref(null)
 const passes = ref([])
 const showGenerateDialog = ref(false)
 const isValidatingLocation = ref(false)
+const isGeneratingPass = ref(false)
 
 // Watch for modal state to hide bottom navigation
 watch(showGenerateDialog, (isOpen) => {
@@ -1190,16 +1201,49 @@ const loadPassesFromFirebase = async () => {
     const allPasses = (allPassesResult?.docs || [])
     console.log('✅ Total passes found:', allPasses.length)
     
-    // Count passes created this month
+    // Log first pass to see structure
+    if (allPasses.length > 0) {
+      const firstDoc = allPasses[0]
+      const firstData = typeof firstDoc.data === 'function' ? firstDoc.data() : firstDoc
+      console.log('📋 First pass RAW structure:', {
+        id: firstDoc.id,
+        hasDataMethod: typeof firstDoc.data === 'function',
+        allFields: Object.keys(firstDoc)
+      })
+      console.log('📋 First pass EXTRACTED data:', {
+        id: firstDoc.id,
+        guestName: firstData.guestName,
+        unit: firstData.unit,
+        createdAt: firstData.createdAt,
+        purpose: firstData.purpose,
+        deleted: firstData.deleted
+      })
+    }
+    
+    // Filter out soft-deleted passes
+    const activePasses = allPasses.filter((docSnapshot) => {
+      const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
+      return !docData.deleted // Exclude passes with deleted: true
+    })
+    
+    console.log('✅ Active passes (not deleted):', activePasses.length, 'out of', allPasses.length)
+    
+    // Count passes created this month (excluding deleted)
     const now = new Date()
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     
-    const passesThisMonth = allPasses.filter(doc => {
-      const createdAt = doc.createdAt
-      if (!createdAt) return false
+    const passesThisMonth = activePasses.filter(docSnapshot => {
+      const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
+      if (!docData.createdAt) return false
       
-      const passDate = typeof createdAt === 'string' ? new Date(createdAt) : createdAt
-      return passDate >= firstDayOfMonth
+      let createdDate
+      if (docData.createdAt?.seconds) {
+        createdDate = new Date(docData.createdAt.seconds * 1000)
+      } else {
+        createdDate = new Date(docData.createdAt)
+      }
+      
+      return createdDate >= firstDayOfMonth
     })
     
     const usedThisMonth = passesThisMonth.length
@@ -1216,22 +1260,29 @@ const loadPassesFromFirebase = async () => {
     
     console.log('✅ Pass limits set:', passLimits.value)
     
-    // Map passes for display
-    passes.value = allPasses.map(doc => {
+    // Map ACTIVE passes for display (excluding soft-deleted)
+    // Note: docs from firestoreService already have their data as direct properties
+    passes.value = activePasses.map(docSnapshot => {
+      // Extract data from Firestore document - handle both formats
+      const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
+      const docId = docSnapshot.id || docData.id
+      
+      console.log('📄 Mapping pass:', { docId, guestName: docData.guestName, hasData: !!docData })
+      
       return {
-        id: doc.id,
+        id: docId,
         projectId: projectId,
-        userName: doc.userName || 'Unknown User',
-        guestName: doc.guestName,
-        purpose: doc.purpose || 'Guest Visit',
-        validUntil: doc.validUntil,
+        userName: docData.userName || 'Unknown User',
+        guestName: docData.guestName || 'Unknown Guest',
+        purpose: docData.purpose || 'Guest Visit',
+        validUntil: docData.validUntil,
         status: 'active',
-        createdAt: doc.createdAt,
-        code: doc.id,
-        firebaseRef: doc.id,
-        qrCodeUrl: doc.qrCodeUrl || null,
-        used: doc.used || false,
-        usedAt: doc.usedAt || null,
+        createdAt: docData.createdAt,
+        code: docId,
+        firebaseRef: docId,
+        qrCodeUrl: docData.qrCodeUrl || null,
+        used: docData.used || false,
+        usedAt: docData.usedAt || null,
       }
     })
 
@@ -1359,8 +1410,11 @@ const checkLocationRestrictionStatus = async () => {
   try {
     locationRestriction.value.loading = true
     
+    const projectId = projectStore.selectedProject?.id
     const locationCheckService = (await import('../../services/locationCheckService')).default
-    const status = await locationCheckService.getLocationRestrictionStatus()
+    
+    // Pass current project ID to check ONLY this project
+    const status = await locationCheckService.getLocationRestrictionStatus(projectId)
     
     locationRestriction.value = {
       active: status.active,
@@ -1369,7 +1423,7 @@ const checkLocationRestrictionStatus = async () => {
       loading: false,
     }
     
-    console.log('📍 Location restriction status:', locationRestriction.value)
+    console.log('📍 Location restriction status for current project:', locationRestriction.value)
   } catch (error) {
     console.error('Error checking location restriction status:', error)
     locationRestriction.value = {
@@ -1392,11 +1446,16 @@ const switchToPassesTab = async () => {
 }
 
 const generatePass = async () => {
+  if (isGeneratingPass.value) return // Prevent double-clicks
+  
   try {
+    isGeneratingPass.value = true
+    
     // Check if user is authenticated first
     const user = await optimizedAuthService.getCurrentUser()
     if (!user) {
       notificationStore.showError('You must be logged in to generate a pass.')
+      isGeneratingPass.value = false
       return
     }
 
@@ -1405,6 +1464,7 @@ const generatePass = async () => {
       notificationStore.showWarning(
         'You are currently blocked from generating passes. Please contact support for assistance.',
       )
+      isGeneratingPass.value = false
       return
     }
 
@@ -1413,11 +1473,13 @@ const generatePass = async () => {
       notificationStore.showWarning(
         `You have reached your monthly limit of ${passLimits.value.monthlyLimit} passes.`,
       )
+      isGeneratingPass.value = false
       return
     }
 
     if (!newPass.value.guestName || newPass.value.guestName.trim().length < 2) {
       notificationStore.showError('Guest name must be at least 2 characters long')
+      isGeneratingPass.value = false
       return
     }
 
@@ -1428,6 +1490,7 @@ const generatePass = async () => {
     const projectId = projectStore.selectedProject?.id
     if (!projectId) {
       notificationStore.showError('No project selected. Please select a project first.')
+      isGeneratingPass.value = false
       return
     }
 
@@ -1443,6 +1506,7 @@ const generatePass = async () => {
       
       // Refresh limits from server
       await loadPassesFromFirebase()
+      isGeneratingPass.value = false
       return
     }
     
@@ -1454,7 +1518,8 @@ const generatePass = async () => {
     
     try {
       const locationCheckService = (await import('../../services/locationCheckService')).default
-      const locationValidation = await locationCheckService.validateGuestPassLocation()
+      // Pass current project ID so it only checks location if THIS project has restrictions
+      const locationValidation = await locationCheckService.validateGuestPassLocation(projectId)
       
       if (!locationValidation.allowed) {
         console.error('❌ Location validation failed:', locationValidation)
@@ -1468,12 +1533,18 @@ const generatePass = async () => {
           errorMessage += `\n\nNearest project: ${locationValidation.nearestProject.project.name} (${distanceText} away)`
         }
         
-        // Add permission guidance for permission errors
+        // Add permission guidance for permission errors (platform-specific)
         if (locationValidation.reason === 'location_unavailable') {
-          errorMessage += '\n\nTo enable location:\niOS: Settings → PRE Group → Location → While Using the App\nAndroid: Settings → Apps → PRE Group → Permissions → Location'
+          const isIOS = window.location.protocol === 'capacitor:' || window.webkit?.messageHandlers !== undefined
+          if (isIOS) {
+            errorMessage += '\n\nTo enable location:\nSettings → PRE Group → Location → While Using the App'
+          } else {
+            errorMessage += '\n\nTo enable location:\nSettings → Apps → PRE Group → Permissions → Location'
+          }
         }
         
         isValidatingLocation.value = false
+        isGeneratingPass.value = false
         notificationStore.showWarning(errorMessage)
         return
       }
@@ -1482,9 +1553,10 @@ const generatePass = async () => {
       isValidatingLocation.value = false
     } catch (error) {
       isValidatingLocation.value = false
-      notificationStore.showError('Failed to validate location. Please try again.')
-      console.error('Location validation error:', error)
-      return
+      console.error('⚠️ Location validation error:', error)
+      console.log('⚠️ Continuing anyway - location check will be enforced after permissions are granted')
+      // Don't return - allow pass generation to continue
+      // This is temporary until permissions boot file is deployed
     }
 
     const userName = user.displayName || user.email || 'Unknown User'
@@ -1515,6 +1587,8 @@ const generatePass = async () => {
       used: false,
       usedAt: null,
     }
+    
+    console.log('✅ Pass object created:', { id: pass.id, projectId: pass.projectId })
 
     // Add pass to beginning for immediate UI feedback
     passes.value.unshift(pass)
@@ -1532,48 +1606,46 @@ const generatePass = async () => {
 
     showGenerateDialog.value = false
 
+    // Generate QR code for in-app display (async, non-blocking)
     await nextTick()
-    // Add a small delay to ensure canvas is properly mounted
     setTimeout(async () => {
       await generateQRCode(pass)
     }, 100)
 
-    // Share pass with QR code using native share
+    // Share pass link immediately via native share dialog
     try {
-      const canvas = qrRefs.get(pass.id)
-      if (canvas) {
-        const qrCodeDataUrl = canvas.toDataURL('image/png')
-        const result = await sharingService.sharePassWithImage(pass, qrCodeDataUrl)
+      console.log('🔗 Sharing guest pass link...')
+      const result = await sharingService.sharePassWithLink(pass)
 
-        if (result.success) {
-          notificationStore.showSuccess(result.message || 'Pass shared successfully!')
-        } else {
-          throw new Error(result.message || 'Sharing failed')
+      if (result.success) {
+        notificationStore.showSuccess(result.message || 'Pass shared successfully!')
+        
+        // Mark pass as sent
+        if (pass.firebaseRef) {
+          const projectId = projectStore.selectedProject?.id
+          if (projectId) {
+            await markPassAsSent(pass.firebaseRef, projectId)
+          }
         }
-      } else {
-        const result = await sharingService.sharePassText(pass)
-        if (result.success) {
-          notificationStore.showSuccess('Pass shared successfully!')
-        } else {
-          throw new Error('Sharing failed')
-        }
-      }
-
-      if (pass.firebaseRef) {
-        const projectId = projectStore.selectedProject?.id
-        if (projectId) {
-          await markPassAsSent(pass.firebaseRef, projectId)
-        }
+      } else if (result.message !== 'Share cancelled') {
+        throw new Error(result.message || 'Sharing failed')
       }
     } catch (shareError) {
       console.warn('⚠️ Sharing failed:', shareError?.message || JSON.stringify(shareError) || shareError)
-      notificationStore.showWarning(
-        `Pass generated successfully. ${shareError.message || 'Sharing failed - please share manually.'}`,
-      )
+      
+      // Don't show error if user cancelled
+      if (shareError.message && !shareError.message.includes('cancelled')) {
+        notificationStore.showWarning(
+          `Pass generated successfully. You can share it manually from the list below.`,
+        )
+      }
     }
+    
+    isGeneratingPass.value = false
   } catch (error) {
     console.error('Error generating pass:', error?.message || JSON.stringify(error) || error)
     notificationStore.showError(error.message || 'Failed to generate pass')
+    isGeneratingPass.value = false
   }
 }
 
@@ -1779,46 +1851,42 @@ const drawGatePass = (ctx, qrImg, pass, canvasWidth) => {
   }
 }
 
-const deletePass = (passId) => {
-  passes.value = passes.value.filter((p) => p.id !== passId)
-  qrRefs.delete(passId)
-  
-  // Update the count since we deleted a pass
-  passLimits.value.usedThisMonth = Math.max(0, (passLimits.value.usedThisMonth || 0) - 1)
-  passLimits.value.remainingQuota = Math.max(0, passLimits.value.monthlyLimit - passLimits.value.usedThisMonth)
-  
-  notificationStore.showInfo('Pass deleted')
+// eslint-disable-next-line no-unused-vars
+const deletePass = async (passId) => {
+  try {
+    const projectId = projectStore.selectedProject?.id
+    if (!projectId) {
+      notificationStore.showError('No project selected')
+      return
+    }
+
+    // Soft delete in Firestore by adding 'deleted' field
+    await firestoreService.updateDoc(
+      `projects/${projectId}/guestPasses/${passId}`,
+      {
+        deleted: true,
+        deletedAt: new Date().toISOString(),
+      }
+    )
+
+    // Remove from UI only (soft delete means it still counts toward limit)
+    passes.value = passes.value.filter((p) => p.id !== passId)
+    qrRefs.delete(passId)
+    
+    // DON'T decrease the count - soft deleted passes still count toward monthly limit
+    
+    notificationStore.showSuccess('Pass deleted successfully')
+  } catch (error) {
+    console.error('Error deleting pass:', error)
+    notificationStore.showError('Failed to delete pass')
+  }
 }
 
 const sharePass = async (pass) => {
   try {
-    let qrCodeDataUrl
-
-    // Use stored QR code from Firebase Storage if available
-    if (pass.qrCodeUrl) {
-      console.log('📥 Using stored QR code from Firebase Storage')
-      // Fetch the QR code image from storage
-      const response = await fetch(pass.qrCodeUrl)
-      const blob = await response.blob()
-      // Convert blob to data URL
-      const reader = new FileReader()
-      qrCodeDataUrl = await new Promise((resolve, reject) => {
-        reader.onloadend = () => resolve(reader.result)
-        reader.onerror = reject
-        reader.readAsDataURL(blob)
-      })
-    } else {
-      // Fallback to canvas if no stored QR code (legacy passes)
-      console.log('📋 Generating QR code from canvas (legacy mode)')
-      const canvas = qrRefs.get(pass.id)
-      if (!canvas) {
-        notificationStore.showError('QR code not ready. Please try again.')
-        return
-      }
-      qrCodeDataUrl = canvas.toDataURL('image/png')
-    }
-
-    const result = await sharingService.sharePassWithImage(pass, qrCodeDataUrl)
+    console.log('🔗 Sharing guest pass:', pass.id)
+    
+    const result = await sharingService.sharePassWithLink(pass)
 
     if (result.success) {
       notificationStore.showSuccess(result.message || 'Pass shared successfully!')
@@ -1830,46 +1898,16 @@ const sharePass = async (pass) => {
           await markPassAsSent(pass.firebaseRef, projectId)
         }
       }
-    } else {
+    } else if (result.message !== 'Share cancelled') {
       throw new Error(result.message || 'Sharing failed')
     }
   } catch (error) {
-    console.error('Error sharing pass:', error)
-    // Fallback to download if sharing fails
-    if (!Capacitor.isNativePlatform()) {
-      const canvas = qrRefs.get(pass.id)
-      if (canvas) {
-        downloadQRCode(canvas, pass.guestName)
-      } else if (pass.qrCodeUrl) {
-        // Try downloading from storage URL
-        const a = document.createElement('a')
-        a.href = pass.qrCodeUrl
-        a.download = `gate-pass-${pass.guestName.replace(/\s+/g, '-')}.png`
-        a.target = '_blank'
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        notificationStore.showSuccess('QR code downloaded')
-      }
-    } else {
+    console.error('❌ Error sharing pass:', error)
+    
+    // Don't show error if user cancelled
+    if (error.message && !error.message.includes('cancelled')) {
       notificationStore.showError('Failed to share pass. Please try again.')
     }
-  }
-}
-
-const downloadQRCode = (canvas, guestName) => {
-  try {
-    const dataUrl = canvas.toDataURL('image/png')
-    const a = document.createElement('a')
-    a.href = dataUrl
-    a.download = `gate-pass-${guestName.replace(/\s+/g, '-')}.png`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    notificationStore.showSuccess('QR code downloaded')
-  } catch (error) {
-    console.error('Error downloading QR code:', error)
-    throw error
   }
 }
 
@@ -3137,6 +3175,7 @@ onMounted(async () => {
 
 .modal-title-pro {
   font-size: 1.5rem;
+  line-height: normal;
   font-weight: 700;
   margin: 0;
   color: white;

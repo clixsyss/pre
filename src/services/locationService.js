@@ -81,6 +81,13 @@ export async function getCurrentPosition() {
       throw error
     }
 
+    // Check for invalid coordinates (0,0 is a common error case)
+    if (position.coords.latitude === 0 && position.coords.longitude === 0) {
+      const error = new Error('Invalid location coordinates (0,0). Location services may not be fully initialized. Please wait a moment and try again.')
+      error.code = 'INVALID_POSITION'
+      throw error
+    }
+
     console.log('📍 Position obtained:', {
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,

@@ -25,6 +25,8 @@ const validatePass = (pass) => {
   }
 
   return {
+    id: pass.id || pass.code, // Use id or fallback to code
+    projectId: pass.projectId, // Preserve projectId for URL generation
     guestName: sanitizeString(pass.guestName, 100),
     purpose: sanitizeString(pass.purpose, 200),
     code: sanitizeString(pass.code, 50),
@@ -40,7 +42,7 @@ class SharingService {
 
 
   /**
-   * Create WhatsApp message for gate pass
+   * Create guest pass message with shareable link
    * @param {Object} pass - Gate pass object
    * @returns {string} - Formatted message
    */
@@ -57,6 +59,9 @@ class SharingService {
     // Sanitize all user inputs to prevent XSS
     const guestName = sanitizeString(pass.guestName, 100)
     const purpose = sanitizeString(pass.purpose, 200)
+    
+    // Generate shareable link for the guest pass
+    const passUrl = this.generatePassUrl(pass)
 
     return `🏘️ *PRE Group - Guest Pass*
 
@@ -69,12 +74,41 @@ You have been invited as a guest to PRE Group community.
 📅 Valid Until: ${validDate}
 🎯 Purpose: ${purpose}
 
+🔗 *Your Guest Pass:*
+${passUrl}
+
 ✅ *Instructions:*
-Please present the attached QR code at the main gate for entry. The security team will scan it for verification.
+Open the link above to view your QR code. Present the QR code at the main gate for entry. The security team will scan it for verification.
 
 Thank you for visiting PRE Group! 🌟
 
 _This is an automated message from PRE Group Management System._`
+  }
+
+  /**
+   * Generate public URL for guest pass
+   * @param {Object} pass - Gate pass object
+   * @returns {string} - Public URL
+   */
+  generatePassUrl(pass) {
+    console.log('🔗 Generating URL for pass:', { id: pass.id, code: pass.code, projectId: pass.projectId })
+    
+    // Use the pass ID (which could be in different fields)
+    const passId = pass.id || pass.code || pass.passId
+    const projectId = pass.projectId
+    
+    if (!passId || !projectId) {
+      console.error('❌ Missing pass ID or project ID:', { passId, projectId, pass })
+      throw new Error('Invalid pass data - missing ID or project ID')
+    }
+    
+    // Use production URL 
+    // Using .firebaseapp.com instead of .web.app to prevent iOS from opening in-app
+    const baseUrl = 'https://pre-group.firebaseapp.com'
+    
+    const url = `${baseUrl}/#/guest-pass/${projectId}/${passId}`
+    console.log('🔗 Generated URL:', url)
+    return url
   }
 
 
@@ -83,142 +117,98 @@ _This is an automated message from PRE Group Management System._`
 
 
   /**
-   * Share pass with QR code image using native share
+   * Share pass with link (NOT image)
+   * The link displays the QR code when opened
    * @param {Object} pass - Gate pass object
-   * @param {string} qrCodeDataUrl - QR code as data URL
    * @returns {Promise<Object>} - Success status
    */
-  async sharePassWithImage(pass, qrCodeDataUrl) {
+  async sharePassWithLink(pass) {
     try {
       // Validate inputs
       const validatedPass = validatePass(pass)
 
-      // Create message
+      // Create message with shareable link
       const message = this.createGatePassMessage(validatedPass)
+      const passUrl = this.generatePassUrl(validatedPass)
 
-      console.log('📱 Sharing pass with QR code image')
+      console.log('🔗 Sharing pass with link:', passUrl)
 
-      if (Capacitor.isNativePlatform()) {
-        // For native platforms, use Filesystem + Share plugin
-        const { Share } = await import('@capacitor/share')
-        const { Filesystem, Directory } = await import('@capacitor/filesystem')
+      // Enhanced iOS/Android detection
+      const protocol = window.location.protocol
+      const hasIOSBridge = window.webkit?.messageHandlers !== undefined
+      const isNative = protocol === 'capacitor:' || hasIOSBridge || Capacitor.getPlatform() === 'android'
+      
+      console.log('📱 Platform detection:', { protocol, isNative, platform: Capacitor.getPlatform() })
+
+      if (isNative) {
+        // For native platforms, use Share plugin from Capacitor.Plugins
+        console.log('📱 Accessing Share from Capacitor.Plugins...')
+        const Share = window.Capacitor?.Plugins?.Share
+        
+        if (!Share) {
+          console.error('❌ Share not found in Capacitor.Plugins')
+          throw new Error('Share plugin not available')
+        }
         
         try {
-          // Extract base64 data from data URL
-          const base64Data = qrCodeDataUrl.split(',')[1]
-          if (!base64Data) {
-            throw new Error('Invalid QR code data URL')
-          }
-          
-          // Create a unique filename
-          const fileName = `PRE-GuestPass-${validatedPass.guestName.replace(/\s+/g, '-')}-${Date.now()}.png`
-          
-          console.log('📝 Writing QR code to filesystem:', fileName)
-          
-          // Write the file to the cache directory
-          const writeResult = await Filesystem.writeFile({
-            path: fileName,
-            data: base64Data,
-            directory: Directory.Cache,
+          console.log('📤 Opening native share dialog...')
+          console.log('📤 Share object:', Share)
+          console.log('📤 Pass URL:', passUrl)
+          console.log('📤 Pass data:', validatedPass)
+          await Share.share({
+            title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
+            text: message,
+            url: passUrl, // Share the URL directly
+            dialogTitle: 'Share PRE Group Guest Pass',
           })
+          console.log('✅ Share dialog completed')
+
+          return {
+            success: true,
+            message: 'Pass shared successfully!',
+          }
+        } catch (shareError) {
+          console.error('❌ Share failed:', shareError)
           
-          console.log('✅ File written successfully:', writeResult.uri)
-          
-          // Share using the file URI
-          try {
-            await Share.share({
-              title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
-              text: message,
-              url: writeResult.uri,
-              dialogTitle: 'Share PRE Group Guest Pass',
-            })
-
-            // Clean up the temporary file after sharing
-            try {
-              await Filesystem.deleteFile({
-                path: fileName,
-                directory: Directory.Cache,
-              })
-              console.log('🗑️ Temporary file cleaned up')
-            } catch (deleteError) {
-              console.warn('⚠️ Could not delete temporary file:', deleteError)
-            }
-
+          // If sharing failed, user might have cancelled
+          if (shareError.message && shareError.message.includes('cancelled')) {
             return {
-              success: true,
-              message: 'Pass shared successfully!',
-            }
-          } catch (shareError) {
-            console.warn('Share with image failed, falling back to text only:', shareError)
-            
-            // Clean up the file if sharing failed
-            try {
-              await Filesystem.deleteFile({
-                path: fileName,
-                directory: Directory.Cache,
-              })
-            } catch (deleteError) {
-              console.warn('⚠️ Could not delete temporary file:', deleteError)
-            }
-            
-            // Fallback to text only
-            await Share.share({
-              title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
-              text: message,
-              dialogTitle: 'Share PRE Group Guest Pass',
-            })
-
-            return {
-              success: true,
-              message: 'Pass shared successfully (text only)!',
+              success: false,
+              message: 'Share cancelled',
             }
           }
-        } catch (filesystemError) {
-          console.error('❌ Filesystem error:', filesystemError)
           
-          // Final fallback to text only
-          try {
-            await Share.share({
-              title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
-              text: message,
-              dialogTitle: 'Share PRE Group Guest Pass',
-            })
-
-            return {
-              success: true,
-              message: 'Pass shared successfully (text only)!',
-            }
-          } catch (finalError) {
-            throw new Error('Failed to share pass: ' + finalError.message)
-          }
+          throw shareError
         }
       } else {
-        // For web, download the QR code and show instructions
+        // For web, copy link to clipboard
         try {
-          // Download the QR code image
-          const link = document.createElement('a')
-          link.href = qrCodeDataUrl
-          link.download = `PRE-Group-GuestPass-${validatedPass.guestName.replace(/\s+/g, '-')}.png`
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-
+          await navigator.clipboard.writeText(`${message}\n\n${passUrl}`)
           return {
             success: true,
-            message: 'PRE Group Guest Pass downloaded. You can now share it via any app.',
+            message: 'Guest pass link copied to clipboard!',
           }
-        } catch (webError) {
-          console.warn('Web sharing failed:', webError)
+        } catch (clipboardError) {
+          console.warn('Clipboard failed:', clipboardError)
           return {
             success: true,
-            message: 'Pass generated successfully. Please use the share button.',
+            message: `Pass URL: ${passUrl}`,
           }
         }
       }
     } catch (error) {
-      console.error('❌ Error sharing pass with image:', error)
+      console.error('❌ Error sharing pass:', error)
       throw new Error('Failed to share pass: ' + (error.message || 'Unknown error'))
     }
+  }
+
+  /**
+   * Legacy method - now redirects to link sharing
+   * @deprecated Use sharePassWithLink instead
+   */
+  async sharePassWithImage(pass) {
+    console.log('⚠️ sharePassWithImage is deprecated, using sharePassWithLink instead')
+    return this.sharePassWithLink(pass)
   }
 
   /**
@@ -236,9 +226,18 @@ _This is an automated message from PRE Group Management System._`
 
       console.log('📱 Sharing pass text')
 
-      if (Capacitor.isNativePlatform()) {
-        // For native platforms, use the Share plugin
-        const { Share } = await import('@capacitor/share')
+      // Enhanced iOS/Android detection
+      const protocol = window.location.protocol
+      const hasIOSBridge = window.webkit?.messageHandlers !== undefined
+      const isNative = protocol === 'capacitor:' || hasIOSBridge || Capacitor.getPlatform() === 'android'
+
+      if (isNative) {
+        // For native platforms, use the Share plugin from Capacitor.Plugins
+        const Share = window.Capacitor?.Plugins?.Share
+        
+        if (!Share) {
+          throw new Error('Share plugin not available')
+        }
         
         await Share.share({
           title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,

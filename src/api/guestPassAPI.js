@@ -1,4 +1,4 @@
-import { doc, getDoc, collection, addDoc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { db, storage } from 'src/boot/firebase'
 import firestoreService from '../services/firestoreService'
@@ -248,11 +248,18 @@ export const checkUserEligibility = async (projectId, userId) => {
               { field: 'unit', operator: '==', value: userUnit },
               { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
             ]
-          }
+          },
+          8000 // timeout - force fresh query, bypass cache
         )
         
-        usedThisMonth = result?.docs?.length || 0
-        console.log(`📊 Counted ${usedThisMonth} passes this month for UNIT ${userUnit} in project ${projectId}`)
+        // Filter out soft-deleted passes (they don't count toward limit anymore)
+        const activePasses = (result?.docs || []).filter(docSnapshot => {
+          const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
+          return !docData.deleted // Exclude passes with deleted: true
+        })
+        
+        usedThisMonth = activePasses.length
+        console.log(`📊 Counted ${usedThisMonth} ACTIVE passes this month for UNIT ${userUnit} (${result?.docs?.length || 0} total, excluding deleted)`)
       } else {
         // Fallback to per-user counting if no unit found (backward compatibility)
         console.warn(`⚠️ No unit found for user ${userId}, falling back to per-user counting (DEPRECATED)`)
@@ -263,10 +270,18 @@ export const checkUserEligibility = async (projectId, userId) => {
               { field: 'userId', operator: '==', value: userId },
               { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
             ]
-          }
+          },
+          8000 // timeout - force fresh query
         )
-        usedThisMonth = result?.docs?.length || 0
-        console.log(`📊 Counted ${usedThisMonth} passes this month for USER ${userId} (fallback)`)
+        
+        // Filter out soft-deleted passes
+        const activePasses = (result?.docs || []).filter(docSnapshot => {
+          const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
+          return !docData.deleted
+        })
+        
+        usedThisMonth = activePasses.length
+        console.log(`📊 Counted ${usedThisMonth} ACTIVE passes this month for USER ${userId} (${result?.docs?.length || 0} total, excluding deleted)`)
       }
     } catch (error) {
       console.error('❌ Error counting monthly passes:', error)
@@ -405,8 +420,8 @@ export const createGuestPass = async (
     
     console.log(`🏠 Creating pass for unit: ${userUnit}`)
     
-    // Create pass record in Firebase - per project subcollection
-    const passRef = await addDoc(collection(db, `projects/${projectId}/guestPasses`), {
+    // Prepare pass data
+    const passData = {
       id: passId,
       projectId: projectId,
       userId: userId,
@@ -424,7 +439,23 @@ export const createGuestPass = async (
       usedAt: null,
       verificationToken: verificationToken,
       updatedAt: createdAt,
+    }
+    
+    console.log('💾 Saving pass to Firestore:', {
+      passId,
+      projectId,
+      userId,
+      guestName,
+      purpose,
+      unit: userUnit,
+      path: `projects/${projectId}/guestPasses/${passId}`
     })
+    
+    // Create pass record in Firebase - use passId as document ID for easy public lookup
+    const passRef = doc(db, `projects/${projectId}/guestPasses`, passId)
+    await setDoc(passRef, passData)
+    
+    console.log('✅ Pass saved to Firestore with ID:', passId)
 
     // Update UNIT usage count in per-unit settings
     if (userUnit) {
@@ -479,7 +510,7 @@ export const createGuestPass = async (
     return {
       success: true,
       passId: passId,
-      passRef: passRef.id,
+      passRef: passId, // Document ID is now the same as passId
       qrCodeUrl: qrCodeUrl,
       data: {
         id: passId,

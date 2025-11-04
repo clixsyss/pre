@@ -1,28 +1,34 @@
 <template>
   <div id="app-root">
-    <SplashScreen />
+    <!-- Guest Pass Page - Completely standalone, no app UI -->
+    <router-view v-if="isGuestPassPage" />
     
-    <!-- Network Status Banner - Shows when offline or slow connection -->
-    <NetworkStatusBanner />
-    
-    <!-- Show MainLayout only for authenticated pages -->
-    <MainLayout v-if="isAuthenticatedPage && !isRouterLoading" class="main-layout">
-      <router-view />
-    </MainLayout>
-    
-    <!-- Show clean layout for authentication pages -->
-    <div v-else-if="!isRouterLoading" class="auth-layout">
-      <router-view />
-    </div>
-    
-    <NotificationPopup />
-    
-    <!-- Document Verification Modal - Shows when user is missing required documents (only on authenticated pages) -->
-    <DocumentVerificationModal 
-      v-if="showDocumentModal && isAuthenticatedPage && !isRouterLoading"
-      :missing-documents="missingDocuments"
-      @documents-uploaded="handleDocumentsUploaded"
-    />
+    <!-- Regular App UI -->
+    <template v-else>
+      <SplashScreen />
+      
+      <!-- Network Status Banner - Shows when offline or slow connection -->
+      <NetworkStatusBanner />
+      
+      <!-- Show MainLayout only for authenticated pages -->
+      <MainLayout v-if="isAuthenticatedPage && !isRouterLoading" class="main-layout">
+        <router-view />
+      </MainLayout>
+      
+      <!-- Show clean layout for authentication pages -->
+      <div v-else-if="!isRouterLoading" class="auth-layout">
+        <router-view />
+      </div>
+      
+      <NotificationPopup />
+      
+      <!-- Document Verification Modal - Shows when user is missing required documents (only on authenticated pages) -->
+      <DocumentVerificationModal 
+        v-if="showDocumentModal && isAuthenticatedPage && !isRouterLoading"
+        :missing-documents="missingDocuments"
+        @documents-uploaded="handleDocumentsUploaded"
+      />
+    </template>
   </div>
 </template>
 
@@ -238,11 +244,22 @@ const authenticatedRoutes = [
 ]
 
 // Check if current route should show main layout
+// Check if current route is the guest pass page (standalone, no app UI)
+const isGuestPassPage = computed(() => {
+  return route.path.startsWith('/guest-pass/')
+})
+
 const isAuthenticatedPage = computed(() => {
   console.log('🔍 App.vue: Checking route:', { 
     currentPath: route.path, 
-    isRouterLoading: isRouterLoading.value 
+    isRouterLoading: isRouterLoading.value,
+    isGuestPass: isGuestPassPage.value
   })
+  
+  // Guest pass page should never show app UI
+  if (isGuestPassPage.value) {
+    return false
+  }
   
   // Check exact matches first
   if (authenticatedRoutes.includes(route.path)) {

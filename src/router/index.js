@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import optimizedAuthService from '../services/optimizedAuthService'
 import firestoreService from '../services/firestoreService'
 import { canUserAccessRoute, checkUserSuspension } from '../services/suspensionService'
@@ -88,6 +88,12 @@ const routes = [
     path: '/migrate-account',
     name: 'MigrateAccount',
     component: MigrateAccount,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/guest-pass/:projectId/:passId',
+    name: 'GuestPassView',
+    component: () => import('../pages/unauth/GuestPassView.vue'),
     meta: { requiresAuth: false },
   },
 
@@ -306,7 +312,7 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes,
   scrollBehavior() {
     // Always scroll to top when navigating between pages
@@ -434,7 +440,33 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
 // Navigation guard
 router.beforeEach(async (to, from, next) => {
   console.log('Navigation guard - to:', to.path, 'from:', from.path)
+  
+  // Check if running on web (not native app)
+  const isWeb = !window.Capacitor || window.Capacitor.getPlatform() === 'web'
+  
+  // WEB PLATFORM: ONLY allow guest pass pages, block everything else
+  if (isWeb) {
+    if (to.path.startsWith('/guest-pass/')) {
+      console.log('Navigation guard: Guest pass page on WEB - allowing')
+      next()
+      return
+    }
+    
+    // Block all other routes on web
+    console.log('Navigation guard: Blocking non-guest-pass route on WEB')
+    console.log('⛔ This app is only available on iOS/Android')
+    next(false) // Cancel navigation
+    return
+  }
+  
   const requiresAuth = to.meta.requiresAuth
+
+  // Guest pass pages should NEVER redirect - allow direct access (native app)
+  if (to.path.startsWith('/guest-pass/')) {
+    console.log('Navigation guard: Guest pass page - allowing direct access')
+    next()
+    return
+  }
 
   // Handle root route specially
   if (to.path === '/') {

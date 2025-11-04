@@ -1,3 +1,5 @@
+(node:94843) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
 {
   "indexes": [
     {
@@ -475,3 +477,11 @@
   ],
   "fieldOverrides": []
 }
+┌─────────────────────────────────────────────────────────┐
+│           firebase-tools update check failed            │
+│           Try running with sudo or get access           │
+│          to the local update config store via           │
+│ sudo chown -R $USER:$(id -gn $USER) /Users/hady/.config │
+└─────────────────────────────────────────────────────────┘
+
+Error: An unexpected error has occurred.

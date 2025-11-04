@@ -8,11 +8,13 @@ import locationService from './locationService'
 
 /**
  * Validate if user can generate guest pass based on location
+ * @param {string} currentProjectId - The ID of the current project (optional)
  * @returns {Promise<Object>} Validation result
  */
-export async function validateGuestPassLocation() {
+export async function validateGuestPassLocation(currentProjectId = null) {
   try {
     console.log('🔍 Validating location for guest pass generation...')
+    console.log('🏢 Current project ID:', currentProjectId)
 
     // OPTIMIZATION: Fetch projects with limit
     const { limit } = await import('firebase/firestore')
@@ -26,11 +28,30 @@ export async function validateGuestPassLocation() {
 
     console.log(`📍 Fetched ${projects.length} projects`)
 
+    // If currentProjectId is provided, check if ONLY THAT project has restrictions
+    if (currentProjectId) {
+      const currentProject = projects.find(p => p.id === currentProjectId)
+      
+      if (!currentProject) {
+        console.warn('⚠️ Current project not found in projects list')
+      } else if (!currentProject.restrictionEnabled) {
+        console.log(`✅ Current project "${currentProject.name}" has NO location restrictions`)
+        return {
+          success: true,
+          allowed: true,
+          reason: 'project_not_restricted',
+          message: 'Location check passed - current project has no restrictions',
+        }
+      }
+      
+      console.log(`🔍 Current project "${currentProject.name}" HAS location restrictions enabled`)
+    }
+
     // Check if any project has restriction enabled
     const hasRestrictions = projects.some((p) => p.restrictionEnabled === true)
 
     if (!hasRestrictions) {
-      console.log('✅ No location restrictions enabled')
+      console.log('✅ No location restrictions enabled across all projects')
       return {
         success: true,
         allowed: true,
@@ -39,7 +60,7 @@ export async function validateGuestPassLocation() {
       }
     }
 
-    // Get user's current location
+    // Get user's current location (only if restrictions exist)
     console.log('📱 Getting user location...')
     let userLocation
     try {
@@ -98,7 +119,7 @@ export async function validateGuestPassLocation() {
  * Get location restriction status for display
  * @returns {Promise<Object>} Restriction status
  */
-export async function getLocationRestrictionStatus() {
+export async function getLocationRestrictionStatus(currentProjectId = null) {
   try {
     // OPTIMIZATION: Fetch projects with limit
     const { limit } = await import('firebase/firestore')
@@ -110,7 +131,40 @@ export async function getLocationRestrictionStatus() {
       ...doc.data(),
     }))
 
-    // Check if any project has restriction enabled
+    // If currentProjectId is provided, check ONLY that project
+    if (currentProjectId) {
+      const currentProject = projects.find(p => p.id === currentProjectId)
+      
+      if (!currentProject) {
+        console.warn('⚠️ Current project not found')
+        return {
+          active: false,
+          projectCount: 0,
+          projects: [],
+        }
+      }
+      
+      // Return status for CURRENT project only
+      if (currentProject.restrictionEnabled === true) {
+        return {
+          active: true,
+          projectCount: 1,
+          projects: [{
+            id: currentProject.id,
+            name: currentProject.name,
+            radius: currentProject.radiusMeters || 500,
+          }],
+        }
+      } else {
+        return {
+          active: false,
+          projectCount: 0,
+          projects: [],
+        }
+      }
+    }
+
+    // If no currentProjectId, check all projects (legacy behavior)
     const restrictedProjects = projects.filter((p) => p.restrictionEnabled === true)
 
     return {
