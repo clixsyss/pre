@@ -90,7 +90,7 @@
 
     .pass-header {
       background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
-      padding: 40px 30px;
+      padding: 20px;
       text-align: center;
       color: white;
     }
@@ -99,7 +99,7 @@
       width: 100px;
       height: 100px;
       object-fit: contain;
-      margin: 0 auto 20px;
+      margin: 0 auto;
       display: block;
       filter: brightness(0) invert(1);
     }
@@ -117,7 +117,7 @@
     }
 
     .guest-info {
-      padding: 30px;
+      padding: 10px;
       text-align: center;
       border-bottom: 2px dashed #e0e0e0;
     }
@@ -144,7 +144,7 @@
     }
 
     .qr-image {
-      max-width: 300px;
+      max-width: 100%;
       width: 100%;
       height: auto;
       border-radius: 12px;
@@ -274,20 +274,13 @@
     }
 
     @media (max-width: 640px) {
-      .pass-header h1 {
-        font-size: 24px;
-      }
 
       .guest-info h2 {
         font-size: 28px;
       }
 
       .qr-container {
-        padding: 30px 20px;
-      }
-
-      .qr-image {
-        max-width: 250px;
+        padding: 10px;
       }
     }
   </style>
@@ -314,7 +307,6 @@
   <div id="pass" class="pass-container">
     <div class="pass-header">
       <img src="https://firebasestorage.googleapis.com/v0/b/pre-group.firebasestorage.app/o/logo.png?alt=media&token=85e3ad0a-ce08-4f0c-b6d4-394e41914467" alt="PRE Group" />
-      <h1>PRE Group</h1>
       <p>Guest Pass</p>
     </div>
 

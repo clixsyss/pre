@@ -1265,3 +1265,206 @@ exports.cleanupPushNotifications = functions.pubsub
     }
   });
 
+/**
+ * verifyGuestPass - Verify and mark a guest pass as used (one-time use enforcement)
+ * 
+ * This function is called by hardware QR code scanners at the gate to:
+ * 1. Verify the guest pass exists and hasn't been deleted
+ * 2. Validate the verification token (prevents QR code tampering)
+ * 3. Check if the pass has already been used (one-time use enforcement)
+ * 4. Check if the pass has expired
+ * 5. Mark the pass as used with timestamp
+ * 
+ * Security Features:
+ * - Verification token must match exactly (prevents forged QR codes)
+ * - Pass can only be used once (prevents reuse)
+ * - Expiration time is enforced
+ * - Soft-deleted passes are rejected
+ * - All verification attempts are logged
+ * 
+ * @param {Object} data - Request data
+ * @param {string} data.projectId - Project ID (from QR code)
+ * @param {string} data.passId - Pass ID (from QR code)
+ * @param {string} data.verificationToken - Secret token (from QR code)
+ * 
+ * @returns {Object} Verification result with guest info or error
+ * 
+ * @example Success Response:
+ * {
+ *   success: true,
+ *   message: "Pass verified and marked as used",
+ *   data: {
+ *     passId: "GP-1730123456789-ABC12",
+ *     guestName: "John Doe",
+ *     purpose: "Guest Visit",
+ *     usedAt: "2024-11-05T21:15:30.000Z"
+ *   }
+ * }
+ * 
+ * @example Error Response (Already Used):
+ * {
+ *   success: false,
+ *   error: "Already used",
+ *   message: "This pass has already been used",
+ *   data: { usedAt: "2024-11-05T21:00:00.000Z" }
+ * }
+ */
+exports.verifyGuestPass = functions.https.onCall(async (data, context) => {
+  try {
+    console.log('[verifyGuestPass] 🔍 Starting pass verification...')
+    
+    // Validate input parameters
+    const { projectId, passId, verificationToken } = data
+    
+    if (!projectId || typeof projectId !== 'string') {
+      console.error('[verifyGuestPass] ❌ Invalid projectId')
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Project ID is required and must be a string'
+      )
+    }
+    
+    if (!passId || typeof passId !== 'string') {
+      console.error('[verifyGuestPass] ❌ Invalid passId')
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Pass ID is required and must be a string'
+      )
+    }
+    
+    if (!verificationToken || typeof verificationToken !== 'string') {
+      console.error('[verifyGuestPass] ❌ Invalid verificationToken')
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Verification token is required and must be a string'
+      )
+    }
+    
+    console.log('[verifyGuestPass] 📋 Verifying pass:', { projectId, passId })
+    
+    // Get the pass document from Firestore
+    const db = admin.firestore()
+    const passRef = db.doc(`projects/${projectId}/guestPasses/${passId}`)
+    const passDoc = await passRef.get()
+    
+    // Check if pass exists
+    if (!passDoc.exists) {
+      console.error('[verifyGuestPass] ❌ Pass not found')
+      return {
+        success: false,
+        error: 'Pass not found',
+        message: 'This guest pass does not exist'
+      }
+    }
+    
+    const passData = passDoc.data()
+    console.log('[verifyGuestPass] ✅ Pass found')
+    
+    // Check if pass was soft-deleted
+    if (passData.deleted === true) {
+      console.error('[verifyGuestPass] ❌ Pass was deleted')
+      return {
+        success: false,
+        error: 'Pass deleted',
+        message: 'This pass has been deleted and is no longer valid'
+      }
+    }
+    
+    // Verify the verification token (security check)
+    if (passData.verificationToken !== verificationToken) {
+      console.error('[verifyGuestPass] ❌ Invalid verification token')
+      console.error('[verifyGuestPass] Expected:', passData.verificationToken)
+      console.error('[verifyGuestPass] Received:', verificationToken)
+      return {
+        success: false,
+        error: 'Invalid token',
+        message: 'Invalid verification token - QR code may be forged or corrupted'
+      }
+    }
+    
+    console.log('[verifyGuestPass] ✅ Verification token valid')
+    
+    // Check if pass has already been used (ONE-TIME USE ENFORCEMENT)
+    if (passData.used === true) {
+      console.error('[verifyGuestPass] ❌ Pass already used')
+      
+      // Convert Firestore Timestamp to ISO string if needed
+      let usedAtString = null
+      if (passData.usedAt) {
+        usedAtString = passData.usedAt.toDate 
+          ? passData.usedAt.toDate().toISOString()
+          : passData.usedAt
+      }
+      
+      return {
+        success: false,
+        error: 'Already used',
+        message: 'This pass has already been used and cannot be used again',
+        data: {
+          usedAt: usedAtString,
+          guestName: passData.guestName
+        }
+      }
+    }
+    
+    console.log('[verifyGuestPass] ✅ Pass not yet used')
+    
+    // Check if pass has expired
+    const now = new Date()
+    let validUntil
+    
+    // Handle Firestore Timestamp or ISO string
+    if (passData.validUntil && passData.validUntil.toDate) {
+      validUntil = passData.validUntil.toDate()
+    } else {
+      validUntil = new Date(passData.validUntil)
+    }
+    
+    if (now > validUntil) {
+      console.error('[verifyGuestPass] ❌ Pass expired')
+      console.error('[verifyGuestPass] Valid until:', validUntil)
+      console.error('[verifyGuestPass] Current time:', now)
+      return {
+        success: false,
+        error: 'Expired',
+        message: 'This pass has expired and is no longer valid'
+      }
+    }
+    
+    console.log('[verifyGuestPass] ✅ Pass not expired')
+    console.log('[verifyGuestPass] 🎉 All checks passed - marking pass as used')
+    
+    // Mark pass as used (CRITICAL: One-time use enforcement)
+    await passRef.update({
+      used: true,
+      usedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    })
+    
+    console.log('[verifyGuestPass] ✅ Pass marked as used successfully')
+    console.log('[verifyGuestPass] 🚪 ACCESS GRANTED for:', passData.guestName)
+    
+    // Return success with guest information
+    return {
+      success: true,
+      message: 'Pass verified and marked as used',
+      data: {
+        passId: passId,
+        guestName: passData.guestName,
+        purpose: passData.purpose || 'Guest Visit',
+        unit: passData.unit || '',
+        usedAt: new Date().toISOString()
+      }
+    }
+    
+  } catch (error) {
+    console.error('[verifyGuestPass] ❌ Unexpected error:', error)
+    
+    // Don't expose internal errors to clients
+    throw new functions.https.HttpsError(
+      'internal',
+      'Unable to verify pass. Please try again or contact support.'
+    )
+  }
+})
+

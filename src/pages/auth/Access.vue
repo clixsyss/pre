@@ -1269,20 +1269,35 @@ const loadPassesFromFirebase = async () => {
       
       console.log('📄 Mapping pass:', { docId, guestName: docData.guestName, hasData: !!docData })
       
+      // Convert Firestore Timestamps to ISO strings for proper date handling
+      const convertTimestamp = (timestamp) => {
+        if (!timestamp) return null
+        // If it's a Firestore Timestamp object
+        if (timestamp && typeof timestamp.toDate === 'function') {
+          return timestamp.toDate().toISOString()
+        }
+        // If it's already a Date object
+        if (timestamp instanceof Date) {
+          return timestamp.toISOString()
+        }
+        // If it's already a string or number, return as is
+        return timestamp
+      }
+      
       return {
         id: docId,
         projectId: projectId,
         userName: docData.userName || 'Unknown User',
         guestName: docData.guestName || 'Unknown Guest',
         purpose: docData.purpose || 'Guest Visit',
-        validUntil: docData.validUntil,
+        validUntil: convertTimestamp(docData.validUntil),
         status: 'active',
-        createdAt: docData.createdAt,
+        createdAt: convertTimestamp(docData.createdAt),
         code: docId,
         firebaseRef: docId,
         qrCodeUrl: docData.qrCodeUrl || null,
         used: docData.used || false,
-        usedAt: docData.usedAt || null,
+        usedAt: convertTimestamp(docData.usedAt),
       }
     })
 
@@ -1912,58 +1927,110 @@ const sharePass = async (pass) => {
 }
 
 const formatCreationDate = (dateString) => {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now - date
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
+  if (!dateString) return 'Unknown date'
   
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
-  
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  })
+  try {
+    const date = new Date(dateString)
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date:', dateString)
+      return 'Invalid date'
+    }
+    
+    const now = new Date()
+    const diffMs = now - date
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+    
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    })
+  } catch (error) {
+    console.error('Error formatting creation date:', error, dateString)
+    return 'Invalid date'
+  }
 }
 
 const isPassExpired = (pass) => {
-  if (!pass.validUntil) return false
-  const now = new Date()
-  const expiryDate = new Date(pass.validUntil)
-  return now > expiryDate
+  if (!pass || !pass.validUntil) return false
+  
+  try {
+    const now = new Date()
+    const expiryDate = new Date(pass.validUntil)
+    
+    // Check if date is valid
+    if (isNaN(expiryDate.getTime())) {
+      console.error('Invalid expiry date:', pass.validUntil)
+      return false
+    }
+    
+    return now > expiryDate
+  } catch (error) {
+    console.error('Error checking expiration:', error)
+    return false
+  }
 }
 
 const isPassExpiringSoon = (pass) => {
-  if (!pass.validUntil || isPassExpired(pass)) return false
-  const now = new Date()
-  const expiryDate = new Date(pass.validUntil)
-  const remainingMs = expiryDate - now
-  const remainingMins = Math.floor(remainingMs / 60000)
-  return remainingMins < 30 && remainingMins > 0
+  if (!pass || !pass.validUntil || isPassExpired(pass)) return false
+  
+  try {
+    const now = new Date()
+    const expiryDate = new Date(pass.validUntil)
+    
+    // Check if date is valid
+    if (isNaN(expiryDate.getTime())) {
+      return false
+    }
+    
+    const remainingMs = expiryDate - now
+    const remainingMins = Math.floor(remainingMs / 60000)
+    return remainingMins < 30 && remainingMins > 0
+  } catch (error) {
+    console.error('Error checking if expiring soon:', error)
+    return false
+  }
 }
 
 const getRemainingTime = (pass) => {
+  if (!pass) return 'Unknown'
   if (pass.used) return 'Used'
   if (!pass.validUntil) return 'No expiry'
   
-  const now = new Date()
-  const expiryDate = new Date(pass.validUntil)
-  const remainingMs = expiryDate - now
-  
-  if (remainingMs < 0) return 'Expired'
-  
-  const remainingMins = Math.floor(remainingMs / 60000)
-  const remainingHours = Math.floor(remainingMs / 3600000)
-  const remainingDays = Math.floor(remainingMs / 86400000)
-  
-  if (remainingDays > 0) return `${remainingDays}d ${remainingHours % 24}h left`
-  if (remainingHours > 0) return `${remainingHours}h ${remainingMins % 60}m left`
-  if (remainingMins > 0) return `${remainingMins}m left`
-  return 'Expiring soon'
+  try {
+    const now = new Date()
+    const expiryDate = new Date(pass.validUntil)
+    
+    // Check if date is valid
+    if (isNaN(expiryDate.getTime())) {
+      console.error('Invalid validUntil date:', pass.validUntil)
+      return 'Invalid date'
+    }
+    
+    const remainingMs = expiryDate - now
+    
+    if (remainingMs < 0) return 'Expired'
+    
+    const remainingMins = Math.floor(remainingMs / 60000)
+    const remainingHours = Math.floor(remainingMs / 3600000)
+    const remainingDays = Math.floor(remainingMs / 86400000)
+    
+    if (remainingDays > 0) return `${remainingDays}d ${remainingHours % 24}h left`
+    if (remainingHours > 0) return `${remainingHours}h ${remainingMins % 60}m left`
+    if (remainingMins > 0) return `${remainingMins}m left`
+    return 'Expiring soon'
+  } catch (error) {
+    console.error('Error calculating remaining time:', error)
+    return 'Unknown'
+  }
 }
 
 const getPassStatusClass = (pass) => {
