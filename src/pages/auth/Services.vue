@@ -26,7 +26,7 @@
       <!-- Services Tab -->
       <div v-if="activeTab === 'services'" class="services-content">
         <!-- Loading State -->
-        <div v-if="serviceCategoriesStore.isLoading" class="loading-container">
+        <div v-if="serviceCategoriesStore.isLoading || loadingStores" class="loading-container">
           <div class="loading-spinner"></div>
           <p>{{ $t('loadingServices') }}</p>
         </div>
@@ -35,6 +35,18 @@
         <div v-else-if="serviceCategoriesStore.getError" class="error-container">
           <p>{{ serviceCategoriesStore.getError }}</p>
           <button @click="loadServiceCategories" class="retry-btn">{{ $t('retry') }}</button>
+        </div>
+
+        <!-- Empty State - No Services Available -->
+        <div v-else-if="!serviceCategoriesStore.isLoading && !loadingStores && !hasAnyServices" class="empty-state">
+          <div class="empty-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 11L12 14L22 4" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3>{{ $t('noServicesAvailable') }}</h3>
+          <p>{{ $t('noServicesAvailableMessage') }}</p>
         </div>
 
         <!-- Services Grid -->
@@ -69,7 +81,7 @@
 
           <!-- Static Services -->
           <!-- Smart Devices -->
-          <div class="service-card" @click="navigateToSmartDevices">
+          <div v-if="isSmartHomeConnected" class="service-card" @click="navigateToSmartDevices">
             <div class="service-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M9 21C9 21.5523 9.44772 22 10 22H14C14.5523 22 15 21.5523 15 21V20H9V21Z" stroke="currentColor"
@@ -94,7 +106,7 @@
           </div>
 
           <!-- Court Booking -->
-          <div class="facility-card" @click="navigateToCourtBooking">
+          <div v-if="hasCourts" class="facility-card" @click="navigateToCourtBooking">
             <div class="facility-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
@@ -117,7 +129,7 @@
           </div>
 
           <!-- Academy Programs -->
-          <div class="facility-card" @click="navigateToAcademyPrograms">
+          <div v-if="hasAcademies" class="facility-card" @click="navigateToAcademyPrograms">
             <div class="facility-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
@@ -144,7 +156,7 @@
           </div>
 
           <!-- Stores & Shopping -->
-          <div class="facility-card" @click="navigateToStores">
+          <div v-if="hasStores" class="facility-card" @click="navigateToStores">
             <div class="facility-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
@@ -359,7 +371,11 @@ import { useI18n } from 'vue-i18n';
 import optimizedAuthService from 'src/services/optimizedAuthService';
 import { useServiceCategoriesStore } from '../../stores/serviceCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
+import { useSportsStore } from '../../stores/sportsStore';
+import { useAcademiesStore } from '../../stores/academyStore';
+import { useSmartMirrorStore } from '../../stores/smartMirrorStore';
 import serviceBookingService from '../../services/serviceBookingService';
+import firestoreService from '../../services/firestoreService';
 import ServiceBookingModal from '../../components/ServiceBookingModal.vue';
 
 // Component name for ESLint
@@ -371,6 +387,9 @@ const router = useRouter();
 const { t, locale } = useI18n();
 const serviceCategoriesStore = useServiceCategoriesStore();
 const projectStore = useProjectStore();
+const sportsStore = useSportsStore();
+const academiesStore = useAcademiesStore();
+const smartMirrorStore = useSmartMirrorStore();
 
 // Helper function to get localized category title
 const getCategoryTitle = (category) => {
@@ -430,6 +449,46 @@ const openBookings = ref([]);
 const closedBookings = ref([]);
 const showBookingModal = ref(false);
 const selectedBooking = ref(null);
+const stores = ref([]);
+const loadingStores = ref(false);
+
+// Computed properties to check if services exist
+const hasCourts = computed(() => {
+  // Check if there are any courts in the sports store
+  const courtsCount = Object.values(sportsStore.courtsBySport).reduce((total, courts) => total + courts.length, 0);
+  return courtsCount > 0;
+});
+
+const hasAcademies = computed(() => {
+  return academiesStore.academyOptions.length > 0;
+});
+
+const hasStores = computed(() => {
+  return stores.value.length > 0;
+});
+
+const isSmartHomeConnected = computed(() => {
+  if (!projectStore.selectedProject?.id) return false;
+  return smartMirrorStore.isProjectConnected(projectStore.selectedProject.id);
+});
+
+// Check if there are any services at all
+const hasAnyServices = computed(() => {
+  const hasDynamicCategories = serviceCategoriesStore.getCategories.length > 0;
+  const hasAny = hasDynamicCategories || hasCourts.value || hasAcademies.value || hasStores.value || isSmartHomeConnected.value;
+  
+  // Debug logging
+  console.log('Services availability check:', {
+    dynamicCategories: serviceCategoriesStore.getCategories.length,
+    hasCourts: hasCourts.value,
+    hasAcademies: hasAcademies.value,
+    hasStores: hasStores.value,
+    isSmartHomeConnected: isSmartHomeConnected.value,
+    hasAnyServices: hasAny
+  });
+  
+  return hasAny;
+});
 
 // Computed properties
 const tabs = computed(() => [
@@ -457,19 +516,58 @@ onMounted(async () => {
   if (projectStore.selectedProject?.id) {
     await loadServiceCategories();
     await loadBookings();
+    await loadServiceData();
   }
 });
 
 // Watch for project changes
 watch(() => projectStore.selectedProject?.id, async (newProjectId) => {
   if (newProjectId) {
+    await loadServiceCategories();
     await loadBookings();
+    await loadServiceData();
   }
 });
 
 const loadServiceCategories = async () => {
   if (projectStore.selectedProject?.id) {
     await serviceCategoriesStore.fetchCategories(projectStore.selectedProject.id);
+  }
+};
+
+const loadServiceData = async () => {
+  if (!projectStore.selectedProject?.id) return;
+  
+  try {
+    // Load courts data
+    await sportsStore.fetchSports(projectStore.selectedProject.id);
+    
+    // Load academies data
+    await academiesStore.fetchAcademies(projectStore.selectedProject.id);
+    
+    // Load stores data
+    await loadStores();
+  } catch (error) {
+    console.error('Error loading service data:', error);
+  }
+};
+
+const loadStores = async () => {
+  if (!projectStore.selectedProject?.id) return;
+  
+  try {
+    loadingStores.value = true;
+    const collectionPath = `projects/${projectStore.selectedProject.id}/stores`;
+    const queryResult = await firestoreService.getDocs(collectionPath, { timeoutMs: 6000 });
+    stores.value = queryResult.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error loading stores:', error);
+    stores.value = [];
+  } finally {
+    loadingStores.value = false;
   }
 };
 

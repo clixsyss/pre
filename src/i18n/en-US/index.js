@@ -121,6 +121,8 @@ export default {
   servicesSubtitle: 'Smart home devices and other services',
   loadingServices: 'Loading services...',
   retry: 'Retry',
+  noServicesAvailable: 'No Services Available',
+  noServicesAvailableMessage: 'There are no available services for this project at the moment.',
   smartDevicesTitle: 'Smart Devices',
   smartDevicesDesc: 'Control your smart home devices and automation',
   courtBookingTitle: 'Court Booking',

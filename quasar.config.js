@@ -20,6 +20,7 @@ export default defineConfig((ctx) => {
       'smartMirrorFirebase',
       'projectStore',
       'fcm',
+      'permissions',
     ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
@@ -89,6 +90,7 @@ export default defineConfig((ctx) => {
             '@capacitor/share': capacitorCoreStub,
             '@capacitor/motion': capacitorCoreStub,
             '@capacitor/preferences': capacitorCoreStub,
+            '@capacitor-community/bluetooth-le': capacitorCoreStub,
           }
         }
       },

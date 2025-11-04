@@ -117,6 +117,8 @@ export default {
   servicesSubtitle: 'الأجهزة الذكية وخدمات أخرى',
   loadingServices: 'جاري تحميل الخدمات...',
   retry: 'حاول مرة أخرى',
+  noServicesAvailable: 'لا توجد خدمات متاحة',
+  noServicesAvailableMessage: 'لا توجد خدمات متاحة لهذا المشروع في الوقت الحالي.',
   smartDevicesTitle: 'الأجهزة الذكية',
   smartDevicesDesc: 'تحكم في أجهزتك الذكية والأتمتة',
   courtBookingTitle: 'حجز الملاعب',
