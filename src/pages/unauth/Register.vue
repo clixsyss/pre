@@ -14,9 +14,9 @@
             stroke-linejoin="round" />
         </svg>
       </button>
-      <h1 class="page-title">{{ $t('registration') }}</h1>
+      <h1 class="page-title">Registration</h1>
       <div class="header-actions">
-        <button @click="goToSignIn" class="signin-header-btn">{{ $t('signIn') }}</button>
+        <button @click="goToSignIn" class="signin-header-btn">Sign In</button>
       </div>
     </div>
 
@@ -44,7 +44,7 @@
               stroke-linejoin="round" />
           </svg>
         </div>
-        <span class="step-label">{{ $t('personal') }}</span>
+        <span class="step-label">Personal</span>
       </div>
 
       <!-- Property Step -->
@@ -67,7 +67,7 @@
               stroke-linejoin="round" />
           </svg>
         </div>
-        <span class="step-label">{{ $t('property') }}</span>
+        <span class="step-label">Property</span>
       </div>
     </div>
 
@@ -78,16 +78,16 @@
 
         <form @submit.prevent="handlePersonalSubmit" class="form">
           <div class="form-group">
-            <label for="email" class="form-label">{{ $t('emailField') }}</label>
+            <label for="email" class="form-label">E-mail</label>
             <input id="email" v-model="personalForm.email" type="email" class="form-input"
-              :placeholder="$t('emailPlaceholderReg')" required />
+              placeholder="Example@gmail.com" required />
           </div>
 
           <div class="form-group">
-            <label for="password" class="form-label">{{ $t('passwordField') }}</label>
+            <label for="password" class="form-label">Password</label>
             <div class="password-input-wrapper">
               <input id="password" v-model="personalForm.password" :type="showPassword ? 'text' : 'password'" class="form-input"
-                :placeholder="$t('passwordPlaceholder')" required minlength="8" />
+                placeholder="Create a strong password" required minlength="8" />
               <button type="button" @click="togglePassword" class="password-toggle">
                 <svg
                   v-if="showPassword"
@@ -147,15 +147,15 @@
               </button>
             </div>
             <div class="password-requirements">
-              <small>{{ $t('passwordRequirements') }}</small>
+              <small>Password must be at least 8 characters long</small>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="confirmPassword" class="form-label">{{ $t('confirmPasswordField') }}</label>
+            <label for="confirmPassword" class="form-label">Confirm Password</label>
             <div class="password-input-wrapper">
               <input id="confirmPassword" v-model="personalForm.confirmPassword" :type="showConfirmPassword ? 'text' : 'password'" class="form-input"
-                :placeholder="$t('confirmPasswordPlaceholder')" required />
+                placeholder="Confirm your password" required />
               <button type="button" @click="toggleConfirmPassword" class="password-toggle">
                 <svg
                   v-if="showConfirmPassword"
@@ -217,8 +217,8 @@
           </div>
 
           <button type="submit" class="proceed-btn" :disabled="loading || !canProceed">
-            <span v-if="loading">{{ $t('processing') }}</span>
-            <span v-else>{{ $t('proceed') }}</span>
+            <span v-if="loading">Processing...</span>
+            <span v-else>Proceed</span>
           </button>
         </form>
 
@@ -227,14 +227,14 @@
         <!-- Navigation Options -->
         <div class="step-navigation">
           <div class="nav-divider">
-            <span>{{ $t('orDivider') }}</span>
+            <span>or</span>
           </div>
           <div class="nav-options">
             <a @click="goToSignIn" class="nav-link">
-              {{ $t('alreadyHaveAccount') }}
+              Already have an account? Sign In
             </a>
             <a @click="goToOnboarding" class="nav-link">
-              {{ $t('backToOnboarding') }}
+              Back to Onboarding
             </a>
           </div>
         </div>
@@ -275,8 +275,8 @@
         <!-- Project Selection Form -->
         <form @submit.prevent="handlePropertySubmit" class="form">
           <div class="step-header">
-            <h3 class="step-title">{{ $t('propertySelection') }}</h3>
-            <p class="step-description">{{ $t('propertySelectionDesc') }}</p>
+            <h3 class="step-title">Property Selection</h3>
+            <p class="step-description">Select your primary property and optionally add additional properties.</p>
           </div>
 
           <!-- Primary Property Section -->
@@ -288,16 +288,16 @@
                     stroke-linejoin="round" />
                 </svg>
               </div>
-              <h4 class="section-title">{{ $t('primaryProperty') }}</h4>
+              <h4 class="section-title">Primary Property</h4>
             </div>
 
             <!-- Project Selection -->
             <div class="form-group">
-              <label for="project" class="form-label">{{ $t('projectLabel') }}</label>
+              <label for="project" class="form-label">Project *</label>
               <div class="select-wrapper">
                 <select id="project" v-model="propertyForm.selectedProject" class="form-input custom-select" required
                   @change="onProjectChange">
-                  <option value="" disabled>{{ $t('selectProject') }}</option>
+                  <option value="" disabled>Select Project</option>
                   <option v-for="project in availableProjects" :key="project.id" :value="project.id">
                     {{ project.name }} - {{ project.type }} ({{ project.location }})
                   </option>
@@ -306,22 +306,16 @@
               </div>
             </div>
 
-            <!-- Unit Selection -->
+            <!-- Unit Input -->
             <div class="form-group">
-              <SearchableUnitDropdown
-                v-model="propertyForm.unit"
-                :project-id="propertyForm.selectedProject"
-                :project-users="projectUsers"
-                :label="$t('unitNumberName')"
-                :placeholder="$t('selectUnit')"
-                :search-placeholder="$t('searchUnitPlaceholder')"
-                :disabled="!propertyForm.selectedProject"
-              />
+              <label for="unit" class="form-label">Unit Number/Name *</label>
+              <input id="unit" v-model="propertyForm.unit" type="text" class="form-input"
+                placeholder="e.g., A1, Villa 5, Office 12" required :disabled="!propertyForm.selectedProject" />
             </div>
 
             <!-- Role Selection -->
             <div class="form-group">
-              <label class="form-label">{{ $t('roleLabel') }}</label>
+              <label class="form-label">Role *</label>
               <div class="role-buttons">
                 <button type="button" @click="propertyForm.role = 'owner'"
                   :class="['role-btn', { active: propertyForm.role === 'owner' }]">
@@ -332,7 +326,7 @@
                     <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                       stroke-linejoin="round" />
                   </svg>
-                  {{ $t('ownerRole') }}
+                  Owner
                 </button>
                 <button type="button" @click="propertyForm.role = 'family'"
                   :class="['role-btn', { active: propertyForm.role === 'family' }]">
@@ -344,7 +338,7 @@
                     <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                       stroke-linejoin="round" />
                   </svg>
-                  {{ $t('familyMember') }}
+                  Family Member
                 </button>
               </div>
             </div>
@@ -356,7 +350,7 @@
                   <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round" />
                 </svg>
-                {{ $t('addThisProperty') }}
+                Add This Property
               </button>
             </div>
           </div>
@@ -371,8 +365,8 @@
                     stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
-              <h4 class="section-title">{{ $t('additionalProperties') }}</h4>
-              <p class="section-subtitle">{{ $t('additionalPropertiesDesc') }}</p>
+              <h4 class="section-title">Additional Properties (Optional)</h4>
+              <p class="section-subtitle">You can add more properties if you own or have access to multiple units</p>
             </div>
 
             <div class="projects-list">
@@ -396,11 +390,11 @@
                         <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                           stroke-linejoin="round" />
                       </svg>
-                      {{ project.role === 'owner' ? $t('ownerRole') : $t('familyMember') }}
+                      {{ project.role }}
                     </span>
                   </div>
                 </div>
-                <button type="button" @click="removeProject(index)" class="remove-project-btn" :title="$t('remove')">
+                <button type="button" @click="removeProject(index)" class="remove-project-btn" title="Remove property">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                       stroke-linejoin="round" />
@@ -437,15 +431,9 @@
                 </div>
 
                 <div class="form-group">
-                  <SearchableUnitDropdown
-                    v-model="additionalPropertyForm.unit"
-                    :project-id="additionalPropertyForm.selectedProject"
-                    :project-users="projectUsers"
-                    label="Unit Number/Name"
-                    placeholder="Select your unit..."
-                    search-placeholder="Search units (e.g., D1A-1, D2A)..."
-                    :disabled="!additionalPropertyForm.selectedProject"
-                  />
+                  <label for="additional-unit" class="form-label">Unit Number/Name</label>
+                  <input id="additional-unit" v-model="additionalPropertyForm.unit" type="text" class="form-input"
+                    placeholder="e.g., A2, Villa 6, Office 15" :disabled="!additionalPropertyForm.selectedProject" />
                 </div>
 
                 <div class="form-group">
@@ -519,7 +507,6 @@ import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/fire
 import { db } from '../../boot/firebase'
 import firebaseRestAuth from '../../services/firebaseRestAuth'
 import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
-import SearchableUnitDropdown from '../../components/SearchableUnitDropdown.vue'
 
 // Component name for ESLint
 defineOptions({
@@ -557,7 +544,6 @@ const propertyForm = reactive({
 const availableProjects = ref([])
 const selectedProjects = ref([])
 const showAddAnotherForm = ref(false)
-const projectUsers = ref([]) // For determining occupied units
 
 const additionalPropertyForm = reactive({
   selectedProject: '',
@@ -604,63 +590,6 @@ const fetchAvailableProjects = async () => {
   }
 }
 
-// Function to fetch users for the selected project (to determine occupied units)
-const fetchProjectUsers = async (projectId) => {
-  if (!projectId) {
-    projectUsers.value = []
-    return
-  }
-
-  try {
-    console.log('[Register] Fetching users for project:', projectId)
-    
-    const { Capacitor } = await import('@capacitor/core')
-    
-    if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
-      // Use Capacitor Firebase plugin for iOS
-      const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
-      
-      const result = await FirebaseFirestore.getCollection({
-        reference: 'users'
-      })
-      
-      projectUsers.value = result.documents
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data
-        }))
-        .filter(user => {
-          if (user.projects && Array.isArray(user.projects)) {
-            return user.projects.some(p => p.projectId === projectId)
-          }
-          return false
-        })
-      
-      console.log('[Register] ✅ Fetched', projectUsers.value.length, 'users for project via Capacitor')
-    } else {
-      // Use Web SDK for web/Android
-      const usersRef = collection(db, 'users')
-      const snapshot = await getDocs(usersRef)
-      projectUsers.value = snapshot.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        .filter(user => {
-          if (user.projects && Array.isArray(user.projects)) {
-            return user.projects.some(p => p.projectId === projectId)
-          }
-          return false
-        })
-      
-      console.log('[Register] ✅ Fetched', projectUsers.value.length, 'users for project via Web SDK')
-    }
-  } catch (error) {
-    console.error('[Register] Error fetching project users:', error)
-    projectUsers.value = []
-  }
-}
-
 // Function to get project name by ID
 const getProjectName = (projectId) => {
   const project = availableProjects.value.find(p => p.id === projectId)
@@ -695,11 +624,6 @@ const onProjectChange = () => {
   // Clear unit input when project changes
   propertyForm.unit = ''
   propertyForm.role = ''
-  
-  // Fetch users for the selected project to determine occupied units
-  if (propertyForm.selectedProject) {
-    fetchProjectUsers(propertyForm.selectedProject)
-  }
 }
 
 // Function to handle additional project selection change
@@ -707,11 +631,6 @@ const onAdditionalProjectChange = () => {
   // Clear unit input when project changes
   additionalPropertyForm.unit = ''
   additionalPropertyForm.role = ''
-  
-  // Fetch users for the selected project to determine occupied units
-  if (additionalPropertyForm.selectedProject) {
-    fetchProjectUsers(additionalPropertyForm.selectedProject)
-  }
 }
 
 // Function to add additional property
@@ -1432,12 +1351,6 @@ select.form-input:disabled {
   color: #666;
   cursor: pointer;
   padding: 0;
-}
-
-/* Move eye icon to left for RTL languages */
-[dir="rtl"] .password-toggle {
-  right: auto;
-  left: 15px;
 }
 
 
