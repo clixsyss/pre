@@ -5,29 +5,29 @@
     
     <!-- Regular App UI -->
     <template v-else>
-      <SplashScreen />
-      
-      <!-- Network Status Banner - Shows when offline or slow connection -->
-      <NetworkStatusBanner />
-      
-      <!-- Show MainLayout only for authenticated pages -->
-      <MainLayout v-if="isAuthenticatedPage && !isRouterLoading" class="main-layout">
-        <router-view />
-      </MainLayout>
-      
-      <!-- Show clean layout for authentication pages -->
-      <div v-else-if="!isRouterLoading" class="auth-layout">
-        <router-view />
-      </div>
-      
-      <NotificationPopup />
-      
-      <!-- Document Verification Modal - Shows when user is missing required documents (only on authenticated pages) -->
-      <DocumentVerificationModal 
-        v-if="showDocumentModal && isAuthenticatedPage && !isRouterLoading"
-        :missing-documents="missingDocuments"
-        @documents-uploaded="handleDocumentsUploaded"
-      />
+    <SplashScreen />
+    
+    <!-- Network Status Banner - Shows when offline or slow connection -->
+    <NetworkStatusBanner />
+    
+    <!-- Show MainLayout only for authenticated pages -->
+    <MainLayout v-if="isAuthenticatedPage && !isRouterLoading" class="main-layout">
+      <router-view />
+    </MainLayout>
+    
+    <!-- Show clean layout for authentication pages -->
+    <div v-else-if="!isRouterLoading" class="auth-layout">
+      <router-view />
+    </div>
+    
+    <NotificationPopup />
+    
+    <!-- Document Verification Modal - Shows when user is missing required documents (only on authenticated pages) -->
+    <DocumentVerificationModal 
+      v-if="showDocumentModal && isAuthenticatedPage && !isRouterLoading"
+      :missing-documents="missingDocuments"
+      @documents-uploaded="handleDocumentsUploaded"
+    />
     </template>
   </div>
 </template>

@@ -308,14 +308,14 @@
 
             <!-- Unit Input -->
             <div class="form-group">
-              <label for="unit" class="form-label">Unit Number/Name *</label>
+              <label for="unit" class="form-label">{{ $t('unitNumberName') }} *</label>
               <input id="unit" v-model="propertyForm.unit" type="text" class="form-input"
-                placeholder="e.g., A1, Villa 5, Office 12" required :disabled="!propertyForm.selectedProject" />
+                :placeholder="$t('selectUnit')" required :disabled="!propertyForm.selectedProject" />
             </div>
 
             <!-- Role Selection -->
             <div class="form-group">
-              <label class="form-label">Role *</label>
+              <label class="form-label">{{ $t('roleLabel') }} *</label>
               <div class="role-buttons">
                 <button type="button" @click="propertyForm.role = 'owner'"
                   :class="['role-btn', { active: propertyForm.role === 'owner' }]">
@@ -326,7 +326,7 @@
                     <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                       stroke-linejoin="round" />
                   </svg>
-                  Owner
+                  {{ $t('ownerRole') }}
                 </button>
                 <button type="button" @click="propertyForm.role = 'family'"
                   :class="['role-btn', { active: propertyForm.role === 'family' }]">
@@ -338,7 +338,7 @@
                     <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                       stroke-linejoin="round" />
                   </svg>
-                  Family Member
+                  {{ $t('familyMember') }}
                 </button>
               </div>
             </div>
@@ -431,13 +431,13 @@
                 </div>
 
                 <div class="form-group">
-                  <label for="additional-unit" class="form-label">Unit Number/Name</label>
+                  <label for="additional-unit" class="form-label">{{ $t('unitNumberName') }}</label>
                   <input id="additional-unit" v-model="additionalPropertyForm.unit" type="text" class="form-input"
-                    placeholder="e.g., A2, Villa 6, Office 15" :disabled="!additionalPropertyForm.selectedProject" />
+                    :placeholder="$t('selectUnit')" :disabled="!additionalPropertyForm.selectedProject" />
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label">Role</label>
+                  <label class="form-label">{{ $t('roleLabel') }}</label>
                   <div class="role-buttons">
                     <button type="button" @click="additionalPropertyForm.role = 'owner'"
                       :class="['role-btn', { active: additionalPropertyForm.role === 'owner' }]">
@@ -448,7 +448,7 @@
                         <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                           stroke-linejoin="round" />
                       </svg>
-                      Owner
+                      {{ $t('ownerRole') }}
                     </button>
                     <button type="button" @click="additionalPropertyForm.role = 'family'"
                       :class="['role-btn', { active: additionalPropertyForm.role === 'family' }]">
@@ -460,7 +460,7 @@
                         <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                           stroke-linejoin="round" />
                       </svg>
-                      Family Member
+                      {{ $t('familyMember') }}
                     </button>
                   </div>
                 </div>

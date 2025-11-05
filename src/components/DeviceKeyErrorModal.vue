@@ -317,26 +317,13 @@ const handleDeviceKeyResetSubmit = async () => {
       return
     }
 
-    // Check for existing pending request
-    const resetRequestsRef = collection(db, `projects/${deviceKeyResetForm.projectId}/deviceKeyResetRequests`)
-    const existingRequestQuery = query(
-      resetRequestsRef,
-      where('userId', '==', userDoc.id),
-      where('status', '==', 'pending')
-    )
-    const existingRequestSnapshot = await getDocs(existingRequestQuery)
-
-    if (!existingRequestSnapshot.empty) {
-      Notify.create({
-        type: 'warning',
-        message: 'You already have a pending reset request. Please wait for admin approval.',
-        position: 'top',
-        timeout: 5000
-      })
-      return
-    }
+    // Skip duplicate check for unauthenticated users
+    // The admin dashboard will handle any duplicate requests
+    // Unauthenticated users don't have permission to query the collection
+    console.log('ℹ️ Skipping duplicate check (user not authenticated)')
 
     // Create device key reset request
+    const resetRequestsRef = collection(db, `projects/${deviceKeyResetForm.projectId}/deviceKeyResetRequests`)
     const resetRequest = {
       userId: userDoc.id,
       userEmail: userData.email,

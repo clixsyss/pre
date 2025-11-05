@@ -155,21 +155,21 @@ _This is an automated message from PRE Group Management System._`
           console.log('📤 Share object:', Share)
           console.log('📤 Pass URL:', passUrl)
           console.log('📤 Pass data:', validatedPass)
-          await Share.share({
-            title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
-            text: message,
+            await Share.share({
+              title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
+              text: message,
             url: passUrl, // Share the URL directly
-            dialogTitle: 'Share PRE Group Guest Pass',
-          })
+              dialogTitle: 'Share PRE Group Guest Pass',
+            })
           console.log('✅ Share dialog completed')
 
-          return {
-            success: true,
-            message: 'Pass shared successfully!',
-          }
-        } catch (shareError) {
+            return {
+              success: true,
+              message: 'Pass shared successfully!',
+            }
+          } catch (shareError) {
           console.error('❌ Share failed:', shareError)
-          
+            
           // If sharing failed, user might have cancelled
           if (shareError.message && shareError.message.includes('cancelled')) {
             return {

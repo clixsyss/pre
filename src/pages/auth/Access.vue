@@ -599,14 +599,14 @@
                       Expired
                     </template>
                     <template v-else>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
-                        <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                        <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
-                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
-                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
-                      </svg>
-                      Share
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
+                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Share
                     </template>
                   </button>
 
@@ -1632,15 +1632,15 @@ const generatePass = async () => {
       console.log('🔗 Sharing guest pass link...')
       const result = await sharingService.sharePassWithLink(pass)
 
-      if (result.success) {
-        notificationStore.showSuccess(result.message || 'Pass shared successfully!')
+        if (result.success) {
+          notificationStore.showSuccess(result.message || 'Pass shared successfully!')
         
         // Mark pass as sent
-        if (pass.firebaseRef) {
-          const projectId = projectStore.selectedProject?.id
-          if (projectId) {
-            await markPassAsSent(pass.firebaseRef, projectId)
-          }
+      if (pass.firebaseRef) {
+        const projectId = projectStore.selectedProject?.id
+        if (projectId) {
+          await markPassAsSent(pass.firebaseRef, projectId)
+        }
         }
       } else if (result.message !== 'Share cancelled') {
         throw new Error(result.message || 'Sharing failed')
@@ -1650,10 +1650,10 @@ const generatePass = async () => {
       
       // Don't show error if user cancelled
       if (shareError.message && !shareError.message.includes('cancelled')) {
-        notificationStore.showWarning(
+      notificationStore.showWarning(
           `Pass generated successfully. You can share it manually from the list below.`,
-        )
-      }
+      )
+    }
     }
     
     isGeneratingPass.value = false
@@ -1885,9 +1885,9 @@ const deletePass = async (passId) => {
     )
 
     // Remove from UI only (soft delete means it still counts toward limit)
-    passes.value = passes.value.filter((p) => p.id !== passId)
-    qrRefs.delete(passId)
-    
+  passes.value = passes.value.filter((p) => p.id !== passId)
+  qrRefs.delete(passId)
+  
     // DON'T decrease the count - soft deleted passes still count toward monthly limit
     
     notificationStore.showSuccess('Pass deleted successfully')
@@ -1938,21 +1938,21 @@ const formatCreationDate = (dateString) => {
       return 'Invalid date'
     }
     
-    const now = new Date()
-    const diffMs = now - date
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-    
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
-    
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  })
   } catch (error) {
     console.error('Error formatting creation date:', error, dateString)
     return 'Invalid date'
@@ -1963,8 +1963,8 @@ const isPassExpired = (pass) => {
   if (!pass || !pass.validUntil) return false
   
   try {
-    const now = new Date()
-    const expiryDate = new Date(pass.validUntil)
+  const now = new Date()
+  const expiryDate = new Date(pass.validUntil)
     
     // Check if date is valid
     if (isNaN(expiryDate.getTime())) {
@@ -1972,7 +1972,7 @@ const isPassExpired = (pass) => {
       return false
     }
     
-    return now > expiryDate
+  return now > expiryDate
   } catch (error) {
     console.error('Error checking expiration:', error)
     return false
@@ -1983,17 +1983,17 @@ const isPassExpiringSoon = (pass) => {
   if (!pass || !pass.validUntil || isPassExpired(pass)) return false
   
   try {
-    const now = new Date()
-    const expiryDate = new Date(pass.validUntil)
+  const now = new Date()
+  const expiryDate = new Date(pass.validUntil)
     
     // Check if date is valid
     if (isNaN(expiryDate.getTime())) {
       return false
     }
     
-    const remainingMs = expiryDate - now
-    const remainingMins = Math.floor(remainingMs / 60000)
-    return remainingMins < 30 && remainingMins > 0
+  const remainingMs = expiryDate - now
+  const remainingMins = Math.floor(remainingMs / 60000)
+  return remainingMins < 30 && remainingMins > 0
   } catch (error) {
     console.error('Error checking if expiring soon:', error)
     return false
@@ -2006,8 +2006,8 @@ const getRemainingTime = (pass) => {
   if (!pass.validUntil) return 'No expiry'
   
   try {
-    const now = new Date()
-    const expiryDate = new Date(pass.validUntil)
+  const now = new Date()
+  const expiryDate = new Date(pass.validUntil)
     
     // Check if date is valid
     if (isNaN(expiryDate.getTime())) {
@@ -2015,18 +2015,18 @@ const getRemainingTime = (pass) => {
       return 'Invalid date'
     }
     
-    const remainingMs = expiryDate - now
-    
-    if (remainingMs < 0) return 'Expired'
-    
-    const remainingMins = Math.floor(remainingMs / 60000)
-    const remainingHours = Math.floor(remainingMs / 3600000)
-    const remainingDays = Math.floor(remainingMs / 86400000)
-    
-    if (remainingDays > 0) return `${remainingDays}d ${remainingHours % 24}h left`
-    if (remainingHours > 0) return `${remainingHours}h ${remainingMins % 60}m left`
-    if (remainingMins > 0) return `${remainingMins}m left`
-    return 'Expiring soon'
+  const remainingMs = expiryDate - now
+  
+  if (remainingMs < 0) return 'Expired'
+  
+  const remainingMins = Math.floor(remainingMs / 60000)
+  const remainingHours = Math.floor(remainingMs / 3600000)
+  const remainingDays = Math.floor(remainingMs / 86400000)
+  
+  if (remainingDays > 0) return `${remainingDays}d ${remainingHours % 24}h left`
+  if (remainingHours > 0) return `${remainingHours}h ${remainingMins % 60}m left`
+  if (remainingMins > 0) return `${remainingMins}m left`
+  return 'Expiring soon'
   } catch (error) {
     console.error('Error calculating remaining time:', error)
     return 'Unknown'

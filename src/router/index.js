@@ -330,6 +330,14 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
     return
   }
 
+  // Allow navigation from onboarding to registration/signin flow
+  if ((to.path === '/register' || to.path === '/signin' || to.path.startsWith('/register/')) && from.path === '/onboarding') {
+    console.log('Allowing navigation from onboarding to', to.path)
+    next()
+    resolve()
+    return
+  }
+
   if (requiresAuth && !user) {
     // Route requires auth but user is not authenticated
     // Store the intended route for later redirect
