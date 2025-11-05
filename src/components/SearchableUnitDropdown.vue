@@ -66,17 +66,10 @@
             <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
           <p>Search by unit or building</p>
-          <small>Try: "101", "D1A", or "D1A-1"</small>
+          <small>Try: "3", "101", "379", or "D1A"</small>
         </div>
         
-        <!-- Empty State - No units available -->
-        <div v-else-if="allUnits.length === 0 && searchTerm && searchTerm.length < 2" class="empty-state">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <p>Type at least 2 characters</p>
-          <small>Keep typing to search...</small>
-        </div>
+        <!-- Empty State - Keep typing (removed - now support 1 character) -->
 
         <!-- No Results -->
         <div v-else-if="filteredUnits.length === 0" class="empty-state">
@@ -85,64 +78,28 @@
             <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
           <p>No units found for "{{ searchTerm }}"</p>
-          <small>Try unit number (101) or building (D1A)</small>
+          <small>Try unit number (3, 101) or building (379)</small>
         </div>
 
         <!-- Units List -->
         <div v-else class="units-list">
-          <!-- Vacant Units Section -->
-          <div v-if="vacantUnits.length > 0" class="units-section">
-            <div class="section-header">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" fill="#4CAF50" opacity="0.2"/>
-                <path d="M9 12L11 14L15 10" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span>Available Units ({{ vacantUnits.length }})</span>
-            </div>
+          <!-- All Units (Vacant first, then Occupied) - All Selectable -->
+          <div v-if="allVisibleUnits.length > 0" class="units-section">
             <div
-              v-for="unit in vacantUnits"
+              v-for="unit in allVisibleUnits"
               :key="unit.id"
-              class="unit-item vacant"
+              :class="['unit-item', unit.isOccupied ? 'occupied' : 'vacant']"
               @click="selectUnit(unit)"
             >
               <div class="unit-info">
                 <span class="unit-number">{{ unit.unitIdentifier }}</span>
                 <span v-if="unit.buildingNum" class="unit-building">Building {{ unit.buildingNum }}</span>
+                <span v-if="unit.floor" class="unit-floor">Floor {{ unit.floor }}</span>
               </div>
-              <div class="unit-badge vacant-badge">Available</div>
-            </div>
-          </div>
-
-          <!-- Occupied Units Section (shown only with search) -->
-          <div v-if="occupiedUnits.length > 0 && searchTerm" class="units-section">
-            <div class="section-header">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" fill="#FF9800" opacity="0.2"/>
-                <path d="M12 8V12M12 16H12.01" stroke="#FF9800" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-              <span>Occupied Units ({{ occupiedUnits.length }})</span>
-            </div>
-            <div
-              v-for="unit in occupiedUnits"
-              :key="unit.id"
-              class="unit-item occupied"
-              @click="selectUnit(unit)"
-            >
-              <div class="unit-info">
-                <span class="unit-number">{{ unit.unitIdentifier }}</span>
-                <span v-if="unit.buildingNum" class="unit-building">Building {{ unit.buildingNum }}</span>
+              <div :class="['unit-badge', unit.isOccupied ? 'occupied-badge' : 'vacant-badge']">
+                {{ unit.isOccupied ? 'Has Residents' : 'Available' }}
               </div>
-              <div class="unit-badge occupied-badge">Occupied</div>
             </div>
-          </div>
-
-          <!-- Hint for occupied units -->
-          <div v-if="occupiedUnits.length > 0 && !searchTerm && vacantUnits.length > 0" class="search-hint">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-              <path d="M12 8V12M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <span>{{ occupiedUnits.length }} occupied unit{{ occupiedUnits.length !== 1 ? 's' : '' }} hidden. Search to view.</span>
           </div>
         </div>
       </div>
@@ -258,9 +215,16 @@ const occupiedUnits = computed(() => {
   })
 })
 
+// Computed: All units (vacant first, then occupied) - all selectable
+const allVisibleUnits = computed(() => {
+  const vacant = vacantUnits.value.map(unit => ({ ...unit, isOccupied: false }))
+  const occupied = occupiedUnits.value.map(unit => ({ ...unit, isOccupied: true }))
+  return [...vacant, ...occupied]
+})
+
 // Search units when user types in search box
 watch(searchTerm, (newValue) => {
-  if (newValue && newValue.length >= 2) {
+  if (newValue && newValue.length >= 1) {
     searchUnits(newValue)
   } else {
     allUnits.value = []
@@ -281,8 +245,8 @@ watch(() => props.modelValue, (newValue) => {
 // Search units from Firestore based on user input
 let searchTimeout = null
 const searchUnits = async (searchQuery) => {
-  if (!props.projectId || !searchQuery || searchQuery.length < 2) {
-    // Don't search if query is too short (less than 2 characters)
+  if (!props.projectId || !searchQuery || searchQuery.length < 1) {
+    // Don't search if query is empty
     allUnits.value = []
     return
   }
@@ -302,77 +266,47 @@ const searchUnits = async (searchQuery) => {
         // iOS - Use Capacitor Firebase plugin
       const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
       
-        // Search by unitNum field
-      const result = await FirebaseFirestore.getDocuments({
-          reference: `projects/${props.projectId}/units`,
-          queryConstraints: [
-            {
-              type: 'where',
-              fieldPath: 'unitNum',
-              opStr: '>=',
-              value: searchQuery
-            },
-            {
-              type: 'where',
-              fieldPath: 'unitNum',
-              opStr: '<=',
-              value: searchQuery + '\uf8ff' // Unicode trick for "startsWith"
-            },
-            {
-              type: 'limit',
-              limit: 20 // Only return top 20 matches
-            }
-          ]
+        // Fetch ALL units for the project (client-side filtering)
+        // This ensures search works for both text and numeric building numbers
+      const result = await FirebaseFirestore.getCollection({
+          reference: `projects/${props.projectId}/units`
       })
       
-      allUnits.value = result.snapshots?.map(snapshot => ({
-        id: snapshot.id,
-        ...snapshot.data,
-        unitIdentifier: snapshot.data.buildingNum && snapshot.data.unitNum 
-          ? `${snapshot.data.buildingNum}-${snapshot.data.unitNum}`
-          : snapshot.data.unitNum || snapshot.id
-      })) || []
+      const searchLower = searchQuery.toLowerCase()
+      
+      allUnits.value = (result.documents || [])
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data,
+          unitIdentifier: doc.data.buildingNum && doc.data.unitNum 
+            ? `${doc.data.buildingNum}-${doc.data.unitNum}`
+            : doc.data.unitNum || doc.id
+        }))
+        .filter(unit => {
+          // Search in unitNum, buildingNum, and combined identifier
+          const unitNum = String(unit.unitNum || '').toLowerCase()
+          const buildingNum = String(unit.buildingNum || '').toLowerCase()
+          const identifier = String(unit.unitIdentifier || '').toLowerCase()
+          const floor = String(unit.floor || '').toLowerCase()
+          
+          return unitNum.includes(searchLower) || 
+                 buildingNum.includes(searchLower) || 
+                 identifier.includes(searchLower) ||
+                 floor.includes(searchLower)
+        })
+        .slice(0, 50) // Limit to 50 results for performance
       
     } else {
-        // Web/Android - Use Web SDK with range query
-        const { where, orderBy, query: fsQuery, limit: fsLimit } = await import('firebase/firestore')
+        // Web/Android - Use Web SDK
+        // Fetch ALL units for the project and filter client-side
+        // This ensures search works for both text and numeric building numbers
+        const unitsRef = collection(db, `projects/${props.projectId}/units`)
+        const unitsSnapshot = await getDocs(unitsRef)
         
-        // Query for units that start with the search term
-        const unitsQuery = fsQuery(
-          collection(db, `projects/${props.projectId}/units`),
-          where('unitNum', '>=', searchQuery),
-          where('unitNum', '<=', searchQuery + '\uf8ff'),
-          orderBy('unitNum', 'asc'),
-          fsLimit(20) // Only return top 20 matches
-        )
+        const searchLower = searchQuery.toLowerCase()
         
-        const unitsSnapshot = await getDocs(unitsQuery)
-      allUnits.value = unitsSnapshot.docs.map(doc => {
-        const data = doc.data()
-        return {
-          id: doc.id,
-          ...data,
-          unitIdentifier: data.buildingNum && data.unitNum 
-            ? `${data.buildingNum}-${data.unitNum}`
-            : data.unitNum || doc.id
-        }
-      })
-      }
-      
-      // Also search by building number if no results
-      if (allUnits.value.length === 0 && !isNaN(searchQuery)) {
-        try {
-          const { where, orderBy, query: fsQuery, limit: fsLimit } = await import('firebase/firestore')
-          
-          const buildingQuery = fsQuery(
-            collection(db, `projects/${props.projectId}/units`),
-            where('buildingNum', '==', searchQuery),
-            orderBy('unitNum', 'asc'),
-            fsLimit(20)
-          )
-          
-          const buildingSnapshot = await getDocs(buildingQuery)
-          allUnits.value = buildingSnapshot.docs.map(doc => {
+        allUnits.value = unitsSnapshot.docs
+          .map(doc => {
             const data = doc.data()
             return {
               id: doc.id,
@@ -382,9 +316,19 @@ const searchUnits = async (searchQuery) => {
                 : data.unitNum || doc.id
             }
           })
-        } catch {
-          console.log('Building number search not available')
-    }
+          .filter(unit => {
+            // Search in unitNum, buildingNum, and combined identifier
+            const unitNum = String(unit.unitNum || '').toLowerCase()
+            const buildingNum = String(unit.buildingNum || '').toLowerCase()
+            const identifier = String(unit.unitIdentifier || '').toLowerCase()
+            const floor = String(unit.floor || '').toLowerCase()
+            
+            return unitNum.includes(searchLower) || 
+                   buildingNum.includes(searchLower) || 
+                   identifier.includes(searchLower) ||
+                   floor.includes(searchLower)
+          })
+          .slice(0, 50) // Limit to 50 results for performance
       }
       
       console.log(`✅ [SearchableUnitDropdown] Found ${allUnits.value.length} matching units`)
@@ -726,7 +670,8 @@ watch(isOpen, (newValue) => {
   font-size: 1rem;
 }
 
-.unit-building {
+.unit-building,
+.unit-floor {
   font-size: 0.85rem;
   color: #666;
 }

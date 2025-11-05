@@ -1097,4 +1097,5 @@ export default {
   typeDELETE: 'DELETE',
   deleteMyAccount: 'Delete Account',
   deleting: 'Deleting',
+
 }

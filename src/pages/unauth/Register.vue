@@ -298,19 +298,31 @@
                 <select id="project" v-model="propertyForm.selectedProject" class="form-input custom-select" required
                   @change="onProjectChange">
                   <option value="" disabled>Select Project</option>
-                  <option v-for="project in availableProjects" :key="project.id" :value="project.id">
-                    {{ project.name }} - {{ project.type }} ({{ project.location }})
+                  <option 
+                    v-for="project in availableProjectsSorted" 
+                    :key="project.id" 
+                    :value="project.id"
+                    :disabled="project.unitsCount === 0"
+                    :style="project.unitsCount === 0 ? 'color: #999; opacity: 0.6;' : ''"
+                  >
+                    {{ project.name }} - {{ project.type }} ({{ project.location }}){{ project.unitsCount === 0 ? ' - No Units Available' : '' }}
                   </option>
                 </select>
                 <div class="select-arrow"></div>
               </div>
             </div>
 
-            <!-- Unit Input -->
+            <!-- Unit Selection -->
             <div class="form-group">
-              <label for="unit" class="form-label">{{ $t('unitNumberName') }} *</label>
-              <input id="unit" v-model="propertyForm.unit" type="text" class="form-input"
-                :placeholder="$t('selectUnit')" required :disabled="!propertyForm.selectedProject" />
+              <SearchableUnitDropdown
+                v-model="propertyForm.unit"
+                :project-id="propertyForm.selectedProject"
+                :project-users="[]"
+                :label="$t('unitNumberName')"
+                :placeholder="$t('selectUnit')"
+                :search-placeholder="$t('searchUnitPlaceholder')"
+                :disabled="!propertyForm.selectedProject"
+              />
             </div>
 
             <!-- Role Selection -->
@@ -422,8 +434,14 @@
                     <select id="additional-project" v-model="additionalPropertyForm.selectedProject"
                       class="form-input custom-select" @change="onAdditionalProjectChange">
                       <option value="" disabled>Select Project</option>
-                      <option v-for="project in availableProjects" :key="project.id" :value="project.id">
-                        {{ project.name }} - {{ project.type }} ({{ project.location }})
+                      <option 
+                        v-for="project in availableProjectsSorted" 
+                        :key="project.id" 
+                        :value="project.id"
+                        :disabled="project.unitsCount === 0"
+                        :style="project.unitsCount === 0 ? 'color: #999; opacity: 0.6;' : ''"
+                      >
+                        {{ project.name }} - {{ project.type }} ({{ project.location }}){{ project.unitsCount === 0 ? ' - No Units Available' : '' }}
                       </option>
                     </select>
                     <div class="select-arrow"></div>
@@ -431,9 +449,15 @@
                 </div>
 
                 <div class="form-group">
-                  <label for="additional-unit" class="form-label">{{ $t('unitNumberName') }}</label>
-                  <input id="additional-unit" v-model="additionalPropertyForm.unit" type="text" class="form-input"
-                    :placeholder="$t('selectUnit')" :disabled="!additionalPropertyForm.selectedProject" />
+                  <SearchableUnitDropdown
+                    v-model="additionalPropertyForm.unit"
+                    :project-id="additionalPropertyForm.selectedProject"
+                    :project-users="[]"
+                    :label="$t('unitNumberName')"
+                    :placeholder="$t('selectUnit')"
+                    :search-placeholder="$t('searchUnitPlaceholder')"
+                    :disabled="!additionalPropertyForm.selectedProject"
+                  />
                 </div>
 
                 <div class="form-group">
@@ -507,10 +531,15 @@ import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/fire
 import { db } from '../../boot/firebase'
 import firebaseRestAuth from '../../services/firebaseRestAuth'
 import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
+import SearchableUnitDropdown from '../../components/SearchableUnitDropdown.vue'
 
 // Component name for ESLint
 defineOptions({
-  name: 'RegisterPage'
+  name: 'RegisterPage',
+  components: {
+    PendingApprovalModal,
+    SearchableUnitDropdown
+  }
 })
 
 const router = useRouter()
@@ -542,6 +571,7 @@ const propertyForm = reactive({
 })
 
 const availableProjects = ref([])
+const availableProjectsSorted = ref([]) // Sorted with zero-unit projects at bottom
 const selectedProjects = ref([])
 const showAddAnotherForm = ref(false)
 
@@ -551,7 +581,7 @@ const additionalPropertyForm = reactive({
   role: ''
 })
 
-// Function to fetch available projects from Firestore
+// Function to fetch available projects from Firestore with units count
 const fetchAvailableProjects = async () => {
   try {
     console.log('[Register] Fetching projects...')
@@ -567,22 +597,73 @@ const fetchAvailableProjects = async () => {
         reference: 'projects'
       })
       
-      availableProjects.value = result.documents.map(doc => ({
-        id: doc.id,
-        ...doc.data
-      }))
+      // Fetch units count for each project
+      const projectsWithUnits = await Promise.all(
+        result.documents.map(async doc => {
+          try {
+            const unitsResult = await FirebaseFirestore.getCollection({
+              reference: `projects/${doc.id}/units`
+            })
+            console.log(`[Register] ✅ Project ${doc.data.name}: ${unitsResult.documents?.length || 0} units`)
+            return {
+              id: doc.id,
+              ...doc.data,
+              unitsCount: unitsResult.documents?.length || 0
+            }
+          } catch (error) { // eslint-disable-line no-unused-vars
+            console.warn(`[Register] ⚠️ Failed to fetch units for project ${doc.id}:`, error.code, error.message)
+            return {
+              id: doc.id,
+              ...doc.data,
+              unitsCount: 0
+            }
+          }
+        })
+      )
+      
+      availableProjects.value = projectsWithUnits
       console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects via Capacitor')
     } else {
       // Use Web SDK for web/Android
       console.log('[Register] Using Web SDK Firestore...')
       const projectsRef = collection(db, 'projects')
       const snapshot = await getDocs(projectsRef)
-      availableProjects.value = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
+      
+      // Fetch units count for each project
+      const projectsWithUnits = await Promise.all(
+        snapshot.docs.map(async doc => {
+          try {
+            const unitsRef = collection(db, 'projects', doc.id, 'units')
+            const unitsSnapshot = await getDocs(unitsRef)
+            console.log(`[Register] ✅ Project ${doc.data().name}: ${unitsSnapshot.size} units`)
+            return {
+              id: doc.id,
+              ...doc.data(),
+              unitsCount: unitsSnapshot.size
+            }
+          } catch (error) { // eslint-disable-line no-unused-vars
+            console.warn(`[Register] ⚠️ Failed to fetch units for project ${doc.id}:`, error.code, error.message)
+            return {
+              id: doc.id,
+              ...doc.data(),
+              unitsCount: 0
+            }
+          }
+        })
+      )
+      
+      availableProjects.value = projectsWithUnits
       console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects via Web SDK')
     }
+    
+    // Sort projects: projects with units first, then zero-unit projects at bottom
+    availableProjectsSorted.value = [...availableProjects.value].sort((a, b) => {
+      if (a.unitsCount === 0 && b.unitsCount > 0) return 1
+      if (a.unitsCount > 0 && b.unitsCount === 0) return -1
+      return a.name.localeCompare(b.name)
+    })
+    
+    console.log('[Register] ✅ Sorted projects (zero-unit projects at bottom)')
   } catch (error) {
     console.error('[Register] Error fetching projects:', error)
     console.error('[Register] Error details:', error?.message, error?.code)
@@ -624,6 +705,8 @@ const onProjectChange = () => {
   // Clear unit input when project changes
   propertyForm.unit = ''
   propertyForm.role = ''
+  // Note: During registration, we don't fetch occupied units
+  // All units will be shown as available, admin will verify later
 }
 
 // Function to handle additional project selection change
@@ -631,6 +714,8 @@ const onAdditionalProjectChange = () => {
   // Clear unit input when project changes
   additionalPropertyForm.unit = ''
   additionalPropertyForm.role = ''
+  // Note: During registration, we don't fetch occupied units
+  // All units will be shown as available, admin will verify later
 }
 
 // Function to add additional property
