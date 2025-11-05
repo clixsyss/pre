@@ -1089,7 +1089,15 @@ export default {
   
   // Account Deletion (Apple App Store Requirement)
   deleteAccount: 'Delete Account',
+  deleteAccountSectionDesc: 'Permanently remove your account',
   deleteAccountWarning: 'Permanently delete your account and all data',
+  deleteAccountWarningTitle: 'This action is permanent',
+  deleteAccountWarningText: 'Once you delete your account, there is no going back. All your personal information, projects, and data will be permanently removed from our servers.',
+  whatWillBeDeleted: 'What will be deleted:',
+  deleteItem1: 'Your personal information and profile data',
+  deleteItem2: 'Your project memberships and access',
+  deleteItem3: 'Your account settings and preferences',
+  deleteItem4: 'All associated data and history',
   deleteAccountTitle: 'Delete Account?',
   deleteAccountWarningMessage: 'This will permanently delete your account and all associated data.',
   deleteAccountFinal: 'This action cannot be undone.',

@@ -1125,7 +1125,15 @@ export default {
   
   // Account Deletion (Apple App Store Requirement)
   deleteAccount: 'حذف الحساب',
+  deleteAccountSectionDesc: 'إزالة حسابك بشكل دائم',
   deleteAccountWarning: 'حذف حسابك وجميع بياناتك نهائياً',
+  deleteAccountWarningTitle: 'هذا الإجراء نهائي',
+  deleteAccountWarningText: 'بمجرد حذف حسابك، لا يمكن التراجع عن ذلك. سيتم إزالة جميع معلوماتك الشخصية والمشاريع والبيانات بشكل دائم من خوادمنا.',
+  whatWillBeDeleted: 'ما سيتم حذفه:',
+  deleteItem1: 'معلوماتك الشخصية وبيانات ملفك الشخصي',
+  deleteItem2: 'عضوياتك في المشاريع والوصول',
+  deleteItem3: 'إعدادات حسابك وتفضيلاتك',
+  deleteItem4: 'جميع البيانات والسجلات المرتبطة',
   deleteAccountTitle: 'حذف الحساب؟',
   deleteAccountWarningMessage: 'سيتم حذف حسابك وجميع البيانات المرتبطة به نهائياً.',
   deleteAccountFinal: 'لا يمكن التراجع عن هذا الإجراء.',

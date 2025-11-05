@@ -668,22 +668,6 @@
               </div>
             </div>
           </div>
-          
-          <!-- Delete Account Card (Apple App Store Requirement) -->
-          <div class="info-card delete-account-card">
-            <div class="info-icon delete-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 6H5H21M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V6M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <div class="info-content delete-content">
-              <label>{{ $t('deleteAccount') || 'Delete Account' }}</label>
-              <span class="delete-description">{{ $t('deleteAccountWarning') || 'Permanently delete your account and all data' }}</span>
-              <button @click="showDeleteAccountConfirm = true" class="delete-account-btn">
-                {{ $t('deleteMyAccount') || 'Delete My Account' }}
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1027,6 +1011,80 @@
               <h4>{{ $t('requestPending') }}</h4>
               <p>{{ $t('deviceKeyResetPendingMessage') }}</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Account Accordion (Apple App Store Requirement) -->
+      <div class="accordion-section">
+        <button @click="toggleAccordion('deleteAccount')" class="accordion-header delete-account-header"
+          :class="{ active: activeAccordion === 'deleteAccount' }">
+          <div class="accordion-title">
+            <div class="section-icon danger-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 6H5H21M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V6M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="section-text">
+              <h3>{{ $t('deleteAccount') || 'Delete Account' }}</h3>
+              <p>{{ $t('deleteAccountSectionDesc') || 'Permanently remove your account' }}</p>
+            </div>
+          </div>
+          <div class="accordion-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </div>
+        </button>
+        <div class="accordion-content" :class="{ active: activeAccordion === 'deleteAccount' }">
+          <div class="delete-account-section">
+            <div class="delete-warning-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 9V13M12 17H12.01M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <div class="warning-content">
+                <h4>{{ $t('deleteAccountWarningTitle') || 'This action is permanent' }}</h4>
+                <p>{{ $t('deleteAccountWarningText') || 'Once you delete your account, there is no going back. All your personal information, projects, and data will be permanently removed from our servers.' }}</p>
+              </div>
+            </div>
+            
+            <div class="delete-info-list">
+              <h4>{{ $t('whatWillBeDeleted') || 'What will be deleted:' }}</h4>
+              <ul>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17L4 12" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ $t('deleteItem1') || 'Your personal information and profile data' }}
+                </li>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17L4 12" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ $t('deleteItem2') || 'Your project memberships and access' }}
+                </li>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17L4 12" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ $t('deleteItem3') || 'Your account settings and preferences' }}
+                </li>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17L4 12" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ $t('deleteItem4') || 'All associated data and history' }}
+                </li>
+              </ul>
+            </div>
+
+            <button @click="showDeleteAccountConfirm = true" class="delete-account-main-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 6H5H21M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V6M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              {{ $t('deleteMyAccount') || 'Delete My Account' }}
+            </button>
           </div>
         </div>
       </div>
@@ -5968,48 +6026,147 @@ input:checked+.toggle-slider:before {
   color: #f9fafb;
 }
 
-/* Delete Account Card - Matches existing info-card style */
-.delete-account-card {
-  border-color: #fca5a5;
-  background: #fef2f2;
-  margin-top: 16px;
+/* Delete Account Accordion Section */
+.delete-account-header {
+  border-left: 3px solid #dc2626;
 }
 
-.delete-icon {
+.danger-icon {
+  color: #dc2626;
   background: #fee2e2;
-  color: #AF1E23;
 }
 
-.delete-content {
-  flex: 1;
+.dark .danger-icon {
+  color: #fca5a5;
+  background: rgba(220, 38, 38, 0.15);
+}
+
+.delete-account-section {
   display: flex;
   flex-direction: column;
+  gap: 20px;
+  padding: 4px;
+}
+
+.delete-warning-box {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.dark .delete-warning-box {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+.delete-warning-box svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.warning-content {
+  flex: 1;
+}
+
+.warning-content h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #991b1b;
+}
+
+.dark .warning-content h4 {
+  color: #fca5a5;
+}
+
+.warning-content p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #7f1d1d;
+}
+
+.dark .warning-content p {
+  color: #fecaca;
+}
+
+.delete-info-list {
+  padding: 20px;
+  background: #f9fafb;
+  border-radius: 12px;
+}
+
+.dark .delete-info-list {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.delete-info-list h4 {
+  margin: 0 0 16px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.dark .delete-info-list h4 {
+  color: #f9fafb;
+}
+
+.delete-info-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.delete-info-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.dark .delete-info-list li {
+  color: #d1d5db;
+}
+
+.delete-info-list li svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.delete-account-main-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
-}
-
-.delete-description {
-  color: #6b7280;
-  font-size: 13px;
-  margin-top: -4px;
-}
-
-.delete-account-btn {
-  margin-top: 8px;
-  padding: 10px 16px;
+  padding: 14px 24px;
   background: #AF1E23;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  align-self: flex-start;
+  margin-top: 8px;
 }
 
-.delete-account-btn:active {
+.delete-account-main-btn:active {
   transform: scale(0.98);
   opacity: 0.9;
+}
+
+.delete-account-main-btn svg {
+  flex-shrink: 0;
 }
 
 /* Delete Account Modal - Matches existing modal style */

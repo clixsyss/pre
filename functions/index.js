@@ -985,7 +985,6 @@ exports.processPushNotifications = functions.pubsub
                     aps: {
                       sound: 'default',
                       badge: 1,
-                      'content-available': 1,
                       'interruption-level': 'time-sensitive'
                     }
                   },
@@ -1177,7 +1176,6 @@ exports.sendImmediatePushNotification = functions.https.onCall(async (data, cont
               aps: {
                 sound: 'default',
                 badge: 1,
-                'content-available': 1,
                 'interruption-level': 'time-sensitive'
               }
             },
