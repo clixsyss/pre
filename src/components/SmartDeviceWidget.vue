@@ -448,7 +448,6 @@ const isDeviceLoading = (deviceId) => {
 .smart-device-widget {
   border-radius: 16px;
   padding: 0;
-  margin-bottom: 24px;
   overflow: hidden;
   border: none;
 }

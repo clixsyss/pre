@@ -1518,7 +1518,7 @@ const { openModal, closeModal } = useModalState()
 const { formatDate, formatDateTime } = useDateFormat()
 
 // Reactive state
-const loading = ref(true)
+const loading = ref(false) // Start as false, will be set to true only if we need to fetch data
 const error = ref(null)
 const userProfile = ref(null)
 const showLogoutConfirm = ref(false)
@@ -1631,8 +1631,16 @@ const filteredGroupedDevices = computed(() => {
   return filtered
 })
 
+// Cache for profile data to prevent unnecessary reloads
+const profileCache = {
+  data: null,
+  userId: null,
+  timestamp: null,
+  CACHE_DURATION: 5 * 60 * 1000 // 5 minutes
+}
+
 // Load user profile from Firestore
-const loadProfile = async () => {
+const loadProfile = async (forceReload = false) => {
   try {
     const currentUser = await optimizedAuthService.getCurrentUser()
     if (!currentUser) {
@@ -1641,16 +1649,38 @@ const loadProfile = async () => {
       return
     }
 
+    // Check if we have cached data for this user BEFORE setting loading state
+    const now = Date.now()
+    const isCacheValid = profileCache.data && 
+                        profileCache.userId === currentUser.uid &&
+                        profileCache.timestamp &&
+                        (now - profileCache.timestamp) < profileCache.CACHE_DURATION
+
+    if (!forceReload && isCacheValid) {
+      console.log('ProfilePage: Using cached profile data (cached', Math.round((now - profileCache.timestamp) / 1000), 'seconds ago)')
+      userProfile.value = profileCache.data
+      loading.value = false // Set to false immediately when using cache
+      error.value = null
+      return
+    }
+
+    // Only show loading if we need to fetch from Firebase
     loading.value = true
     error.value = null
 
-    console.log('ProfilePage: Loading profile for user:', currentUser.uid)
+    console.log('ProfilePage: Loading profile from Firebase for user:', currentUser.uid)
     const profileDoc = await firestoreService.getDoc(`users/${currentUser.uid}`)
 
     if (profileDoc.exists()) {
       const profileData = profileDoc.data()
       userProfile.value = { id: currentUser.uid, ...profileData }
-      console.log('ProfilePage: Profile loaded successfully:', userProfile.value)
+      
+      // Update cache
+      profileCache.data = userProfile.value
+      profileCache.userId = currentUser.uid
+      profileCache.timestamp = now
+      
+      console.log('ProfilePage: Profile loaded and cached successfully:', userProfile.value)
 
       // Also load user projects and available projects
       await projectStore.fetchUserProjects(currentUser.uid)
@@ -1670,12 +1700,29 @@ const loadProfile = async () => {
   }
 }
 
-const loadViolationStats = async () => {
+// Cache for violations stats
+const violationsCache = {
+  projectId: null,
+  timestamp: null,
+  CACHE_DURATION: 2 * 60 * 1000 // 2 minutes
+}
+
+const loadViolationStats = async (forceReload = false) => {
   const currentUser = await optimizedAuthService.getCurrentUser()
   if (!currentUser || !projectStore.selectedProject) return
 
   try {
-    console.log('🔍 ProfilePage: Current user ID:', currentUser.uid)
+    const now = Date.now()
+    const isCacheValid = violationsCache.projectId === projectStore.selectedProject.id &&
+                        violationsCache.timestamp &&
+                        (now - violationsCache.timestamp) < violationsCache.CACHE_DURATION
+
+    if (!forceReload && isCacheValid) {
+      console.log('🔍 ProfilePage: Using cached violation stats')
+      return
+    }
+
+    console.log('🔍 ProfilePage: Loading violation stats for user:', currentUser.uid)
     console.log('🔍 ProfilePage: Project ID:', projectStore.selectedProject.id)
 
     const userViolations = await getUserFines(projectStore.selectedProject.id, currentUser.uid)
@@ -1690,7 +1737,9 @@ const loadViolationStats = async () => {
     }, { total: 0, pending: 0, paid: 0, disputed: 0, cancelled: 0 })
 
     violationStats.value = stats
-    console.log('🔍 Violation stats loaded:', stats)
+    violationsCache.projectId = projectStore.selectedProject.id
+    violationsCache.timestamp = now
+    console.log('🔍 Violation stats loaded and cached:', stats)
     console.log('🔍 Raw violations data:', userViolations)
   } catch (error) {
     console.error('Error loading violation stats:', error)
@@ -1698,11 +1747,29 @@ const loadViolationStats = async () => {
 }
 
 
-const loadComplaintStats = async () => {
+// Cache for complaints stats
+const complaintsCache = {
+  projectId: null,
+  timestamp: null,
+  CACHE_DURATION: 2 * 60 * 1000 // 2 minutes
+}
+
+const loadComplaintStats = async (forceReload = false) => {
   const currentUser = await optimizedAuthService.getCurrentUser()
   if (!currentUser || !projectStore.selectedProject) return
 
   try {
+    const now = Date.now()
+    const isCacheValid = complaintsCache.projectId === projectStore.selectedProject.id &&
+                        complaintsCache.timestamp &&
+                        (now - complaintsCache.timestamp) < complaintsCache.CACHE_DURATION
+
+    if (!forceReload && isCacheValid) {
+      console.log('🔍 ProfilePage: Using cached complaint stats')
+      return
+    }
+
+    console.log('🔍 ProfilePage: Loading complaint stats')
     const userComplaints = await complaintService.getComplaints(projectStore.selectedProject.id)
 
     // Filter complaints for current user
@@ -1717,6 +1784,9 @@ const loadComplaintStats = async () => {
     }, { total: 0, open: 0, resolved: 0, closed: 0 })
 
     complaintStats.value = stats
+    complaintsCache.projectId = projectStore.selectedProject.id
+    complaintsCache.timestamp = now
+    console.log('🔍 Complaint stats loaded and cached:', stats)
   } catch (error) {
     console.error('Error loading complaint stats:', error)
   }
@@ -1982,6 +2052,10 @@ const handleProfileSaved = (updatedData) => {
   // Update the local userProfile with the new data
   if (userProfile.value) {
     Object.assign(userProfile.value, updatedData)
+    
+    // Update cache with new data
+    profileCache.data = userProfile.value
+    profileCache.timestamp = Date.now()
   }
 
   // Show success message
@@ -2687,15 +2761,47 @@ const handleTextaraBlur = () => {
 }
 
 
+// Initialize from cache immediately on mount (no loading state)
+const initializeFromCache = async () => {
+  const currentUser = await optimizedAuthService.getCurrentUser()
+  if (!currentUser) return
+
+  const now = Date.now()
+  const isCacheValid = profileCache.data && 
+                      profileCache.userId === currentUser.uid &&
+                      profileCache.timestamp &&
+                      (now - profileCache.timestamp) < profileCache.CACHE_DURATION
+
+  if (isCacheValid) {
+    console.log('ProfilePage: Initializing from cache instantly (no loading)')
+    userProfile.value = profileCache.data
+    loading.value = false
+  }
+}
+
 // Load profile on component mount
-onMounted(() => {
+onMounted(async () => {
   // Initialize settings stores
   settingsStore.initializeSettings()
   appSettingsStore.initSettings()
-  loadProfile()
-  loadViolationStats()
-  loadComplaintStats()
+  
+  // Try to initialize from cache first (synchronous, no loading)
+  await initializeFromCache()
+  
+  // Then load data (will use cache if valid, or fetch if needed)
+  loadProfile() // Uses cache if available
+  loadViolationStats() // Uses cache if available
+  loadComplaintStats() // Uses cache if available
   loadDeviceKeyRequests()
+})
+
+// Watch for project changes to reload stats
+watch(() => projectStore.selectedProject?.id, (newProjectId, oldProjectId) => {
+  if (newProjectId && newProjectId !== oldProjectId) {
+    console.log('🔄 ProfilePage: Project changed, reloading stats...')
+    loadViolationStats(true) // Force reload
+    loadComplaintStats(true) // Force reload
+  }
 })
 
 // Watch modal states to manage navigation bar visibility and background scrolling
@@ -4656,7 +4762,6 @@ watch(showDeviceManagementModal, (isOpen) => {
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
 }
 
 .form-group {
@@ -4884,6 +4989,7 @@ watch(showDeviceManagementModal, (isOpen) => {
   color: white;
   flex-shrink: 0;
   position: relative;
+  flex-direction: column;
 }
 
 .device-management-modal .modal-header::after {
@@ -4929,14 +5035,12 @@ watch(showDeviceManagementModal, (isOpen) => {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 24px 32px;
 }
 
 .device-category {
   background: #f9fafb;
   border-radius: 12px;
   padding: 16px;
-  border: 1px solid #e5e7eb;
 }
 
 .category-header {
@@ -5097,10 +5201,12 @@ watch(showDeviceManagementModal, (isOpen) => {
 
 input:checked+.toggle-slider {
   background-color: #AF1E23;
+  width: 98%;
+  border-radius: 12px;
 }
 
 input:checked+.toggle-slider:before {
-  transform: translateX(20px);
+  transform: translateX(24px);
 }
 
 .no-devices-message {
@@ -5141,40 +5247,42 @@ input:checked+.toggle-slider:before {
 /* Device Management Modal Actions */
 .device-management-modal .modal-actions {
   display: flex;
-  gap: 16px;
-  padding: 24px 32px;
-  background: #F6F6F6;
+  gap: 12px;
+  padding: 24px;
+  background: white;
   border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
 }
 
 .device-management-modal .cancel-btn {
   flex: 1;
-  padding: 14px 24px;
+  padding: 16px 24px;
   border-radius: 12px;
   border: 2px solid #e5e7eb;
-  background: #F6F6F6;
-  color: #6b7280;
+  background: white;
+  color: #374151;
   font-weight: 600;
   font-size: 15px;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.device-management-modal
-/* Mobile app - hover effects disabled */
-/* .cancel-btn:hover {
-  border-color: #d1d5db;
+.device-management-modal .cancel-btn:active {
+  transform: scale(0.98);
   background: #f9fafb;
-  color: #374151;
-} */
+  border-color: #d1d5db;
+}
 
 .device-management-modal .save-btn {
   flex: 1;
-  padding: 14px 24px;
+  padding: 16px 24px;
   border-radius: 12px;
   border: none;
-  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  background: #AF1E23;
   color: white;
   font-weight: 600;
   font-size: 15px;
@@ -5184,17 +5292,19 @@ input:checked+.toggle-slider:before {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.25);
 }
 
-.device-management-modal
-/* Mobile app - hover effects disabled */
-/* .save-btn:hover:not(:disabled) { ... } */
+.device-management-modal .save-btn:active:not(:disabled) {
+  transform: scale(0.98);
+  box-shadow: 0 1px 4px rgba(175, 30, 35, 0.2);
+}
 
 .device-management-modal .save-btn:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 .device-management-modal .spinning {
