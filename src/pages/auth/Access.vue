@@ -541,7 +541,7 @@
 
             <!-- Passes Grid -->
             <div v-if="currentProjectPasses.length > 0" class="passes-grid">
-              <div v-for="pass in currentProjectPasses" :key="pass.id" class="pass-card-compact" :class="{ 'pass-used': pass.used, 'pass-expired': isPassExpired(pass) }">
+              <div v-for="pass in displayedPasses" :key="pass.id" class="pass-card-compact" :class="{ 'pass-used': pass.used, 'pass-expired': isPassExpired(pass) }">
                 <!-- Hidden canvas for QR code generation (for legacy passes) -->
                 <canvas :ref="(el) => setQRRef(el, pass.id)" class="qr-code-hidden"></canvas>
                 
@@ -614,8 +614,18 @@
               </div>
             </div>
 
+            <!-- Load More Button -->
+            <div v-if="hasMorePasses" class="load-more-container">
+              <button @click="loadMorePasses" class="load-more-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Load More ({{ currentProjectPasses.length - displayedPassesCount }} more)
+              </button>
+            </div>
+
             <!-- Empty State -->
-            <div v-else class="empty-state">
+            <div v-else-if="currentProjectPasses.length === 0" class="empty-state">
               <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
                 <rect
                   x="3"
@@ -842,6 +852,7 @@ const passes = ref([])
 const showGenerateDialog = ref(false)
 const isValidatingLocation = ref(false)
 const isGeneratingPass = ref(false)
+const displayedPassesCount = ref(5) // Show 5 passes initially
 
 // Watch for modal state to hide bottom navigation
 watch(showGenerateDialog, (isOpen) => {
@@ -887,6 +898,21 @@ const currentProjectPasses = computed(() => {
   // Filter passes to only show those for the current project
   return passes.value.filter(pass => pass.projectId === projectId)
 })
+
+// Computed: Displayed passes with pagination
+const displayedPasses = computed(() => {
+  return currentProjectPasses.value.slice(0, displayedPassesCount.value)
+})
+
+// Computed: Check if there are more passes to load
+const hasMorePasses = computed(() => {
+  return currentProjectPasses.value.length > displayedPassesCount.value
+})
+
+// Function to load more passes
+const loadMorePasses = () => {
+  displayedPassesCount.value += 5
+}
 
 // Computed: Current month pass count for display
 const currentMonthPassCount = computed(() => {
@@ -1452,6 +1478,7 @@ const checkLocationRestrictionStatus = async () => {
 
 const switchToPassesTab = async () => {
   activeTab.value = 'passes'
+  displayedPassesCount.value = 5 // Reset to show 5 passes initially
   // Load passes (this also calculates limits) and check blocking status
   await Promise.all([
     loadPassesFromFirebase(),
@@ -1607,6 +1634,9 @@ const generatePass = async () => {
 
     // Add pass to beginning for immediate UI feedback
     passes.value.unshift(pass)
+    
+    // Reset displayed count to show the new pass (ensure at least 5 are shown)
+    displayedPassesCount.value = Math.max(5, Math.min(displayedPassesCount.value, passes.value.length))
 
     // Update limits locally for immediate feedback
     passLimits.value.usedThisMonth = (passLimits.value.usedThisMonth || 0) + 1
@@ -2054,6 +2084,7 @@ watch(
     if (newUserId !== oldUserId) {
       passes.value = []
       qrRefs.clear()
+      displayedPassesCount.value = 5 // Reset pagination
 
       // Fetch unit info for new user
       if (newUserId) {
@@ -2065,6 +2096,14 @@ watch(
       }
     }
   },
+)
+
+// Watch for project changes to reset pagination
+watch(
+  () => projectStore.selectedProject?.id,
+  () => {
+    displayedPassesCount.value = 5 // Reset to 5 when switching projects
+  }
 )
 
 // Initialize
@@ -2749,6 +2788,51 @@ onMounted(async () => {
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 20px;
   margin-top: 20px;
+}
+
+/* Load More Button */
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+  margin-bottom: 16px;
+}
+
+.load-more-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.load-more-btn:hover {
+  background: #f9fafb;
+  border-color: #AF1E23;
+  color: #AF1E23;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.15);
+}
+
+.load-more-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.load-more-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.load-more-btn:hover svg {
+  transform: translateY(2px);
 }
 
 /* Blocking Alert */

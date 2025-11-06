@@ -34,20 +34,45 @@ class PermissionsService {
     }
 
     console.log('📋 Requesting critical permissions...')
+    console.log('📋 Platform:', this.platform)
     
-    try {
-      // Request Location Permission (needed for guest passes)
-      await this.requestLocationPermission()
-      
-      // Request Bluetooth Permission (needed for gate control)
-      await this.requestBluetoothPermission()
-      
+    // Only request permissions on native platforms
+    if (this.platform === 'web') {
+      console.log('📋 Web platform detected - skipping native permission requests')
       this.permissionsRequested = true
-      console.log('✅ All critical permissions requested')
-    } catch (error) {
-      console.error('❌ Error requesting permissions:', error)
-      // Don't throw - let app continue even if permissions denied
+      return { location: false, bluetooth: false }
     }
+    
+    const results = {
+      location: false,
+      bluetooth: false
+    }
+    
+    // Request Location Permission (needed for guest passes)
+    try {
+      console.log('📍 [1/2] Requesting Location Permission...')
+      results.location = await this.requestLocationPermission()
+      console.log(`📍 Location permission result: ${results.location ? 'SUCCESS ✅' : 'FAILED ❌'}`)
+    } catch (error) {
+      console.error('❌ Error requesting location permission:', error)
+      results.location = false
+    }
+    
+    // Request Bluetooth Permission (needed for gate control)
+    try {
+      console.log('📶 [2/2] Requesting Bluetooth Permission...')
+      results.bluetooth = await this.requestBluetoothPermission()
+      console.log(`📶 Bluetooth permission result: ${results.bluetooth ? 'SUCCESS ✅' : 'FAILED ❌'}`)
+    } catch (error) {
+      console.error('❌ Error requesting Bluetooth permission:', error)
+      results.bluetooth = false
+    }
+    
+    this.permissionsRequested = true
+    console.log('✅ All critical permissions requested')
+    console.log('📊 Results:', results)
+    
+    return results
   }
 
   /**
@@ -67,12 +92,12 @@ class PermissionsService {
         return true
       }
       
+      // Don't skip if denied - still try to request (user might have changed settings)
       if (permission.location === 'denied') {
-        console.log('⚠️ Location permission previously denied')
-        return false
+        console.log('⚠️ Location permission previously denied - will still attempt to request')
       }
       
-      // Request permission
+      // ALWAYS request permission if not granted (even if previously denied or prompt)
       console.log('📍 Requesting location permission...')
       const result = await Geolocation.requestPermissions()
       console.log('📍 Location permission result:', result.location)
@@ -81,7 +106,8 @@ class PermissionsService {
         console.log('✅ Location permission granted')
         return true
       } else {
-        console.log('⚠️ Location permission denied by user')
+        console.log('⚠️ Location permission denied by user or needs to be enabled in settings')
+        console.log(`💡 User should go to Settings → ${this.platform === 'ios' ? 'PRE Group → Location' : 'Apps → PRE Group → Permissions → Location'}`)
         return false
       }
     } catch (error) {
@@ -152,6 +178,33 @@ class PermissionsService {
         type: typeof error
       })
       // Don't fail - gate control features will handle missing permissions
+      return false
+    }
+  }
+
+  /**
+   * Check Bluetooth permission status
+   * @returns {Promise<boolean>} True if Bluetooth is available and enabled
+   */
+  async checkBluetoothPermission() {
+    try {
+      const bleModule = await import('@capacitor-community/bluetooth-le')
+      const BleClient = bleModule.BleClient
+      
+      if (!BleClient) {
+        return false
+      }
+      
+      // Try to check if BLE is enabled
+      try {
+        const isEnabled = await BleClient.isEnabled()
+        return isEnabled
+      } catch (error) {
+        console.warn('Could not check Bluetooth status:', error)
+        return false
+      }
+    } catch (error) {
+      console.error('Error checking Bluetooth permission:', error)
       return false
     }
   }

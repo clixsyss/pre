@@ -89,6 +89,17 @@ export const Geolocation = {
   requestPermissions: async () => ({ location: 'granted' }),
 }
 
+export const App = {
+  getInfo: async () => ({ name: 'PRE Group', id: 'com.pre-group.app', version: '1.0.0', build: '1' }),
+  getState: async () => ({ isActive: true }),
+  getLaunchUrl: async () => ({ url: null }),
+  openSettings: async () => {
+    console.warn('App.openSettings() is not available in web mode. This only works on native platforms.')
+  },
+  addListener: () => ({ remove: () => {} }),
+  removeAllListeners: () => {},
+}
+
 export const Camera = {
   getPhoto: async () => ({ webPath: '', format: 'jpeg' }),
   pickImages: async () => ({ images: [] }),

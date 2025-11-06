@@ -90,6 +90,7 @@ export default defineConfig((ctx) => {
             '@capacitor/share': capacitorCoreStub,
             '@capacitor/motion': capacitorCoreStub,
             '@capacitor/preferences': capacitorCoreStub,
+            '@capacitor/app': capacitorCoreStub,
             '@capacitor-community/bluetooth-le': capacitorCoreStub,
           }
         }

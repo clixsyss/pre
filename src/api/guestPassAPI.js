@@ -229,60 +229,37 @@ export const checkUserEligibility = async (projectId, userId) => {
       }
     }
     
-    // Count actual passes for this month PER UNIT (not per user)
-    // All family members in the same unit share the same limit
+    // Count actual passes for this month PER USER
+    // Each user in a unit gets their own independent limit
     let usedThisMonth = 0
     
     try {
       const now = new Date()
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
       
-      console.log(`📊 Counting passes for UNIT ${userUnit} in project ${projectId} since ${firstDayOfMonth}`)
+      console.log(`📊 Counting passes for USER ${userId} in unit ${userUnit} since ${firstDayOfMonth}`)
       
-      if (userUnit) {
-        // Query passes created this month for this UNIT in this project
-        const result = await firestoreService.getDocs(
-          `projects/${projectId}/guestPasses`,
-          {
-            filters: [
-              { field: 'unit', operator: '==', value: userUnit },
-              { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
-            ]
-          },
-          8000 // timeout - force fresh query, bypass cache
-        )
-        
-        // Filter out soft-deleted passes (they don't count toward limit anymore)
-        const activePasses = (result?.docs || []).filter(docSnapshot => {
-          const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
-          return !docData.deleted // Exclude passes with deleted: true
-        })
-        
-        usedThisMonth = activePasses.length
-        console.log(`📊 Counted ${usedThisMonth} ACTIVE passes this month for UNIT ${userUnit} (${result?.docs?.length || 0} total, excluding deleted)`)
-      } else {
-        // Fallback to per-user counting if no unit found (backward compatibility)
-        console.warn(`⚠️ No unit found for user ${userId}, falling back to per-user counting (DEPRECATED)`)
-        const result = await firestoreService.getDocs(
-          `projects/${projectId}/guestPasses`,
-          {
-            filters: [
-              { field: 'userId', operator: '==', value: userId },
-              { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
-            ]
-          },
-          8000 // timeout - force fresh query
-        )
-        
-        // Filter out soft-deleted passes
-        const activePasses = (result?.docs || []).filter(docSnapshot => {
-          const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
-          return !docData.deleted
-        })
-        
-        usedThisMonth = activePasses.length
-        console.log(`📊 Counted ${usedThisMonth} ACTIVE passes this month for USER ${userId} (${result?.docs?.length || 0} total, excluding deleted)`)
-      }
+      // Always count PER USER (not per unit)
+      // Query passes created this month for this USER in this project
+      const result = await firestoreService.getDocs(
+        `projects/${projectId}/guestPasses`,
+        {
+          filters: [
+            { field: 'userId', operator: '==', value: userId },
+            { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
+          ]
+        },
+        8000 // timeout - force fresh query, bypass cache
+      )
+      
+      // Filter out soft-deleted passes (they don't count toward limit anymore)
+      const activePasses = (result?.docs || []).filter(docSnapshot => {
+        const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
+        return !docData.deleted // Exclude passes with deleted: true
+      })
+      
+      usedThisMonth = activePasses.length
+      console.log(`📊 Counted ${usedThisMonth} ACTIVE passes this month for USER ${userId} in unit ${userUnit} (${result?.docs?.length || 0} total, excluding deleted)`)
     } catch (error) {
       console.error('❌ Error counting monthly passes:', error)
       // If counting fails, fall back to 0
@@ -429,6 +406,7 @@ export const createGuestPass = async (
       unit: userUnit, // Store unit for per-unit tracking
       guestName: guestName,
       purpose: purpose,
+      validFrom: createdAt, // ✅ Add validFrom field
       validUntil: validUntil,
       phoneNumber: phoneNumber,
       createdAt: createdAt,

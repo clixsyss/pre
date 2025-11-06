@@ -53,6 +53,10 @@
         "sound",
         "alert"
       ]
+    },
+    "Geolocation": {
+      "iosBackgroundLocationIndicator": false,
+      "iosShowLocationDialog": true
     }
   }
 }

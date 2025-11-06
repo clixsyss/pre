@@ -1,6 +1,8 @@
 import { boot } from 'quasar/wrappers'
 import { useProjectStore } from 'src/stores/projectStore'
 import optimizedAuthService from 'src/services/optimizedAuthService'
+import permissionsService from 'src/services/permissionsService'
+import { Capacitor } from '@capacitor/core'
 
 export default boot(async ({ app }) => {
   // Initialize project store when app starts
@@ -8,6 +10,10 @@ export default boot(async ({ app }) => {
   
   // Track if we've already processed the current user to prevent infinite loops
   let lastProcessedUserId = null
+  
+  // Get platform info
+  const platform = Capacitor.getPlatform()
+  const isNativePlatform = platform === 'ios' || platform === 'android'
   
   // Listen for auth state changes and rehydrate project store
   const unsubscribe = optimizedAuthService.onAuthStateChanged(async (user) => {
@@ -34,6 +40,19 @@ export default boot(async ({ app }) => {
           }))
         } else {
           console.log('App boot: No project restored, user needs to select')
+        }
+        
+        // Request permissions after successful authentication (like orange-app pattern)
+        if (isNativePlatform && !permissionsService.permissionsRequested) {
+          console.log('🔐 Requesting app permissions after authentication...')
+          setTimeout(async () => {
+            try {
+              await permissionsService.requestAllPermissions()
+              console.log('✅ All permissions requested')
+            } catch (error) {
+              console.error('❌ Error requesting permissions:', error)
+            }
+          }, 1500)
         }
       } catch (error) {
         console.error('App boot: Error rehydrating project store:', error)
