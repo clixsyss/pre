@@ -1,0 +1,140 @@
+{
+  "collectionId": "pendingAdmins",
+  "parent": "",
+  "documents": [
+    {
+      "id": "EsqI1XUvpOwgsiFlJl3J",
+      "path": "pendingAdmins/EsqI1XUvpOwgsiFlJl3J",
+      "data": {
+        "firstName": "Hady",
+        "lastName": "Korshem",
+        "email": "h.korshem33@gmail.com",
+        "mobile": "7812415167",
+        "nationalId": "29911018800332",
+        "firebaseUid": "0oDKHmJCHTUiWpIG6xJL7m299FC3",
+        "accountType": null,
+        "assignedProjects": [],
+        "permissions": {},
+        "createdAt": "2025-09-16T10:51:42.815Z",
+        "requestedAt": "2025-09-16T10:51:42.815Z",
+        "adminId": "0oDKHmJCHTUiWpIG6xJL7m299FC3",
+        "approvedBy": "current-super-admin",
+        "approvedAt": "2025-09-16T10:52:36.030Z",
+        "status": "approved"
+      },
+      "subcollections": {}
+    },
+    {
+      "id": "pAFGK37F8XqYeq4k2wAs",
+      "path": "pendingAdmins/pAFGK37F8XqYeq4k2wAs",
+      "data": {
+        "firstName": "Mohamed",
+        "lastName": "Elshamy",
+        "email": "m.elshamy06@gmail.com",
+        "mobile": "01022201108",
+        "nationalId": "303030",
+        "firebaseUid": "ur8d1l3UfHMrNb5YuREnLD4KF7J2",
+        "accountType": null,
+        "assignedProjects": [],
+        "permissions": {},
+        "createdAt": "2025-10-10T09:06:56.512Z",
+        "requestedAt": "2025-10-10T09:06:56.512Z",
+        "adminId": "ur8d1l3UfHMrNb5YuREnLD4KF7J2",
+        "approvedBy": "current-super-admin",
+        "approvedAt": "2025-10-10T09:08:14.353Z",
+        "status": "approved"
+      },
+      "subcollections": {}
+    },
+    {
+      "id": "pending_0oDKHmJCHTUiWpIG6xJL7m299FC3_1758019901501",
+      "path": "pendingAdmins/pending_0oDKHmJCHTUiWpIG6xJL7m299FC3_1758019901501",
+      "data": {
+        "firstName": "Hady",
+        "lastName": "Korshem",
+        "email": "h.korshem33@gmail.com",
+        "mobile": "7812415167",
+        "nationalId": "29911018800332",
+        "firebaseUid": "0oDKHmJCHTUiWpIG6xJL7m299FC3",
+        "approvedBy": null,
+        "approvedAt": null,
+        "accountType": null,
+        "assignedProjects": [],
+        "permissions": {},
+        "createdAt": "2025-09-16T10:51:42.120Z",
+        "requestedAt": "2025-09-16T10:51:42.120Z",
+        "rejectedBy": "current-super-admin",
+        "rejectedAt": "2025-09-16T15:07:27.536Z",
+        "rejectionReason": "",
+        "status": "rejected"
+      },
+      "subcollections": {}
+    },
+    {
+      "id": "pending_WahoGpygGkTKWs2ZV81QSTT4Ez32_1762336678521",
+      "path": "pendingAdmins/pending_WahoGpygGkTKWs2ZV81QSTT4Ez32_1762336678521",
+      "data": {
+        "firstName": "Khaled",
+        "lastName": "Zaki",
+        "email": "khaledikh93@gmail.com",
+        "mobile": "01011116440",
+        "nationalId": "29904072100374",
+        "firebaseUid": "WahoGpygGkTKWs2ZV81QSTT4Ez32",
+        "accountType": null,
+        "assignedProjects": [],
+        "permissions": {},
+        "createdAt": "2025-11-05T09:57:59.155Z",
+        "requestedAt": "2025-11-05T09:57:59.155Z",
+        "adminId": "WahoGpygGkTKWs2ZV81QSTT4Ez32",
+        "approvedBy": "current-super-admin",
+        "approvedAt": "2025-11-05T09:58:44.833Z",
+        "status": "approved"
+      },
+      "subcollections": {}
+    },
+    {
+      "id": "pending_ur8d1l3UfHMrNb5YuREnLD4KF7J2_1760087214535",
+      "path": "pendingAdmins/pending_ur8d1l3UfHMrNb5YuREnLD4KF7J2_1760087214535",
+      "data": {
+        "firstName": "Mohamed",
+        "lastName": "Elshamy",
+        "email": "m.elshamy06@gmail.com",
+        "mobile": "01022201108",
+        "nationalId": "303030",
+        "firebaseUid": "ur8d1l3UfHMrNb5YuREnLD4KF7J2",
+        "accountType": null,
+        "assignedProjects": [],
+        "permissions": {},
+        "createdAt": "2025-10-10T09:06:55.783Z",
+        "requestedAt": "2025-10-10T09:06:55.783Z",
+        "adminId": "ur8d1l3UfHMrNb5YuREnLD4KF7J2",
+        "approvedBy": "current-super-admin",
+        "approvedAt": "2025-10-15T20:16:06.558Z",
+        "status": "approved"
+      },
+      "subcollections": {}
+    },
+    {
+      "id": "pending_vEBAZtcTkagpe6lpShker4yia6C2_1758999225205",
+      "path": "pendingAdmins/pending_vEBAZtcTkagpe6lpShker4yia6C2_1758999225205",
+      "data": {
+        "firstName": "Hady",
+        "firebaseUid": "vEBAZtcTkagpe6lpShker4yia6C2",
+        "permissions": {},
+        "nationalId": "29911018800332",
+        "email": "h.korshem33@gmail.com",
+        "mobile": "01117719995",
+        "accountType": null,
+        "lastName": "Korshem",
+        "assignedProjects": [],
+        "createdAt": "2025-09-27T18:53:45.954Z",
+        "requestedAt": "2025-09-27T18:53:45.954Z",
+        "adminId": "vEBAZtcTkagpe6lpShker4yia6C2",
+        "approvedBy": "current-super-admin",
+        "approvedAt": "2025-09-27T18:54:19.604Z",
+        "status": "approved"
+      },
+      "subcollections": {}
+    }
+  ]
+}

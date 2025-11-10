@@ -135,17 +135,14 @@ import { Keyboard } from '@capacitor/keyboard'
 import { Capacitor } from '@capacitor/core'
 import { useNotificationStore } from '../../stores/notifications'
 import { useRegistrationStore } from '../../stores/registration'
-import { httpsCallable } from 'firebase/functions'
-import { functions } from '../../boot/firebase'
+import optimizedAuthService from '../../services/optimizedAuthService'
 
-// Component name for ESLint
-defineOptions({
-  name: 'MigrateAccountPage',
-})
+defineOptions({ name: 'MigrateAccountPage' })
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
 const registrationStore = useRegistrationStore()
+
 const loading = ref(false)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
@@ -157,13 +154,15 @@ const formData = reactive({
 })
 
 onMounted(() => {
-  // Get email from registration store
-  const email = registrationStore.personalData.email
-  if (!email) {
-    notificationStore.showError('No email found. Please try signing in again.')
+  const challenge = registrationStore.migrationChallenge
+  const email = challenge.email || registrationStore.personalData.email
+
+  if (!challenge.cognitoUser || !email) {
+    notificationStore.showError('No pending migration found. Please try signing in again.')
     router.push('/signin')
     return
   }
+
   formData.email = email
 })
 
@@ -172,12 +171,11 @@ const goBack = () => {
 }
 
 const handlePageClick = async () => {
-  // Dismiss keyboard when clicking outside form (iOS/Android)
   if (Capacitor.isNativePlatform()) {
     try {
       await Keyboard.hide()
     } catch {
-      // Keyboard API might not be available, ignore error
+      // Keyboard API may not be available; ignore
     }
   }
 }
@@ -190,21 +188,18 @@ const toggleConfirmPassword = () => {
   showConfirmPassword.value = !showConfirmPassword.value
 }
 
-const canSubmit = computed(() => {
-  return (
-    formData.email &&
-    formData.password &&
-    formData.confirmPassword &&
-    formData.password === formData.confirmPassword &&
-    formData.password.length >= 6 &&
-    !loading.value
-  )
-})
+const canSubmit = computed(() =>
+  formData.email &&
+  formData.password &&
+  formData.confirmPassword &&
+  formData.password === formData.confirmPassword &&
+  formData.password.length >= 6 &&
+  !loading.value,
+)
 
 const handleMigration = async () => {
   if (loading.value) return
 
-  // Validate inputs
   if (!formData.password || formData.password.length < 6) {
     notificationStore.showError('Password must be at least 6 characters long')
     return
@@ -215,97 +210,45 @@ const handleMigration = async () => {
     return
   }
 
+  const challenge = registrationStore.migrationChallenge
+  if (!challenge.cognitoUser) {
+    notificationStore.showError('Migration session has expired. Please sign in again.')
+    router.push('/signin')
+    return
+  }
+
   loading.value = true
 
   try {
-    console.log('[MigrateAccount] Starting migration for:', formData.email)
+    console.log('[MigrateAccount] Completing migration for:', formData.email)
 
-    // On iOS, Cloud Functions consistently fail - skip them and use direct migration
-    const isIOS = Capacitor.getPlatform() === 'ios'
-    
-    if (isIOS) {
-      console.log('[MigrateAccount] 📱 iOS detected - using direct migration (Cloud Functions not reliable on iOS)')
-      await handleDirectMigration()
-      return
-    }
+    await optimizedAuthService.completeNewPassword(challenge.cognitoUser, formData.password)
 
-    // On other platforms, try Cloud Function first
-    console.log('[MigrateAccount] Calling Cloud Function with 30s timeout...')
-    
-    const migrateOldUser = httpsCallable(functions, 'migrateOldUser', {
-      timeout: 30000, // 30 seconds timeout
-    })
-
-    // Create timeout promise
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('Migration request timed out after 30 seconds. Please check your network connection and try again.'))
-      }, 30000)
-    })
-
-    // Race between function call and timeout
-    const functionCall = migrateOldUser({
-      email: formData.email,
-      password: formData.password,
-    })
-
-    const result = await Promise.race([functionCall, timeoutPromise])
-
-    console.log('[MigrateAccount] ✅ Migration successful:', result.data)
-
-    // Clear stored email
+    registrationStore.clearMigrationChallenge()
     registrationStore.setPersonalData({ email: '' })
 
-    // Show success message
-    notificationStore.showSuccess('Account migrated successfully! Please sign in with your new password.')
+    notificationStore.showSuccess(
+      'Account migrated successfully! Please sign in with your new password.',
+    )
 
-    // Redirect to sign in
     setTimeout(() => {
       router.push('/signin')
-    }, 1000)
+    }, 800)
   } catch (error) {
     console.error('[MigrateAccount] ❌ Migration error:', error)
     console.error('[MigrateAccount] Error details:', {
       code: error.code,
       message: error.message,
-      name: error.name
+      name: error.name,
     })
-
-    // Check if should trigger fallback
-    const shouldUseFallback = error.message?.includes('timeout') ||
-      error.message?.includes('timed out') ||
-      error.code === 'functions/unavailable' ||
-      error.code === 'functions/deadline-exceeded'
-
-    console.log('[MigrateAccount] Should use fallback?', shouldUseFallback)
-
-    // If Cloud Function fails, try direct migration
-    if (shouldUseFallback) {
-      console.warn('[MigrateAccount] ⚠️ Cloud Function failed, trying direct migration...')
-
-      try {
-        await handleDirectMigration()
-        return
-      } catch (directError) {
-        console.error('[MigrateAccount] ❌ Direct migration also failed:', directError)
-        notificationStore.showError('Migration failed. Please check your network connection and try again.')
-        loading.value = false
-        return
-      }
-    }
 
     let errorMessage = 'Migration failed. Please try again.'
 
-    if (error.code === 'functions/invalid-argument') {
-      errorMessage = 'Invalid email or password format.'
-    } else if (error.code === 'functions/not-found') {
-      errorMessage = 'Account not found or already migrated.'
-    } else if (error.code === 'functions/already-exists') {
-      errorMessage = 'An account with this email already exists. Please try signing in.'
-    } else if (error.code === 'functions/unauthenticated') {
-      errorMessage = 'Authentication failed. Please try again.'
-    } else if (error.code === 'functions/unavailable') {
-      errorMessage = 'Service temporarily unavailable. Please try again later.'
+    if (error.code === 'InvalidPasswordException') {
+      errorMessage =
+        'Password does not meet complexity requirements. Please choose a stronger password.'
+    } else if (error.code === 'NotAuthorizedException') {
+      errorMessage = 'The migration session has expired. Please try signing in again.'
     } else if (error.message) {
       errorMessage = error.message
     }
@@ -313,188 +256,6 @@ const handleMigration = async () => {
     notificationStore.showError(errorMessage)
   } finally {
     loading.value = false
-  }
-}
-
-// Direct migration fallback for iOS when Cloud Functions fail
-const handleDirectMigration = async () => {
-  console.log('[MigrateAccount] 🔄 Starting direct migration (fallback)...')
-
-  try {
-    // Import firestoreService
-    const { default: firestoreService } = await import('../../services/firestoreService')
-
-    let authUid
-    
-    // Check if running on iOS
-    const isIOS = Capacitor.getPlatform() === 'ios'
-    console.log('[MigrateAccount] Platform:', Capacitor.getPlatform(), 'Using Capacitor:', isIOS)
-
-    if (isIOS) {
-      console.log('[MigrateAccount] 📱 Using Capacitor Firebase Auth for iOS...')
-      
-      // Import Capacitor Firebase Authentication
-      const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
-      
-      try {
-        // Try to create user with Capacitor plugin
-        console.log('[MigrateAccount] Creating user with Capacitor plugin...')
-        const result = await FirebaseAuthentication.createUserWithEmailAndPassword({
-          email: formData.email,
-          password: formData.password,
-        })
-        authUid = result.user.uid
-        console.log('[MigrateAccount] ✅ Auth user created (Capacitor):', authUid)
-      } catch (authError) {
-        console.log('[MigrateAccount] Capacitor auth error:', authError)
-        
-        // Check if user already exists
-        if (authError.message?.includes('already') || authError.message?.includes('exists')) {
-          console.log('[MigrateAccount] ℹ️ User already exists, signing in with Capacitor...')
-          
-          const signInResult = await FirebaseAuthentication.signInWithEmailAndPassword({
-            email: formData.email,
-            password: formData.password,
-          })
-          
-          authUid = signInResult.user.uid
-          console.log('[MigrateAccount] ✅ Got existing user UID (Capacitor):', authUid)
-        } else {
-          throw authError
-        }
-      }
-    } else {
-      console.log('[MigrateAccount] 🌐 Using Web SDK for authentication...')
-      
-      // Import Firebase Auth Web SDK
-      const { createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import('firebase/auth')
-      const { auth } = await import('../../boot/firebase')
-
-      console.log('[MigrateAccount] Creating Firebase Auth user with 20s timeout...')
-
-      // Create timeout for auth user creation
-      const authTimeout = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Auth user creation timed out')), 20000)
-      })
-
-      let userCredential
-      
-      try {
-        // Try to create Firebase Auth user with timeout
-        userCredential = await Promise.race([
-          createUserWithEmailAndPassword(auth, formData.email, formData.password),
-          authTimeout
-        ])
-        authUid = userCredential.user.uid
-        console.log('[MigrateAccount] ✅ Auth user created (Web SDK):', authUid)
-      } catch (authError) {
-        console.log('[MigrateAccount] Auth creation error:', authError.code, authError.message)
-        
-        // Check if user already exists
-        if (authError.code === 'auth/email-already-in-use' || authError.message?.includes('already')) {
-          console.log('[MigrateAccount] ℹ️ User already exists in Auth, signing in to get UID...')
-          
-          // Sign in to get the UID
-          const signInTimeout = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Sign in timed out')), 15000)
-          })
-          
-          const signInResult = await Promise.race([
-            signInWithEmailAndPassword(auth, formData.email, formData.password),
-            signInTimeout
-          ])
-          
-          authUid = signInResult.user.uid
-          console.log('[MigrateAccount] ✅ Got existing user UID (Web SDK):', authUid)
-        } else {
-          // Rethrow if it's a different error
-          throw authError
-        }
-      }
-    }
-
-    // Find old user document in Firestore
-    console.log('[MigrateAccount] Finding old user document in Firestore...')
-
-    // Create timeout for Firestore getDocs
-    const getDocsTimeout = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Firestore getDocs timed out')), 15000)
-    })
-
-    // Use firestoreService to get user by email (more reliable on iOS)
-    const result = await Promise.race([
-      firestoreService.getDocs('users', {
-        filters: [{ field: 'email', operator: '==', value: formData.email.toLowerCase().trim() }],
-      }),
-      getDocsTimeout
-    ])
-
-    if (!result || result.empty || result.docs.length === 0) {
-      throw new Error('User document not found in Firestore')
-    }
-
-    const oldUserDocId = result.docs[0].id
-    // Get data - handle both function and object formats
-    const oldUserData = typeof result.docs[0].data === 'function' ? result.docs[0].data() : result.docs[0].data
-    console.log('[MigrateAccount] Found old user document:', oldUserDocId)
-
-    // Create new user document at users/<authUid> with data from old document
-    console.log('[MigrateAccount] Creating new user document at users/' + authUid)
-    
-    // Prepare new user data (copy from old, update metadata)
-    const newUserData = {
-      ...oldUserData,
-      migrated: true,
-      oldDocumentId: oldUserDocId, // Reference to old document
-      authUid: authUid,
-      updatedAt: new Date().toISOString()
-    }
-    
-    // Remove oldId from the new document (it's now in oldDocumentId)
-    delete newUserData.oldId
-    
-    // Create timeout for Firestore setDoc
-    const setDocTimeout = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Firestore setDoc timed out')), 10000)
-    })
-    
-    // Create the new document
-    await Promise.race([
-      firestoreService.setDoc(`users/${authUid}`, newUserData),
-      setDocTimeout
-    ])
-    
-    console.log('[MigrateAccount] ✅ New user document created at users/' + authUid)
-    
-    // Delete old document to avoid duplicates
-    console.log('[MigrateAccount] Deleting old document to avoid duplicates...')
-    const deleteOldTimeout = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Firestore delete old doc timed out')), 10000)
-    })
-    
-    await Promise.race([
-      firestoreService.deleteDoc(`users/${oldUserDocId}`),
-      deleteOldTimeout
-    ])
-    
-    console.log('[MigrateAccount] ✅ Old document deleted:', oldUserDocId)
-
-    console.log('[MigrateAccount] ✅ Direct migration successful!')
-
-    // Clear stored email
-    registrationStore.setPersonalData({ email: '' })
-
-    // Show success message
-    notificationStore.showSuccess('Account migrated successfully! Please sign in with your new password.')
-
-    // Redirect to sign in
-    setTimeout(() => {
-      router.push('/signin')
-    }, 1000)
-
-  } catch (error) {
-    console.error('[MigrateAccount] ❌ Direct migration error:', error)
-    throw error
   }
 }
 </script>

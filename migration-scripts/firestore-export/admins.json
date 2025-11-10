@@ -1,0 +1,263 @@
+{
+  "collectionId": "admins",
+  "parent": "",
+  "documents": [
+    {
+      "id": "QCIxINMrJyPhehlQtrpGBUJgsUl1",
+      "path": "admins/QCIxINMrJyPhehlQtrpGBUJgsUl1",
+      "data": {
+        "firstName": "Hady",
+        "lastName": "- Super Admin",
+        "email": "admin@pre.com",
+        "mobile": "+1234567890",
+        "nationalId": "SUPER001",
+        "firebaseUid": "QCIxINMrJyPhehlQtrpGBUJgsUl1",
+        "accountType": "super_admin",
+        "permissions": "{}",
+        "isActive": true,
+        "createdAt": "2024-01-01T00:00:00Z",
+        "lastLogin": null,
+        "approvedBy": "system",
+        "approvedAt": "2024-01-01T00:00:00Z",
+        "assignedProjects": [
+          "3OcGvjzt8lPCNG4PB812",
+          "IzN8JxYC1wl21EuUwtC5",
+          "gffEmqBOveWUOxzARNaX",
+          "BiHENuiMdDrivwbPccNE",
+          "VtOV8ZzMQqUCGitQlLjR",
+          "u3drPih6Hf6vOFX8savu",
+          "I3taP0crSITF2iqpBUfO",
+          "dQ7daaLWN0OSGOppEan7",
+          "pydeLooGHbSrbWIsK2ZW",
+          "Ab1suKN0KufKmseFBqgY",
+          "2omCgcFTjCsR52XdNGGz"
+        ],
+        "updatedAt": "2025-10-30T18:43:40.658Z"
+      },
+      "subcollections": {}
+    },
+    {
+      "id": "WahoGpygGkTKWs2ZV81QSTT4Ez32",
+      "path": "admins/WahoGpygGkTKWs2ZV81QSTT4Ez32",
+      "data": {
+        "firstName": "Khaled",
+        "lastName": "Zaki",
+        "email": "khaledikh93@gmail.com",
+        "mobile": "01011116440",
+        "nationalId": "29904072100374",
+        "firebaseUid": "WahoGpygGkTKWs2ZV81QSTT4Ez32",
+        "accountType": "super_admin",
+        "assignedProjects": [
+          "2omCgcFTjCsR52XdNGGz",
+          "BiHENuiMdDrivwbPccNE",
+          "VtOV8ZzMQqUCGitQlLjR",
+          "pydeLooGHbSrbWIsK2ZW",
+          "3OcGvjzt8lPCNG4PB812",
+          "I3taP0crSITF2iqpBUfO",
+          "dQ7daaLWN0OSGOppEan7",
+          "u3drPih6Hf6vOFX8savu",
+          "Ab1suKN0KufKmseFBqgY",
+          "IzN8JxYC1wl21EuUwtC5",
+          "gffEmqBOveWUOxzARNaX"
+        ],
+        "permissions": {},
+        "isActive": true,
+        "lastLogin": null,
+        "approvedBy": "current-super-admin",
+        "createdAt": "2025-11-05T09:58:44.569Z",
+        "approvedAt": "2025-11-05T09:58:44.569Z",
+        "updatedAt": "2025-11-05T09:58:44.569Z"
+      },
+      "subcollections": {}
+    },
+    {
+      "id": "ur8d1l3UfHMrNb5YuREnLD4KF7J2",
+      "path": "admins/ur8d1l3UfHMrNb5YuREnLD4KF7J2",
+      "data": {
+        "firstName": "Mohamed",
+        "lastName": "Elshamy",
+        "email": "m.elshamy06@gmail.com",
+        "mobile": "01022201108",
+        "nationalId": "303030",
+        "firebaseUid": "ur8d1l3UfHMrNb5YuREnLD4KF7J2",
+        "accountType": "custom",
+        "assignedProjects": [
+          "3OcGvjzt8lPCNG4PB812"
+        ],
+        "permissions": {
+          "users": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "units": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "logs": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "services": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "fines": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "ads": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "guidelines": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "gate_pass": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "orders": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "store": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "notifications": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "news": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "complaints": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "bookings": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "courts": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "academies": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "support": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "guards": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ],
+          "admin_accounts": [
+            "read",
+            "write",
+            "delete",
+            "create",
+            "send"
+          ]
+        },
+        "isActive": true,
+        "lastLogin": null,
+        "approvedBy": "current-super-admin",
+        "createdAt": "2025-10-15T20:16:06.290Z",
+        "approvedAt": "2025-10-15T20:16:06.290Z",
+        "updatedAt": "2025-10-15T20:16:06.290Z"
+      },
+      "subcollections": {}
+    },
+    {
+      "id": "vEBAZtcTkagpe6lpShker4yia6C2",
+      "path": "admins/vEBAZtcTkagpe6lpShker4yia6C2",
+      "data": {
+        "mobile": "01117719995",
+        "lastName": "Korshem",
+        "email": "h.korshem33@gmail.com",
+        "permissions": {
+          "units": [
+            "read"
+          ],
+          "users": [
+            "read"
+          ]
+        },
+        "approvedBy": "current-super-admin",
+        "firstName": "Hady",
+        "accountType": "custom",
+        "isActive": true,
+        "firebaseUid": "vEBAZtcTkagpe6lpShker4yia6C2",
+        "nationalId": "29911018800332",
+        "lastLogin": null,
+        "assignedProjects": [
+          "3OcGvjzt8lPCNG4PB812"
+        ],
+        "createdAt": "2025-09-27T18:54:19.348Z",
+        "approvedAt": "2025-09-27T18:54:19.348Z",
+        "updatedAt": "2025-09-27T18:54:19.348Z"
+      },
+      "subcollections": {}
+    }
+  ]
+}

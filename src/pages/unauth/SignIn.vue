@@ -591,12 +591,35 @@ const handleSignIn = async () => {
     // Use optimized auth service (works on all platforms)
     console.log('[SignIn] Starting authentication...')
     
-    const userCredential = await optimizedAuthService.signInWithEmailAndPassword(
-      formData.email,
+    const signInResult = await optimizedAuthService.signInWithEmailAndPassword(
+      formData.email.trim(),
       formData.password,
     )
-    const userId = userCredential.user.uid
+
+    if (signInResult.challenge === 'NEW_PASSWORD_REQUIRED') {
+      console.log('[SignIn] ⚠️ User must complete password migration.')
+      const registrationStore = useRegistrationStore()
+      registrationStore.setPersonalData({ email: formData.email.trim() })
+      registrationStore.setMigrationChallenge({
+        type: signInResult.challenge,
+        user: signInResult.user,
+        email: formData.email.trim(),
+      })
+      registrationStore.setFirestoreUserId(signInResult.user?.username ?? null)
+
+      notificationStore.showInfo('Please set a new password to complete your account migration.')
+      loading.value = false
+      router.push('/migrate-account')
+      return
+    }
+
+    const user = signInResult.user
+    const userId = user?.username || user?.attributes?.sub
     console.log('[SignIn] ✅ Authentication successful:', userId)
+
+    const registrationStore = useRegistrationStore()
+    registrationStore.setFirestoreUserId(userId ?? null)
+    registrationStore.clearMigrationChallenge()
 
     // Check device key BEFORE proceeding
     console.log('[SignIn] 🔐 Checking device key...')
@@ -694,20 +717,19 @@ const handleSignIn = async () => {
       name: error.name
     })
     
-    // Check if user needs migration (exists in Firestore but not in Firebase Auth)
-    // Note: iOS Capacitor plugin may return 'auth/invalid-credential' instead of 'auth/user-not-found'
-    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-      console.log('[SignIn] 🔍 Auth error detected, checking for migration...', error.code)
+    const errorCode = error.code || error.name
+
+    // Check if user needs migration (legacy Firebase account)
+    if (errorCode === 'UserNotFoundException' || errorCode === 'NotAuthorizedException') {
+      console.log('[SignIn] 🔍 Auth error detected, checking for migration...', errorCode)
       const migrationCheck = await checkForMigration(formData.email)
       
       if (migrationCheck.needsMigration) {
         console.log('[SignIn] ✅ User needs migration, redirecting to migration page')
         // Store email AND user ID in registration store for migration page
         const registrationStore = useRegistrationStore()
-        registrationStore.setPersonalData({ 
-          email: formData.email,
-          firestoreUserId: migrationCheck.userId 
-        })
+        registrationStore.setPersonalData({ email: formData.email })
+        registrationStore.setFirestoreUserId(migrationCheck.userId)
         
         console.log('[SignIn] 📋 Stored user ID for migration:', migrationCheck.userId)
         
@@ -722,22 +744,22 @@ const handleSignIn = async () => {
     
     // Provide user-friendly error messages
     let errorMessage = 'Sign in failed. Please try again.'
-    
-    if (error.message.includes('timeout')) {
+
+    if (error.message?.includes('timeout')) {
       errorMessage = 'Connection timeout. Please check your internet connection and try again.'
-    } else if (error.code === 'auth/invalid-email') {
+    } else if (errorCode === 'InvalidParameterException') {
       errorMessage = 'Invalid email address.'
-    } else if (error.code === 'auth/user-disabled') {
+    } else if (errorCode === 'UserDisabledException') {
       errorMessage = 'This account has been disabled.'
-    } else if (error.code === 'auth/user-not-found') {
+    } else if (errorCode === 'UserNotFoundException') {
       errorMessage = 'No account found with this email.'
-    } else if (error.code === 'auth/invalid-credential') {
+    } else if (errorCode === 'UserNotConfirmedException') {
+      errorMessage = 'This account has not been confirmed yet. Please check your email for the verification link.'
+    } else if (errorCode === 'NotAuthorizedException') {
       errorMessage = 'Invalid email or password. Please check your credentials and try again.'
-    } else if (error.code === 'auth/wrong-password') {
-      errorMessage = 'Incorrect password.'
-    } else if (error.code === 'auth/network-request-failed') {
+    } else if (errorCode === 'NetworkError') {
       errorMessage = 'Network error. Please check your internet connection.'
-    } else if (error.code === 'auth/too-many-requests') {
+    } else if (errorCode === 'TooManyRequestsException') {
       errorMessage = 'Too many failed attempts. Please try again later.'
     } else if (error.message) {
       errorMessage = error.message

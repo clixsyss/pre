@@ -1,0 +1,17 @@
+{
+  "collectionId": "guestPassSettings",
+  "parent": "",
+  "documents": [
+    {
+      "id": "BiHENuiMdDrivwbPccNE",
+      "path": "guestPassSettings/BiHENuiMdDrivwbPccNE",
+      "data": {
+        "allowOverrides": true,
+        "autoReset": true,
+        "monthlyLimit": 5,
+        "updatedAt": "2025-11-02T19:47:02.464Z"
+      },
+      "subcollections": {}
+    }
+  ]
+}

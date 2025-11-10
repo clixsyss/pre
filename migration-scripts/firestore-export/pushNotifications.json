@@ -1,0 +1,80 @@
+{
+  "collectionId": "pushNotifications",
+  "parent": "",
+  "documents": [
+    {
+      "id": "4Pl3ebKAugeo3F0iy3nV",
+      "path": "pushNotifications/4Pl3ebKAugeo3F0iy3nV",
+      "data": {
+        "userId": "OpljNxl2HvVV6a6VIvXI4CgYq9Z2",
+        "projectId": "BiHENuiMdDrivwbPccNE",
+        "title": "Unit Access Approved",
+        "message": "Great news! Your request to access Unit test-01T in Stone Residence has been approved. You can now access this unit and all its features.",
+        "actionType": "unit_request_approved",
+        "category": "unit_access",
+        "priority": "high",
+        "requiresAction": false,
+        "actionUrl": null,
+        "actionText": null,
+        "imageUrl": null,
+        "metadata": {
+          "sentFrom": "dashboard",
+          "adminId": "QCIxINMrJyPhehlQtrpGBUJgsUl1",
+          "adminName": "Admin",
+          "adminEmail": "admin@pre.com",
+          "unit": "test-01T",
+          "projectName": "Stone Residence",
+          "timestamp": "2025-10-29T15:34:25.944Z",
+          "sentAt": "2025-10-29T15:34:28.328Z",
+          "source": "custom_user_notification"
+        },
+        "maxRetries": 3,
+        "createdAt": "2025-10-29T15:34:28.904Z",
+        "lastError": "Failed to send to all 11 tokens",
+        "scheduledFor": "2025-10-29T15:36:01.699Z",
+        "failedAt": "2025-10-29T15:37:01.284Z",
+        "retryCount": 3,
+        "error": "Failed to send to all 11 tokens",
+        "status": "failed"
+      },
+      "subcollections": {}
+    },
+    {
+      "id": "8DgxHLLYo0AViUI79X9B",
+      "path": "pushNotifications/8DgxHLLYo0AViUI79X9B",
+      "data": {
+        "userId": "OpljNxl2HvVV6a6VIvXI4CgYq9Z2",
+        "projectId": "BiHENuiMdDrivwbPccNE",
+        "title": "Unit Access Approved",
+        "message": "Great news! Your request to access Unit test-01T in Stone Residence has been approved. You can now access this unit and all its features.",
+        "actionType": "unit_request_approved",
+        "category": "unit_access",
+        "priority": "high",
+        "requiresAction": false,
+        "actionUrl": null,
+        "actionText": null,
+        "imageUrl": null,
+        "metadata": {
+          "sentFrom": "dashboard",
+          "adminId": "QCIxINMrJyPhehlQtrpGBUJgsUl1",
+          "adminName": "Admin",
+          "adminEmail": "admin@pre.com",
+          "unit": "test-01T",
+          "projectName": "Stone Residence",
+          "timestamp": "2025-10-29T16:04:03.244Z",
+          "sentAt": "2025-10-29T16:04:03.246Z",
+          "source": "custom_user_notification"
+        },
+        "maxRetries": 3,
+        "createdAt": "2025-10-29T16:04:03.802Z",
+        "lastError": "Failed to send to all 10 tokens",
+        "scheduledFor": "2025-10-29T16:05:05.780Z",
+        "failedAt": "2025-10-29T16:06:01.868Z",
+        "retryCount": 3,
+        "error": "Failed to send to all 10 tokens",
+        "status": "failed"
+      },
+      "subcollections": {}
+    }
+  ]
+}

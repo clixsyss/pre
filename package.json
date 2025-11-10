@@ -41,6 +41,7 @@
     "@capacitor/status-bar": "^7.0.3",
     "@capawesome/capacitor-badge": "^7.0.0",
     "@quasar/extras": "^1.16.4",
+    "aws-amplify": "^5.3.11",
     "axios": "^1.2.1",
     "date-fns": "^4.1.0",
     "firebase": "^11.10.0",
