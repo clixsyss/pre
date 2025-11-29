@@ -186,86 +186,35 @@ export async function getUserById(userId) {
 export async function getUserByEmail(email) {
   try {
     if (!email) {
-      console.warn('[DynamoDBUsersService] No email provided')
       return null
     }
     
-    console.log(`[DynamoDBUsersService] Fetching user by email: ${email}`)
-    
-    // Normalize email (lowercase, trim)
+    // Normalize email (lowercase, trim) - emails are stored normalized in DynamoDB
     const normalizedEmail = email.trim().toLowerCase()
     
-    console.log(`[DynamoDBUsersService] 🔍 Searching for user by email`)
-    console.log(`[DynamoDBUsersService] Input email: "${email}"`)
-    console.log(`[DynamoDBUsersService] Normalized email: "${normalizedEmail}"`)
-    
-    // Scan table and filter in memory for case-insensitive email matching
-    // Note: This is less efficient but necessary for case-insensitive matching
-    // For better performance, consider adding a GSI on email (lowercased) or use a separate index
-    console.log('[DynamoDBUsersService] 📊 Scanning users table...')
-    let allItems = []
-    try {
-      allItems = await scan(TABLE_NAME, {})
-      console.log(`[DynamoDBUsersService] 📊 Scanned ${allItems.length} total users from table`)
-    } catch (scanError) {
-      console.error('[DynamoDBUsersService] ❌ Error scanning table:', scanError)
-      throw scanError
-    }
-    
-    // Log first few emails for debugging
-    if (allItems.length > 0) {
-      console.log('[DynamoDBUsersService] 📋 Sample emails in table (first 5):', 
-        allItems.slice(0, 5).map(item => ({
-          id: item.id,
-          email: item.email,
-          normalized: (item.email || '').trim().toLowerCase(),
-          emailMatch: (item.email || '').trim().toLowerCase() === normalizedEmail
-        }))
-      )
-    } else {
-      console.warn('[DynamoDBUsersService] ⚠️ No users found in table! Table might be empty.')
-    }
-    
-    // Filter items by email (case-insensitive)
-    const items = allItems.filter(item => {
-      const itemEmail = (item.email || '').trim().toLowerCase()
-      const matches = itemEmail === normalizedEmail
-      if (matches) {
-        console.log(`[DynamoDBUsersService] ✅ MATCH FOUND!`)
-        console.log(`[DynamoDBUsersService] Original email in table: "${item.email}"`)
-        console.log(`[DynamoDBUsersService] Search email: "${email}"`)
-        console.log(`[DynamoDBUsersService] User ID: "${item.id}"`)
-        console.log(`[DynamoDBUsersService] Full user data:`, JSON.stringify(item, null, 2))
-      }
-      return matches
+    // Use filtered scan to find user by email (more efficient than scanning all and filtering in memory)
+    // Note: For even better performance, consider adding a GSI on email field
+    const items = await scan(TABLE_NAME, {
+      FilterExpression: 'email = :email',
+      ExpressionAttributeValues: {
+        ':email': normalizedEmail
+      },
+      Limit: 1 // Only need one result
     })
     
-    console.log(`[DynamoDBUsersService] 🔍 Found ${items.length} matching user(s)`)
-    
-    // If no match found, log all emails for debugging
-    if (items.length === 0 && allItems.length > 0) {
-      console.warn('[DynamoDBUsersService] ⚠️ No match found. All emails in table:')
-      allItems.forEach((item, index) => {
-        const itemEmail = (item.email || '').trim().toLowerCase()
-        console.warn(`[DynamoDBUsersService]   ${index + 1}. "${item.email}" (normalized: "${itemEmail}") - matches: ${itemEmail === normalizedEmail}`)
-      })
-    }
-    
     if (items.length === 0) {
-      console.log(`[DynamoDBUsersService] ⚠️ User not found with email: ${email}`)
       return null
     }
     
     // If multiple users found (shouldn't happen), return the first one
     if (items.length > 1) {
-      console.warn(`[DynamoDBUsersService] ⚠️ Multiple users found with email ${email}, returning first match`)
+      console.warn(`[DynamoDBUsersService] Multiple users found with email ${email}, returning first match`)
     }
     
     const convertedUser = convertUserFromDynamoDB(items[0])
-    console.log(`[DynamoDBUsersService] ✅ Found user by email: ${convertedUser.id || email}`)
     return convertedUser
   } catch (error) {
-    console.error(`[DynamoDBUsersService] ❌ Error fetching user by email ${email}:`, error)
+    console.error(`[DynamoDBUsersService] Error fetching user by email:`, error)
     throw error
   }
 }
@@ -321,10 +270,13 @@ export async function createUser(userId, userData) {
     }
     
     // Create user object with all required fields
+    // Normalize email to ensure consistent storage (lowercase, trimmed)
+    const normalizedEmail = userData.email ? userData.email.trim().toLowerCase() : ''
+    
     const item = {
       id: userId,
       // Core user information
-      email: userData.email || '',
+      email: normalizedEmail,
       firstName: userData.firstName || '',
       lastName: userData.lastName || '',
       fullName: userData.fullName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || '',
@@ -403,10 +355,16 @@ export async function updateUser(userId, userData) {
   try {
     console.log(`[DynamoDBUsersService] Updating user: ${userId}`)
     
+    // Normalize email if provided to ensure consistent storage
+    const normalizedUserData = { ...userData }
+    if (normalizedUserData.email) {
+      normalizedUserData.email = normalizedUserData.email.trim().toLowerCase()
+    }
+    
     const item = {
       id: userId,
       userId: userId,
-      ...userData,
+      ...normalizedUserData,
       updatedAt: new Date().toISOString()
     }
     
