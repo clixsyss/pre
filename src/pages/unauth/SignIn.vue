@@ -711,45 +711,62 @@ const handleSignIn = async () => {
     
     try {
       const { getUserByEmail, getUserById, getUserByAuthUid } = await import('src/services/dynamoDBUsersService')
-      console.log('[SignIn] 🔍 Checking DynamoDB for email:', userEmail)
-      console.log('[SignIn] 🔍 Cognito User ID (for fallback):', userId)
+      console.log('[SignIn] 🔍 Checking DynamoDB for user...')
+      console.log('[SignIn] 🔍 Email:', userEmail)
+      console.log('[SignIn] 🔍 Cognito sub (authUid):', cognitoSubForLookup)
       
-      dynamoUser = await getUserByEmail(userEmail)
-      
-      // If not found by email, try finding by Cognito user ID (authUid)
-      // Use both username and sub (sub is more reliable as it's the unique Cognito ID)
-      const identifiersToTry = []
-      
-      if (cognitoSubForLookup && cognitoSubForLookup !== userId) {
-        identifiersToTry.push({ type: 'sub', value: cognitoSubForLookup })
-      }
-      if (userId) {
-        identifiersToTry.push({ type: 'username/id', value: userId })
+      // PERFORMANCE OPTIMIZATION: Try authUid first (faster lookup if available)
+      // authUid is typically the Cognito sub and is indexed in DynamoDB
+      if (cognitoSubForLookup) {
+        console.log('[SignIn] 🔍 Attempting fast lookup by authUid first...')
+        dynamoUser = await getUserByAuthUid(cognitoSubForLookup)
+        if (dynamoUser) {
+          console.log('[SignIn] ✅ User found by authUid (fast lookup)')
+        }
       }
       
-      if (!dynamoUser && identifiersToTry.length > 0) {
-        console.log('[SignIn] ⚠️ User not found by email, trying to find by Cognito identifiers...')
-        console.log('[SignIn] Identifiers to try:', identifiersToTry)
+      // Fallback to email lookup if authUid lookup failed
+      if (!dynamoUser) {
+        console.log('[SignIn] 🔍 User not found by authUid, trying email lookup...')
+        dynamoUser = await getUserByEmail(userEmail)
         
-        for (const identifier of identifiersToTry) {
-          try {
-            console.log(`[SignIn] Trying to find user by ${identifier.type}: ${identifier.value}`)
+        // If not found by email, try finding by Cognito user ID (authUid) as last resort
+        // Use both username and sub (sub is more reliable as it's the unique Cognito ID)
+        if (!dynamoUser) {
+          const identifiersToTry = []
+          
+          if (cognitoSubForLookup && cognitoSubForLookup !== userId) {
+            identifiersToTry.push({ type: 'sub', value: cognitoSubForLookup })
+          }
+          if (userId) {
+            identifiersToTry.push({ type: 'username/id', value: userId })
+          }
+          
+          if (identifiersToTry.length > 0) {
+            console.log('[SignIn] ⚠️ User not found by email, trying to find by Cognito identifiers...')
+            console.log('[SignIn] Identifiers to try:', identifiersToTry)
             
-            // Try direct lookup by ID first (in case the ID in DynamoDB matches)
-            dynamoUser = await getUserById(identifier.value)
-            
-            // If not found, try searching by authUid field (Cognito sub)
-            if (!dynamoUser) {
-              dynamoUser = await getUserByAuthUid(identifier.value)
+            for (const identifier of identifiersToTry) {
+              try {
+                console.log(`[SignIn] Trying to find user by ${identifier.type}: ${identifier.value}`)
+                
+                // Try direct lookup by ID first (in case the ID in DynamoDB matches)
+                dynamoUser = await getUserById(identifier.value)
+                
+                // If not found, try searching by authUid field (Cognito sub)
+                if (!dynamoUser) {
+                  dynamoUser = await getUserByAuthUid(identifier.value)
+                }
+                
+                if (dynamoUser) {
+                  console.log(`[SignIn] ✅ Found user by ${identifier.type}:`, dynamoUser.id)
+                  break // Stop searching once we find the user
+                }
+              } catch (idSearchError) {
+                console.warn(`[SignIn] ⚠️ Error searching by ${identifier.type}:`, idSearchError)
+                // Continue trying other identifiers
+              }
             }
-            
-            if (dynamoUser) {
-              console.log(`[SignIn] ✅ Found user by ${identifier.type}:`, dynamoUser.id)
-              break // Stop searching once we find the user
-            }
-          } catch (idSearchError) {
-            console.warn(`[SignIn] ⚠️ Error searching by ${identifier.type}:`, idSearchError)
-            // Continue trying other identifiers
           }
         }
       }
