@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PRE Group</string>
+    <string name="title_activity_main">PRE Group</string>
+    <string name="package_name">com.pregroup.app</string>
+    <string name="custom_url_scheme">com.pregroup.app</string>
+</resources>

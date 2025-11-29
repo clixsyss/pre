@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRE Group - Guest Pass</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #AF1E23 0%, #231F20 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    .loading-container,
+    .error-container {
+      background: white;
+      border-radius: 20px;
+      padding: 60px 40px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #AF1E23;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .error-container svg {
+      margin: 0 auto 20px;
+    }
+
+    .error-container h2 {
+      color: #AF1E23;
+      margin: 0 0 10px;
+      font-size: 24px;
+    }
+
+    .error-container p {
+      color: #666;
+      margin: 0;
+    }
+
+    .pass-container {
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 480px;
+      width: 100%;
+      animation: slideUp 0.5s ease;
+      display: none;
+    }
+
+    .pass-container.show {
+      display: block;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .pass-header {
+      background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
+      padding: 20px;
+      text-align: center;
+      color: white;
+    }
+
+    .pass-header img {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+      margin: 0 auto;
+      display: block;
+      filter: brightness(0) invert(1);
+    }
+
+    .pass-header h1 {
+      margin: 0 0 5px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .pass-header p {
+      margin: 0;
+      opacity: 0.9;
+      font-size: 16px;
+    }
+
+    .guest-info {
+      padding: 10px;
+      text-align: center;
+      border-bottom: 2px dashed #e0e0e0;
+    }
+
+    .guest-info h2 {
+      margin: 0 0 10px;
+      font-size: 32px;
+      font-weight: 700;
+      color: #231F20;
+    }
+
+    .guest-info .purpose {
+      margin: 0;
+      color: #666;
+      font-size: 16px;
+    }
+
+    .qr-container {
+      padding: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fafafa;
+    }
+
+    .qr-image {
+      max-width: 100%;
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      background: white; 
+    }
+
+    .pass-details {
+      padding: 30px;
+      border-top: 2px dashed #e0e0e0;
+    }
+
+    .detail-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .detail-row svg {
+      flex-shrink: 0;
+      color: #AF1E23;
+      margin-top: 2px;
+      width: 20px;
+      height: 20px;
+    }
+
+    .detail-row > div {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .detail-row .label {
+      font-size: 12px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .detail-row .value {
+      font-size: 16px;
+      color: #231F20;
+      font-weight: 500;
+    }
+
+    .status-badge {
+      margin: 0 30px 20px;
+      padding: 15px;
+      border-radius: 12px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .status-badge.active {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status-badge.expired {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .status-badge.used {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+
+    .instructions {
+      padding: 30px;
+      background: #f9fafb;
+      border-top: 2px dashed #e0e0e0;
+    }
+
+    .instructions h3 {
+      margin: 0 0 15px;
+      font-size: 18px;
+      color: #231F20;
+      font-weight: 700;
+    }
+
+    .instructions p {
+      margin: 0 0 15px;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .instructions p:last-child {
+      margin: 0;
+    }
+
+    .instructions .note {
+      font-size: 14px;
+      font-style: italic;
+      color: #999;
+    }
+
+    .footer {
+      padding: 30px;
+      text-align: center;
+      background: #fafafa;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .footer p {
+      margin: 0 0 5px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .footer p:last-child {
+      margin: 0;
+    }
+
+    .footer .small {
+      font-size: 12px;
+      color: #999;
+    }
+
+    @media (max-width: 640px) {
+
+      .guest-info h2 {
+        font-size: 28px;
+      }
+
+      .qr-container {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading State -->
+  <div id="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading Guest Pass...</p>
+  </div>
+
+  <!-- Error State -->
+  <div id="error" class="error-container" style="display: none;">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="#AF1E23" stroke-width="2"/>
+      <line x1="15" y1="9" x2="9" y2="15" stroke="#AF1E23" stroke-width="2"/>
+      <line x1="9" y1="9" x2="15" y2="15" stroke="#AF1E23" stroke-width="2"/>
+    </svg>
+    <h2>Pass Not Found</h2>
+    <p id="error-message"></p>
+  </div>
+
+  <!-- Pass Container -->
+  <div id="pass" class="pass-container">
+    <div class="pass-header">
+      <img src="https://firebasestorage.googleapis.com/v0/b/pre-group.firebasestorage.app/o/logo.png?alt=media&token=85e3ad0a-ce08-4f0c-b6d4-394e41914467" alt="PRE Group" />
+      <p>Guest Pass</p>
+    </div>
+
+    <div class="qr-container">
+      <img id="qr-image" class="qr-image" alt="Guest Pass QR Code" />
+    </div>
+
+    <div class="guest-info">
+      <h2 id="guest-name"></h2>
+      <p class="purpose" id="purpose"></p>
+    </div>
+
+    <div class="pass-details">
+      <div class="detail-row">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <div>
+          <span class="label">Valid Until</span>
+          <span class="value" id="valid-until"></span>
+        </div>
+      </div>
+
+      <div class="detail-row">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+          <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
+          <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/>
+          <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <div>
+          <span class="label">Created</span>
+          <span class="value" id="created-at"></span>
+        </div>
+      </div>
+
+      <div class="detail-row">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2"/>
+          <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" stroke-width="2"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <div>
+          <span class="label">Invited by</span>
+          <span class="value" id="user-name"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="status-badge" class="status-badge"></div>
+
+    <div class="instructions">
+      <h3>Instructions</h3>
+      <p>Please present this QR code at the main gate for entry. The security team will scan it for verification.</p>
+      <p class="note" id="instructions-note"></p>
+    </div>
+
+    <div class="footer">
+      <p>PRE Group Management System</p>
+      <p class="small">This is an automated guest pass</p>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'
+    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDpYVhP_uLDecqds0VD7g409N_AMj-OMF8",
+      authDomain: "pre-group.firebaseapp.com",
+      projectId: "pre-group",
+      storageBucket: "pre-group.firebasestorage.app",
+      messagingSenderId: "588019395133",
+      appId: "1:588019395133:web:1e37de7f2f1e81eb22a4ca"
+    }
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig)
+    const db = getFirestore(app)
+
+    // Get pass ID from URL hash
+    const hash = window.location.hash
+    const match = hash.match(/#\/guest-pass\/([^\/]+)\/([^\/]+)/)
+    
+    if (!match) {
+      showError('Invalid pass link. Please check the URL.')
+    } else {
+      const projectId = match[1]
+      const passId = match[2]
+      loadGuestPass(projectId, passId)
+    }
+
+    async function loadGuestPass(projectId, passId) {
+      try {
+        console.log('📥 Loading guest pass:', passId, 'for project:', projectId)
+
+        // Direct lookup by pass ID (document ID matches pass ID)
+        const passRef = doc(db, `projects/${projectId}/guestPasses/${passId}`)
+        const passDoc = await getDoc(passRef)
+
+        if (!passDoc.exists()) {
+          throw new Error('Guest pass not found. It may have been deleted or the link is invalid.')
+        }
+
+        const passData = passDoc.data()
+        console.log('✅ Guest pass loaded:', passData)
+
+        // Format date helper
+        function formatDate(dateValue) {
+          if (!dateValue) return 'Invalid date'
+          
+          let date
+          if (dateValue && typeof dateValue === 'object' && dateValue.seconds) {
+            date = new Date(dateValue.seconds * 1000)
+          } else {
+            date = new Date(dateValue)
+          }
+          
+          if (isNaN(date.getTime())) return 'Invalid date'
+          
+          return date.toLocaleString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        }
+
+        // Check if expired
+        function isExpired(dateValue) {
+          if (!dateValue) return false
+          let date
+          if (dateValue && typeof dateValue === 'object' && dateValue.seconds) {
+            date = new Date(dateValue.seconds * 1000)
+          } else {
+            date = new Date(dateValue)
+          }
+          return new Date() > date
+        }
+
+        // Get remaining time
+        function getRemainingTime(dateValue) {
+          if (!dateValue) return null
+          
+          let expiryDate
+          if (dateValue && typeof dateValue === 'object' && dateValue.seconds) {
+            expiryDate = new Date(dateValue.seconds * 1000)
+          } else {
+            expiryDate = new Date(dateValue)
+          }
+          
+          const now = new Date()
+          const remainingMs = expiryDate - now
+          
+          if (remainingMs <= 0) return null
+          
+          const hours = Math.floor(remainingMs / 3600000)
+          const minutes = Math.floor((remainingMs % 3600000) / 60000)
+          
+          if (hours > 0) return `${hours}h ${minutes}m left`
+          if (minutes > 0) return `${minutes}m left`
+          return 'Expiring soon'
+        }
+
+        // Populate data
+        document.getElementById('guest-name').textContent = passData.guestName || 'Guest'
+        document.getElementById('purpose').textContent = passData.purpose || 'Guest Visit'
+        document.getElementById('qr-image').src = passData.qrCodeUrl || ''
+        document.getElementById('valid-until').textContent = formatDate(passData.validUntil)
+        document.getElementById('created-at').textContent = formatDate(passData.createdAt)
+        document.getElementById('user-name').textContent = passData.userName || 'Unknown'
+        document.getElementById('instructions-note').textContent = `This pass is valid until ${formatDate(passData.validUntil)}`
+
+        // Status badge
+        const statusBadge = document.getElementById('status-badge')
+        const expired = isExpired(passData.validUntil)
+        const used = passData.used || false
+
+        if (used) {
+          statusBadge.textContent = '✅ Used'
+          statusBadge.className = 'status-badge used'
+        } else if (expired) {
+          statusBadge.textContent = '❌ Expired'
+          statusBadge.className = 'status-badge expired'
+        } else {
+          const remaining = getRemainingTime(passData.validUntil)
+          statusBadge.textContent = remaining ? `⏰ ${remaining}` : '✅ Active'
+          statusBadge.className = 'status-badge active'
+        }
+
+        // Hide loading, show pass
+        document.getElementById('loading').style.display = 'none'
+        document.getElementById('pass').classList.add('show')
+
+      } catch (err) {
+        console.error('❌ Error loading guest pass:', err)
+        showError(err.message || 'Failed to load guest pass')
+      }
+    }
+
+    function showError(message) {
+      document.getElementById('loading').style.display = 'none'
+      document.getElementById('error').style.display = 'block'
+      document.getElementById('error-message').textContent = message
+    }
+  </script>
+</body>
+</html>
+

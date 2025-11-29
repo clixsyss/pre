@@ -1,0 +1,27 @@
+{
+  "name": "migration-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "export-firestore": "node exportFirestore.js",
+    "create-dynamo": "node createDynamoTables.js",
+    "import-dynamo": "node importToDynamo.js",
+    "transfer-storage": "node transferStorage.js",
+    "sync-pinpoint": "node syncPinpointEndpoints.js",
+    "export-auth": "node exportAuthUsers.js",
+    "import-auth": "node importAuthToCognito.js",
+    "export-fcm-tokens": "node exportFcmTokens.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.674.0",
+    "@aws-sdk/lib-dynamodb": "^3.674.0",
+    "@aws-sdk/client-pinpoint": "^3.674.0",
+    "@aws-sdk/client-s3": "^3.674.0",
+    "@aws-sdk/util-dynamodb": "^3.674.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.674.0",
+    "firebase-admin": "^12.6.0",
+    "mime": "^4.0.4"
+  }
+}
+

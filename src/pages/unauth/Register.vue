@@ -1,0 +1,1997 @@
+<template>
+  <div class="register-page">
+    <!-- Pending Approval Modal -->
+    <PendingApprovalModal
+      v-if="showPendingModal"
+      @close="router.push('/signin')"
+    />
+
+    <!-- Header -->
+    <div class="header">
+      <button @click="goToOnboarding" class="back-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 12H5M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </button>
+      <h1 class="page-title">Registration</h1>
+      <div class="header-actions">
+        <button @click="goToSignIn" class="signin-header-btn">Sign In</button>
+      </div>
+    </div>
+
+    <!-- Orange Separator Line -->
+    <div class="separator-line"></div>
+
+    <!-- Progress Indicator -->
+    <div class="progress-indicator">
+      <div class="progress-line"></div>
+
+      <!-- Personal Step -->
+      <div class="progress-step"
+        :class="{ active: currentStep === 'personal' && !isPersonalDetailsCompleted, completed: currentStep === 'property' || currentStep === 'details' || isPersonalDetailsCompleted }">
+        <div class="step-icon">
+          <svg v-if="currentStep === 'personal' && !isPersonalDetailsCompleted" width="24" height="24"
+            viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+              stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="12" cy="7" r="4" stroke="white" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+          <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 6L9 17L4 12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+        </div>
+        <span class="step-label">Personal</span>
+      </div>
+
+      <!-- Property Step -->
+      <div class="progress-step"
+        :class="{ active: currentStep === 'property' || isPersonalDetailsCompleted, completed: currentStep === 'details' }">
+        <div class="step-icon">
+          <svg v-if="currentStep === 'property' || isPersonalDetailsCompleted" width="24" height="24"
+            viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+              stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+          <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+        </div>
+        <span class="step-label">Property</span>
+      </div>
+    </div>
+
+    <!-- Step Content -->
+    <div class="step-content">
+      <!-- Personal Step -->
+      <div v-if="currentStep === 'personal'" class="step-panel">
+
+        <form @submit.prevent="handlePersonalSubmit" class="form">
+          <div class="form-group">
+            <label for="email" class="form-label">E-mail</label>
+            <input id="email" v-model="personalForm.email" type="email" class="form-input"
+              placeholder="Example@gmail.com" required />
+          </div>
+
+          <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <div class="password-input-wrapper">
+              <input id="password" v-model="personalForm.password" :type="showPassword ? 'text' : 'password'" class="form-input"
+                placeholder="Create a strong password" required minlength="8" />
+              <button type="button" @click="togglePassword" class="password-toggle">
+                <svg
+                  v-if="showPassword"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <svg
+                  v-else
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M2 12C2 12 6 4 12 4C18 4 22 12 22 12C22 12 18 20 12 20C6 20 2 12 2 12Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M2 2L22 22"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div class="password-requirements">
+              <small>Password must be at least 8 characters long</small>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPassword" class="form-label">Confirm Password</label>
+            <div class="password-input-wrapper">
+              <input id="confirmPassword" v-model="personalForm.confirmPassword" :type="showConfirmPassword ? 'text' : 'password'" class="form-input"
+                placeholder="Confirm your password" required />
+              <button type="button" @click="toggleConfirmPassword" class="password-toggle">
+                <svg
+                  v-if="showConfirmPassword"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <svg
+                  v-else
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M2 12C2 12 6 4 12 4C18 4 22 12 22 12C22 12 18 20 12 20C6 20 2 12 2 12Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M2 2L22 22"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="proceed-btn" :disabled="loading || !canProceed">
+            <span v-if="loading">Processing...</span>
+            <span v-else>Proceed</span>
+          </button>
+        </form>
+
+
+
+        <!-- Navigation Options -->
+        <div class="step-navigation">
+          <div class="nav-divider">
+            <span>or</span>
+          </div>
+          <div class="nav-options">
+            <a @click="goToSignIn" class="nav-link">
+              Already have an account? Sign In
+            </a>
+            <a @click="goToOnboarding" class="nav-link">
+              Back to Onboarding
+            </a>
+          </div>
+        </div>
+
+        <!-- <div class="registration-notice">
+          <div class="notice-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M12 8V12" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M12 16H12.01" stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <h3 class="notice-title">Important Notice</h3>
+          <p class="notice-text">
+            To ensure proper account setup and verification, all new users must complete our custom registration
+            process.
+            This helps us maintain security and provide personalized service for PRE Group members.
+          </p>
+        </div> -->
+      </div>
+
+      <!-- Property Step -->
+      <div v-if="currentStep === 'property'" class="step-panel">
+        <!-- <div class="icon-section">
+          <div class="icon-wrapper">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+                stroke="#AF1E23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <polyline points="9,22 9,12 15,12 15,22" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </div>
+        </div> -->
+
+        <!-- Project Selection Form -->
+        <form @submit.prevent="handlePropertySubmit" class="form">
+          <div class="step-header">
+            <h3 class="step-title">Property Selection</h3>
+            <p class="step-description">Select your primary property and optionally add additional properties.</p>
+          </div>
+
+          <!-- Primary Property Section -->
+          <div v-if="selectedProjects.length === 0" class="property-section primary-property">
+            <div class="section-header">
+              <div class="section-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#AF1E23" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+              <h4 class="section-title">Primary Property</h4>
+            </div>
+
+            <!-- Project Selection -->
+            <div class="form-group">
+              <label for="project" class="form-label">Project *</label>
+              <div class="select-wrapper">
+                <select id="project" v-model="propertyForm.selectedProject" class="form-input custom-select" required
+                  @change="onProjectChange">
+                  <option value="" disabled>Select Project</option>
+                  <option 
+                    v-for="project in availableProjectsSorted" 
+                    :key="project.id" 
+                    :value="project.id"
+                    :disabled="project.unitsCount === 0"
+                    :style="project.unitsCount === 0 ? 'color: #999; opacity: 0.6;' : ''"
+                  >
+                    {{ project.name }} - {{ project.type }} ({{ project.location }}){{ project.unitsCount === 0 ? ' - No Units Available' : '' }}
+                  </option>
+                </select>
+                <div class="select-arrow"></div>
+              </div>
+            </div>
+
+            <!-- Unit Selection -->
+            <div class="form-group">
+              <SearchableUnitDropdown
+                v-model="propertyForm.unit"
+                :project-id="propertyForm.selectedProject"
+                :project-users="[]"
+                :label="$t('unitNumberName')"
+                :placeholder="$t('selectUnit')"
+                :search-placeholder="$t('searchUnitPlaceholder')"
+                :disabled="!propertyForm.selectedProject"
+              />
+            </div>
+
+            <!-- Role Selection -->
+            <div class="form-group">
+              <label class="form-label">{{ $t('roleLabel') }} *</label>
+              <div class="role-buttons">
+                <button type="button" @click="propertyForm.role = 'owner'"
+                  :class="['role-btn', { active: propertyForm.role === 'owner' }]">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                  </svg>
+                  {{ $t('ownerRole') }}
+                </button>
+                <button type="button" @click="propertyForm.role = 'family'"
+                  :class="['role-btn', { active: propertyForm.role === 'family' }]">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                  </svg>
+                  {{ $t('familyMember') }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Add Project Button -->
+            <div class="form-group">
+              <button type="button" @click="addProjectToSelection" class="add-project-btn" :disabled="!canAddProject">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+                Add This Property
+              </button>
+            </div>
+          </div>
+
+          <!-- Additional Properties Section -->
+          <div v-if="selectedProjects.length > 0" class="property-section additional-properties">
+            <div class="section-header">
+              <div class="section-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M19 11H13V5C13 4.44772 12.5523 4 12 4C11.4477 4 11 4.44772 11 5V11H5C4.44772 11 4 11.4477 4 12C4 12.5523 4.44772 13 5 13H11V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V13H19C19.5523 13 20 12.5523 20 12C20 11.4477 19.5523 11 19 11Z"
+                    stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              <h4 class="section-title">Additional Properties (Optional)</h4>
+              <p class="section-subtitle">You can add more properties if you own or have access to multiple units</p>
+            </div>
+
+            <div class="projects-list">
+              <div v-for="(project, index) in selectedProjects" :key="index" class="project-item">
+                <div class="project-info">
+                  <div class="project-name">{{ getProjectName(project.projectId) }}</div>
+                  <div class="project-details">
+                    <span class="detail-item">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                      {{ project.unit }}
+                    </span>
+                    <span class="detail-item">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" />
+                      </svg>
+                      {{ project.role }}
+                    </span>
+                  </div>
+                </div>
+                <button type="button" @click="removeProject(index)" class="remove-project-btn" title="Remove property">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Add Another Property Button -->
+            <div class="add-another-section">
+              <button type="button" @click="showAddAnotherForm = true" class="add-another-btn"
+                v-if="!showAddAnotherForm">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+                Add Another Property
+              </button>
+
+              <!-- Additional Property Form -->
+              <div v-if="showAddAnotherForm" class="additional-property-form">
+                <div class="form-group">
+                  <label for="additional-project" class="form-label">Project</label>
+                  <div class="select-wrapper">
+                    <select id="additional-project" v-model="additionalPropertyForm.selectedProject"
+                      class="form-input custom-select" @change="onAdditionalProjectChange">
+                      <option value="" disabled>Select Project</option>
+                      <option 
+                        v-for="project in availableProjectsSorted" 
+                        :key="project.id" 
+                        :value="project.id"
+                        :disabled="project.unitsCount === 0"
+                        :style="project.unitsCount === 0 ? 'color: #999; opacity: 0.6;' : ''"
+                      >
+                        {{ project.name }} - {{ project.type }} ({{ project.location }}){{ project.unitsCount === 0 ? ' - No Units Available' : '' }}
+                      </option>
+                    </select>
+                    <div class="select-arrow"></div>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <SearchableUnitDropdown
+                    v-model="additionalPropertyForm.unit"
+                    :project-id="additionalPropertyForm.selectedProject"
+                    :project-users="[]"
+                    :label="$t('unitNumberName')"
+                    :placeholder="$t('selectUnit')"
+                    :search-placeholder="$t('searchUnitPlaceholder')"
+                    :disabled="!additionalPropertyForm.selectedProject"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">{{ $t('roleLabel') }}</label>
+                  <div class="role-buttons">
+                    <button type="button" @click="additionalPropertyForm.role = 'owner'"
+                      :class="['role-btn', { active: additionalPropertyForm.role === 'owner' }]">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" />
+                      </svg>
+                      {{ $t('ownerRole') }}
+                    </button>
+                    <button type="button" @click="additionalPropertyForm.role = 'family'"
+                      :class="['role-btn', { active: additionalPropertyForm.role === 'family' }]">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2"
+                          stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" />
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" />
+                      </svg>
+                      {{ $t('familyMember') }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="additional-form-actions">
+                  <button type="button" @click="addAdditionalProperty" class="add-property-btn"
+                    :disabled="!canAddAdditionalProperty">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    </svg>
+                    Add Property
+                  </button>
+                  <button type="button" @click="cancelAdditionalProperty" class="cancel-btn">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" @click="goToPreviousStep" class="back-action-btn">
+              Back
+            </button>
+            <button type="submit" class="verify-btn" :disabled="loading || !canProceedToNext">
+              <span v-if="loading">Saving...</span>
+              <span v-else>Complete Registration</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useFormKeyboard } from '../../composables/useFormKeyboard'
+import { useRegistrationStore } from '../../stores/registration'
+import { useNotificationStore } from '../../stores/notifications'
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from '../../boot/firebase'
+import optimizedAuthService from '../../services/optimizedAuthService'
+import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
+import SearchableUnitDropdown from '../../components/SearchableUnitDropdown.vue'
+
+// Component name for ESLint
+defineOptions({
+  name: 'RegisterPage',
+  components: {
+    PendingApprovalModal,
+    SearchableUnitDropdown
+  }
+})
+
+const router = useRouter()
+const registrationStore = useRegistrationStore()
+const notificationStore = useNotificationStore()
+const currentStep = ref('personal')
+const loading = ref(false)
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+const showPendingModal = ref(false)
+
+// Setup keyboard handling for better mobile UX
+useFormKeyboard({
+  scrollToInput: true,
+  hideOnBackdropClick: true,
+  scrollOffset: 150
+})
+
+const personalForm = reactive({
+  email: '',
+  password: '',
+  confirmPassword: ''
+})
+
+const propertyForm = reactive({
+  selectedProject: '', // Stores the ID of the selected project
+  unit: '',
+  role: ''
+})
+
+const availableProjects = ref([])
+const availableProjectsSorted = ref([]) // Sorted with zero-unit projects at bottom
+const selectedProjects = ref([])
+const showAddAnotherForm = ref(false)
+
+const additionalPropertyForm = reactive({
+  selectedProject: '',
+  unit: '',
+  role: ''
+})
+
+// Function to fetch available projects from Firestore with units count
+const fetchAvailableProjects = async () => {
+  try {
+    console.log('[Register] Fetching projects...')
+    
+    const { Capacitor } = await import('@capacitor/core')
+    
+    if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
+      // Use Capacitor Firebase plugin for iOS
+      console.log('[Register] Using Capacitor Firestore for iOS...')
+      const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
+      
+      const result = await FirebaseFirestore.getCollection({
+        reference: 'projects'
+      })
+      
+      // Fetch units count for each project
+      const projectsWithUnits = await Promise.all(
+        result.documents.map(async doc => {
+          try {
+            const unitsResult = await FirebaseFirestore.getCollection({
+              reference: `projects/${doc.id}/units`
+            })
+            console.log(`[Register] ✅ Project ${doc.data.name}: ${unitsResult.documents?.length || 0} units`)
+            return {
+              id: doc.id,
+              ...doc.data,
+              unitsCount: unitsResult.documents?.length || 0
+            }
+          } catch (error) {
+            console.warn(`[Register] ⚠️ Failed to fetch units for project ${doc.id}:`, error.code, error.message)
+            return {
+              id: doc.id,
+              ...doc.data,
+              unitsCount: 0
+            }
+          }
+        })
+      )
+      
+      availableProjects.value = projectsWithUnits
+      console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects via Capacitor')
+    } else {
+      // Use Web SDK for web/Android
+      console.log('[Register] Using Web SDK Firestore...')
+      const projectsRef = collection(db, 'projects')
+      const snapshot = await getDocs(projectsRef)
+      
+      // Fetch units count for each project
+      const projectsWithUnits = await Promise.all(
+        snapshot.docs.map(async doc => {
+          try {
+            const unitsRef = collection(db, 'projects', doc.id, 'units')
+            const unitsSnapshot = await getDocs(unitsRef)
+            console.log(`[Register] ✅ Project ${doc.data().name}: ${unitsSnapshot.size} units`)
+            return {
+              id: doc.id,
+              ...doc.data(),
+              unitsCount: unitsSnapshot.size
+            }
+          } catch (error) {
+            console.warn(`[Register] ⚠️ Failed to fetch units for project ${doc.id}:`, error.code, error.message)
+            return {
+              id: doc.id,
+              ...doc.data(),
+              unitsCount: 0
+            }
+          }
+        })
+      )
+      
+      availableProjects.value = projectsWithUnits
+      console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects via Web SDK')
+    }
+    
+    // Sort projects: projects with units first, then zero-unit projects at bottom
+    availableProjectsSorted.value = [...availableProjects.value].sort((a, b) => {
+      if (a.unitsCount === 0 && b.unitsCount > 0) return 1
+      if (a.unitsCount > 0 && b.unitsCount === 0) return -1
+      return a.name.localeCompare(b.name)
+    })
+    
+    console.log('[Register] ✅ Sorted projects (zero-unit projects at bottom)')
+  } catch (error) {
+    console.error('[Register] Error fetching projects:', error)
+    console.error('[Register] Error details:', error?.message, error?.code)
+    notificationStore.showError('Failed to load projects. Please try again later.')
+  }
+}
+
+// Function to get project name by ID
+const getProjectName = (projectId) => {
+  const project = availableProjects.value.find(p => p.id === projectId)
+  return project ? `${project.name} - ${project.type}` : 'N/A'
+}
+
+// Function to add a project to the selected projects list
+const addProjectToSelection = () => {
+  if (propertyForm.selectedProject && propertyForm.unit) {
+    selectedProjects.value.push({
+      projectId: propertyForm.selectedProject,
+      unit: propertyForm.unit,
+      role: propertyForm.role
+    })
+    propertyForm.selectedProject = ''
+    propertyForm.unit = ''
+    propertyForm.role = ''
+    notificationStore.showSuccess('Project added to selection!')
+  } else {
+    notificationStore.showError('Please select a project and enter a unit number/name.')
+  }
+}
+
+// Function to remove a project from the selected projects list
+const removeProject = (index) => {
+  selectedProjects.value.splice(index, 1)
+  notificationStore.showSuccess('Project removed from selection!')
+}
+
+// Function to handle project selection change
+const onProjectChange = () => {
+  // Clear unit input when project changes
+  propertyForm.unit = ''
+  propertyForm.role = ''
+  // Note: During registration, we don't fetch occupied units
+  // All units will be shown as available, admin will verify later
+}
+
+// Function to handle additional project selection change
+const onAdditionalProjectChange = () => {
+  // Clear unit input when project changes
+  additionalPropertyForm.unit = ''
+  additionalPropertyForm.role = ''
+  // Note: During registration, we don't fetch occupied units
+  // All units will be shown as available, admin will verify later
+}
+
+// Function to add additional property
+const addAdditionalProperty = () => {
+  if (additionalPropertyForm.selectedProject && additionalPropertyForm.unit && additionalPropertyForm.role) {
+    selectedProjects.value.push({
+      projectId: additionalPropertyForm.selectedProject,
+      unit: additionalPropertyForm.unit,
+      role: additionalPropertyForm.role
+    })
+
+    // Reset form
+    additionalPropertyForm.selectedProject = ''
+    additionalPropertyForm.unit = ''
+    additionalPropertyForm.role = ''
+    showAddAnotherForm.value = false
+
+    notificationStore.showSuccess('Additional property added!')
+  } else {
+    notificationStore.showError('Please fill in all fields for the additional property.')
+  }
+}
+
+// Function to cancel adding additional property
+const cancelAdditionalProperty = () => {
+  additionalPropertyForm.selectedProject = ''
+  additionalPropertyForm.unit = ''
+  additionalPropertyForm.role = ''
+  showAddAnotherForm.value = false
+}
+
+// Computed property to check if additional property can be added
+const canAddAdditionalProperty = computed(() => {
+  return additionalPropertyForm.selectedProject && additionalPropertyForm.unit && additionalPropertyForm.role
+})
+
+// Firestore writes are now handled by iosRegistrationService for better iOS compatibility
+
+onMounted(() => {
+  // Load existing data from store if available
+  if (registrationStore.personalData.email) {
+    personalForm.email = registrationStore.personalData.email
+  }
+  if (registrationStore.propertyData.compound) {
+    propertyForm.compound = registrationStore.propertyData.compound
+    propertyForm.unit = registrationStore.propertyData.unit
+    propertyForm.role = registrationStore.propertyData.role
+  }
+
+  // Clear password fields for security
+  personalForm.password = ''
+  personalForm.confirmPassword = ''
+
+  // If email is verified, show property step
+  if (registrationStore.isEmailVerified) {
+    console.log('Email verified, switching to property step')
+    currentStep.value = 'property'
+    // Don't show notification here to avoid spam
+  }
+
+  // If personal details are already completed, show property step and hide personal step
+  if (isPersonalDetailsCompleted.value) {
+    console.log('Personal details completed, switching to property step')
+    currentStep.value = 'property'
+    // Show only one notification for the user's current status
+    notificationStore.showInfo('Please complete your property details to finish registration.')
+
+    // Hide the personal step content since it's already completed
+    // The user should only see the property step
+  }
+
+  // Fetch available projects on mount
+  fetchAvailableProjects()
+
+  // Development verification code listener removed to avoid unnecessary notifications
+})
+
+const goToPreviousStep = () => {
+  if (currentStep.value === 'property') {
+    currentStep.value = 'personal'
+  }
+}
+
+const canProceedToNext = computed(() => {
+  if (currentStep.value === 'personal') {
+    return personalForm.email && !loading.value
+  } else if (currentStep.value === 'property') {
+    return selectedProjects.value.length > 0 && !loading.value
+  }
+  return false
+})
+
+// Check if personal details are completed
+const isPersonalDetailsCompleted = computed(() => {
+  const userDetails = registrationStore.userDetails
+  return userDetails.firstName && userDetails.lastName && userDetails.mobile &&
+    userDetails.dateOfBirth && userDetails.nationalId
+})
+
+const canProceed = computed(() => {
+  return personalForm.email &&
+    personalForm.password &&
+    personalForm.confirmPassword &&
+    personalForm.password === personalForm.confirmPassword &&
+    personalForm.password.length >= 8 &&
+    !loading.value
+})
+
+const canAddProject = computed(() => {
+  return propertyForm.selectedProject && propertyForm.unit && propertyForm.role
+})
+
+const handlePersonalSubmit = async () => {
+  if (loading.value) return
+
+  if (!personalForm.email) {
+    notificationStore.showError('Please enter your email address')
+    return
+  }
+
+  if (!personalForm.password) {
+    notificationStore.showError('Please enter a password')
+    return
+  }
+
+  if (personalForm.password.length < 8) {
+    notificationStore.showError('Password must be at least 8 characters long')
+    return
+  }
+
+  if (personalForm.password !== personalForm.confirmPassword) {
+    notificationStore.showError('Passwords do not match')
+    return
+  }
+
+  loading.value = true
+
+  try {
+    console.log('[Register] STEP 1: Checking if email already exists in users table...')
+    const normalizedEmail = personalForm.email.trim().toLowerCase()
+    
+    // Check if email already exists in DynamoDB users table
+    const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
+    const existingUser = await getUserByEmail(normalizedEmail)
+    
+    if (existingUser) {
+      console.warn('[Register] ⚠️ Email already exists in users table:', existingUser.id)
+      notificationStore.showError('An account with this email already exists. Please sign in instead.')
+      loading.value = false
+      return
+    }
+    
+    console.log('[Register] ✅ Email is available, proceeding with registration')
+    console.log('[Register] STEP 2: Storing credentials')
+    registrationStore.setPersonalData({ email: personalForm.email })
+    registrationStore.setUserDetails({ password: personalForm.password })
+
+    console.log('[Register] STEP 3: Creating account via Amplify Auth (will be pending admin approval)...')
+    // Use createUserWithEmailAndPassword instead of registerOrSignIn to ensure new account creation
+    const authResult = await optimizedAuthService.createUserWithEmailAndPassword(personalForm.email, personalForm.password)
+    console.log('[Register] ✅ Cognito account created:', authResult.userSub)
+    console.log('[Register] User confirmed status:', authResult.userConfirmed)
+
+    console.log('[Register] STEP 4: Storing user ID')
+    registrationStore.setTempUserId(authResult.userSub || authResult.user?.uid)
+    registrationStore.setUserDetails({
+      password: personalForm.password,
+      authToken: null, // No token until admin approves and user signs in
+      refreshToken: null
+    })
+
+    console.log('[Register] STEP 5: Creating user in DynamoDB users table with pending status...')
+    // Create user in DynamoDB users table with pending approval status
+    const { createUser } = await import('src/services/dynamoDBUsersService')
+    await createUser(authResult.userSub || authResult.user?.uid, {
+      email: normalizedEmail,
+      approvalStatus: 'pending', // Pending admin approval
+      registrationStatus: 'pending', // Pending admin approval
+      registrationStep: 'personal', // Just started registration
+      isProfileComplete: false,
+      emailVerified: false
+    })
+    console.log('[Register] ✅ User created in DynamoDB users table with pending status')
+
+    console.log('[Register] STEP 6: Clearing password fields')
+    personalForm.password = ''
+    personalForm.confirmPassword = ''
+
+    console.log('[Register] STEP 7: NAVIGATING to /register/personal-details')
+    router.push('/register/personal-details')
+    console.log('[Register] ✅ NAVIGATION TRIGGERED')
+  } catch (error) {
+    console.error('[Register] ❌ CAUGHT ERROR:', error)
+    console.error('[Register] Error type:', typeof error)
+    console.error('[Register] Error code:', error?.code)
+    console.error('[Register] Error message:', error?.message)
+    console.error('[Register] Error stack:', error?.stack)
+    console.error('[Register] Error keys:', Object.keys(error || {}))
+    
+    let errorMessage = 'Registration failed. Please try again.'
+    
+    // Handle normalized error codes (from optimizedAuthService)
+    if (error?.code === 'auth/signup-disabled' || 
+        (error?.code === 'NotAuthorizedException' && error?.message?.toLowerCase().includes('signup is not permitted'))) {
+      errorMessage = 'Self-registration is currently disabled. Please contact an administrator to create your account.'
+    } else if (error?.code === 'auth/invalid-email' || error?.code === 'InvalidParameterException') {
+      errorMessage = 'Invalid email address'
+    } else if (error?.code === 'auth/network-request-failed' || error?.code === 'NetworkError') {
+      errorMessage = 'Network error. Please check your connection'
+    } else if (error?.code === 'auth/email-already-in-use' || 
+               error?.code === 'UsernameExistsException' || 
+               error?.message?.includes('already exists') ||
+               error?.message?.includes('An account with this email already exists')) {
+      errorMessage = 'An account with this email already exists. Please sign in instead.'
+    } else if (error?.code === 'auth/weak-password' || error?.code === 'InvalidPasswordException') {
+      errorMessage = 'Password does not meet requirements. Please use a stronger password.'
+    } else if (error?.code === 'auth/too-many-requests' || error?.code === 'LimitExceededException') {
+      errorMessage = 'Too many attempts. Please try again later.'
+    } else if (error?.message) {
+      errorMessage = error.message
+    }
+
+    notificationStore.showError(errorMessage)
+  } finally {
+    loading.value = false
+  }
+}
+
+const handlePropertySubmit = async () => {
+  if (loading.value) return
+
+  if (selectedProjects.value.length === 0) {
+    notificationStore.showError('Please select at least one project.')
+    return
+  }
+
+  loading.value = true
+
+  try {
+    console.log('[Register] Property submit - selected projects:', selectedProjects.value)
+    
+    // Store property data in registration store
+    registrationStore.setPropertyData({
+      compound: '',
+      unit: '',
+      role: '',
+      projects: selectedProjects.value
+    })
+
+    // Save COMPLETE user data to DynamoDB users table
+    if (registrationStore.tempUserId) {
+      console.log('[Register] Saving complete registration to DynamoDB users table...')
+      console.log('[Register] Projects to save:', selectedProjects.value)
+      
+      const userDetails = registrationStore.userDetails
+      const now = new Date().toISOString()
+      
+      // Prepare complete user data
+      const completeUserData = {
+        // Personal info
+        email: registrationStore.personalData.email.trim().toLowerCase(),
+        firstName: userDetails.firstName || '',
+        lastName: userDetails.lastName || '',
+        fullName: `${userDetails.firstName || ''} ${userDetails.lastName || ''}`.trim() || '',
+        mobile: userDetails.mobile || '',
+        dateOfBirth: userDetails.dateOfBirth || null,
+        gender: userDetails.gender || null,
+        nationalId: userDetails.nationalId || '',
+        
+        // Documents
+        documents: userDetails.documents || {},
+        
+        // Projects (with proper structure)
+        projects: selectedProjects.value || [],
+        unit: '', // Will be set per project
+        role: '', // Will be set per project
+        
+        // Registration status - PENDING ADMIN APPROVAL
+        registrationStep: 'completed',
+        registrationStatus: 'pending', // Pending admin approval
+        isProfileComplete: true,
+        
+        // Approval status - PENDING ADMIN APPROVAL
+        approvalStatus: 'pending', // Pending admin approval
+        approvedBy: '', // Will be set by admin
+        approvedAt: null, // Will be set when admin approves
+        
+        // Auth and verification
+        authUid: registrationStore.tempUserId,
+        emailVerified: false,
+        
+        // Account type (unknown for new registrations)
+        accountType: '',
+        
+        // Suspension fields (initialize as not suspended)
+        isSuspended: false,
+        isTemporary: false,
+        suspendedAt: null,
+        suspendedBy: '',
+        suspensionReason: '',
+        suspensionType: '',
+        suspensionEndDate: null,
+        unsuspendedAt: null,
+        unsuspendedBy: '',
+        
+        // Timestamps
+        createdAt: now,
+        updatedAt: now,
+        lastLoginAt: null, // No login yet, pending approval
+        
+        // Admin and creation fields
+        createdByAdmin: false,
+        oldId: '',
+        
+        // Password reset fields
+        passwordResetCount: 0,
+        passwordResetSent: false,
+        passwordResetSentAt: null
+      }
+      
+      // Update user in DynamoDB users table (user was already created in handlePersonalSubmit)
+      console.log('[Register] Updating user in DynamoDB users table...')
+      const { updateUser } = await import('src/services/dynamoDBUsersService')
+      await updateUser(registrationStore.tempUserId, completeUserData)
+      console.log('[Register] ✅ Complete registration data saved to DynamoDB users table')
+      
+      // Clear password for security after successful save
+      console.log('[Register] Clearing stored password for security')
+      registrationStore.setUserDetails({ password: '', authToken: '', refreshToken: '' })
+    }
+
+    console.log('[Register] Showing success notification')
+    notificationStore.showSuccess('Registration completed!')
+    
+    console.log('[Register] ✅ Registration complete - showing pending approval modal')
+    // Show pending approval modal since all new registrations are pending by default
+    showPendingModal.value = true
+  } catch (error) {
+    console.error('Property save error:', error)
+    notificationStore.showError('Failed to save properties: ' + error.message)
+  } finally {
+    loading.value = false
+  }
+}
+
+const goToOnboarding = () => {
+  console.log('goToOnboarding called, navigating to /onboarding')
+  router.push('/onboarding')
+}
+
+const goToSignIn = () => {
+  router.push('/signin')
+}
+
+const togglePassword = () => {
+  showPassword.value = !showPassword.value
+}
+
+const toggleConfirmPassword = () => {
+  showConfirmPassword.value = !showConfirmPassword.value
+}
+
+</script>
+
+<style scoped>
+.register-page {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  /* Enable scrolling for keyboard visibility */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  background-color: #231F20;
+  color: white;
+  margin-bottom: 0;
+}
+
+.page-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+  color: white;
+  line-height: normal;
+}
+
+.placeholder {
+  width: 40px;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.back-btn svg {
+  stroke: white;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.signin-header-btn {
+  background-color: #AF1E23;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.separator-line {
+  height: 3px;
+  background-color: #AF1E23;
+  margin: 0;
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.registration-info {
+  display: flex;
+  align-items: center;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+  margin-top: 20px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background-color: rgba(255, 107, 53, 0.1);
+  border-radius: 50%;
+  margin-right: 15px;
+}
+
+.info-content {
+  flex: 1;
+}
+
+.info-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #856404;
+  margin: 0 0 10px 0;
+}
+
+.info-content p {
+  color: #856404;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.progress-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 30px;
+  padding: 0 40px;
+  position: relative;
+  gap: 120px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.progress-line {
+  position: absolute;
+  height: 2px;
+  background-color: #e1e5e9;
+  width: 70%;
+  margin-left: 15%;
+  top: 30%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  border-radius: 8px;
+  min-width: 80px;
+}
+
+.progress-step.active .step-icon {
+  background-color: #231F20;
+  border-color: #231F20;
+  color: white;
+  width: 48px;
+  height: 48px;
+}
+
+.progress-step.active .step-label {
+  color: #231F20;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 12px;
+}
+
+.progress-step.completed .step-icon {
+  background-color: #e1e5e9;
+  border-color: #e1e5e9;
+  color: #AF1E23;
+  width: 48px;
+  height: 48px;
+}
+
+.progress-step.completed .step-label {
+  color: #AF1E23;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 12px;
+}
+
+.progress-step:not(.active):not(.completed) .step-icon {
+  background-color: #e1e5e9;
+  border-color: #e1e5e9;
+  color: #999;
+  width: 48px;
+  height: 48px;
+}
+
+.progress-step:not(.active):not(.completed) .step-label {
+  color: #999;
+  font-weight: 500;
+  font-size: 1rem;
+  margin-top: 12px;
+}
+
+.step-icon {
+  border: 2px solid #e1e5e9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.step-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.progress-step.active .step-icon svg {
+  stroke: white;
+}
+
+.progress-step.completed .step-icon svg {
+  stroke: #AF1E23;
+}
+
+.progress-step:not(.active):not(.completed) .step-icon svg {
+  stroke: #999;
+}
+
+.step-label {
+  font-weight: 500;
+  transition: all 0.3s ease;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.step-content {
+  padding: 40px 20px;
+  max-width: 500px;
+  margin: 0 auto;
+  /* Add extra bottom padding for keyboard */
+  padding-bottom: 150px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 30px 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: #e1e5e9;
+}
+
+.divider span {
+  padding: 0 15px;
+  background-color: #f8f9fa;
+}
+
+.social-signin {
+  margin-top: 20px;
+}
+
+.social-btn {
+  width: 100%;
+  padding: 12px 20px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  background-color: white;
+  color: #333;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.google-btn {
+  border-color: #AF1E23;
+  color: #AF1E23;
+}
+
+.google-btn svg {
+  flex-shrink: 0;
+}
+
+.step-panel {
+  animation: fadeIn 0.3s ease;
+}
+
+.icon-section {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.registration-notice {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 30px;
+  text-align: center;
+}
+
+.notice-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background-color: rgba(255, 107, 53, 0.1);
+  border-radius: 50%;
+  margin-bottom: 15px;
+}
+
+.notice-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #856404;
+  margin: 0 0 10px 0;
+}
+
+.notice-text {
+  color: #856404;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background-color: rgba(255, 107, 53, 0.1);
+  border-radius: 50%;
+}
+
+.form {
+  width: 100%;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 15px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  background-color: white;
+  font-family: inherit;
+  /* iOS keyboard improvements */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #AF1E23;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+select.form-input {
+  cursor: pointer;
+  background-color: white;
+}
+
+select.form-input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.password-requirements {
+  margin-top: 5px;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.password-input-wrapper {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+}
+
+
+
+.proceed-btn,
+.verify-btn {
+  width: 100%;
+  background-color: #AF1E23;
+  color: white;
+  border: none;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.proceed-btn:disabled,
+.verify-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.form-actions {
+  display: flex;
+  gap: 15px;
+}
+
+.back-action-btn {
+  flex: 1;
+  background-color: white;
+  color: #666;
+  border: 2px solid #e1e5e9;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.verify-btn {
+  flex: 2;
+}
+
+.add-project-btn {
+  width: 100%;
+  background-color: #AF1E23;
+  color: white;
+  border: none;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.add-project-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+
+
+.remove-project-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.remove-project-btn svg {
+  stroke: #AF1E23;
+}
+
+
+
+.step-navigation {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.nav-divider {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.nav-divider::before,
+.nav-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: #e1e5e9;
+}
+
+.nav-divider span {
+  padding: 0 15px;
+  background-color: #f8f9fa;
+}
+
+.nav-options {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.nav-link {
+  color: #666;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced Property Selection Styles */
+.step-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.step-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 10px 0;
+}
+
+.step-description {
+  color: #666;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.property-section {
+  background-color: #f8f9fa;
+  border: 1px solid #e1e5e9;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 25px;
+}
+
+.primary-property {
+  border-left: 4px solid #AF1E23;
+}
+
+.additional-properties {
+  border-left: 4px solid #AF1E23;
+}
+
+.primary-property-summary {
+  border-left: 4px solid #4CAF50;
+  background-color: #f1f8e9;
+}
+
+.primary-property-summary .section-icon {
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.primary-property-summary .section-icon svg {
+  stroke: #4CAF50;
+}
+
+.section-header {
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.section-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: rgba(255, 107, 53, 0.1);
+  border-radius: 8px;
+}
+
+.additional-properties .section-icon {
+  background-color: rgba(33, 150, 243, 0.1);
+}
+
+.section-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.section-subtitle {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 5px 0 0 0;
+  font-style: italic;
+}
+
+/* Enhanced Dropdown Styles */
+.select-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.custom-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: none;
+  padding-right: 45px;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #666;
+  pointer-events: none;
+  transition: border-top-color 0.3s ease;
+}
+
+.custom-select:focus+.select-arrow {
+  border-top-color: #AF1E23;
+}
+
+/* Enhanced Role Buttons */
+.role-buttons {
+  display: flex;
+  gap: 15px;
+}
+
+.role-btn {
+  flex: 1;
+  padding: 15px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  background-color: white;
+  color: #666;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.role-btn.active {
+  border-color: #AF1E23;
+  background-color: #AF1E23;
+  color: white;
+}
+
+.role-btn svg {
+  stroke: currentColor;
+}
+
+/* Enhanced Project Items */
+.projects-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.project-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background-color: white;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+}
+
+.project-item:last-child {
+  margin-bottom: 0;
+}
+
+.project-info {
+  flex: 1;
+}
+
+.project-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+.project-details {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.detail-item svg {
+  stroke: #666;
+}
+
+/* Add Another Property Section */
+.add-another-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e1e5e9;
+}
+
+.add-another-btn {
+  width: 100%;
+  background-color: transparent;
+  color: #AF1E23;
+  border: 2px dashed #AF1E23;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.additional-property-form {
+  background-color: white;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 15px;
+}
+
+.additional-form-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.add-property-btn {
+  flex: 2;
+  background-color: #AF1E23;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.add-property-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.cancel-btn {
+  flex: 1;
+  background-color: white;
+  color: #666;
+  border: 2px solid #e1e5e9;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Primary Property Display */
+.primary-property-display {
+  margin-top: 15px;
+}
+
+.property-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background-color: white;
+  border: 2px solid #e1e5e9;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.property-card.primary {
+  border-color: #4CAF50;
+  background-color: #f8fff8;
+}
+
+.property-info {
+  flex: 1;
+}
+
+.property-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+.property-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.primary-badge {
+  background-color: #4CAF50;
+  color: white;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .step-content {
+    padding: 20px;
+  }
+
+  .form-input {
+    padding: 14px;
+  }
+
+  .role-buttons {
+    flex-direction: column;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .verify-btn {
+    flex: 1;
+  }
+
+  .progress-indicator {
+    gap: 40px;
+    padding: 0 15px;
+  }
+
+  .step-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .step-label {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+
+  .progress-indicator {
+    gap: 50px;
+  }
+}
+</style>

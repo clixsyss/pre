@@ -1,0 +1,27 @@
+# Xcode Cloud Configuration for PRE iOS App
+# This file configures Xcode Cloud to use the workspace instead of the project file
+
+version: 1
+
+# Build configuration
+build:
+  # Use the workspace file instead of the project file
+  scheme: App
+  workspace: ios/App/App.xcworkspace
+  
+  # Environment variables
+  environment:
+    CI_XCODE_PROJECT: ios/App/App.xcworkspace
+    
+  # Pre-build actions
+  pre_build:
+    - script: ci_scripts/ci_post_clone.sh
+    
+  # Post-build actions  
+  post_build:
+    - script: ios/App/App.xcworkspace/xcshareddata/ci_scripts/ci_post_xcodebuild.sh
+
+# Test configuration (if needed)
+test:
+  scheme: App
+  workspace: ios/App/App.xcworkspace

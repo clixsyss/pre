@@ -1,0 +1,21 @@
+{
+  "collectionId": "deviceKeyResetRequests",
+  "parent": "",
+  "documents": [
+    {
+      "id": "YIdFwsufBZO8jFxOQUvb",
+      "path": "deviceKeyResetRequests/YIdFwsufBZO8jFxOQUvb",
+      "data": {
+        "userId": "OpljNxl2HvVV6a6VIvXI4CgYq9Z2",
+        "reason": "Idk",
+        "projectId": null,
+        "status": "pending",
+        "requestedAt": "2025-10-24T16:42:00.296Z",
+        "resolvedAt": null,
+        "resolvedBy": null,
+        "adminNotes": null
+      },
+      "subcollections": {}
+    }
+  ]
+}

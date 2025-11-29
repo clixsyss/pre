@@ -1,0 +1,230 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to read all files
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+    }
+    
+    // Allow news media uploads for admins
+    match /news/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+        // Allow project-specific news media uploads for admins
+    match /projects/{projectId}/news/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Allow store image uploads for admins
+    match /projects/{projectId}/stores/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+      // Temporary: Allow authenticated users to upload store images (for testing)
+    match /projects/{projectId}/stores/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
+    // Temporary: Allow authenticated users to upload product images (for testing)
+    match /projects/{projectId}/stores/{storeId}/products/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
+    // Allow product image uploads for admins
+    match /projects/{projectId}/stores/{storeId}/products/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Temporary: Allow authenticated users to upload news media (for testing)
+    // TODO: Remove this rule once admin authentication is properly set up
+    match /news/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
+    // Allow chat image uploads for authenticated users
+    // TEMPORARY: Open for iOS auth workaround (same as user documents)
+    match /projects/{projectId}/serviceBookings/{bookingId}/images/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Allow support chat image uploads for authenticated users
+    // TEMPORARY: Open for iOS auth workaround (same as user documents)
+    match /projects/{projectId}/supportChats/{chatId}/images/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Allow support chat uploads (without project prefix)
+    // TEMPORARY: Open for iOS auth workaround (same as user documents)
+    match /support/{chatId}/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Allow violation chat image uploads for authenticated users
+    // TEMPORARY: Open for iOS auth workaround (same as user documents)
+    match /projects/{projectId}/violations/{violationId}/images/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Allow request chat image uploads for authenticated users
+    // TEMPORARY: Open for iOS auth workaround (same as user documents)
+    match /projects/{projectId}/requestSubmissions/{submissionId}/images/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Allow request chat message uploads (with dash in path)
+    // TEMPORARY: Open for iOS auth workaround (same as user documents)
+    match /projects/{projectId}/request-submissions/{submissionId}/messages/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Allow court image uploads for admins
+    match /courts/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Temporary: Allow authenticated users to upload court images (for testing)
+    match /courts/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
+    // Allow academy image uploads for admins
+    match /academies/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Temporary: Allow authenticated users to upload academy images (for testing)
+    match /academies/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
+    // Allow complaint file uploads for authenticated users
+    // TEMPORARY: Open for iOS auth workaround (same as user documents)
+    match /complaints/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Allow project-specific complaint file uploads for authenticated users
+    // TEMPORARY: Open for iOS auth workaround (same as user documents)
+    match /projects/{projectId}/complaints/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Allow PDF guidelines uploads for admins
+    match /projects/{projectId}/guidelines/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Temporary: Allow authenticated users to upload PDF guidelines (for testing)
+    match /projects/{projectId}/guidelines/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
+    // Allow ads image uploads for admins
+    match /projects/{projectId}/ads/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Temporary: Allow authenticated users to upload ads images (for testing)
+    match /projects/{projectId}/ads/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
+    // Fine evidence images
+    // TEMPORARY: Open for iOS auth workaround (same as user documents)
+    match /projects/{projectId}/fines/{fineId}/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Allow user document uploads (National ID, Profile Pictures)
+    // TEMPORARY: Open for registration (iOS auth workaround)
+    match /users/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Allow request submission media uploads for authenticated users
+    // TEMPORARY: Open for iOS auth workaround (same as user documents)
+    match /projects/{projectId}/requestSubmissions/{submissionId}/media/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Allow request category image uploads for admins
+    match /projects/{projectId}/requestCategories/{categoryId}/image/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Temporary: Allow authenticated users to upload request category images (for testing)
+    match /projects/{projectId}/requestCategories/{categoryId}/image/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
+    // Allow service category icon uploads for admins
+    match /serviceCategories/{categoryId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Temporary: Allow authenticated users to upload service category icons (for testing)
+    match /serviceCategories/{categoryId}/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
+    // Allow project-specific service category icon uploads for admins
+    match /projects/{projectId}/serviceCategories/{categoryId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Temporary: Allow authenticated users to upload project-specific service category icons (for testing)
+    match /projects/{projectId}/serviceCategories/{categoryId}/{fileName} {
+      allow write: if request.auth != null;
+    }
+    
+    // Allow guest pass QR code PUBLIC READ (so guests can view via shared link)
+    // Only authenticated users can write/upload
+    match /guestPasses/{projectId}/{fileName} {
+      allow read: if true; // Public read access for guest pass QR codes
+      allow write: if request.auth != null;
+    }
+    
+    // Allow logo and other public assets to be read by anyone
+    match /logo.png {
+      allow read: if true;
+    }
+    
+    match /public/{allPaths=**} {
+      allow read: if true;
+    }
+  }
+}

@@ -1,0 +1,401 @@
+import { defineStore } from "pinia";
+import { ref } from "vue";
+import firestoreService from "../services/firestoreService";
+import performanceService from "../services/performanceService";
+import errorHandlingService from "../services/errorHandlingService";
+import { getAcademiesByProject } from "../services/dynamoDBAcademiesService";
+import { getUserBookings as getDynamoDBUserBookings } from "../services/dynamoDBBookingsService";
+
+export const useAcademiesStore = defineStore("academiesStore", () => {
+    const academyOptions = ref([]);
+    const programsByAcademy = ref({});
+    const selectedAcademy = ref(null);
+    const userBookings = ref([]);
+
+    const addAcademy = async (academy) => {
+        return performanceService.timeOperation('addAcademy', async () => {
+            try {
+                console.log('🚀 AcademyStore: Adding academy:', academy.name);
+                await firestoreService.setDoc(`academies/${academy.name}`, {
+                    email: academy.email,
+                    phone: academy.phone,
+                    website: academy.website,
+                    programs: []
+                });
+
+                academyOptions.value.push({
+                    id: academy.name,
+                    email: academy.email,
+                    phone: academy.phone,
+                    website: academy.website,
+                    programs: [],
+                    imageUrl: academy.imageUrl || null,
+                    imageFileName: academy.imageFileName || null
+                });
+                programsByAcademy.value[academy.name] = [];
+                console.log('✅ AcademyStore: Academy added successfully');
+            } catch (error) {
+                console.error("❌ AcademyStore: Error adding academy:", error);
+                errorHandlingService.handleFirestoreError(error, 'addAcademy');
+                throw error;
+            }
+        });
+    };
+
+    const updateAcademy = async (academy) => {
+        return performanceService.timeOperation('updateAcademy', async () => {
+            try {
+                console.log('🚀 AcademyStore: Updating academy:', academy.name);
+                await firestoreService.updateDoc(`academies/${academy.name}`, {
+                    email: academy.email,
+                    phone: academy.phone,
+                    website: academy.website
+                });
+
+                const index = academyOptions.value.findIndex(a => a.id === academy.name);
+                if (index !== -1) {
+                    academyOptions.value[index] = { ...academyOptions.value[index], ...academy };
+                }
+                console.log('✅ AcademyStore: Academy updated successfully');
+            } catch (error) {
+                console.error("❌ AcademyStore: Error updating academy:", error);
+                errorHandlingService.handleFirestoreError(error, 'updateAcademy');
+                throw error;
+            }
+        });
+    };
+
+    const deleteAcademy = async (academyId) => {
+        return performanceService.timeOperation('deleteAcademy', async () => {
+            try {
+                console.log('🚀 AcademyStore: Deleting academy:', academyId);
+                await firestoreService.deleteDoc(`academies/${academyId}`);
+                academyOptions.value = academyOptions.value.filter(a => a.id !== academyId);
+                delete programsByAcademy.value[academyId];
+                console.log('✅ AcademyStore: Academy deleted successfully');
+            } catch (error) {
+                console.error("❌ AcademyStore: Error deleting academy:", error);
+                errorHandlingService.handleFirestoreError(error, 'deleteAcademy');
+                throw error;
+            }
+        });
+    };
+
+    const addProgram = async (academyId, program) => {
+        return performanceService.timeOperation('addProgram', async () => {
+            try {
+                console.log('🚀 AcademyStore: Adding program to academy:', academyId);
+                const academyPrograms = programsByAcademy.value[academyId] || [];
+                academyPrograms.push(program);
+                programsByAcademy.value[academyId] = academyPrograms;
+                await firestoreService.updateDoc(`academies/${academyId}`, { programs: academyPrograms });
+                console.log('✅ AcademyStore: Program added successfully');
+            } catch (error) {
+                console.error("❌ AcademyStore: Error adding program:", error);
+                errorHandlingService.handleFirestoreError(error, 'addProgram');
+                throw error;
+            }
+        });
+    };
+
+    const updateProgram = async (academyId, programId, updatedProgram) => {
+        return performanceService.timeOperation('updateProgram', async () => {
+            try {
+                console.log('🚀 AcademyStore: Updating program:', programId);
+                const academyPrograms = programsByAcademy.value[academyId] || [];
+                const index = academyPrograms.findIndex(p => p.id === programId);
+                if (index !== -1) {
+                    academyPrograms[index] = updatedProgram;
+                    programsByAcademy.value[academyId] = academyPrograms;
+                    await firestoreService.updateDoc(`academies/${academyId}`, { programs: academyPrograms });
+                    console.log('✅ AcademyStore: Program updated successfully');
+                }
+            } catch (error) {
+                console.error("❌ AcademyStore: Error updating program:", error);
+                errorHandlingService.handleFirestoreError(error, 'updateProgram');
+                throw error;
+            }
+        });
+    };
+
+    const deleteProgram = async (academyId, programId) => {
+        return performanceService.timeOperation('deleteProgram', async () => {
+            try {
+                console.log('🚀 AcademyStore: Deleting program:', programId);
+                const academyPrograms = programsByAcademy.value[academyId] || [];
+                const filteredPrograms = academyPrograms.filter(p => p.id !== programId);
+                programsByAcademy.value[academyId] = filteredPrograms;
+                await firestoreService.updateDoc(`academies/${academyId}`, { programs: filteredPrograms });
+                console.log('✅ AcademyStore: Program deleted successfully');
+            } catch (error) {
+                console.error("❌ AcademyStore: Error deleting program:", error);
+                errorHandlingService.handleFirestoreError(error, 'deleteProgram');
+                throw error;
+            }
+        });
+    };
+
+    const setSelectedAcademy = (academy) => {
+        selectedAcademy.value = academy;
+    };
+
+    const addUserBooking = async (booking) => {
+        return performanceService.timeOperation('addUserBooking', async () => {
+            try {
+                console.log('🚀 AcademyStore: Adding user booking');
+                const newBooking = {
+                    ...booking,
+                    createdAt: new Date(),
+                    status: "pending" // Start as pending until admin confirms
+                };
+
+                const docId = await firestoreService.addDoc('userBookings', newBooking);
+                newBooking.id = docId;
+                userBookings.value.push(newBooking);
+                console.log('✅ AcademyStore: User booking added successfully');
+            } catch (error) {
+                console.error("❌ AcademyStore: Error adding user booking:", error);
+                errorHandlingService.handleFirestoreError(error, 'addUserBooking');
+                throw error;
+            }
+        });
+    };
+
+    // Method to create a test booking in project-specific collection
+    const createTestBooking = async (projectId, userId, bookingData) => {
+        return performanceService.timeOperation('createTestBooking', async () => {
+            try {
+                if (!projectId || !userId) {
+                    console.warn("Missing projectId or userId for test booking");
+                    return false;
+                }
+
+                console.log('🚀 AcademyStore: Creating test booking for project:', projectId);
+                const newBooking = {
+                    ...bookingData,
+                    userId: userId,
+                    createdAt: new Date(),
+                    status: "pending" // Start as pending until admin confirms
+                };
+
+                const docId = await firestoreService.addDoc(`projects/${projectId}/bookings`, newBooking);
+                newBooking.id = docId;
+                console.log("✅ AcademyStore: Test booking created successfully:", newBooking);
+                return true;
+            } catch (error) {
+                console.error("❌ AcademyStore: Error creating test booking:", error);
+                errorHandlingService.handleFirestoreError(error, 'createTestBooking');
+                throw error;
+            }
+        });
+    };
+
+    const fetchUserBookings = async (userId, projectId) => {
+        return performanceService.timeOperation('fetchUserBookings', async () => {
+            try {
+                if (!projectId) {
+                    console.warn("No project ID provided to fetchUserBookings");
+                    return;
+                }
+
+                console.log('🚀 AcademyStore: Fetching user bookings for user:', userId, 'project:', projectId);
+                
+                // Use DynamoDB service first
+                try {
+                    const bookings = await getDynamoDBUserBookings(projectId, userId, { limit: 100 });
+                    
+                    // Sort by createdAt descending
+                    bookings.sort((a, b) => {
+                        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                        return dateB - dateA;
+                    });
+                    
+                    userBookings.value = bookings;
+                    console.log("✅ AcademyStore: User bookings fetched from DynamoDB:", bookings.length);
+                    return bookings;
+                } catch (dynamoError) {
+                    console.warn('AcademyStore: DynamoDB fetch failed, falling back to Firestore:', dynamoError);
+                    // Fallback to Firestore
+                    const queryOptions = {
+                        filters: [
+                            { field: 'userId', operator: '==', value: userId }
+                        ],
+                        orderBy: [
+                            { field: 'createdAt', direction: 'desc' }
+                        ],
+                        timeoutMs: 6000
+                    };
+                    
+                    const result = await firestoreService.getDocs(`projects/${projectId}/bookings`, queryOptions);
+                    
+                    const bookings = result.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    
+                    userBookings.value = bookings;
+                    console.log("✅ AcademyStore: User bookings fetched from Firestore (fallback):", bookings.length);
+                    return bookings;
+                }
+            } catch (error) {
+                console.error("❌ AcademyStore: Error fetching user bookings:", error);
+                errorHandlingService.handleFirestoreError(error, 'fetchUserBookings');
+                throw error;
+            }
+        });
+    };
+
+    const clearUserBookings = () => {
+        userBookings.value = [];
+    };
+
+    const completeBooking = async (projectId, bookingId) => {
+        return performanceService.timeOperation('completeBooking', async () => {
+            try {
+                console.log('🔍 AcademyStore: Completing booking:', { projectId, bookingId });
+                
+                const docPath = `projects/${projectId}/bookings/${bookingId}`;
+                const updateData = {
+                    status: "completed",
+                    updatedAt: new Date()
+                };
+                
+                await firestoreService.updateDoc(docPath, updateData);
+                
+                // Update local state
+                const bookingIndex = userBookings.value.findIndex(booking => booking.id === bookingId);
+                if (bookingIndex !== -1) {
+                    userBookings.value[bookingIndex].status = "completed";
+                    userBookings.value[bookingIndex].updatedAt = updateData.updatedAt;
+                }
+                
+                console.log('✅ AcademyStore: Booking completed successfully');
+                return { success: true };
+            } catch (error) {
+                console.error('❌ AcademyStore: Error completing booking:', error);
+                errorHandlingService.handleFirestoreError(error, 'completeBooking');
+                throw error;
+            }
+        });
+    };
+
+    const fetchAcademies = async (projectId) => {
+        return performanceService.timeOperation('fetchAcademies', async () => {
+            try {
+                console.log('🚀 AcademyStore: Fetching academies for project:', projectId);
+                
+                if (!projectId) {
+                    console.warn('AcademyStore: No projectId provided');
+                    academyOptions.value = [];
+                    return [];
+                }
+                
+                // Use DynamoDB service first
+                try {
+                    console.log('🚀 AcademyStore: Calling getAcademiesByProject with projectId:', projectId);
+                    const academies = await getAcademiesByProject(projectId, { limit: 100 });
+                    
+                    console.log('🚀 AcademyStore: Received academies from DynamoDB:', academies.length);
+                    console.log('🚀 AcademyStore: Raw academies data:', JSON.stringify(academies, null, 2));
+                    
+                    // Transform to match expected format
+                    const transformedAcademies = academies.map(academy => {
+                        console.log(`🚀 AcademyStore: Transforming academy "${academy.name}":`, {
+                            id: academy.id,
+                            programsCount: academy.programs?.length || 0,
+                            programs: academy.programs
+                        });
+                        
+                        return {
+                            id: academy.id,
+                            name: academy.name,
+                            description: academy.description || '',
+                            email: academy.email || '',
+                            phone: academy.phone || '',
+                            website: academy.website || '',
+                            programs: academy.programs || [],
+                            updatedAt: academy.updatedAt || null,
+                            imageUrl: academy.imageUrl || null,
+                            imageFileName: academy.imageFileName || null
+                        };
+                    });
+                    
+                    console.log('🚀 AcademyStore: Transformed academies:', transformedAcademies.length);
+                    academyOptions.value = transformedAcademies;
+                    
+                    // Also populate programsByAcademy
+                    transformedAcademies.forEach(academy => {
+                        if (academy.programs && academy.programs.length > 0) {
+                            programsByAcademy.value[academy.id] = academy.programs;
+                            console.log(`✅ AcademyStore: Loaded ${academy.programs.length} programs for academy "${academy.name}"`);
+                            console.log(`✅ AcademyStore: Programs for "${academy.name}":`, academy.programs);
+                        } else {
+                            programsByAcademy.value[academy.id] = [];
+                            console.log(`⚠️ AcademyStore: Academy "${academy.name}" has no programs`);
+                        }
+                    });
+                    
+                    console.log("✅ AcademyStore: Academies fetched from DynamoDB:", transformedAcademies.length);
+                    console.log("✅ AcademyStore: Total academies with programs:", transformedAcademies.filter(a => a.programs && a.programs.length > 0).length);
+                    console.log("✅ AcademyStore: Final academyOptions.value:", academyOptions.value);
+                    return transformedAcademies;
+                } catch (dynamoError) {
+                    console.warn('AcademyStore: DynamoDB fetch failed, falling back to Firestore:', dynamoError);
+                    // Fallback to Firestore
+                    const queryOptions = {
+                        timeoutMs: 6000
+                    };
+                    
+                    const result = await firestoreService.getDocs(`projects/${projectId}/academies`, queryOptions);
+                    
+                    const academies = result.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            id: doc.id,
+                            ...data,
+                            imageUrl: data.imageUrl || null,
+                            imageFileName: data.imageFileName || null
+                        };
+                    });
+                    
+                    academyOptions.value = academies;
+                    
+                    // Also populate programsByAcademy
+                    academies.forEach(academy => {
+                        if (academy.programs) {
+                            programsByAcademy.value[academy.id] = academy.programs;
+                        }
+                    });
+                    
+                    console.log("✅ AcademyStore: Academies fetched from Firestore (fallback):", academies.length);
+                    return academies;
+                }
+            } catch (error) {
+                console.error("❌ AcademyStore: Error fetching academies:", error);
+                errorHandlingService.handleFirestoreError(error, 'fetchAcademies');
+                throw error;
+            }
+        });
+    };
+
+    return {
+        academyOptions,
+        programsByAcademy,
+        selectedAcademy,
+        userBookings,
+        addAcademy,
+        updateAcademy,
+        deleteAcademy,
+        addProgram,
+        updateProgram,
+        deleteProgram,
+        setSelectedAcademy,
+        addUserBooking,
+        fetchUserBookings,
+        clearUserBookings,
+        createTestBooking,
+        fetchAcademies,
+        completeBooking,
+    };
+});

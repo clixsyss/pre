@@ -1,0 +1,302 @@
+// app global css in SCSS form
+
+/* Prevent white screen flash on app startup - keep black during splash */
+html, body, #q-app {
+  background-color: #000 !important;
+  transition: background-color 0.5s ease;
+}
+
+/* After app loads, allow background color changes */
+body.app-loaded {
+  background-color: var(--background-color) !important;
+}
+
+/* Disable text selection and double-tap zoom */
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Allow text selection for input fields */
+input, textarea {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Ensure buttons are clickable */
+button, a, [role="button"], .clickable {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  touch-action: manipulation;
+}
+
+/* iOS Safari Modal Fixes - Ensure modals appear above everything */
+.modal-overlay, .dialog-overlay, .notification-overlay, .suspension-overlay,
+.violations-modal-overlay, .guidelines-overlay, .pdf-viewer-overlay,
+.pending-modal-overlay, .booking-dialog-overlay {
+  z-index: 999999 !important;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* iOS Fix: Hide navigation bars when any modal is open */
+body.modal-open .app-header,
+body.modal-open .bottom-navigation {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Prevent background scrolling when modal is open */
+body.modal-open {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+  height: 100% !important;
+  -webkit-overflow-scrolling: none !important;
+  overscroll-behavior: contain !important;
+}
+
+/* Global Theme Support */
+:root {
+  --primary-color: #AF1E23;
+  --secondary-color: #231F20;
+  --background-color: #fafafa;
+  --surface-color: #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb;
+}
+
+/* Dark Theme Variables */
+.dark {
+  --background-color: #111827;
+  --surface-color: #371f1f;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --border-color: #513737;
+}
+
+/* RTL Support */
+[dir="rtl"] {
+  text-align: right;
+  direction: rtl;
+  
+  /* Flip margins and paddings */
+  .q-ml-auto {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+  
+  .q-mr-auto {
+    margin-right: 0 !important;
+    margin-left: auto !important;
+  }
+  
+  /* Flip float */
+  .float-left {
+    float: right !important;
+  }
+  
+  .float-right {
+    float: left !important;
+  }
+  
+  /* Flip text alignment */
+  .text-left {
+    text-align: right !important;
+  }
+  
+  .text-right {
+    text-align: left !important;
+  }
+  
+  /* Flip border radius for cards and buttons */
+  .q-card {
+    border-radius: 8px;
+  }
+  
+  /* Flip icons that indicate direction */
+  .q-icon.flip-rtl {
+    transform: scaleX(-1);
+  }
+  
+  /* Arrow icons */
+  svg {
+    &[data-direction="right"] {
+      transform: scaleX(-1);
+    }
+  }
+  
+  /* Drawer positioning */
+  .q-drawer--left {
+    left: auto;
+    right: 0;
+  }
+  
+  .q-drawer--right {
+    right: auto;
+    left: 0;
+  }
+  
+  /* Input fields */
+  input, textarea, select {
+    text-align: right;
+    direction: rtl;
+  }
+  
+  /* List items */
+  .q-item__section--side {
+    padding-right: 0;
+    padding-left: 16px;
+  }
+  
+  /* Tooltips */
+  .q-tooltip {
+    text-align: right;
+  }
+  
+  /* Flex direction */
+  .row {
+    flex-direction: row-reverse;
+  }
+  
+  /* Quasar specific RTL fixes */
+  .q-btn__content {
+    flex-direction: row-reverse;
+  }
+  
+  .q-field__control {
+    text-align: right;
+  }
+  
+  .q-field__append {
+    padding-right: 0;
+    padding-left: 12px;
+  }
+  
+  .q-field__prepend {
+    padding-left: 0;
+    padding-right: 12px;
+  }
+  
+  /* Custom classes for RTL */
+  .info-card, .action-card, .service-card, .booking-card {
+    .info-content, .action-content {
+      text-align: right;
+    }
+  }
+  
+  /* Accordion arrows */
+  .accordion-arrow {
+    transform: scaleX(-1);
+  }
+  
+  /* Navigation arrows */
+  .nav-arrow-left {
+    transform: scaleX(-1);
+  }
+  
+  .nav-arrow-right {
+    transform: scaleX(-1);
+  }
+}
+
+/* LTR explicit styles */
+[dir="ltr"] {
+  text-align: left;
+  direction: ltr;
+}
+
+/* Apply theme variables to body */
+body {
+  background-color: var(--background-color);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  /* Enable scrolling when keyboard appears */
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* Ensure body can expand beyond viewport */
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Global Keyboard Handling - Modern Consistent Behavior */
+body.keyboard-open {
+  /* Allow body to scroll normally on iOS/Android */
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  /* Prevent any layout shifts */
+  overscroll-behavior: contain !important;
+}
+
+/* Hide bottom navigation when keyboard is open */
+body.keyboard-open .bottom-navigation {
+  transform: translateY(100%) !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Ensure main content can scroll properly when keyboard is open */
+body.keyboard-open .main-content {
+  margin-bottom: 0 !important;
+  padding-bottom: 20px !important;
+  /* Allow smooth scrolling */
+  -webkit-overflow-scrolling: touch !important;
+  overflow-y: auto !important;
+}
+
+/* Ensure inputs are visible and properly positioned */
+body.keyboard-open input,
+body.keyboard-open textarea,
+body.keyboard-open select {
+  /* Prevent iOS zoom on focus for inputs less than 16px */
+  font-size: 16px !important;
+}
+
+/* Prevent iOS zoom on input focus */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Ensure main layout handles keyboard properly */
+.q-layout {
+  /* Allow the layout to handle scrolling */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Ensure proper height */
+  min-height: 100vh;
+}
+
+/* Theme transition for smooth switching */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Safe area spacing for notifications (avoid notch area on iOS) */
+.notif-with-safe-area {
+  top: 40px !important;
+}
