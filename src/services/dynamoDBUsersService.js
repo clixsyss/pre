@@ -186,11 +186,13 @@ export async function getUserById(userId) {
 export async function getUserByEmail(email) {
   try {
     if (!email) {
+      console.warn('[DynamoDBUsersService] No email provided to getUserByEmail')
       return null
     }
     
     // Normalize email (lowercase, trim) - emails are stored normalized in DynamoDB
     const normalizedEmail = email.trim().toLowerCase()
+    console.log(`[DynamoDBUsersService] Searching for user with email: "${email}" (normalized: "${normalizedEmail}")`)
     
     // Use filtered scan to find user by email (more efficient than scanning all and filtering in memory)
     // Note: For even better performance, consider adding a GSI on email field
@@ -202,7 +204,30 @@ export async function getUserByEmail(email) {
       Limit: 1 // Only need one result
     })
     
+    console.log(`[DynamoDBUsersService] FilterExpression scan found ${items.length} result(s)`)
+    
     if (items.length === 0) {
+      console.warn(`[DynamoDBUsersService] No user found with normalized email: "${normalizedEmail}"`)
+      
+      // Fallback: Try case-insensitive search if normalized search fails
+      // This handles cases where emails might not have been normalized on creation
+      console.log('[DynamoDBUsersService] Attempting case-insensitive fallback search...')
+      const allItems = await scan(TABLE_NAME, {
+        Limit: 100 // Limit to avoid scanning entire table
+      })
+      
+      const matchedItem = allItems.find(item => {
+        const itemEmail = (item.email || '').trim().toLowerCase()
+        return itemEmail === normalizedEmail
+      })
+      
+      if (matchedItem) {
+        console.log('[DynamoDBUsersService] ✅ Found user via case-insensitive fallback')
+        const convertedUser = convertUserFromDynamoDB(matchedItem)
+        return convertedUser
+      }
+      
+      console.warn('[DynamoDBUsersService] ❌ User not found even with case-insensitive fallback')
       return null
     }
     
@@ -211,10 +236,16 @@ export async function getUserByEmail(email) {
       console.warn(`[DynamoDBUsersService] Multiple users found with email ${email}, returning first match`)
     }
     
+    console.log(`[DynamoDBUsersService] ✅ Found user: ${items[0].id}`)
     const convertedUser = convertUserFromDynamoDB(items[0])
     return convertedUser
   } catch (error) {
-    console.error(`[DynamoDBUsersService] Error fetching user by email:`, error)
+    console.error(`[DynamoDBUsersService] Error fetching user by email "${email}":`, error)
+    console.error('[DynamoDBUsersService] Error details:', {
+      message: error.message,
+      code: error.code,
+      name: error.name
+    })
     throw error
   }
 }

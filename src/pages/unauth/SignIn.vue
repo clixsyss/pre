@@ -695,9 +695,18 @@ const handleSignIn = async () => {
         console.log('[SignIn] ✅ Approval status is approved')
       } else {
         console.log('[SignIn] ❌ User NOT found in DynamoDB')
+        console.log('[SignIn] User email searched:', userEmail)
+        console.log('[SignIn] User ID from Cognito:', userId)
+        
+        // User authenticated successfully with Cognito but not found in DynamoDB
+        // This could mean:
+        // 1. User completed registration but DynamoDB write failed
+        // 2. User account was deleted from DynamoDB
+        // 3. Email mismatch between Cognito and DynamoDB
+        
         await optimizedAuthService.signOut()
         notificationStore.showError(
-          'Your account is not registered. Please contact support.'
+          'Your account is not registered in our system. This may happen if registration was incomplete. Please contact support or try registering again.'
         )
         loading.value = false
         return
