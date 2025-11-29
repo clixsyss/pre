@@ -141,6 +141,42 @@ function convertUserFromDynamoDB(item) {
 }
 
 /**
+ * Get a user by Cognito authUid
+ * @param {string} authUid - Cognito user ID (authUid)
+ * @returns {Promise<Object|null>} User object or null if not found
+ */
+export async function getUserByAuthUid(authUid) {
+  try {
+    if (!authUid) {
+      return null
+    }
+    
+    console.log(`[DynamoDBUsersService] Searching for user by authUid: ${authUid}`)
+    
+    // Search by authUid field
+    const items = await scan(TABLE_NAME, {
+      FilterExpression: 'authUid = :authUid',
+      ExpressionAttributeValues: {
+        ':authUid': authUid
+      },
+      Limit: 1
+    })
+    
+    if (items.length === 0) {
+      console.log(`[DynamoDBUsersService] No user found with authUid: ${authUid}`)
+      return null
+    }
+    
+    const convertedUser = convertUserFromDynamoDB(items[0])
+    console.log(`[DynamoDBUsersService] ✅ Found user by authUid: ${convertedUser.id}`)
+    return convertedUser
+  } catch (error) {
+    console.error(`[DynamoDBUsersService] Error fetching user by authUid:`, error)
+    throw error
+  }
+}
+
+/**
  * Get a user by ID
  * @param {string} userId - User ID
  * @returns {Promise<Object|null>} User object or null if not found
@@ -212,19 +248,70 @@ export async function getUserByEmail(email) {
       // Fallback: Try case-insensitive search if normalized search fails
       // This handles cases where emails might not have been normalized on creation
       console.log('[DynamoDBUsersService] Attempting case-insensitive fallback search...')
-      const allItems = await scan(TABLE_NAME, {
-        Limit: 100 // Limit to avoid scanning entire table
-      })
       
-      const matchedItem = allItems.find(item => {
-        const itemEmail = (item.email || '').trim().toLowerCase()
-        return itemEmail === normalizedEmail
-      })
-      
-      if (matchedItem) {
-        console.log('[DynamoDBUsersService] ✅ Found user via case-insensitive fallback')
-        const convertedUser = convertUserFromDynamoDB(matchedItem)
-        return convertedUser
+      // Use a filter expression that checks both exact match and case variations
+      // DynamoDB FilterExpression doesn't support case-insensitive comparison,
+      // so we need to scan and filter in memory, but let's try multiple variations
+      try {
+        // Try scanning with different email variations
+        const emailVariations = [
+          normalizedEmail,
+          normalizedEmail.charAt(0).toUpperCase() + normalizedEmail.slice(1), // Hady@gmail.com
+          normalizedEmail.toUpperCase(), // HADY@GMAIL.COM
+        ]
+        
+        for (const emailVar of emailVariations) {
+          console.log(`[DynamoDBUsersService] Trying email variation: "${emailVar}"`)
+          const items = await scan(TABLE_NAME, {
+            FilterExpression: 'email = :email',
+            ExpressionAttributeValues: {
+              ':email': emailVar
+            },
+            Limit: 1
+          })
+          
+          if (items.length > 0) {
+            console.log(`[DynamoDBUsersService] ✅ Found user with email variation: "${emailVar}"`)
+            const convertedUser = convertUserFromDynamoDB(items[0])
+            return convertedUser
+          }
+        }
+        
+        // Last resort: Scan and filter in memory (limited to reasonable size)
+        console.log('[DynamoDBUsersService] Last resort: Scanning table for case-insensitive match...')
+        let allItems = []
+        let lastEvaluatedKey = null
+        
+        do {
+          const scanResult = await scan(TABLE_NAME, {
+            Limit: 500, // Scan in batches
+            ...(lastEvaluatedKey && { ExclusiveStartKey: lastEvaluatedKey })
+          })
+          
+          allItems = allItems.concat(scanResult.items || scanResult || [])
+          lastEvaluatedKey = scanResult.LastEvaluatedKey
+          
+          // Check if we found a match
+          const matchedItem = allItems.find(item => {
+            const itemEmail = (item.email || '').trim().toLowerCase()
+            return itemEmail === normalizedEmail
+          })
+          
+          if (matchedItem) {
+            console.log('[DynamoDBUsersService] ✅ Found user via case-insensitive fallback scan')
+            const convertedUser = convertUserFromDynamoDB(matchedItem)
+            return convertedUser
+          }
+          
+          // Limit total scan to 2000 items to avoid timeout
+          if (allItems.length >= 2000) {
+            console.warn('[DynamoDBUsersService] Reached scan limit, stopping fallback search')
+            break
+          }
+        } while (lastEvaluatedKey)
+        
+      } catch (fallbackError) {
+        console.error('[DynamoDBUsersService] Error in fallback search:', fallbackError)
       }
       
       console.warn('[DynamoDBUsersService] ❌ User not found even with case-insensitive fallback')
@@ -414,6 +501,7 @@ export async function updateUser(userId, userData) {
 export default {
   getUserById,
   getUserByEmail,
+  getUserByAuthUid,
   getAllUsers,
   createUser,
   updateUser

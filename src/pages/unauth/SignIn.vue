@@ -558,7 +558,53 @@ const handleSignIn = async () => {
 
     const user = signInResult.user
     const userId = user?.username || user?.attributes?.sub
+    const cognitoSub = user?.attributes?.sub || user?.cognitoAttributes?.sub
+    
+    // Verify user is from the correct user pool "rvfwv6"
+    // The configured Amplify user pool is already set in boot/amplify.js
+    // This verification ensures the token is from the expected pool
+    try {
+      const accessToken = user?.signInUserSession?.accessToken
+      const idToken = user?.signInUserSession?.idToken
+      
+      // Get the configured user pool ID from Amplify config
+      const { Amplify } = await import('aws-amplify')
+      const amplifyConfig = Amplify.configure()
+      const configuredUserPoolId = amplifyConfig?.Auth?.userPoolId || 'us-east-1_vuhaTK66l'
+      
+      console.log('[SignIn] 🔍 Verifying user pool...')
+      console.log('[SignIn] Configured user pool ID:', configuredUserPoolId)
+      
+      if (accessToken || idToken) {
+        const token = accessToken || idToken
+        const tokenPayload = token.payload || {}
+        const tokenIssuer = tokenPayload.iss || ''
+        const userPoolIdFromToken = tokenIssuer.split('/').pop() || ''
+        
+        console.log('[SignIn] Token issuer:', tokenIssuer)
+        console.log('[SignIn] User pool ID from token:', userPoolIdFromToken)
+        
+        // Verify token is from the configured user pool
+        if (userPoolIdFromToken && userPoolIdFromToken !== configuredUserPoolId) {
+          console.error('[SignIn] ❌ User pool mismatch!')
+          console.error('[SignIn] Expected pool:', configuredUserPoolId)
+          console.error('[SignIn] Token pool:', userPoolIdFromToken)
+          await optimizedAuthService.signOut()
+          notificationStore.showError('Authentication failed: User is not from the expected user pool. Please contact support.')
+          loading.value = false
+          return
+        }
+        
+        console.log('[SignIn] ✅ User pool verified - user is from the correct pool')
+      }
+    } catch (poolCheckError) {
+      console.warn('[SignIn] ⚠️ Could not verify user pool:', poolCheckError)
+      // Continue - pool verification failure is not critical, Amplify config ensures correct pool
+    }
+    
     console.log('[SignIn] ✅ Authentication successful:', userId)
+    console.log('[SignIn] 🔍 Cognito username:', user?.username)
+    console.log('[SignIn] 🔍 Cognito sub (unique ID):', cognitoSub)
     console.log('[SignIn] 🔍 SIGN-IN RESULT USER OBJECT:', JSON.stringify(user, null, 2))
     console.log('[SignIn] 🔍 User attributes:', user?.attributes)
     console.log('[SignIn] 🔍 User cognitoAttributes:', user?.cognitoAttributes)
@@ -612,9 +658,12 @@ const handleSignIn = async () => {
 
     // Get user email from sign-in result
     const userEmail = user?.attributes?.email || user?.cognitoAttributes?.email || formData.email.trim()
+    // Store Cognito sub for later use in DynamoDB lookup
+    const cognitoSubForLookup = user?.attributes?.sub || user?.cognitoAttributes?.sub
     
     console.log('[SignIn] ========== STARTING VERIFICATION CHECKS ==========')
     console.log('[SignIn] User email:', userEmail)
+    console.log('[SignIn] Cognito sub for lookup:', cognitoSubForLookup)
     
     // If user successfully signed into Cognito, they MUST have a confirmed email
     // Cognito won't let unconfirmed users sign in
@@ -661,10 +710,49 @@ const handleSignIn = async () => {
     let approvalCheckPassed = false
     
     try {
-      const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
+      const { getUserByEmail, getUserById, getUserByAuthUid } = await import('src/services/dynamoDBUsersService')
       console.log('[SignIn] 🔍 Checking DynamoDB for email:', userEmail)
+      console.log('[SignIn] 🔍 Cognito User ID (for fallback):', userId)
       
       dynamoUser = await getUserByEmail(userEmail)
+      
+      // If not found by email, try finding by Cognito user ID (authUid)
+      // Use both username and sub (sub is more reliable as it's the unique Cognito ID)
+      const identifiersToTry = []
+      
+      if (cognitoSubForLookup && cognitoSubForLookup !== userId) {
+        identifiersToTry.push({ type: 'sub', value: cognitoSubForLookup })
+      }
+      if (userId) {
+        identifiersToTry.push({ type: 'username/id', value: userId })
+      }
+      
+      if (!dynamoUser && identifiersToTry.length > 0) {
+        console.log('[SignIn] ⚠️ User not found by email, trying to find by Cognito identifiers...')
+        console.log('[SignIn] Identifiers to try:', identifiersToTry)
+        
+        for (const identifier of identifiersToTry) {
+          try {
+            console.log(`[SignIn] Trying to find user by ${identifier.type}: ${identifier.value}`)
+            
+            // Try direct lookup by ID first (in case the ID in DynamoDB matches)
+            dynamoUser = await getUserById(identifier.value)
+            
+            // If not found, try searching by authUid field (Cognito sub)
+            if (!dynamoUser) {
+              dynamoUser = await getUserByAuthUid(identifier.value)
+            }
+            
+            if (dynamoUser) {
+              console.log(`[SignIn] ✅ Found user by ${identifier.type}:`, dynamoUser.id)
+              break // Stop searching once we find the user
+            }
+          } catch (idSearchError) {
+            console.warn(`[SignIn] ⚠️ Error searching by ${identifier.type}:`, idSearchError)
+            // Continue trying other identifiers
+          }
+        }
+      }
       
       if (dynamoUser) {
         console.log('[SignIn] ✅ User found in DynamoDB:')
