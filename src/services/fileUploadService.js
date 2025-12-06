@@ -1,192 +1,277 @@
-import { ref as storageRef, deleteObject } from 'firebase/storage'
-import { storage } from '../boot/firebase'
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { fromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity'
+import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity'
 import { Capacitor } from '@capacitor/core'
+import { Auth } from 'aws-amplify'
+
+// S3 Configuration
+const S3_BUCKET = 'pre-app-user-images'
+const AWS_REGION = 
+  process.env.AWS_REGION || 
+  process.env.VITE_AWS_REGION || 
+  import.meta.env.AWS_REGION || 
+  import.meta.env.VITE_AWS_REGION || 
+  'us-east-1'
+
+// Read AWS credentials from environment variables
+// Vite exposes variables prefixed with VITE_ via import.meta.env
+const AWS_ACCESS_KEY_ID = 
+  import.meta.env.VITE_AWS_ACCESS_KEY_ID || 
+  import.meta.env.AWS_ACCESS_KEY_ID ||
+  process.env.VITE_AWS_ACCESS_KEY_ID || 
+  process.env.AWS_ACCESS_KEY_ID
+
+const AWS_SECRET_ACCESS_KEY = 
+  import.meta.env.VITE_AWS_SECRET_ACCESS_KEY || 
+  import.meta.env.AWS_SECRET_ACCESS_KEY ||
+  process.env.VITE_AWS_SECRET_ACCESS_KEY || 
+  process.env.AWS_SECRET_ACCESS_KEY
+
+// S3 Client instance (singleton)
+let s3Client = null
+
+/**
+ * Initialize S3 client with credentials
+ * @returns {Promise<S3Client>} S3 client instance
+ */
+async function getS3Client() {
+  if (s3Client) {
+    return s3Client
+  }
+
+  const clientConfig = {
+    region: AWS_REGION
+  }
+
+  // Detect platform: Web browser vs Native (iOS/Android)
+  // Note: Capacitor apps have `window` but are native, so we check Capacitor too
+  const isNative = Capacitor.isNativePlatform()
+  const isBrowser = typeof window !== 'undefined' && !isNative
+  
+  console.log('[S3Service] Platform detection:', {
+    isBrowser,
+    isNative,
+    platform: isNative ? Capacitor.getPlatform() : 'web'
+  })
+  
+  if (isBrowser) {
+    // Web browser - CORS applies, use environment variables or Cognito Identity Pool
+    // Priority 1: Try Cognito Identity Pool (if user is authenticated)
+    try {
+      const amplifyConfig = Auth.configure()
+      const identityPoolId = amplifyConfig?.aws_cognito_identity_pool_id
+      
+      if (identityPoolId) {
+        try {
+          // Try to get authenticated user (may fail during sign-up)
+          const currentUser = await Auth.currentAuthenticatedUser()
+          const idToken = currentUser.signInUserSession.idToken.jwtToken
+          
+          console.log('[S3Service] Using Cognito Identity Pool for credentials:', identityPoolId)
+          
+          // Use Cognito Identity Pool credentials
+          clientConfig.credentials = fromCognitoIdentityPool({
+            client: new CognitoIdentityClient({ region: AWS_REGION }),
+            identityPoolId: identityPoolId,
+            logins: {
+              [`cognito-idp.${AWS_REGION}.amazonaws.com/${amplifyConfig.Auth.userPoolId}`]: idToken
+            }
+          })
+        } catch (authError) {
+          console.warn('[S3Service] User not authenticated, cannot use Identity Pool:', authError.message)
+          // Fall through to environment variables
+          throw authError
+        }
+      } else {
+        throw new Error('No Identity Pool configured')
+      }
+    } catch {
+      // Priority 2: Fallback to environment variables
+      console.log('[S3Service] Trying environment variable credentials...')
+      console.log('[S3Service] Credential check:', {
+        hasAccessKey: !!AWS_ACCESS_KEY_ID,
+        hasSecretKey: !!AWS_SECRET_ACCESS_KEY,
+        accessKeyLength: AWS_ACCESS_KEY_ID?.length || 0,
+        secretKeyLength: AWS_SECRET_ACCESS_KEY?.length || 0
+      })
+      
+      if (AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY) {
+        console.log('[S3Service] ✅ Using environment variable credentials')
+        clientConfig.credentials = {
+          accessKeyId: AWS_ACCESS_KEY_ID,
+          secretAccessKey: AWS_SECRET_ACCESS_KEY
+        }
+      } else {
+        // Priority 3: Try AWS SDK default credential provider chain
+        console.error('[S3Service] ❌ No explicit credentials found!')
+        console.error('[S3Service] Environment variable check:', {
+          'import.meta.env.VITE_AWS_ACCESS_KEY_ID': !!import.meta.env.VITE_AWS_ACCESS_KEY_ID,
+          'import.meta.env.VITE_AWS_SECRET_ACCESS_KEY': !!import.meta.env.VITE_AWS_SECRET_ACCESS_KEY,
+          'import.meta.env.AWS_ACCESS_KEY_ID': !!import.meta.env.AWS_ACCESS_KEY_ID,
+          'import.meta.env.AWS_SECRET_ACCESS_KEY': !!import.meta.env.AWS_SECRET_ACCESS_KEY,
+          'process.env.VITE_AWS_ACCESS_KEY_ID': !!process.env.VITE_AWS_ACCESS_KEY_ID,
+          'process.env.VITE_AWS_SECRET_ACCESS_KEY': !!process.env.VITE_AWS_SECRET_ACCESS_KEY
+        })
+        throw new Error('AWS credentials not found. Please set VITE_AWS_ACCESS_KEY_ID and VITE_AWS_SECRET_ACCESS_KEY in .env file and restart the dev server.')
+      }
+    }
+  } else {
+    // Native iOS/Android or Server-side: Use explicit credentials
+    // Native apps don't have CORS restrictions, but still need credentials
+    if (AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY) {
+      console.log('[S3Service] Using environment variable credentials for native/server')
+      clientConfig.credentials = {
+        accessKeyId: AWS_ACCESS_KEY_ID,
+        secretAccessKey: AWS_SECRET_ACCESS_KEY
+      }
+    } else if (isNative) {
+      // For native apps, try Cognito Identity Pool if available
+      try {
+        const amplifyConfig = Auth.configure()
+        const identityPoolId = amplifyConfig?.aws_cognito_identity_pool_id
+        
+        if (identityPoolId) {
+          try {
+            const currentUser = await Auth.currentAuthenticatedUser()
+            const idToken = currentUser.signInUserSession.idToken.jwtToken
+            
+            console.log('[S3Service] Native: Using Cognito Identity Pool for credentials')
+            clientConfig.credentials = fromCognitoIdentityPool({
+              client: new CognitoIdentityClient({ region: AWS_REGION }),
+              identityPoolId: identityPoolId,
+              logins: {
+                [`cognito-idp.${AWS_REGION}.amazonaws.com/${amplifyConfig.Auth.userPoolId}`]: idToken
+              }
+            })
+          } catch {
+            console.warn('[S3Service] Native: User not authenticated, credentials needed')
+            throw new Error('AWS credentials required for native app. Set VITE_AWS_ACCESS_KEY_ID and VITE_AWS_SECRET_ACCESS_KEY or configure Cognito Identity Pool.')
+          }
+        } else {
+          throw new Error('AWS credentials required. Set VITE_AWS_ACCESS_KEY_ID and VITE_AWS_SECRET_ACCESS_KEY in .env')
+        }
+      } catch (error) {
+        console.error('[S3Service] Native: Failed to get credentials:', error)
+        throw error
+      }
+    } else {
+      // Server-side: Rely on AWS SDK default credential provider chain
+      console.log('[S3Service] Server-side: Using AWS SDK default credential provider chain')
+    }
+  }
+
+  s3Client = new S3Client(clientConfig)
+  
+  // Debug: Log credential availability (without exposing secrets)
+  console.log('[S3Service] Environment check:', {
+    hasAccessKey: !!AWS_ACCESS_KEY_ID,
+    hasSecretKey: !!AWS_SECRET_ACCESS_KEY,
+    region: AWS_REGION,
+    bucket: S3_BUCKET
+  })
+  
+  console.log('[S3Service] ✅ S3 client initialized', {
+    region: AWS_REGION,
+    bucket: S3_BUCKET,
+    isBrowser,
+    hasCredentials: !!(clientConfig.credentials),
+    credentialSource: clientConfig.credentials ? 'configured' : 'default-provider-chain'
+  })
+
+  return s3Client
+}
+
+/**
+ * Generate S3 URL for an object
+ * @param {string} key - S3 object key
+ * @returns {string} Public URL
+ */
+function getS3Url(key) {
+  // Use virtual-hosted-style URL
+  return `https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`
+}
 
 class FileUploadService {
   /**
-   * Upload a file to Firebase Storage
+   * Upload a file to AWS S3
    * @param {File} file - The file to upload
-   * @param {string} path - The storage path (e.g., 'users/userId/documents/')
+   * @param {string} path - The S3 key path (e.g., 'users/userId/')
    * @param {string} fileName - The file name
    * @returns {Promise<string>} - The download URL
    */
   async uploadFile(file, path, fileName) {
     try {
-      console.log('🚀 Uploading file:', { path, fileName, fileSize: file?.size })
+      console.log('🚀 Uploading file to S3:', { path, fileName, fileSize: file?.size })
         
-        // Validate file
-        if (!file) {
-          throw new Error('No file provided')
-        }
+      // Validate file
+      if (!file) {
+        throw new Error('No file provided')
+      }
 
-        // Validate file type (images only)
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-        if (!allowedTypes.includes(file.type)) {
-          throw new Error('Only JPEG, PNG, and WebP images are allowed')
-        }
+      // Validate file type (images only)
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error('Only JPEG, PNG, and WebP images are allowed')
+      }
 
-        // Validate file size (max 10MB)
-        const maxSize = 10 * 1024 * 1024 // 10MB
-        if (file.size > maxSize) {
-          throw new Error('File size must be less than 10MB')
-        }
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024 // 10MB
+      if (file.size > maxSize) {
+        throw new Error('File size must be less than 10MB')
+      }
 
-        const isNative = Capacitor.isNativePlatform()
-        const platform = Capacitor.getPlatform()
-        
-        if (isNative && (platform === 'ios' || platform === 'android')) {
-          console.log(`📱 ${platform} detected, using Storage REST API...`)
-          
-          // Convert file to ArrayBuffer
-          const arrayBuffer = await file.arrayBuffer()
-          const uint8Array = new Uint8Array(arrayBuffer)
-          
-          // Convert to base64 for upload
-          let binary = ''
-          const len = uint8Array.byteLength
-          for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(uint8Array[i])
-          }
-          const base64 = btoa(binary)
-          
-          console.log(`📱 ${platform}: File converted to base64`)
-          
-          // Get auth token
-          const { Http } = await import('@capacitor-community/http')
-          const fullPath = `${path}${fileName}`
-          const bucket = 'pre-group.firebasestorage.app'
-          
-          // Upload using Storage REST API
-          console.log(`📱 ${platform}: Uploading via REST API to:`, fullPath)
-          const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fullPath)}`
-          
-          const uploadResponse = await Http.request({
-            url: uploadUrl,
-            method: 'POST',
-            headers: {
-              'Content-Type': file.type
-            },
-            data: base64,
-            connectTimeout: 60000,
-            readTimeout: 60000
-          })
-          
-          console.log(`📱 ${platform}: Upload response:`, uploadResponse.status)
-          
-          if (uploadResponse.status >= 200 && uploadResponse.status < 300) {
-            console.log(`📱 ${platform}: ✅ File uploaded successfully`)
-            
-            // Parse response to get download token if available
-            let downloadUrl
-            try {
-              const responseData = typeof uploadResponse.data === 'string' 
-                ? JSON.parse(uploadResponse.data) 
-                : uploadResponse.data
-              
-              console.log(`📱 ${platform}: Upload response data:`, responseData)
-              
-              // If Firebase returns a download token, use it
-              if (responseData.downloadTokens) {
-                downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media&token=${responseData.downloadTokens}`
-                console.log(`📱 ${platform}: Using tokenized download URL`)
-              } else {
-                // Fallback to public URL (works with open storage rules)
-                downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
-                console.log(`📱 ${platform}: Using public download URL (no token)`)
-              }
-            } catch (error) {
-              // If parsing fails, use public URL
-              downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
-              console.log(`📱 ${platform}: Using public download URL (parse failed):`, error.message)
-            }
-            
-            console.log(`📱 ${platform}: Download URL:`, downloadUrl)
-            return downloadUrl
-          } else {
-            throw new Error(`Upload failed with status ${uploadResponse.status}`)
-          }
-        } else {
-          // Use REST API for web platform too (since we're using Cognito, not Firebase Auth)
-          console.log('🌐 Using Firebase Storage REST API for upload (web)...')
-          
-          // Convert file to ArrayBuffer
-          const arrayBuffer = await file.arrayBuffer()
-          const uint8Array = new Uint8Array(arrayBuffer)
-          
-          // Convert to base64 for upload
-          let binary = ''
-          const len = uint8Array.byteLength
-          for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(uint8Array[i])
-          }
-          const base64 = btoa(binary)
-          
-          console.log('🌐 Web: File converted to base64')
-          
-          const fullPath = `${path}${fileName}`
-          const bucket = 'pre-group.firebasestorage.app'
-          
-          // Upload using Storage REST API
-          console.log('🌐 Web: Uploading via REST API to:', fullPath)
-          const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fullPath)}`
-          
-          const uploadResponse = await fetch(uploadUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': file.type
-            },
-            body: base64
-          })
-          
-          console.log('🌐 Web: Upload response:', uploadResponse.status)
-          
-          if (uploadResponse.ok) {
-            console.log('🌐 Web: ✅ File uploaded successfully')
-            
-            // Parse response to get download token if available
-            let downloadUrl
-            try {
-              const responseData = await uploadResponse.json()
-              
-              console.log('🌐 Web: Upload response data:', responseData)
-              
-              // If Firebase returns a download token, use it
-              if (responseData.downloadTokens) {
-                downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media&token=${responseData.downloadTokens}`
-                console.log('🌐 Web: Using tokenized download URL')
-              } else {
-                // Fallback to public URL (works with open storage rules)
-                downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
-                console.log('🌐 Web: Using public download URL (no token)')
-              }
-            } catch (error) {
-              // If parsing fails, use public URL
-              downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
-              console.log('🌐 Web: Using public download URL (parse failed):', error.message)
-            }
-            
-            console.log('🌐 Web: Download URL:', downloadUrl)
-            return downloadUrl
-          } else {
-            const errorText = await uploadResponse.text()
-            console.error('🌐 Web: Upload failed:', uploadResponse.status, errorText)
-            throw new Error(`Upload failed with status ${uploadResponse.status}: ${errorText}`)
-          }
-        }
-      } catch (error) {
-        console.error('❌ Error uploading file:', error)
-        console.error('❌ Error type:', typeof error)
-        console.error('❌ Error constructor:', error?.constructor?.name)
-        console.error('❌ Error message:', error?.message)
-        console.error('❌ Error code:', error?.code)
-        console.error('❌ Error stack:', error?.stack)
-        console.error('❌ Full error object:', JSON.stringify({
-          code: error?.code,
-          errorMessage: error?.message
-        }))
-        console.error('❌ Error keys:', Object.keys(error || {}))
-        
-        throw error
+      // Get file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
+
+      // Construct S3 key (path + fileName)
+      const s3Key = `${path}${fileName}`.replace(/\/+/g, '/') // Remove duplicate slashes
+      
+      console.log('📤 Uploading to S3:', {
+        bucket: S3_BUCKET,
+        key: s3Key,
+        contentType: file.type,
+        size: file.size
+      })
+
+      // Get S3 client (async - may need to fetch credentials)
+      const client = await getS3Client()
+
+      // Prepare PutObject command
+      const putCommand = new PutObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: s3Key,
+        Body: uint8Array,
+        ContentType: file.type,
+        // Make object publicly readable (adjust ACL based on your bucket policy)
+        // ACL: 'public-read' // Uncomment if bucket allows public ACLs
+      })
+
+      // Upload to S3
+      await client.send(putCommand)
+      
+      console.log('✅ File uploaded successfully to S3')
+
+      // Generate and return public URL
+      const downloadUrl = getS3Url(s3Key)
+      console.log('📥 Download URL:', downloadUrl)
+      
+      return downloadUrl
+    } catch (error) {
+      console.error('❌ Error uploading file to S3:', error)
+      console.error('❌ Error type:', typeof error)
+      console.error('❌ Error constructor:', error?.constructor?.name)
+      console.error('❌ Error message:', error?.message)
+      console.error('❌ Error code:', error?.code)
+      console.error('❌ Error stack:', error?.stack)
+      console.error('❌ Full error object:', JSON.stringify({
+        code: error?.code,
+        errorMessage: error?.message,
+        name: error?.name
+      }))
+      console.error('❌ Error keys:', Object.keys(error || {}))
+      
+      throw error
     }
   }
 
@@ -210,16 +295,22 @@ class FileUploadService {
   }
 
   /**
-   * Delete a file from Firebase Storage
-   * @param {string} filePath - The storage path of the file to delete
+   * Delete a file from S3
+   * @param {string} s3Key - The S3 key of the file to delete
    */
-  async deleteFile(filePath) {
+  async deleteFile(s3Key) {
     try {
-      const fileRef = storageRef(storage, filePath)
-      await deleteObject(fileRef)
-      console.log('File deleted successfully:', filePath)
+      const client = await getS3Client()
+      
+      const deleteCommand = new DeleteObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: s3Key
+      })
+      
+      await client.send(deleteCommand)
+      console.log('✅ File deleted successfully from S3:', s3Key)
     } catch (error) {
-      console.error('Error deleting file:', error)
+      console.error('❌ Error deleting file from S3:', error)
       throw error
     }
   }
@@ -240,7 +331,7 @@ class FileUploadService {
   }
 
   /**
-   * Upload user documents (National ID and Profile Picture)
+   * Upload user documents (National ID and Profile Picture) to S3
    * @param {string} userId - User ID
    * @param {File} frontIdFile - Front National ID file
    * @param {File} backIdFile - Back National ID file
@@ -249,50 +340,53 @@ class FileUploadService {
    */
   async uploadUserDocuments(userId, frontIdFile, backIdFile, profilePictureFile = null) {
     try {
-      console.log('[FileUpload] Starting upload for user:', userId)
+      console.log('[FileUpload] Starting S3 upload for user:', userId)
       const uploads = []
       
-      // Upload front ID
+      // Upload front ID - store as national-id-front.jpg
       if (frontIdFile) {
-        const frontIdName = this.generateUniqueFileName(frontIdFile.name, userId)
+        const extension = frontIdFile.name.split('.').pop() || 'jpg'
+        const frontIdName = `national-id-front.${extension}`
         console.log('[FileUpload] Adding front ID:', frontIdName)
         uploads.push({
           file: frontIdFile,
-          path: `users/${userId}/documents/`,
+          path: `users/${userId}/`,
           fileName: frontIdName,
           type: 'frontId'
         })
       }
 
-      // Upload back ID
+      // Upload back ID - store as national-id-back.jpg
       if (backIdFile) {
-        const backIdName = this.generateUniqueFileName(backIdFile.name, userId)
+        const extension = backIdFile.name.split('.').pop() || 'jpg'
+        const backIdName = `national-id-back.${extension}`
         console.log('[FileUpload] Adding back ID:', backIdName)
         uploads.push({
           file: backIdFile,
-          path: `users/${userId}/documents/`,
+          path: `users/${userId}/`,
           fileName: backIdName,
           type: 'backId'
         })
       }
 
-      // Upload profile picture
+      // Upload profile picture - store as profile-picture.jpg
       if (profilePictureFile) {
-        const profileName = this.generateUniqueFileName(profilePictureFile.name, userId)
+        const extension = profilePictureFile.name.split('.').pop() || 'jpg'
+        const profileName = `profile-picture.${extension}`
         console.log('[FileUpload] Adding profile picture:', profileName)
         uploads.push({
           file: profilePictureFile,
-          path: `users/${userId}/profile/`,
+          path: `users/${userId}/`,
           fileName: profileName,
           type: 'profilePicture'
         })
       }
 
-      console.log('[FileUpload] Uploading', uploads.length, 'files...')
+      console.log('[FileUpload] Uploading', uploads.length, 'files to S3...')
       
       // Upload all files
       const downloadURLs = await this.uploadMultipleFiles(uploads)
-      console.log('[FileUpload] All files uploaded, URLs received')
+      console.log('[FileUpload] All files uploaded to S3, URLs received')
 
       // Map URLs to their types
       const result = {}
@@ -301,10 +395,10 @@ class FileUploadService {
         console.log('[FileUpload]', upload.type, '→', downloadURLs[index])
       })
 
-      console.log('[FileUpload] ✅ Upload complete')
+      console.log('[FileUpload] ✅ S3 upload complete')
       return result
     } catch (error) {
-      console.error('[FileUpload] ❌ Upload failed:', error)
+      console.error('[FileUpload] ❌ S3 upload failed:', error)
       console.error('[FileUpload] Error code:', error?.code)
       console.error('[FileUpload] Error message:', error?.message)
       throw error

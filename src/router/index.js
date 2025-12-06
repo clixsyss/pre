@@ -513,8 +513,16 @@ router.beforeEach(async (to, from, next) => {
 
           console.log('[Router] 📋 User found in DynamoDB, approvalStatus:', dynamoUser.approvalStatus)
 
-          // Check if approvalStatus is "approved"
-          if (dynamoUser.approvalStatus !== 'approved') {
+          // Check if approvalStatus is "approved" (case-insensitive)
+          const approvalStatus = String(dynamoUser.approvalStatus || '').trim().toLowerCase()
+          const isApproved = approvalStatus === 'approved'
+          
+          console.log('[Router] Approval status check:')
+          console.log('[Router]   - Raw:', dynamoUser.approvalStatus)
+          console.log('[Router]   - Normalized:', approvalStatus)
+          console.log('[Router]   - Is approved?:', isApproved)
+          
+          if (!isApproved) {
             console.log('[Router] ❌ User approval status is not approved, signing out')
             await optimizedAuthService.signOut()
             next('/signin')

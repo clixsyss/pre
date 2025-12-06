@@ -1,0 +1,32 @@
+[
+  {
+    "AllowedHeaders": [
+      "*"
+    ],
+    "AllowedMethods": [
+      "GET",
+      "PUT",
+      "POST",
+      "DELETE",
+      "HEAD"
+    ],
+    "AllowedOrigins": [
+      "http://localhost:9000",
+      "http://localhost:9001",
+      "http://localhost:8080",
+      "http://localhost:*",
+      "https://*.amazonaws.com",
+      "https://*.cloudfront.net",
+      "*"
+    ],
+    "ExposeHeaders": [
+      "ETag",
+      "x-amz-server-side-encryption",
+      "x-amz-request-id",
+      "x-amz-id-2",
+      "Content-Length"
+    ],
+    "MaxAgeSeconds": 3000
+  }
+]
+

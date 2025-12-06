@@ -663,6 +663,9 @@ const handleSignIn = async () => {
     try {
       const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
       console.log('[SignIn] 🔍 Checking DynamoDB for email:', userEmail)
+      console.log('[SignIn] 🔍 Email type:', typeof userEmail)
+      console.log('[SignIn] 🔍 Email length:', userEmail?.length)
+      console.log('[SignIn] 🔍 Email normalized:', userEmail?.trim().toLowerCase())
       
       dynamoUser = await getUserByEmail(userEmail)
       
@@ -670,6 +673,9 @@ const handleSignIn = async () => {
         console.log('[SignIn] ✅ User found in DynamoDB:')
         console.log('[SignIn]   - ID:', dynamoUser.id)
         console.log('[SignIn]   - Email:', dynamoUser.email)
+        console.log('[SignIn]   - Email in DB (normalized):', dynamoUser.email?.trim().toLowerCase())
+        console.log('[SignIn]   - Search email (normalized):', userEmail?.trim().toLowerCase())
+        console.log('[SignIn]   - Emails match:', dynamoUser.email?.trim().toLowerCase() === userEmail?.trim().toLowerCase())
         console.log('[SignIn]   - Approval Status:', dynamoUser.approvalStatus)
         console.log('[SignIn]   - Approval Status Type:', typeof dynamoUser.approvalStatus)
         
@@ -695,6 +701,14 @@ const handleSignIn = async () => {
         console.log('[SignIn] ✅ Approval status is approved')
       } else {
         console.log('[SignIn] ❌ User NOT found in DynamoDB')
+        console.log('[SignIn] 🔍 Search details:')
+        console.log('[SignIn]   - Searched email:', userEmail)
+        console.log('[SignIn]   - Normalized search email:', userEmail?.trim().toLowerCase())
+        console.log('[SignIn]   - This could mean:')
+        console.log('[SignIn]     1. User does not exist in DynamoDB users table')
+        console.log('[SignIn]     2. Email mismatch (case/whitespace)')
+        console.log('[SignIn]     3. Scan pagination issue (should be fixed now)')
+        console.log('[SignIn]     4. DynamoDB permissions issue')
         await optimizedAuthService.signOut()
         notificationStore.showError(
           'Your account is not registered. Please contact support.'
@@ -706,6 +720,9 @@ const handleSignIn = async () => {
       console.error('[SignIn] ❌ Error checking DynamoDB:', dynamoError)
       console.error('[SignIn] Error message:', dynamoError?.message)
       console.error('[SignIn] Error stack:', dynamoError?.stack)
+      console.error('[SignIn] Error name:', dynamoError?.name)
+      console.error('[SignIn] Error code:', dynamoError?.code)
+      console.error('[SignIn] Full error object:', JSON.stringify(dynamoError, Object.getOwnPropertyNames(dynamoError)))
       
       // On DynamoDB error, sign out and show error
       await optimizedAuthService.signOut()

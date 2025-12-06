@@ -12,7 +12,9 @@
     
     <!-- Show MainLayout only for authenticated pages -->
     <MainLayout v-if="isAuthenticatedPage && !isRouterLoading" class="main-layout">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <component :is="Component" />
+      </router-view>
     </MainLayout>
     
     <!-- Show clean layout for authentication pages -->

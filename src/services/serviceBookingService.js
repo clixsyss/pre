@@ -6,6 +6,55 @@ import { createServiceNotification } from './notificationCenterService'
 import { getUserServiceBookings as getDynamoDBUserServiceBookings, getServiceBookingsByProject, getServiceBookingById } from './dynamoDBServiceBookingsService'
 // Note: Using Date.now() instead of serverTimestamp() for Capacitor Firebase compatibility
 
+/**
+ * Helper function to get user info from DynamoDB
+ * @param {string} userEmail - User's email address
+ * @returns {Promise<Object>} User info with email, name, and phone
+ */
+async function getUserInfoFromDynamoDB(userEmail) {
+  try {
+    if (!userEmail) {
+      console.warn('[ServiceBookingService] No email provided for user info lookup')
+      return {
+        email: '',
+        name: 'User',
+        phone: ''
+      }
+    }
+
+    const { getUserByEmail } = await import('./dynamoDBUsersService')
+    const dynamoUser = await getUserByEmail(userEmail.trim().toLowerCase())
+    
+    if (dynamoUser) {
+      const fullName = dynamoUser.fullName || 
+        `${dynamoUser.firstName || ''} ${dynamoUser.lastName || ''}`.trim() || 
+        'User'
+      
+      return {
+        email: dynamoUser.email || userEmail,
+        name: fullName,
+        phone: dynamoUser.mobile || ''
+      }
+    }
+    
+    // Fallback to Cognito user data if DynamoDB lookup fails
+    console.warn('[ServiceBookingService] User not found in DynamoDB, using Cognito data')
+    return {
+      email: userEmail,
+      name: 'User',
+      phone: ''
+    }
+  } catch (error) {
+    console.error('[ServiceBookingService] Error fetching user info from DynamoDB:', error)
+    // Return fallback values on error
+    return {
+      email: userEmail || '',
+      name: 'User',
+      phone: ''
+    }
+  }
+}
+
 class ServiceBookingService {
   /**
    * Create a service booking
@@ -40,11 +89,18 @@ class ServiceBookingService {
           throw new Error('Selected date is required');
         }
 
+        // Get user info from DynamoDB (email, name, phone)
+        const userEmail = user.email || user.attributes?.email || user.cognitoAttributes?.email
+        const userInfo = await getUserInfoFromDynamoDB(userEmail)
+        
+        console.log('[ServiceBookingService] User info from DynamoDB:', userInfo)
+
         const now = new Date()
         const booking = {
           userId: user.uid,
-          userName: user.displayName || 'User',
-          userEmail: user.email,
+          userName: userInfo.name,
+          userEmail: userInfo.email,
+          userPhone: userInfo.phone,
           projectId: projectId,
           serviceId: bookingData.serviceId,
           categoryId: bookingData.categoryId,
@@ -314,6 +370,88 @@ class ServiceBookingService {
       } catch (error) {
         console.error('❌ Error fetching service booking:', error);
         errorHandlingService.handleFirestoreError(error, 'getServiceBooking')
+        throw error;
+      }
+    })
+  }
+
+  /**
+   * Cancel a service booking
+   * @param {string} projectId - Project ID
+   * @param {string} bookingId - Booking ID
+   * @param {string} reason - Reason for cancellation
+   * @returns {Promise<void>}
+   */
+  async cancelBooking(projectId, bookingId, reason = '') {
+    return performanceService.timeOperation('cancelServiceBooking', async () => {
+      try {
+        console.log('🔍 Cancelling service booking:', { projectId, bookingId, reason })
+        
+        if (!projectId || !bookingId) {
+          throw new Error('Project ID and Booking ID are required')
+        }
+        
+        const docPath = `projects/${projectId}/serviceBookings/${bookingId}`;
+        
+        // Convert Date objects to ISO strings for DynamoDB compatibility
+        const now = new Date().toISOString();
+        
+        try {
+          // Get current booking to add system message
+          const currentBooking = await this.getServiceBooking(projectId, bookingId);
+          
+          const systemMessage = {
+            id: Date.now().toString(),
+            text: `Booking cancelled${reason ? `. Reason: ${reason}` : ''}`,
+            senderType: 'system',
+            timestamp: now,
+            messageType: 'cancellation'
+          };
+
+          const updateData = {
+            status: 'cancelled',
+            updatedAt: now,
+            lastMessageAt: now,
+            cancelledAt: now,
+            cancellationReason: reason || '',
+            messages: [...(currentBooking.messages || []), systemMessage]
+          };
+          
+          console.log('📝 Updating service booking with cancellation data:', updateData)
+          console.log('📝 Service booking path:', docPath)
+          
+          await firestoreService.updateDoc(docPath, updateData);
+          
+          console.log('✅ Service booking cancelled successfully')
+        } catch (updateError) {
+          // If update fails, check if booking exists
+          console.warn('⚠️ Update failed, checking if service booking exists:', updateError.message)
+          
+          const bookingDoc = await firestoreService.getDoc(docPath)
+          if (!bookingDoc.exists()) {
+            throw new Error(`Service booking ${bookingId} not found in project ${projectId}. It may have been deleted or never existed.`);
+          }
+          
+          // Booking exists but update failed
+          console.error('❌ Service booking exists but update failed:', {
+            bookingId,
+            projectId,
+            error: updateError.message
+          })
+          
+          throw new Error(`Failed to cancel service booking: ${updateError.message || 'Unknown error'}. Please try again or contact support.`);
+        }
+      } catch (error) {
+        console.error('❌ Error cancelling service booking:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          code: error.code,
+          name: error.name,
+          projectId,
+          bookingId,
+          stack: error.stack
+        });
+        errorHandlingService.handleFirestoreError(error, 'cancelServiceBooking')
         throw error;
       }
     })

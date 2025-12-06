@@ -378,7 +378,35 @@ const checkAndLoadProjectData = async () => {
   }
 }
 
+// Listen for project changes from MainLayout
+const handleProjectChange = async (event) => {
+  const { newProject } = event.detail
+
+  try {
+    // Load device settings for the new project using the store method
+    smartMirrorStore.loadDeviceSettingsForProject(newProject.id)
+
+    // Fetch user bookings for the new project
+    if (user.value?.uid && newProject?.id) {
+      await academiesStore.fetchUserBookings(user.value.uid, newProject.id)
+    }
+
+    // Notifications now handled by Notification Center in header
+    // await fetchNotifications()
+  } catch (error) {
+    console.error('Error refreshing data for new project:', error)
+  }
+}
+
+// Register cleanup - must be at top level, not inside async callback
+onUnmounted(() => {
+  window.removeEventListener('projectChanged', handleProjectChange)
+})
+
 onMounted(async () => {
+  // Register event listener first (synchronously)
+  window.addEventListener('projectChanged', handleProjectChange)
+  
   // Wait for auth state to be established - use optimized auth service instead of direct auth.currentUser
   try {
     const currentUser = await optimizedAuthService.getCurrentUser()
@@ -437,34 +465,6 @@ onMounted(async () => {
     user.value = null
     router.push('/signin')
   }
-
-  // Listen for project changes from MainLayout
-  const handleProjectChange = async (event) => {
-    const { newProject } = event.detail
-
-    try {
-      // Load device settings for the new project using the store method
-      smartMirrorStore.loadDeviceSettingsForProject(newProject.id)
-
-      // Fetch user bookings for the new project
-      if (user.value?.uid && newProject?.id) {
-        await academiesStore.fetchUserBookings(user.value.uid, newProject.id)
-      }
-
-      // Notifications now handled by Notification Center in header
-      // await fetchNotifications()
-    } catch (error) {
-      console.error('Error refreshing data for new project:', error)
-    }
-  }
-
-  // Add event listener for project changes
-  window.addEventListener('projectChanged', handleProjectChange)
-
-  // Cleanup event listener on unmount
-  onUnmounted(() => {
-    window.removeEventListener('projectChanged', handleProjectChange)
-  })
 })
 
 // Watch for route changes to check project data

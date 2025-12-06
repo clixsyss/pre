@@ -555,26 +555,84 @@ class DynamoDBAdapter {
       const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb')
       const { docClient } = await import('../aws/dynamodbClient')
       
+      // Check if document exists first (optional - helps with better error messages)
+      try {
+        const { GetCommand } = await import('@aws-sdk/lib-dynamodb')
+        const getResult = await docClient.send(new GetCommand({
+          TableName: parsed.tableName,
+          Key: key
+        }))
+        
+        if (!getResult.Item) {
+          console.error(`[DynamoDBAdapter] ❌ Document does not exist: ${path}`, {
+            table: parsed.tableName,
+            key
+          })
+          throw new Error(`Document not found: ${path}. The booking may not exist in DynamoDB.`)
+        }
+      } catch (checkError) {
+        // If it's already our "not found" error, re-throw it
+        if (checkError.message?.includes('not found')) {
+          throw checkError
+        }
+        // Otherwise, log warning but continue with update attempt
+        console.warn(`[DynamoDBAdapter] ⚠️ Could not verify document existence, proceeding with update:`, checkError.message)
+      }
+      
       const updateParams = {
         TableName: parsed.tableName,
         Key: key,
         UpdateExpression: updateExpression,
         ExpressionAttributeNames: expressionAttributeNames,
-        ExpressionAttributeValues: expressionAttributeValues
+        ExpressionAttributeValues: expressionAttributeValues,
+        // Return updated item attributes
+        ReturnValues: 'ALL_NEW'
       }
       
       console.log(`[DynamoDBAdapter] Updating doc ${path}:`, {
         table: parsed.tableName,
         key,
         updateExpression,
-        fields: Object.keys(sanitizedUpdateData)
+        fields: Object.keys(sanitizedUpdateData),
+        updateData: sanitizedUpdateData
       })
       
-      await docClient.send(new UpdateCommand(updateParams))
-      
-      console.log(`[DynamoDBAdapter] ✅ Successfully updated doc ${path}`)
+      try {
+        const result = await docClient.send(new UpdateCommand(updateParams))
+        console.log(`[DynamoDBAdapter] ✅ Successfully updated doc ${path}`, {
+          updatedAttributes: result.Attributes ? Object.keys(result.Attributes) : []
+        })
+      } catch (updateError) {
+        // Check for various "not found" error types
+        if (updateError.name === 'ResourceNotFoundException' || 
+            updateError.name === 'ConditionalCheckFailedException' ||
+            updateError.message?.includes('does not exist') ||
+            updateError.message?.includes('not found') ||
+            updateError.message?.includes('The provided key element does not match the schema')) {
+          console.error(`[DynamoDBAdapter] ❌ Document not found or key mismatch: ${path}`, {
+            table: parsed.tableName,
+            key,
+            error: updateError.message,
+            errorName: updateError.name
+          })
+          throw new Error(`Document not found: ${path}. The booking may not exist in DynamoDB or the key structure is incorrect.`)
+        }
+        // Re-throw other errors
+        console.error(`[DynamoDBAdapter] ❌ Update failed with unexpected error:`, {
+          name: updateError.name,
+          message: updateError.message,
+          code: updateError.code
+        })
+        throw updateError
+      }
     } catch (error) {
       console.error(`[DynamoDBAdapter] Error updating doc ${path}:`, error)
+      console.error(`[DynamoDBAdapter] Error details:`, {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        path: path
+      })
       throw error
     }
   }

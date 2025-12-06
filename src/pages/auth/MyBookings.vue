@@ -329,6 +329,7 @@ import { useNotificationStore } from 'src/stores/notifications';
 import { useServiceBookingStore } from 'src/stores/serviceBookingStore';
 import { useModalState } from 'src/composables/useModalState';
 import bookingService from 'src/services/bookingService';
+import serviceBookingService from 'src/services/serviceBookingService';
 import optimizedAuthService from 'src/services/optimizedAuthService';
 import PageHeader from '../../components/PageHeader.vue';
 
@@ -611,7 +612,14 @@ const closeModal = () => {
 const cancelBooking = async (booking) => {
   try {
     if (confirm('Are you sure you want to cancel this booking?')) {
-      await bookingService.cancelBooking(projectId.value, booking.id);
+      // Check booking type and call appropriate service
+      if (isServiceBooking(booking)) {
+        // Service bookings are in a different collection
+        await serviceBookingService.cancelBooking(projectId.value, booking.id, 'Cancelled by user');
+      } else {
+        // Court and Academy bookings
+        await bookingService.cancelBooking(projectId.value, booking.id);
+      }
 
       // Refresh bookings after cancellation
       const user = await optimizedAuthService.getCurrentUser();

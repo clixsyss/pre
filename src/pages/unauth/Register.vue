@@ -300,14 +300,16 @@
                   <option value="" disabled>Select Project</option>
                   <option 
                     v-for="project in availableProjectsSorted" 
-                    :key="project.id" 
-                    :value="project.id"
-                    :disabled="project.unitsCount === 0"
-                    :style="project.unitsCount === 0 ? 'color: #999; opacity: 0.6;' : ''"
+                    :key="project.id || project.projectId || project._id || project.name" 
+                    :value="project.id || project.projectId || project._id"
                   >
-                    {{ project.name }} - {{ project.type }} ({{ project.location }}){{ project.unitsCount === 0 ? ' - No Units Available' : '' }}
+                    {{ project.name || 'Unnamed Project' }} - {{ project.type || 'N/A' }} ({{ project.location || 'N/A' }}){{ project.unitsCount > 0 ? ` (${project.unitsCount} units)` : '' }}
                   </option>
                 </select>
+                <!-- Debug: Show project count -->
+                <div v-if="availableProjectsSorted.length === 0" style="color: red; margin-top: 5px;">
+                  ⚠️ No projects loaded. Check console for errors.
+                </div>
                 <div class="select-arrow"></div>
               </div>
             </div>
@@ -436,12 +438,10 @@
                       <option value="" disabled>Select Project</option>
                       <option 
                         v-for="project in availableProjectsSorted" 
-                        :key="project.id" 
-                        :value="project.id"
-                        :disabled="project.unitsCount === 0"
-                        :style="project.unitsCount === 0 ? 'color: #999; opacity: 0.6;' : ''"
+                        :key="project.id || project.projectId || project._id || project.name" 
+                        :value="project.id || project.projectId || project._id"
                       >
-                        {{ project.name }} - {{ project.type }} ({{ project.location }}){{ project.unitsCount === 0 ? ' - No Units Available' : '' }}
+                        {{ project.name || 'Unnamed Project' }} - {{ project.type || 'N/A' }} ({{ project.location || 'N/A' }}){{ project.unitsCount > 0 ? ` (${project.unitsCount} units)` : '' }}
                       </option>
                     </select>
                     <div class="select-arrow"></div>
@@ -527,8 +527,9 @@ import { useRouter } from 'vue-router'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
-import { collection, getDocs } from 'firebase/firestore'
-import { db } from '../../boot/firebase'
+import { fetchProjects } from '../../services/dynamoDBProjectsService'
+import { getUnitsByProject } from '../../services/dynamoDBUnitsService'
+import { projectsUnitsService } from '../../services/dynamoDBTableServices'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
 import SearchableUnitDropdown from '../../components/SearchableUnitDropdown.vue'
@@ -581,92 +582,94 @@ const additionalPropertyForm = reactive({
   role: ''
 })
 
-// Function to fetch available projects from Firestore with units count
+// Function to fetch available projects from DynamoDB with units count
 const fetchAvailableProjects = async () => {
   try {
-    console.log('[Register] Fetching projects...')
+    console.log('🚀 [Register] START: Fetching projects from DynamoDB...')
     
-    const { Capacitor } = await import('@capacitor/core')
+    // Fetch all projects from DynamoDB - THIS IS THE CRITICAL PART
+    const projects = await fetchProjects()
+    console.log(`✅ [Register] Fetched ${projects.length} projects from DynamoDB`)
+    console.log('📋 [Register] Project list:', projects.map(p => ({ 
+      id: p.id, 
+      name: p.name,
+      projectId: p.projectId,
+      _id: p._id
+    })))
     
-    if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
-      // Use Capacitor Firebase plugin for iOS
-      console.log('[Register] Using Capacitor Firestore for iOS...')
-      const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
-      
-      const result = await FirebaseFirestore.getCollection({
-        reference: 'projects'
-      })
-      
-      // Fetch units count for each project
-      const projectsWithUnits = await Promise.all(
-        result.documents.map(async doc => {
-          try {
-            const unitsResult = await FirebaseFirestore.getCollection({
-              reference: `projects/${doc.id}/units`
-            })
-            console.log(`[Register] ✅ Project ${doc.data.name}: ${unitsResult.documents?.length || 0} units`)
-            return {
-              id: doc.id,
-              ...doc.data,
-              unitsCount: unitsResult.documents?.length || 0
-            }
-          } catch (error) {
-            console.warn(`[Register] ⚠️ Failed to fetch units for project ${doc.id}:`, error.code, error.message)
-            return {
-              id: doc.id,
-              ...doc.data,
-              unitsCount: 0
-            }
-          }
-        })
-      )
-      
-      availableProjects.value = projectsWithUnits
-      console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects via Capacitor')
-    } else {
-      // Use Web SDK for web/Android
-      console.log('[Register] Using Web SDK Firestore...')
-      const projectsRef = collection(db, 'projects')
-      const snapshot = await getDocs(projectsRef)
-      
-      // Fetch units count for each project
-      const projectsWithUnits = await Promise.all(
-        snapshot.docs.map(async doc => {
-          try {
-            const unitsRef = collection(db, 'projects', doc.id, 'units')
-            const unitsSnapshot = await getDocs(unitsRef)
-            console.log(`[Register] ✅ Project ${doc.data().name}: ${unitsSnapshot.size} units`)
-            return {
-              id: doc.id,
-              ...doc.data(),
-              unitsCount: unitsSnapshot.size
-            }
-          } catch (error) {
-            console.warn(`[Register] ⚠️ Failed to fetch units for project ${doc.id}:`, error.code, error.message)
-            return {
-              id: doc.id,
-              ...doc.data(),
-              unitsCount: 0
-            }
-          }
-        })
-      )
-      
-      availableProjects.value = projectsWithUnits
-      console.log('[Register] ✅ Fetched', availableProjects.value.length, 'projects via Web SDK')
-    }
+    // Set projects immediately - don't wait for units count
+    // Units count is optional and non-blocking
+    const projectsWithUnits = projects.map(project => ({
+      ...project,
+      unitsCount: 0 // Will be updated asynchronously
+    }))
     
-    // Sort projects: projects with units first, then zero-unit projects at bottom
-    availableProjectsSorted.value = [...availableProjects.value].sort((a, b) => {
-      if (a.unitsCount === 0 && b.unitsCount > 0) return 1
-      if (a.unitsCount > 0 && b.unitsCount === 0) return -1
-      return a.name.localeCompare(b.name)
+    // Set projects immediately so they show up right away
+    availableProjects.value = projectsWithUnits
+    availableProjectsSorted.value = [...projectsWithUnits].sort((a, b) => {
+      return (a.name || '').localeCompare(b.name || '')
     })
     
-    console.log('[Register] ✅ Sorted projects (zero-unit projects at bottom)')
+    console.log(`✅ [Register] Set ${availableProjectsSorted.value.length} projects in dropdown`)
+    console.log('📋 [Register] Available projects:', availableProjectsSorted.value.map(p => p.name))
+    
+    // Now fetch units count in background (non-blocking)
+    // This doesn't prevent projects from showing
+    projects.forEach(async (project) => {
+      try {
+        const projectId = project.id || project.projectId || project._id || project.ID
+        if (!projectId) return
+        
+        // Try to get units count (silently fail if it doesn't work)
+        try {
+          const units = await getUnitsByProject(projectId, { limit: 1000 })
+          const unitsCount = units?.length || 0
+          
+          // Update the project in the list
+          const projectIndex = availableProjects.value.findIndex(p => 
+            (p.id || p.projectId || p._id) === projectId
+          )
+          if (projectIndex >= 0) {
+            availableProjects.value[projectIndex].unitsCount = unitsCount
+            // Update sorted list too
+            const sortedIndex = availableProjectsSorted.value.findIndex(p => 
+              (p.id || p.projectId || p._id) === projectId
+            )
+            if (sortedIndex >= 0) {
+              availableProjectsSorted.value[sortedIndex].unitsCount = unitsCount
+            }
+          }
+        } catch {
+          // Try alternative method
+          try {
+            const alternativeUnits = await projectsUnitsService.getUnitsByProject(projectId, { limit: 1000 })
+            const unitsCount = alternativeUnits?.length || 0
+            
+            const projectIndex = availableProjects.value.findIndex(p => 
+              (p.id || p.projectId || p._id) === projectId
+            )
+            if (projectIndex >= 0) {
+              availableProjects.value[projectIndex].unitsCount = unitsCount
+              const sortedIndex = availableProjectsSorted.value.findIndex(p => 
+                (p.id || p.projectId || p._id) === projectId
+              )
+              if (sortedIndex >= 0) {
+                availableProjectsSorted.value[sortedIndex].unitsCount = unitsCount
+              }
+            }
+          } catch {
+            // Silently fail - units count stays 0
+          }
+        }
+      } catch {
+        // Silently fail - project still shows
+      }
+    })
+    
   } catch (error) {
-    console.error('[Register] Error fetching projects:', error)
-    console.error('[Register] Error details:', error?.message, error?.code)
+    console.error('❌ [Register] CRITICAL ERROR fetching projects:', error)
+    console.error('❌ [Register] Error message:', error.message)
+    console.error('❌ [Register] Error stack:', error.stack)
     notificationStore.showError('Failed to load projects. Please try again later.')
   }
 }

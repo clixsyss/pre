@@ -109,8 +109,8 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
-import { collection, getDocs } from 'firebase/firestore'
-import { db } from '../boot/firebase'
+import { getUnitsByProject } from '../services/dynamoDBUnitsService'
+import { projectsUnitsService } from '../services/dynamoDBTableServices'
 
 // Props
 const props = defineProps({
@@ -242,7 +242,7 @@ watch(() => props.modelValue, (newValue) => {
   selectedUnit.value = newValue
 })
 
-// Search units from Firestore based on user input
+// Search units from DynamoDB based on user input
 let searchTimeout = null
 const searchUnits = async (searchQuery) => {
   if (!props.projectId || !searchQuery || searchQuery.length < 1) {
@@ -255,33 +255,42 @@ const searchUnits = async (searchQuery) => {
   clearTimeout(searchTimeout)
   
   searchTimeout = setTimeout(async () => {
-  loading.value = true
-  try {
-      console.log(`🔍 [SearchableUnitDropdown] Searching units for: "${searchQuery}"`)
-    
-    // Detect platform
-    const { Capacitor } = await import('@capacitor/core')
-    
-    if (Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()) {
-        // iOS - Use Capacitor Firebase plugin
-      const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
+    loading.value = true
+    try {
+      console.log(`🔍 [SearchableUnitDropdown] Searching units for project "${props.projectId}": "${searchQuery}"`)
       
-        // Fetch ALL units for the project (client-side filtering)
-        // This ensures search works for both text and numeric building numbers
-      const result = await FirebaseFirestore.getCollection({
-          reference: `projects/${props.projectId}/units`
-      })
+      // Try both parentId and projectId keys
+      let units = []
       
+      try {
+        // Try with parentId first (dynamoDBUnitsService)
+        units = await getUnitsByProject(props.projectId, { limit: 1000 })
+        console.log(`✅ [SearchableUnitDropdown] Found ${units.length} units using parentId`)
+      } catch (error) {
+        console.warn(`⚠️ [SearchableUnitDropdown] Failed with parentId, trying projectId:`, error.message)
+        // Try with projectId (projectsUnitsService)
+        try {
+          units = await projectsUnitsService.getUnitsByProject(props.projectId, { limit: 1000 })
+          console.log(`✅ [SearchableUnitDropdown] Found ${units.length} units using projectId`)
+        } catch (altError) {
+          console.error(`❌ [SearchableUnitDropdown] Both queries failed:`, altError.message)
+          throw altError
+        }
+      }
+      
+      // Process units and create unitIdentifier
+      const processedUnits = units.map(unit => ({
+        id: unit.id || unit.unitId || '',
+        ...unit,
+        unitIdentifier: unit.buildingNum && unit.unitNum 
+          ? `${unit.buildingNum}-${unit.unitNum}`
+          : unit.unitNum || unit.buildingNum || unit.id || ''
+      }))
+      
+      // Filter by search query (client-side filtering)
       const searchLower = searchQuery.toLowerCase()
       
-      allUnits.value = (result.documents || [])
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data,
-          unitIdentifier: doc.data.buildingNum && doc.data.unitNum 
-            ? `${doc.data.buildingNum}-${doc.data.unitNum}`
-            : doc.data.unitNum || doc.id
-        }))
+      allUnits.value = processedUnits
         .filter(unit => {
           // Search in unitNum, buildingNum, and combined identifier
           const unitNum = String(unit.unitNum || '').toLowerCase()
@@ -296,48 +305,13 @@ const searchUnits = async (searchQuery) => {
         })
         .slice(0, 50) // Limit to 50 results for performance
       
-    } else {
-        // Web/Android - Use Web SDK
-        // Fetch ALL units for the project and filter client-side
-        // This ensures search works for both text and numeric building numbers
-        const unitsRef = collection(db, `projects/${props.projectId}/units`)
-        const unitsSnapshot = await getDocs(unitsRef)
-        
-        const searchLower = searchQuery.toLowerCase()
-        
-        allUnits.value = unitsSnapshot.docs
-          .map(doc => {
-            const data = doc.data()
-            return {
-              id: doc.id,
-              ...data,
-              unitIdentifier: data.buildingNum && data.unitNum 
-                ? `${data.buildingNum}-${data.unitNum}`
-                : data.unitNum || doc.id
-            }
-          })
-          .filter(unit => {
-            // Search in unitNum, buildingNum, and combined identifier
-            const unitNum = String(unit.unitNum || '').toLowerCase()
-            const buildingNum = String(unit.buildingNum || '').toLowerCase()
-            const identifier = String(unit.unitIdentifier || '').toLowerCase()
-            const floor = String(unit.floor || '').toLowerCase()
-            
-            return unitNum.includes(searchLower) || 
-                   buildingNum.includes(searchLower) || 
-                   identifier.includes(searchLower) ||
-                   floor.includes(searchLower)
-          })
-          .slice(0, 50) // Limit to 50 results for performance
-      }
-      
-      console.log(`✅ [SearchableUnitDropdown] Found ${allUnits.value.length} matching units`)
-  } catch (error) {
-      console.error('[SearchableUnitDropdown] Error searching units:', error)
-    allUnits.value = []
-  } finally {
-    loading.value = false
-  }
+      console.log(`✅ [SearchableUnitDropdown] Found ${allUnits.value.length} matching units after filtering`)
+    } catch (error) {
+      console.error('[SearchableUnitDropdown] ❌ Error searching units:', error)
+      allUnits.value = []
+    } finally {
+      loading.value = false
+    }
   }, 300) // 300ms debounce
 }
 

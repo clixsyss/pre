@@ -33,18 +33,23 @@ class OptimizedAuthService {
         // Don't fetch user immediately on signIn - causes 400 errors and user isn't ready yet
         // The sign-in flow already has the user object from the sign-in result
         if (event === 'signIn') {
-          // Skip fetching for signIn event - the sign-in result already has the user
+          // Skip fetching for signIn event - the sign-in result already has the user cached
           // Don't call fetchCurrentUser here to avoid 400 errors
-          console.log('⚠️ OptimizedAuthService: Skipping fetchCurrentUser for signIn event (user already available in sign-in result)')
-          // Still notify listeners but with null (they can get user from sign-in result)
-          this.authListeners.forEach((callback) => callback(null))
+          console.log('⚠️ OptimizedAuthService: Skipping fetchCurrentUser for signIn event (user already cached from sign-in result)')
+          // Use cached user if available, otherwise notify with null
+          const cachedUser = this.currentUser
+          this.authListeners.forEach((callback) => callback(cachedUser))
         } else {
-          // For other events, fetch immediately
+          // For other events, try to fetch but handle errors gracefully
           try {
             this.currentUser = await this.fetchCurrentUser()
             this.authListeners.forEach((callback) => callback(this.currentUser))
           } catch (error) {
             console.warn('⚠️ OptimizedAuthService: Could not fetch user in Hub listener:', error)
+            // If fetch fails, use cached user if available
+            if (this.currentUser) {
+              this.authListeners.forEach((callback) => callback(this.currentUser))
+            }
           }
         }
       }
@@ -53,14 +58,27 @@ class OptimizedAuthService {
 
   async fetchCurrentUser() {
     try {
-      // Try with bypassCache first, but fallback to cached if it fails (may happen right after sign-in)
+      // Use cached user first - don't call Cognito if we have cached user
+      // This prevents 400 errors right after sign-in
+      if (this.currentUser) {
+        console.log('🚀 OptimizedAuthService: fetchCurrentUser returning cached user (avoiding Cognito call)')
+        return this.currentUser
+      }
+      
+      // Only call Cognito if we don't have a cached user
+      // Use cache first (faster and avoids 400 errors)
       let user
       try {
-        user = await Auth.currentAuthenticatedUser({ bypassCache: true })
-      } catch (bypassError) {
-        console.warn('⚠️ OptimizedAuthService: bypassCache failed, trying with cache:', bypassError)
-        // Fallback to cached user if bypass fails (sometimes happens right after sign-in)
-        user = await Auth.currentAuthenticatedUser()
+        user = await Auth.currentAuthenticatedUser({ bypassCache: false })
+      } catch (cacheError) {
+        // If cache fails, try bypassCache (but this might cause 400 errors right after sign-in)
+        console.warn('⚠️ OptimizedAuthService: Cache fetch failed, trying bypassCache:', cacheError?.message || cacheError)
+        try {
+          user = await Auth.currentAuthenticatedUser({ bypassCache: true })
+        } catch (bypassError) {
+          console.warn('⚠️ OptimizedAuthService: Both cache and bypassCache failed:', bypassError?.message || bypassError)
+          throw bypassError
+        }
       }
       
       // Add uid property for Firebase compatibility (use username or sub)
@@ -139,23 +157,22 @@ class OptimizedAuthService {
 
   /**
    * Get current user with caching
+   * Returns cached user immediately if available to avoid Cognito API calls
    */
   async getCurrentUser() {
+    // Always return cached user if available - don't fetch from Cognito
+    // This prevents 400 errors when called right after sign-in
     if (this.currentUser) {
-      console.log('🚀 OptimizedAuthService: Using cached current user')
       return this.currentUser
     }
 
+    // Only fetch if we don't have a cached user
     try {
       this.currentUser = await this.fetchCurrentUser()
-      console.log(
-        '🚀 OptimizedAuthService: Current user from Amplify:',
-        this.currentUser ? 'authenticated' : 'not authenticated',
-      )
-
       return this.currentUser
     } catch (error) {
-      console.error('❌ Get current user error:', error)
+      // Silently fail - user might not be authenticated yet or Cognito session not ready
+      console.warn('⚠️ OptimizedAuthService: Could not get current user (non-critical):', error?.message || error)
       this.currentUser = null
       return null
     }
@@ -286,9 +303,11 @@ class OptimizedAuthService {
       console.log('✅ Raw email_verified attribute:', enhancedUser?.attributes?.email_verified, 'type:', typeof enhancedUser?.attributes?.email_verified)
       console.log('✅ All user attributes keys:', enhancedUser?.attributes ? Object.keys(enhancedUser.attributes) : 'no attributes')
       
+      // Cache the user immediately from sign-in result - this prevents need to call Cognito
       this.currentUser = enhancedUser
       console.log('✅ Cognito attributes available:', !!enhancedUser?.cognitoAttributes)
       console.log('✅ Email verified:', enhancedUser?.cognitoAttributes?.emailVerified || enhancedUser?.attributes?.email_verified)
+      console.log('✅ User cached in optimizedAuthService for future getCurrentUser() calls')
       
       // Return user in Firebase-like format for compatibility
       return { 
@@ -442,7 +461,14 @@ class OptimizedAuthService {
   onAuthStateChanged(callback) {
     this.ensureHubListener()
     this.authListeners.add(callback)
-    this.getCurrentUser().then((user) => callback(user))
+    
+    // Only call callback with cached user if available - don't fetch immediately
+    // This prevents 400 errors when called right after sign-in
+    // The Hub listener will call the callback when auth state actually changes
+    if (this.currentUser) {
+      callback(this.currentUser)
+    }
+    // Don't call getCurrentUser() here - wait for Hub listener to fire
 
     return () => {
       this.authListeners.delete(callback)

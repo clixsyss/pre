@@ -2,6 +2,56 @@ import firestoreService from './firestoreService'
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
 import { createBookingNotification } from './notificationCenterService'
+import optimizedAuthService from './optimizedAuthService'
+
+/**
+ * Helper function to get user info from DynamoDB
+ * @param {string} userEmail - User's email address
+ * @returns {Promise<Object>} User info with email, name, and phone
+ */
+async function getUserInfoFromDynamoDB(userEmail) {
+  try {
+    if (!userEmail) {
+      console.warn('[BookingService] No email provided for user info lookup')
+      return {
+        email: '',
+        name: 'User',
+        phone: ''
+      }
+    }
+
+    const { getUserByEmail } = await import('./dynamoDBUsersService')
+    const dynamoUser = await getUserByEmail(userEmail.trim().toLowerCase())
+    
+    if (dynamoUser) {
+      const fullName = dynamoUser.fullName || 
+        `${dynamoUser.firstName || ''} ${dynamoUser.lastName || ''}`.trim() || 
+        'User'
+      
+      return {
+        email: dynamoUser.email || userEmail,
+        name: fullName,
+        phone: dynamoUser.mobile || ''
+      }
+    }
+    
+    // Fallback to Cognito user data if DynamoDB lookup fails
+    console.warn('[BookingService] User not found in DynamoDB, using Cognito data')
+    return {
+      email: userEmail,
+      name: 'User',
+      phone: ''
+    }
+  } catch (error) {
+    console.error('[BookingService] Error fetching user info from DynamoDB:', error)
+    // Return fallback values on error
+    return {
+      email: userEmail || '',
+      name: 'User',
+      phone: ''
+    }
+  }
+}
 
 export class BookingService {
     constructor() {
@@ -413,9 +463,29 @@ export class BookingService {
                     throw new Error('Time slots are required');
                 }
 
+                // Get user info from DynamoDB (email, name, phone)
+                let userEmail = ''
+                let userInfo = { email: '', name: 'User', phone: '' }
+                
+                try {
+                    const user = await optimizedAuthService.getCurrentUser()
+                    if (user) {
+                        userEmail = user.email || user.attributes?.email || user.cognitoAttributes?.email
+                        if (userEmail) {
+                            userInfo = await getUserInfoFromDynamoDB(userEmail)
+                            console.log('[BookingService] User info from DynamoDB:', userInfo)
+                        }
+                    }
+                } catch (userInfoError) {
+                    console.warn('[BookingService] Could not fetch user info, using fallback:', userInfoError)
+                }
+
                 const newBooking = {
                     ...bookingData,
                     projectId: projectId,
+                    userName: userInfo.name,
+                    userEmail: userInfo.email,
+                    userPhone: userInfo.phone,
                     createdAt: new Date(),
                     status: "pending", // Start as pending until admin confirms
                     type: "court"
@@ -493,9 +563,29 @@ export class BookingService {
                     throw new Error('Program ID is required');
                 }
 
+                // Get user info from DynamoDB (email, name, phone)
+                let userEmail = ''
+                let userInfo = { email: '', name: 'User', phone: '' }
+                
+                try {
+                    const user = await optimizedAuthService.getCurrentUser()
+                    if (user) {
+                        userEmail = user.email || user.attributes?.email || user.cognitoAttributes?.email
+                        if (userEmail) {
+                            userInfo = await getUserInfoFromDynamoDB(userEmail)
+                            console.log('[BookingService] User info from DynamoDB:', userInfo)
+                        }
+                    }
+                } catch (userInfoError) {
+                    console.warn('[BookingService] Could not fetch user info, using fallback:', userInfoError)
+                }
+
                 const newBooking = {
                     ...bookingData,
                     projectId: projectId,
+                    userName: userInfo.name,
+                    userEmail: userInfo.email,
+                    userPhone: userInfo.phone,
                     createdAt: new Date(),
                     status: "pending", // Start as pending until admin confirms
                     type: "academy"
@@ -609,24 +699,67 @@ export class BookingService {
         })
     }
 
-    // Cancel a booking
+    // Cancel a booking (court or academy)
     async cancelBooking(projectId, bookingId) {
         return performanceService.timeOperation('cancelBooking', async () => {
             try {
                 console.log('🔍 Cancelling booking:', { projectId, bookingId })
                 
+                if (!projectId) {
+                    throw new Error('Project ID is required');
+                }
+                if (!bookingId) {
+                    throw new Error('Booking ID is required');
+                }
+                
                 const docPath = `projects/${projectId}/bookings/${bookingId}`
+                
+                // Convert Date objects to ISO strings for DynamoDB compatibility
+                const now = new Date().toISOString()
                 const updateData = {
                     status: "cancelled",
-                    updatedAt: new Date()
+                    cancelledAt: now,
+                    updatedAt: now
                 };
                 
-                await firestoreService.updateDoc(docPath, updateData)
+                console.log('📝 Updating booking with cancellation data:', updateData)
+                console.log('📝 Booking path:', docPath)
                 
-                console.log('✅ Booking cancelled successfully')
-                return { success: true };
+                try {
+                    // Try to update in DynamoDB
+                    await firestoreService.updateDoc(docPath, updateData)
+                    console.log('✅ Booking cancelled successfully in DynamoDB')
+                    return { success: true };
+                } catch (updateError) {
+                    // If update fails, check if booking exists
+                    console.warn('⚠️ Update failed, checking if booking exists:', updateError.message)
+                    
+                    const bookingDoc = await firestoreService.getDoc(docPath)
+                    if (!bookingDoc.exists()) {
+                        throw new Error(`Booking ${bookingId} not found in project ${projectId}. It may have been deleted or never existed.`);
+                    }
+                    
+                    // Booking exists but update failed - might be a permissions or data issue
+                    console.error('❌ Booking exists but update failed:', {
+                        bookingId,
+                        projectId,
+                        error: updateError.message,
+                        bookingData: bookingDoc.data()
+                    })
+                    
+                    // Re-throw the original update error with more context
+                    throw new Error(`Failed to cancel booking: ${updateError.message || 'Unknown error'}. Please try again or contact support.`);
+                }
             } catch (error) {
                 console.error("❌ Error cancelling booking:", error);
+                console.error("❌ Error details:", {
+                    message: error.message,
+                    code: error.code,
+                    name: error.name,
+                    projectId,
+                    bookingId,
+                    stack: error.stack
+                });
                 errorHandlingService.handleFirestoreError(error, 'cancelBooking')
                 throw error;
             }

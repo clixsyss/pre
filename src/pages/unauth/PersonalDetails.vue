@@ -417,19 +417,32 @@ const handleSubmit = async () => {
   try {
     console.log('[PersonalDetails] Getting user ID...')
     
-    const userId = registrationStore.tempUserId
+    // Get the DynamoDB user ID (MongoDB ObjectId format) instead of Cognito userSub
+    // This ensures S3 folders match the existing structure
+    let userId = registrationStore.tempUserId // Fallback to Cognito userSub
     
-    // userId should already be set from registration step (Cognito userSub)
-    // User is in "Pending Confirmation" status, so they can't sign in yet
-    // But we have the userSub from registration, which is what we need
+    // Try to get the DynamoDB user by email to get the actual user ID
+    try {
+      const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
+      const dynamoUser = await getUserByEmail(formData.email.trim().toLowerCase())
+      
+      if (dynamoUser && dynamoUser.id) {
+        // Use DynamoDB user ID (MongoDB ObjectId format) for S3 uploads
+        userId = dynamoUser.id
+        console.log('[PersonalDetails] ✅ Using DynamoDB user ID for S3 upload:', userId)
+      } else {
+        console.warn('[PersonalDetails] ⚠️ DynamoDB user not found, using Cognito userSub:', userId)
+      }
+    } catch (error) {
+      console.warn('[PersonalDetails] ⚠️ Could not fetch DynamoDB user, using Cognito userSub:', error.message)
+    }
+    
     if (!userId) {
       console.error('[PersonalDetails] ❌ No userId found. Registration may have failed.')
       throw new Error('User ID not found. Please start registration over.')
     }
     
-    console.log('[PersonalDetails] Using userId from registration:', userId)
-
-    console.log('[PersonalDetails] Using userId:', userId)
+    console.log('[PersonalDetails] Using userId for S3 upload:', userId)
     
     // Upload files with detailed logging
     console.log('[PersonalDetails] Starting file upload...', {

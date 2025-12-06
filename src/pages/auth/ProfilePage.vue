@@ -856,7 +856,7 @@
               <div v-if="appSettingsStore.shakeEnabled" class="settings-slider">
                 <div class="slider-header">
                   <span class="slider-label">{{ $t('sensitivity') }}</span>
-                  <span class="slider-value">{{ appSettingsStore.getSensitivityLabel(appSettingsStore.shakeSensitivity) }}</span>
+                  <span class="slider-value">{{ getSensitivityLabel(appSettingsStore.shakeSensitivity) }}</span>
                 </div>
                 <div class="slider-container">
                   <span class="slider-mark">{{ $t('moreSlider') }}</span>
@@ -1516,6 +1516,14 @@ const settingsStore = useSettingsStore()
 const appSettingsStore = useAppSettingsStore()
 const { openModal, closeModal } = useModalState()
 const { formatDate, formatDateTime } = useDateFormat()
+
+// Get sensitivity label with translation
+const getSensitivityLabel = (value) => {
+  if (value <= 10) return t('verySensitive')
+  if (value <= 15) return t('normal')
+  if (value <= 20) return t('lessSensitive')
+  return t('least')
+}
 
 // Reactive state
 const loading = ref(false) // Start as false, will be set to true only if we need to fetch data

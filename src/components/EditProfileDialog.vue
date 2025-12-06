@@ -513,6 +513,7 @@ const handleProfilePictureChange = async (event) => {
     const { Capacitor } = await import('@capacitor/core')
     const isNative = Capacitor.isNativePlatform(); const platform = Capacitor.getPlatform()
     
+    let authUserId
     let userId
     const isIOS = platform === 'ios' && isNative
     
@@ -525,15 +526,37 @@ const handleProfilePictureChange = async (event) => {
         throw new Error('No authenticated user found')
       }
       
-      userId = result.user.uid
-      console.log('📱 iOS: Got user:', userId)
+      authUserId = result.user.uid
+      userId = authUserId // Fallback
+      console.log('📱 iOS: Got user:', authUserId)
     } else {
       // Use Web SDK for Android and web
       if (!auth.currentUser) {
         throw new Error('No authenticated user found')
       }
-      userId = auth.currentUser.uid
-      console.log(`🔍 ${platform}: Got user from Web SDK:`, userId)
+      authUserId = auth.currentUser.uid
+      userId = authUserId // Fallback
+      console.log(`🔍 ${platform}: Got user from Web SDK:`, authUserId)
+    }
+    
+    // Get DynamoDB user ID (MongoDB ObjectId format) for S3 uploads
+    // This ensures S3 folders match the existing structure
+    try {
+      const userEmail = props.userProfile?.email || auth.currentUser?.email
+      if (userEmail) {
+        const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
+        const dynamoUser = await getUserByEmail(userEmail.trim().toLowerCase())
+        
+        if (dynamoUser && dynamoUser.id) {
+          // Use DynamoDB user ID (MongoDB ObjectId format) for S3 uploads
+          userId = dynamoUser.id
+          console.log('✅ Using DynamoDB user ID for S3 upload:', userId)
+        } else {
+          console.warn('⚠️ DynamoDB user not found, using auth user ID:', userId)
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not fetch DynamoDB user, using auth user ID:', error.message)
     }
     
     const uploadedDocuments = await fileUploadService.uploadUserDocuments(

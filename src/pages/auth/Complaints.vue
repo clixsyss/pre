@@ -67,7 +67,7 @@
 
     <!-- My Complaints List -->
     <div class="my-complaints-section">
-      <h2 class="section-title">My Complaints</h2>
+      <h2 class="section-title">{{ $t('myComplaints') }}</h2>
       
       <div class="section-header">
         <div class="filter-tabs">
@@ -81,7 +81,7 @@
       <!-- Loading State -->
       <div v-if="complaintStore.loading" class="loading-state">
         <div class="spinner"></div>
-        <p>Loading complaints...</p>
+        <p>{{ $t('loadingComplaints') }}</p>
       </div>
 
       <!-- Empty State -->
@@ -93,10 +93,10 @@
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
-        <h4>No complaints found</h4>
-        <p>Start a new complaint to get help with any issues.</p>
+        <h4>{{ $t('noComplaintsFound') }}</h4>
+        <p>{{ $t('startNewComplaintMessage') }}</p>
         <button @click="showNewComplaintModal = true" class="btn-primary">
-          Start New Complaint
+          {{ $t('startNewComplaint') }}
         </button>
       </div>
 
@@ -111,7 +111,7 @@
               <span class="complaint-category">{{ getCategoryName(complaint.category) }}</span>
             </div>
             <span :class="['status-badge', complaint.status.toLowerCase().replace(' ', '-')]">
-              {{ complaint.status }}
+              {{ getStatusLabel(complaint.status) }}
             </span>
           </div>
           <div class="complaint-preview">
@@ -140,7 +140,7 @@
     <!-- New Complaint Modal -->
     <div v-if="showNewComplaintModal" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
-        <ModalHeader title="New Complaint" subtitle="Tell us what went wrong" @close="closeModal">
+        <ModalHeader :title="$t('newComplaint')" :subtitle="$t('tellUsWhatWentWrong')" @close="closeModal">
           <template #icon>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z" stroke="currentColor" stroke-width="2"/>
@@ -152,14 +152,14 @@
 
         <form @submit.prevent="submitComplaint" class="complaint-form">
           <div class="form-group">
-            <label>Title</label>
-            <input v-model="newComplaint.title" type="text" placeholder="Brief description of the issue" required />
+            <label>{{ $t('complaintTitle') }}</label>
+            <input v-model="newComplaint.title" type="text" :placeholder="$t('briefDescription')" required />
           </div>
 
           <div class="form-group">
-            <label>Category</label>
+            <label>{{ $t('category') }}</label>
             <select v-model="newComplaint.category" required>
-              <option value="">Select a category</option>
+              <option value="">{{ $t('selectCategory') }}</option>
               <option v-for="category in complaintStore.complaintCategories" :key="category.id" :value="category.id">
                 {{ category.name }}
               </option>
@@ -252,6 +252,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useComplaintStore } from '../../stores/complaintStore';
 import { useNotificationStore } from '../../stores/notifications';
 import { useModalState } from '../../composables/useModalState';
@@ -274,6 +275,7 @@ const router = useRouter();
 const complaintStore = useComplaintStore();
 const notificationStore = useNotificationStore();
 const { openModal, closeModal: hideNavigationBars } = useModalState();
+const { t } = useI18n();
 
 // Reactive data
 const showNewComplaintModal = ref(false);
@@ -293,12 +295,12 @@ const selectedFile = ref(null);
 const filePreviewUrl = ref(null);
 const fileInput = ref(null);
 
-const statusOptions = [
-  { id: 'all', name: 'All' },
-  { id: 'Open', name: 'Open' },
-  { id: 'In Progress', name: 'In Progress' },
-  { id: 'Resolved', name: 'Resolved' }
-];
+const statusOptions = computed(() => [
+  { id: 'all', name: t('all') },
+  { id: 'Open', name: t('open') },
+  { id: 'In Progress', name: t('inProgress') },
+  { id: 'Resolved', name: t('resolved') }
+]);
 
 // Computed properties
 const filteredComplaints = computed(() => {
@@ -403,10 +405,22 @@ const submitComplaint = async () => {
   }
 };
 
+const getStatusLabel = (status) => {
+  const statusMap = {
+    'all': t('all'),
+    'Open': t('open'),
+    'In Progress': t('inProgress'),
+    'Resolved': t('resolved'),
+    'Pending': t('pending'),
+    'Closed': t('closed')
+  };
+  return statusMap[status] || status;
+};
+
 const getLastMessage = (complaint) => {
-  if (!complaint.messages || complaint.messages.length === 0) return 'No messages';
+  if (!complaint.messages || complaint.messages.length === 0) return t('noMessages');
   const lastMessage = complaint.messages[complaint.messages.length - 1];
-  return lastMessage.text || 'Image message';
+  return lastMessage.text || t('imageMessage');
 };
 
 const getCategoryName = (categoryId) => {
