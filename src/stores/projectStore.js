@@ -294,9 +294,8 @@ export const useProjectStore = defineStore('project', () => {
         selectProject(userProjects.value[0])
         console.log('ProjectStore: Auto-selected first available project:', userProjects.value[0].name)
       }
-    } else {
-      console.log('ProjectStore: Selected project is valid:', selectedProject.value.name)
     }
+    // Removed excessive logging - only log when there's an issue
   }
 
   const loadSelectedProject = () => {

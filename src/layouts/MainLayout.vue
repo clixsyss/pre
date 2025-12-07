@@ -600,21 +600,34 @@ const viewViolations = () => {
 const checkUserSuspensionStatus = async () => {
   try {
     const currentUser = await optimizedAuthService.getCurrentUser()
-    if (!currentUser) return
+    if (!currentUser) {
+      console.warn('⚠️ MainLayout: No current user for suspension check')
+      return
+    }
     
-    const suspensionStatus = await checkUserSuspension(currentUser.uid)
+    // Use Cognito sub (which is the DynamoDB user ID) instead of uid which might be email
+    const userId = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.uid
+    console.log('🔍 MainLayout: Checking suspension for user ID:', userId)
+    
+    const suspensionStatus = await checkUserSuspension(userId)
+    
+    console.log('🔍 MainLayout: Suspension status:', {
+      isSuspended: suspensionStatus.isSuspended,
+      hasDetails: !!suspensionStatus.suspensionDetails
+    })
     
     if (suspensionStatus.isSuspended) {
       isUserSuspended.value = true
       suspensionMessage.value = getSuspensionMessage(suspensionStatus.suspensionDetails)
       showSuspensionMessage.value = true
+      console.log('🚫 MainLayout: User is suspended, showing suspension message')
     } else {
       isUserSuspended.value = false
       showSuspensionMessage.value = false
       suspensionMessage.value = null
     }
   } catch (error) {
-    console.error('Error checking user suspension:', error)
+    console.error('❌ MainLayout: Error checking user suspension:', error)
   }
 }
 

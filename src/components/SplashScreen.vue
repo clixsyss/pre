@@ -59,13 +59,21 @@ const videoCompleted = ref(false)
 
 const isIOS = Capacitor.getPlatform() === 'ios'
 
+let logoErrorHandled = false
+
 const handleLogoError = (event) => {
-  console.warn('Logo failed to load, trying fallback')
-  event.target.src = '../assets/logo.png'
-  event.target.onerror = () => {
-    console.warn('Fallback logo also failed')
-    event.target.style.display = 'none'
+  // Prevent infinite loop - if we've already handled this error, ignore it
+  if (logoErrorHandled || !event || !event.target) {
+    return
   }
+  
+  logoErrorHandled = true
+  console.warn('Logo failed to load, hiding logo to prevent infinite retry loop')
+  
+  // Hide the image immediately and remove error handler to prevent further attempts
+  const img = event.target
+  img.style.display = 'none'
+  img.onerror = null
 }
 
 const handleLogoLoad = () => {

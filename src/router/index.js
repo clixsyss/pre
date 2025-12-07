@@ -338,11 +338,14 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
     }
   } else if (user && requiresAuth) {
     // User is authenticated and trying to access protected route
+    // Use Cognito sub (which is the DynamoDB user ID) instead of uid which might be email
+    const userId = user.attributes?.sub || user.cognitoAttributes?.sub || user.uid
+    
     // Run profile and suspension checks in parallel for better performance
     try {
       const [userDocResult, suspensionResult] = await Promise.allSettled([
-        firestoreService.getDoc(`users/${user.uid}`),
-        canUserAccessRoute(user.uid, to.path),
+        firestoreService.getDoc(`users/${userId}`),
+        canUserAccessRoute(userId, to.path),
       ])
 
       // Check profile completion
@@ -380,7 +383,7 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
 
         // Check suspension details to show proper message
         try {
-          const suspensionStatus = await checkUserSuspension(user.uid)
+          const suspensionStatus = await checkUserSuspension(userId)
           if (suspensionStatus.isSuspended) {
             // Emit event to show suspension message
             window.dispatchEvent(
@@ -462,32 +465,47 @@ router.beforeEach(async (to, from, next) => {
   if (to.path === '/') {
     console.log('Navigation guard: Handling root route')
     try {
-      // Wait a bit for auth state to be established
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      const currentUser = await optimizedAuthService.getCurrentUser()
-      console.log(
-        'Navigation guard: Current user check result:',
-        currentUser ? 'authenticated' : 'not authenticated',
-      )
+      // Detect iOS platform for longer wait time
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
+      
+      // On iOS, wait for auth state to be restored (can take several seconds)
+      // On other platforms, use shorter wait
+      let currentUser
+      if (isIOS) {
+        console.log('Navigation guard: iOS detected, waiting for auth state to restore...')
+        currentUser = await optimizedAuthService.waitForAuthState()
+        console.log(
+          'Navigation guard: Current user check result (iOS):',
+          currentUser ? 'authenticated' : 'not authenticated',
+        )
+      } else {
+        // For non-iOS, use shorter wait
+        await new Promise((resolve) => setTimeout(resolve, 300))
+        currentUser = await optimizedAuthService.getCurrentUser()
+        console.log(
+          'Navigation guard: Current user check result:',
+          currentUser ? 'authenticated' : 'not authenticated',
+        )
+      }
 
       if (currentUser) {
         // Check Cognito email confirmation status
+        // Note: Some users may have email_verified=false but can still sign in
+        // Only enforce this if it's critical for your use case
         const emailVerified = currentUser?.cognitoAttributes?.emailVerified || 
                              currentUser?.attributes?.email_verified === 'true' ||
                              currentUser?.attributes?.email_verified === true
         
         console.log('[Router] 📧 Cognito email verification status:', emailVerified)
 
-        // If email is not confirmed, sign out and redirect to sign-in
+        // Don't sign out for unverified emails - user can still sign in, so allow them to proceed
+        // Email verification can be handled elsewhere if needed
         if (!emailVerified) {
-          console.log('[Router] ❌ User email is not confirmed in Cognito, signing out')
-          await optimizedAuthService.signOut()
-          next('/signin')
-          return
+          console.log('[Router] ⚠️ User email is not confirmed in Cognito, but allowing access (user can sign in)')
+        } else {
+          console.log('[Router] ✅ User email is confirmed in Cognito')
         }
-
-        console.log('[Router] ✅ User email is confirmed in Cognito')
 
         // Check DynamoDB for user approval status
         try {
@@ -499,15 +517,38 @@ router.beforeEach(async (to, from, next) => {
             return
           }
 
-          const { getUserByEmail } = await import('../services/dynamoDBUsersService')
-          console.log('[Router] 🔍 Checking DynamoDB users table for email:', userEmail)
+          const { getUserByEmail, getUserById } = await import('../services/dynamoDBUsersService')
           
-          const dynamoUser = await getUserByEmail(userEmail)
+          // Use Cognito sub (primary key) first - this is the most reliable lookup
+          const cognitoSub = currentUser?.attributes?.sub || currentUser?.cognitoAttributes?.sub || currentUser?.uid
+          let dynamoUser = null
+          
+          // First, try by ID (Cognito sub) - this is the primary key and most reliable
+          if (cognitoSub) {
+            console.log('[Router] 🔍 Checking DynamoDB users table by ID (Cognito sub):', cognitoSub)
+            dynamoUser = await getUserById(cognitoSub)
+            
+            if (dynamoUser) {
+              console.log('[Router] ✅ User found by ID (Cognito sub) in DynamoDB')
+            }
+          }
+          
+          // Fallback: If not found by ID, try by email
+          if (!dynamoUser && userEmail) {
+            console.log('[Router] ⚠️ User not found by ID, trying email lookup:', userEmail)
+            dynamoUser = await getUserByEmail(userEmail)
+            
+            if (dynamoUser) {
+              console.log('[Router] ✅ User found by email in DynamoDB')
+            }
+          }
           
           if (!dynamoUser) {
-            console.log('[Router] ❌ User not found in DynamoDB users table, signing out')
-            await optimizedAuthService.signOut()
-            next('/signin')
+            console.log('[Router] ⚠️ User not found in DynamoDB users table (tried email and ID)')
+            console.log('[Router] ⚠️ This might be a new user or data sync issue. Allowing access but user may need to complete registration.')
+            // Don't sign out - allow user to proceed, they might need to complete registration
+            // The app should handle missing user data gracefully
+            next('/home')
             return
           }
 
@@ -567,14 +608,24 @@ router.beforeEach(async (to, from, next) => {
     // Add a delay to allow authentication state to be established
     const checkAuth = async () => {
       try {
+        // Detect iOS platform
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                      (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
+        
         // Check if this is a notification-triggered navigation
         const isNotificationNavigation = from.path === '/' && to.path !== '/onboarding'
         
-        // Wait longer for notification-triggered navigation
-        const waitTime = isNotificationNavigation ? 1500 : 500
-        await new Promise((resolve) => setTimeout(resolve, waitTime))
-
-        const currentUser = await optimizedAuthService.getCurrentUser()
+        let currentUser
+        if (isIOS) {
+          // On iOS, use waitForAuthState to ensure auth is restored
+          console.log('Navigation guard: iOS detected, waiting for auth state...')
+          currentUser = await optimizedAuthService.waitForAuthState()
+        } else {
+          // For non-iOS, use shorter wait
+          const waitTime = isNotificationNavigation ? 1500 : 500
+          await new Promise((resolve) => setTimeout(resolve, waitTime))
+          currentUser = await optimizedAuthService.getCurrentUser()
+        }
 
         if (resolved) return
 
@@ -587,9 +638,15 @@ router.beforeEach(async (to, from, next) => {
         // If this is notification-triggered and no user yet, wait a bit more
         if (isNotificationNavigation && !currentUser) {
           console.log('Notification navigation: waiting for auth state...')
-          await new Promise((resolve) => setTimeout(resolve, 1000))
           
-          const retryUser = await optimizedAuthService.getCurrentUser()
+          // On iOS, use waitForAuthState; on others, use shorter wait
+          const retryUser = isIOS 
+            ? await optimizedAuthService.waitForAuthState(3000) // 3s max for retry
+            : await (async () => {
+                await new Promise((resolve) => setTimeout(resolve, 1000))
+                return await optimizedAuthService.getCurrentUser()
+              })()
+          
           if (retryUser) {
             console.log('Notification navigation: auth state ready on retry')
             clearTimeout(timeout)

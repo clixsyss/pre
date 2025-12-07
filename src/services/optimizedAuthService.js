@@ -112,13 +112,15 @@ class OptimizedAuthService {
           ...user.attributes
         }
         
-        console.log('🚀 OptimizedAuthService: Fetched Cognito attributes:', {
-          email: user.cognitoAttributes.email,
-          name: user.cognitoAttributes.name,
-          phoneNumber: user.cognitoAttributes.phoneNumber,
-          gender: user.cognitoAttributes.gender,
-          birthdate: user.cognitoAttributes.birthdate
-        })
+        // Reduced logging - only log in debug mode or first time
+        // Commented out to reduce console spam
+        // console.log('🚀 OptimizedAuthService: Fetched Cognito attributes:', {
+        //   email: user.cognitoAttributes.email,
+        //   name: user.cognitoAttributes.name,
+        //   phoneNumber: user.cognitoAttributes.phoneNumber,
+        //   gender: user.cognitoAttributes.gender,
+        //   birthdate: user.cognitoAttributes.birthdate
+        // })
       }
       
       this.currentUser = user
@@ -138,11 +140,65 @@ class OptimizedAuthService {
   }
 
   /**
+   * Wait for authentication state to be restored (especially important on iOS)
+   * @param {number} maxWaitTime - Maximum time to wait in ms (default: 5000ms, 8000ms for iOS)
+   * @returns {Promise<Object|null>} - User object or null
+   */
+  async waitForAuthState(maxWaitTime = null) {
+    // Detect iOS platform
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
+    
+    // iOS needs more time to restore auth state
+    const waitTime = maxWaitTime || (isIOS ? 8000 : 5000)
+    const checkInterval = 100 // Check every 100ms
+    let elapsed = 0
+    
+    console.log(`🚀 OptimizedAuthService: Waiting for auth state (max: ${waitTime}ms, iOS: ${isIOS})...`)
+    
+    // First check if we already have a cached user
+    if (this.currentUser) {
+      // Reduced logging - cached user access is frequent and not critical
+      return this.currentUser
+    }
+    
+    while (elapsed < waitTime) {
+      try {
+        const user = await this.fetchCurrentUser()
+        if (user) {
+          console.log(`🚀 OptimizedAuthService: Auth state ready after ${elapsed}ms`)
+          this.currentUser = user
+          return user
+        }
+      } catch {
+        // Ignore errors during polling - auth might not be ready yet
+        if (elapsed > 1000) {
+          // Only log after 1 second to avoid spam
+          console.log(`🚀 OptimizedAuthService: Auth not ready yet (${elapsed}ms)...`)
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, checkInterval))
+      elapsed += checkInterval
+    }
+    
+    console.warn(`🚀 OptimizedAuthService: Auth state not ready after ${waitTime}ms timeout`)
+    // Final attempt
+    try {
+      this.currentUser = await this.fetchCurrentUser()
+      return this.currentUser
+    } catch {
+      this.currentUser = null
+      return null
+    }
+  }
+
+  /**
    * Get current user with caching
    */
   async getCurrentUser() {
     if (this.currentUser) {
-      console.log('🚀 OptimizedAuthService: Using cached current user')
+      // Reduced logging - cached user access is frequent and not critical
       return this.currentUser
     }
 

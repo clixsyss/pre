@@ -288,8 +288,10 @@ export async function getUserByEmail(email) {
             ...(lastEvaluatedKey && { ExclusiveStartKey: lastEvaluatedKey })
           })
           
-          allItems = allItems.concat(scanResult.items || scanResult || [])
-          lastEvaluatedKey = scanResult.LastEvaluatedKey
+          // scanResult is an array (items), with LastEvaluatedKey attached if available
+          const items = Array.isArray(scanResult) ? scanResult : []
+          allItems = allItems.concat(items)
+          lastEvaluatedKey = scanResult.LastEvaluatedKey || null
           
           // Check if we found a match
           const matchedItem = allItems.find(item => {
