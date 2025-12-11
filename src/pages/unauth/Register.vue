@@ -146,8 +146,65 @@
                 </svg>
               </button>
             </div>
-            <div class="password-requirements">
-              <small>Password must be at least 8 characters long</small>
+            <!-- Password Requirements -->
+            <div v-if="personalForm.password" class="password-requirements">
+              <ul class="requirements-list">
+                <li :class="{ valid: passwordRequirements.minLength }">
+                  <span class="requirement-icon">
+                    <svg v-if="passwordRequirements.minLength" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                    <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  </span>
+                  <span class="requirement-text">At least 8 characters</span>
+                </li>
+                <li :class="{ valid: passwordRequirements.hasUppercase }">
+                  <span class="requirement-icon">
+                    <svg v-if="passwordRequirements.hasUppercase" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                    <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  </span>
+                  <span class="requirement-text">One uppercase letter</span>
+                </li>
+                <li :class="{ valid: passwordRequirements.hasLowercase }">
+                  <span class="requirement-icon">
+                    <svg v-if="passwordRequirements.hasLowercase" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                    <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  </span>
+                  <span class="requirement-text">One lowercase letter</span>
+                </li>
+                <li :class="{ valid: passwordRequirements.hasNumber }">
+                  <span class="requirement-icon">
+                    <svg v-if="passwordRequirements.hasNumber" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                    <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  </span>
+                  <span class="requirement-text">One number</span>
+                </li>
+                <li :class="{ valid: passwordRequirements.hasSpecialChar }">
+                  <span class="requirement-icon">
+                    <svg v-if="passwordRequirements.hasSpecialChar" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                    <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  </span>
+                  <span class="requirement-text">One special character (!@#$%^&*)</span>
+                </li>
+              </ul>
             </div>
           </div>
 
@@ -295,8 +352,14 @@
             <div class="form-group">
               <label for="project" class="form-label">Project *</label>
               <div class="select-wrapper">
-                <select id="project" v-model="propertyForm.selectedProject" class="form-input custom-select" required
-                  @change="onProjectChange">
+                <select 
+                  id="project" 
+                  v-model="propertyForm.selectedProject" 
+                  class="form-input custom-select" 
+                  required
+                  :disabled="loading || availableProjectsSorted.length === 0"
+                  @change="onProjectChange"
+                >
                   <option value="" disabled>Select Project</option>
                   <option 
                     v-for="project in availableProjectsSorted" 
@@ -312,6 +375,9 @@
                 </div>
                 <div class="select-arrow"></div>
               </div>
+              <p v-if="availableProjectsSorted.length === 0 && !loading" class="form-help-text" style="color: #666; font-size: 0.85rem; margin-top: 5px;">
+                Loading projects...
+              </p>
             </div>
 
             <!-- Unit Selection -->
@@ -433,8 +499,13 @@
                 <div class="form-group">
                   <label for="additional-project" class="form-label">Project</label>
                   <div class="select-wrapper">
-                    <select id="additional-project" v-model="additionalPropertyForm.selectedProject"
-                      class="form-input custom-select" @change="onAdditionalProjectChange">
+                    <select 
+                      id="additional-project" 
+                      v-model="additionalPropertyForm.selectedProject"
+                      class="form-input custom-select" 
+                      :disabled="loading || availableProjectsSorted.length === 0"
+                      @change="onAdditionalProjectChange"
+                    >
                       <option value="" disabled>Select Project</option>
                       <option 
                         v-for="project in availableProjectsSorted" 
@@ -818,12 +889,30 @@ const isPersonalDetailsCompleted = computed(() => {
     userDetails.dateOfBirth && userDetails.nationalId
 })
 
+// Password requirements validation
+const passwordRequirements = computed(() => {
+  const password = personalForm.password || ''
+  return {
+    minLength: password.length >= 8,
+    hasUppercase: /[A-Z]/.test(password),
+    hasLowercase: /[a-z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+    hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+  }
+})
+
+// Check if all password requirements are met
+const isPasswordValid = computed(() => {
+  const req = passwordRequirements.value
+  return req.minLength && req.hasUppercase && req.hasLowercase && req.hasNumber && req.hasSpecialChar
+})
+
 const canProceed = computed(() => {
   return personalForm.email &&
     personalForm.password &&
     personalForm.confirmPassword &&
     personalForm.password === personalForm.confirmPassword &&
-    personalForm.password.length >= 8 &&
+    isPasswordValid.value &&
     !loading.value
 })
 
@@ -1474,9 +1563,52 @@ select.form-input:disabled {
 }
 
 .password-requirements {
-  margin-top: 5px;
-  color: #666;
-  font-size: 0.85rem;
+  margin-top: 12px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.requirements-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.requirements-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: #6c757d;
+  transition: color 0.2s ease;
+}
+
+.requirements-list li.valid {
+  color: #28a745;
+}
+
+.requirement-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: #adb5bd;
+  transition: color 0.2s ease;
+}
+
+.requirements-list li.valid .requirement-icon {
+  color: #28a745;
+}
+
+.requirement-text {
+  line-height: 1.4;
 }
 
 .password-input-wrapper {

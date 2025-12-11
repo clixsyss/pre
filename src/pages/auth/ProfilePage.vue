@@ -1740,17 +1740,55 @@ const loadProfile = async (forceReload = false) => {
     let profileData = null
     let matchedUserId = null
     
-    // Use email as the common key to match between Cognito and DynamoDB users table
-    // Don't use ID/UID since they are different between Cognito and users table
-    if (userEmail) {
-      const loginEmail = userEmail.trim().toLowerCase()
-      console.log('🔍 ProfilePage: Starting email matching process')
-      console.log('🔍 ProfilePage: Cognito email (raw):', userEmail)
-      console.log('🔍 ProfilePage: Cognito email (normalized):', loginEmail)
-      console.log('🔍 ProfilePage: Cognito UID:', currentUser.uid)
+    // Use Cognito sub (primary key) first - this is the most reliable lookup
+    // The user's ID in DynamoDB is the Cognito sub
+    const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.uid
+    console.log('🔍 ProfilePage: Starting user lookup process')
+    console.log('🔍 ProfilePage: Cognito sub (ID):', cognitoSub)
+    console.log('🔍 ProfilePage: Cognito email:', userEmail)
+    console.log('🔍 ProfilePage: Cognito UID:', currentUser.uid)
+    
+    // Always try to fetch from DynamoDB - don't skip based on credentials check
+    // The DynamoDB client will handle credential errors gracefully
+    try {
+      const { getUserByEmail, getUserById } = await import('src/services/dynamoDBUsersService')
       
-      try {
-        const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
+      // First, try by ID (Cognito sub) - this is the primary key and most reliable
+      if (cognitoSub) {
+        console.log('🔍 ProfilePage: Trying getUserById with Cognito sub:', cognitoSub)
+        const userById = await getUserById(cognitoSub)
+        console.log('🔍 ProfilePage: getUserById returned:', userById)
+        
+        if (userById) {
+          profileData = userById
+          matchedUserId = userById.id
+          console.log('✅ ProfilePage: SUCCESS - Found user by ID (Cognito sub) in DynamoDB users table')
+          console.log('✅ ProfilePage: User data from DynamoDB (via ID):', {
+            dynamoDbUserId: userById.id,
+            cognitoUid: currentUser.uid,
+            email: userById.email,
+            fullName: userById.fullName,
+            firstName: userById.firstName,
+            lastName: userById.lastName,
+            mobile: userById.mobile,
+            dateOfBirth: userById.dateOfBirth,
+            gender: userById.gender,
+            nationalId: userById.nationalId,
+            accountType: userById.accountType,
+            approvalStatus: userById.approvalStatus,
+            registrationStatus: userById.registrationStatus,
+            isProfileComplete: userById.isProfileComplete,
+            projects: userById.projects?.length || 0,
+            unit: userById.unit,
+            allFields: Object.keys(userById)
+          })
+        }
+      }
+      
+      // Fallback: If not found by ID, try by email
+      if (!profileData && userEmail) {
+        const loginEmail = userEmail.trim().toLowerCase()
+        console.warn('⚠️ ProfilePage: User NOT found by ID, trying email lookup:', loginEmail)
         console.log('🔍 ProfilePage: Calling getUserByEmail with:', loginEmail)
         
         const userByEmail = await getUserByEmail(loginEmail)
@@ -1781,21 +1819,48 @@ const loadProfile = async (forceReload = false) => {
             allFields: Object.keys(userByEmail)
           })
         } else {
-          console.warn('⚠️ ProfilePage: User NOT found in users table by email:', loginEmail)
-          console.warn('⚠️ ProfilePage: This means no matching email exists in DynamoDB users table')
+          console.warn('⚠️ ProfilePage: User also NOT found by email')
+          console.warn('⚠️ ProfilePage: Will fallback to Cognito attributes')
         }
-      } catch (emailError) {
+      } else if (!profileData) {
+        console.warn('⚠️ ProfilePage: User NOT found by ID and no email available')
+        console.warn('⚠️ ProfilePage: Will fallback to Cognito attributes')
+      }
+    } catch (emailError) {
         console.error('❌ ProfilePage: ERROR fetching user by email:', emailError)
         console.error('❌ ProfilePage: Error name:', emailError.name)
         console.error('❌ ProfilePage: Error message:', emailError.message)
+        console.error('❌ ProfilePage: Error code:', emailError.code)
         console.error('❌ ProfilePage: Error stack:', emailError.stack)
-        // Don't continue - this is a critical error
-        throw emailError
+        
+        // Check if it's a credentials error
+        if (emailError.message?.includes('credentials') || 
+            emailError.message?.includes('AWS') || 
+            emailError.message?.includes('AccessDenied') ||
+            emailError.code === 'CredentialsError' ||
+            emailError.code === 'UnrecognizedClientException') {
+          console.warn('⚠️ ProfilePage: AWS credentials issue detected. Check your environment variables:')
+          console.warn('⚠️ ProfilePage: Required: VITE_AWS_ACCESS_KEY_ID, VITE_AWS_SECRET_ACCESS_KEY, VITE_AWS_REGION')
+          console.warn('⚠️ ProfilePage: Continuing with Cognito attributes fallback...')
+        } else if (emailError.message?.includes('Network') || emailError.code === 'NetworkingError') {
+          console.warn('⚠️ ProfilePage: Network error connecting to DynamoDB. Check your internet connection.')
+          console.warn('⚠️ ProfilePage: Continuing with Cognito attributes fallback...')
+        } else {
+          console.warn('⚠️ ProfilePage: DynamoDB query failed. Continuing with Cognito attributes fallback...')
+          console.warn('⚠️ ProfilePage: Error details:', {
+            name: emailError.name,
+            message: emailError.message,
+            code: emailError.code
+          })
+        }
+        // Don't throw - allow fallback to Cognito attributes
+        // This ensures the profile page still loads even if DynamoDB fails
       }
-    } else {
-      console.error('❌ ProfilePage: CRITICAL - No email available from Cognito user!')
-      console.error('❌ ProfilePage: Cannot match with users table without email')
-      console.error('❌ ProfilePage: Current user object structure:', {
+    
+    // If no email available, log a warning but continue (we already tried by ID)
+    if (!userEmail && !profileData) {
+      console.warn('⚠️ ProfilePage: No email available from Cognito user and user not found by ID')
+      console.warn('⚠️ ProfilePage: Current user object structure:', {
         uid: currentUser.uid,
         username: currentUser.username,
         hasEmail: !!currentUser.email,
@@ -1810,13 +1875,17 @@ const loadProfile = async (forceReload = false) => {
     // Only use users table - do not check admins table
     if (!profileData) {
       console.warn('ProfilePage: User not found in users table by email. Profile data will be created from Cognito attributes.')
+      console.warn('ProfilePage: This means either:')
+      console.warn('  1. User does not exist in DynamoDB users table')
+      console.warn('  2. Email mismatch between Cognito and DynamoDB')
+      console.warn('  3. DynamoDB query failed (check console for errors above)')
     }
     
     if (profileData) {
       // Ensure matchedUserId is set (use profileData.id if matchedUserId wasn't set)
       const userIdToUse = matchedUserId || profileData.id || currentUser.uid
       
-      console.log('ProfilePage: Using profile data from DynamoDB users table', {
+      console.log('✅ ProfilePage: Using profile data from DynamoDB users table', {
         matchedUserId: userIdToUse,
         cognitoUid: currentUser.uid,
         email: profileData.email,
@@ -1829,7 +1898,18 @@ const loadProfile = async (forceReload = false) => {
           nationalId: !!profileData.nationalId,
           unit: !!profileData.unit,
           projects: !!profileData.projects
-        }
+        },
+        profileDataKeys: Object.keys(profileData)
+      })
+      
+      console.log('🔍 ProfilePage: About to assign profileData to userProfile.value')
+      console.log('🔍 ProfilePage: profileData sample:', {
+        id: profileData.id,
+        email: profileData.email,
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        mobile: profileData.mobile,
+        nationalId: profileData.nationalId
       })
       
       // Normalize dateOfBirth if it exists
@@ -2026,6 +2106,20 @@ const loadProfile = async (forceReload = false) => {
         allKeys: Object.keys(userProfile.value || {})
       })
 
+      // Verify data was actually assigned before proceeding
+      if (!userProfile.value || Object.keys(userProfile.value).length === 0) {
+        console.error('❌ ProfilePage: CRITICAL - userProfile.value is empty after assignment!')
+        console.error('❌ ProfilePage: profileData was:', profileData)
+        throw new Error('Failed to assign profile data to userProfile')
+      }
+      
+      console.log('✅ ProfilePage: Verified userProfile.value has data:', {
+        hasData: !!userProfile.value && Object.keys(userProfile.value).length > 0,
+        email: userProfile.value.email,
+        firstName: userProfile.value.firstName,
+        keysCount: Object.keys(userProfile.value).length
+      })
+
       // Load user projects from users table using the DynamoDB users table ID
       // The projectStore will:
       // 1. Get user from users table using the DynamoDB ID (from userProfile.value.id)
@@ -2039,6 +2133,14 @@ const loadProfile = async (forceReload = false) => {
 
       // Load family members
       await loadFamilyMembers()
+      
+      // Final verification that data is still there
+      console.log('✅ ProfilePage: Final check - userProfile.value still has data:', {
+        hasEmail: !!userProfile.value?.email,
+        email: userProfile.value?.email,
+        hasFirstName: !!userProfile.value?.firstName,
+        firstName: userProfile.value?.firstName
+      })
     } else {
       // Profile doesn't exist in either table - use Cognito attributes
       console.log('ProfilePage: Profile document does not exist in users or admins table, using Cognito attributes')
@@ -2269,7 +2371,11 @@ const loadFamilyMembers = async () => {
   if (!currentUser || !projectStore.selectedProject || !userProfile.value) return
 
   try {
-    console.log('👨‍👩‍👧‍👦 Loading family members for user:', currentUser.uid)
+    // Use DynamoDB user ID (Cognito sub) instead of currentUser.uid (which might be email)
+    const currentUserId = userProfile.value.id || currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.uid
+    console.log('👨‍👩‍👧‍👦 Loading family members for user:', currentUserId)
+    console.log('👨‍👩‍👧‍👦 Current user profile ID:', userProfile.value.id)
+    console.log('👨‍👩‍👧‍👦 Current user Cognito UID:', currentUser.uid)
 
     // Get current user's unit from their projects
     const currentUserProject = userProfile.value.projects?.find(
@@ -2291,7 +2397,7 @@ const loadFamilyMembers = async () => {
     if (hasParentAccountId || await checkIfParentAccountIdSystemExists()) {
       // Use parentAccountId-based system
       console.log('👨‍👩‍👧‍👦 Using parentAccountId system')
-      const parentId = userProfile.value.parentAccountId || currentUser.uid
+      const parentId = userProfile.value.parentAccountId || currentUserId
 
       // Query users who have this parent ID
       const usersSnapshot = await firestoreService.getDocs('users', {
@@ -2308,10 +2414,10 @@ const loadFamilyMembers = async () => {
 
       // Also get users who have current user as parent (if different from parentId)
       let childrenOfCurrentUser = []
-      if (parentId !== currentUser.uid) {
+      if (parentId !== currentUserId) {
         const childrenSnapshot = await firestoreService.getDocs('users', {
           filters: [
-            { field: 'parentAccountId', operator: '==', value: currentUser.uid }
+            { field: 'parentAccountId', operator: '==', value: currentUserId }
           ],
           timeoutMs: 6000
         })
@@ -2323,7 +2429,7 @@ const loadFamilyMembers = async () => {
 
       // If current user is a family member (has a parent), also fetch the parent user
       let parentUser = null
-      if (parentId !== currentUser.uid) {
+      if (parentId !== currentUserId) {
         try {
           const parentDoc = await firestoreService.getDoc('users', parentId)
           if (parentDoc.exists()) {
@@ -2358,8 +2464,8 @@ const loadFamilyMembers = async () => {
       allPotentialMembers = allUsersSnapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter(user => {
-          // Don't include self
-          if (user.id === currentUser.uid) return false
+          // Don't include self - use DynamoDB ID for comparison
+          if (user.id === currentUserId) return false
           
           // Check if user has access to the same project and same unit
           const userProjectData = user.projects?.find(p => p.projectId === projectStore.selectedProject.id)
@@ -2376,25 +2482,53 @@ const loadFamilyMembers = async () => {
     )
 
     // Filter by same unit in the same project and exclude self
-    const members = uniqueMembers.filter(user => {
-      // Don't include self
-      if (user.id === currentUser.uid) return false
+    // Also ensure we have full user data (firstName, lastName, email)
+    const members = await Promise.all(
+      uniqueMembers
+        .filter(user => {
+          // Don't include self - use DynamoDB ID for comparison
+          if (user.id === currentUserId) return false
 
-      // Check if user has access to the same project and same unit
-      const userProjectData = user.projects?.find(p => p.projectId === projectStore.selectedProject.id)
-      if (!userProjectData) return false
+          // Check if user has access to the same project and same unit
+          const userProjectData = user.projects?.find(p => p.projectId === projectStore.selectedProject.id)
+          if (!userProjectData) return false
 
-      // Must be in the same unit
-      if (userProjectData.unit !== currentUserUnit) return false
+          // Must be in the same unit
+          if (userProjectData.unit !== currentUserUnit) return false
 
-      // Get the role from the project data
-      user.role = userProjectData.role
+          // Get the role from the project data
+          user.role = userProjectData.role
 
-      return true
-    })
+          return true
+        })
+        .map(async (user) => {
+          // If user is missing critical fields (firstName, lastName, email), fetch full user data
+          if (!user.firstName || !user.lastName || !user.email) {
+            try {
+              const { getUserById } = await import('src/services/dynamoDBUsersService')
+              const fullUserData = await getUserById(user.id)
+              if (fullUserData) {
+                // Merge full user data with existing data (preserve role from project)
+                return {
+                  ...fullUserData,
+                  role: user.role || fullUserData.role
+                }
+              }
+            } catch (error) {
+              console.warn('Error fetching full user data for family member:', user.id, error)
+            }
+          }
+          return user
+        })
+    )
 
     familyMembers.value = members
-    console.log('👨‍👩‍👧‍👦 Loaded family members:', members.length, members)
+    console.log('👨‍👩‍👧‍👦 Loaded family members:', members.length, members.map(m => ({
+      id: m.id,
+      name: `${m.firstName || ''} ${m.lastName || ''}`.trim() || 'Unknown',
+      email: m.email || 'No email',
+      role: m.role || 'Unknown'
+    })))
   } catch (error) {
     console.error('Error loading family members:', error)
     familyMembers.value = []

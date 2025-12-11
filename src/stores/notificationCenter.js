@@ -432,10 +432,8 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         return
       }
 
-      // Check if iOS to use Capacitor Firebase (use reliable platform detection)
+      // Platform detection for logging (DynamoDB works on all platforms)
       const platformInfo = detectPlatformFromUrl()
-      const isIOS = platformInfo.platform === 'ios' && platformInfo.isNative
-      
       console.log('NotificationCenter: Mark all as read - Platform:', platformInfo)
       
       // Store original unread count for potential rollback
@@ -455,75 +453,20 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
       console.log(`NotificationCenter: Local state updated - ${unreadCount.value} unread`)
       
       try {
-        if (isIOS) {
-          // Try Capacitor Firebase for iOS first
-          try {
-            const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
-            
-            console.log(`NotificationCenter: iOS - Using Capacitor Firebase to mark ${unreadNotifs.length} notifications as read...`)
-            
-            // Mark notifications one by one with better error handling
-            const currentTimestamp = Date.now()
-            console.log(`NotificationCenter: iOS - Using timestamp:`, currentTimestamp)
-            
-            let successCount = 0
-            let failCount = 0
-            
-            for (const notification of unreadNotifs) {
-              try {
-                console.log(`NotificationCenter: iOS - Marking notification ${notification.id} as read`)
-                console.log(`NotificationCenter: iOS - Document path: users/${userId}/notificationReadStatus/${notification.id}`)
-                
-                const result = await FirebaseFirestore.setDocument({
-                  reference: `users/${userId}/notificationReadStatus/${notification.id}`,
-                  data: {
-                    read: true,
-                    readAt: currentTimestamp
-                  },
-                  merge: true
-                })
-                
-                successCount++
-                console.log(`NotificationCenter: iOS - ✅ Notification ${notification.id} marked as read`, result)
-              } catch (notifError) {
-                failCount++
-                console.error(`NotificationCenter: iOS - Failed to mark notification ${notification.id}:`, {
-                  error: notifError,
-                  code: notifError?.code,
-                  message: notifError?.message,
-                  stack: notifError?.stack
-                })
-                // Continue with other notifications even if one fails
-              }
-            }
-            
-            console.log(`NotificationCenter: ✅ iOS Capacitor - Completed: ${successCount} success, ${failCount} failed`)
-            
-            // If all failed, try fallback to Web SDK
-            if (successCount === 0 && failCount > 0) {
-              console.warn(`NotificationCenter: iOS Capacitor - All writes failed, trying Web SDK fallback...`)
-              throw new Error('Capacitor Firebase failed for all notifications')
-            }
-          } catch (capacitorError) {
-            // Fallback to Web SDK if Capacitor fails
-            console.warn(`NotificationCenter: iOS - Capacitor Firebase failed, falling back to Web SDK:`, capacitorError)
-            console.log(`NotificationCenter: iOS - Using Web SDK fallback to mark ${unreadNotifs.length} notifications`)
-            
-            const batch = writeBatch(db)
-            
-            unreadNotifs.forEach((notification) => {
-              const readStatusRef = doc(db, `users/${userId}/notificationReadStatus`, notification.id)
-              batch.set(readStatusRef, {
-                read: true,
-                readAt: Timestamp.now()
-              })
-            })
-            
-            await batch.commit()
-            console.log(`NotificationCenter: ✅ iOS Web SDK fallback - Successfully marked ${unreadNotifs.length} notifications as read`)
-          }
-        } else {
-          // Use Web SDK batch for web - create read status for all notifications
+        // Use DynamoDB for read status (more reliable than Firestore)
+        const { usersNotificationReadStatusService } = await import('../services/dynamoDBTableServices')
+        
+        console.log(`NotificationCenter: Using DynamoDB to mark ${unreadNotifs.length} notifications as read...`)
+        const notificationIds = unreadNotifs.map(n => n.id)
+        
+        await usersNotificationReadStatusService.markMultipleAsRead(userId, notificationIds)
+        
+        console.log(`NotificationCenter: ✅ Successfully marked ${unreadNotifs.length} notifications as read in DynamoDB`)
+      } catch (dynamoError) {
+        // Fallback to Firestore if DynamoDB fails
+        console.warn(`NotificationCenter: DynamoDB failed, falling back to Firestore:`, dynamoError)
+        
+        try {
           const batch = writeBatch(db)
           
           unreadNotifs.forEach((notification) => {
@@ -535,18 +478,17 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
           })
 
           await batch.commit()
-          
-          console.log(`NotificationCenter: ✅ Marked ${unreadNotifs.length} notifications as read in user collection`)
+          console.log(`NotificationCenter: ✅ Firestore fallback - Successfully marked ${unreadNotifs.length} notifications as read`)
+        } catch (firestoreError) {
+          console.error('NotificationCenter: Both DynamoDB and Firestore failed:', firestoreError)
+          // Rollback local state changes if all writes fail
+          unreadNotifs.forEach(notification => {
+            readStatusMap.value.delete(notification.id)
+            notification.read = false
+          })
+          unreadCount.value = originalUnreadCount
+          throw firestoreError
         }
-      } catch (firestoreError) {
-        // Rollback local state changes if Firestore write fails
-        console.error('NotificationCenter: Firestore write failed, rolling back local state:', firestoreError)
-        unreadNotifs.forEach(notification => {
-          readStatusMap.value.delete(notification.id)
-          notification.read = false
-        })
-        unreadCount.value = originalUnreadCount
-        throw firestoreError
       }
     } catch (error) {
       console.error('NotificationCenter: Error marking all notifications as read:', { code: error?.code, errorMessage: error?.message })

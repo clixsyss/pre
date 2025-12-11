@@ -47,6 +47,7 @@ import DocumentVerificationModal from './components/DocumentVerificationModal.vu
 import { useNetworkStatus } from './composables/useNetworkStatus'
 import { useDocumentVerification } from './composables/useDocumentVerification'
 import { useSplashStore } from './stores/splash'
+import optimizedAuthService from './services/optimizedAuthService'
 
 // Component name for ESLint
 defineOptions({
@@ -56,6 +57,14 @@ defineOptions({
 const route = useRoute()
 const isRouterLoading = ref(true)
 const splashStore = useSplashStore()
+
+// Safety timeout: Always show content after 3 seconds, even if initialization fails
+setTimeout(() => {
+  if (isRouterLoading.value) {
+    console.warn('⚠️ App.vue: Safety timeout reached, forcing isRouterLoading to false')
+    isRouterLoading.value = false
+  }
+}, 3000)
 
 // Initialize network monitoring
 const { initNetworkMonitoring, stopNetworkMonitoring } = useNetworkStatus()
@@ -114,54 +123,23 @@ onMounted(async () => {
     await nextTick()
     console.log('🚀 App.vue: Vue app mounted')
     
-    // Simple initialization with error handling
-    console.log('🔍 App.vue: Checking services availability...')
-    
-    // Check services with error handling
-    let authServiceAvailable = false
-    let firestoreServiceAvailable = false
+    // Services are already initialized via boot files
+    // Just verify they're available
+    console.log('🔍 App.vue: Verifying services availability...')
     
     try {
-      authServiceAvailable = !!window.optimizedAuthService
-      console.log('🔍 optimizedAuthService available:', authServiceAvailable)
+      const authCheck = optimizedAuthService ? 'available' : 'not available'
+      console.log('🔍 optimizedAuthService:', authCheck)
     } catch (e) {
       console.warn('⚠️ Error checking auth service:', e)
     }
     
-    try {
-      firestoreServiceAvailable = !!window.firestoreService
-      console.log('🔍 firestoreService available:', firestoreServiceAvailable)
-    } catch (e) {
-      console.warn('⚠️ Error checking firestore service:', e)
-    }
-    
-    // Initialize services one by one with error handling
-    if (authServiceAvailable) {
-      try {
-        console.log('🔍 App.vue: Initializing auth service...')
-        await window.optimizedAuthService.initialize()
-        console.log('✅ Auth service initialized')
-      } catch (error) {
-        console.error('❌ Auth service initialization failed:', error)
-      }
-    }
-    
-    if (firestoreServiceAvailable) {
-      try {
-        console.log('🔍 App.vue: Initializing firestore service...')
-        await window.firestoreService.initialize()
-        console.log('✅ Firestore service initialized')
-      } catch (error) {
-        console.error('❌ Firestore service initialization failed:', error)
-      }
-    }
-    
-    console.log('🚀 App.vue: Services initialization completed')
+    console.log('🚀 App.vue: Services verification completed')
     
     // Wait for smooth initialization
     await new Promise(resolve => setTimeout(resolve, 500))
     
-    // Show app content
+    // Show app content (always set to false, even if there were errors)
     console.log('🔍 App.vue: Setting isRouterLoading to false...')
     isRouterLoading.value = false
     
@@ -194,14 +172,16 @@ onMounted(async () => {
     console.error('❌ App.vue: Critical error during initialization:', error)
     console.error('❌ Error stack:', error.stack)
     
+    // Always show app content, even on error
+    isRouterLoading.value = false
+    
     // Hide splash even if there's an error
     setTimeout(() => {
       console.log('🔍 App.vue: Force hiding splash due to critical error...')
-      isRouterLoading.value = false
       // Force both flags to hide splash immediately on error
       splashStore.setVideoCompleted()
       splashStore.setAppInitialized()
-    }, 2000)
+    }, 1000)
   }
 })
 

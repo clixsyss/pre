@@ -190,7 +190,12 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
         });
     };
 
-    const fetchUserBookings = async (userId, projectId) => {
+    // Track pending requests to prevent duplicate simultaneous calls
+    const pendingBookingsRequests = new Map()
+    const lastBookingsFetch = new Map()
+    const BOOKINGS_CACHE_DURATION = 3 * 60 * 1000 // 3 minutes cache
+
+    const fetchUserBookings = async (userId, projectId, force = false) => {
         return performanceService.timeOperation('fetchUserBookings', async () => {
             try {
                 if (!projectId) {
@@ -198,49 +203,96 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
                     return;
                 }
 
-                console.log('🚀 AcademyStore: Fetching user bookings for user:', userId, 'project:', projectId);
+                const cacheKey = `${projectId}-${userId}`
                 
-                // Use DynamoDB service first
-                try {
-                    const bookings = await getDynamoDBUserBookings(projectId, userId, { limit: 100 });
-                    
-                    // Sort by createdAt descending
-                    bookings.sort((a, b) => {
-                        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                        return dateB - dateA;
-                    });
-                    
-                    userBookings.value = bookings;
-                    console.log("✅ AcademyStore: User bookings fetched from DynamoDB:", bookings.length);
-                    return bookings;
-                } catch (dynamoError) {
-                    console.warn('AcademyStore: DynamoDB fetch failed, falling back to Firestore:', dynamoError);
-                    // Fallback to Firestore
-                    const queryOptions = {
-                        filters: [
-                            { field: 'userId', operator: '==', value: userId }
-                        ],
-                        orderBy: [
-                            { field: 'createdAt', direction: 'desc' }
-                        ],
-                        timeoutMs: 6000
-                    };
-                    
-                    const result = await firestoreService.getDocs(`projects/${projectId}/bookings`, queryOptions);
-                    
-                    const bookings = result.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    }));
-                    
-                    userBookings.value = bookings;
-                    console.log("✅ AcademyStore: User bookings fetched from Firestore (fallback):", bookings.length);
-                    return bookings;
+                // Check cache first
+                if (!force && lastBookingsFetch.has(cacheKey)) {
+                    const { data, timestamp } = lastBookingsFetch.get(cacheKey)
+                    const now = Date.now()
+                    if ((now - timestamp) < BOOKINGS_CACHE_DURATION && data && data.length >= 0) {
+                        console.log('✨ AcademyStore: Using cached bookings data')
+                        userBookings.value = data
+                        return data
+                    }
                 }
+                
+                // Check if there's already a pending request for this key
+                if (pendingBookingsRequests.has(cacheKey)) {
+                    console.log('⚡ AcademyStore: Request already in progress, waiting for existing request...')
+                    return await pendingBookingsRequests.get(cacheKey)
+                }
+
+                // Create new request promise
+                const requestPromise = (async () => {
+                    try {
+                        console.log('🚀 AcademyStore: Fetching user bookings for user:', userId, 'project:', projectId);
+                        
+                        // Use DynamoDB service first
+                        try {
+                            const bookings = await getDynamoDBUserBookings(projectId, userId, { limit: 100 });
+                            
+                            // Sort by createdAt descending
+                            bookings.sort((a, b) => {
+                                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                                return dateB - dateA;
+                            });
+                            
+                            // Cache the result
+                            lastBookingsFetch.set(cacheKey, {
+                                data: bookings,
+                                timestamp: Date.now()
+                            })
+                            
+                            userBookings.value = bookings;
+                            console.log("✅ AcademyStore: User bookings fetched from DynamoDB:", bookings.length);
+                            return bookings;
+                        } catch (dynamoError) {
+                            console.warn('AcademyStore: DynamoDB fetch failed, falling back to Firestore:', dynamoError);
+                            // Fallback to Firestore
+                            const queryOptions = {
+                                filters: [
+                                    { field: 'userId', operator: '==', value: userId }
+                                ],
+                                orderBy: [
+                                    { field: 'createdAt', direction: 'desc' }
+                                ],
+                                timeoutMs: 6000
+                            };
+                            
+                            const result = await firestoreService.getDocs(`projects/${projectId}/bookings`, queryOptions);
+                            
+                            const bookings = result.docs.map(doc => ({
+                                id: doc.id,
+                                ...doc.data()
+                            }));
+                            
+                            // Cache the result
+                            lastBookingsFetch.set(cacheKey, {
+                                data: bookings,
+                                timestamp: Date.now()
+                            })
+                            
+                            userBookings.value = bookings;
+                            console.log("✅ AcademyStore: User bookings fetched from Firestore (fallback):", bookings.length);
+                            return bookings;
+                        }
+                    } catch (error) {
+                        console.error("❌ AcademyStore: Error fetching user bookings:", error);
+                        errorHandlingService.handleFirestoreError(error, 'fetchUserBookings');
+                        throw error;
+                    } finally {
+                        // Clean up pending request
+                        pendingBookingsRequests.delete(cacheKey)
+                    }
+                })()
+                
+                // Store the promise so other calls can wait for it
+                pendingBookingsRequests.set(cacheKey, requestPromise)
+                
+                return await requestPromise
             } catch (error) {
-                console.error("❌ AcademyStore: Error fetching user bookings:", error);
-                errorHandlingService.handleFirestoreError(error, 'fetchUserBookings');
+                console.error("❌ AcademyStore: Error in fetchUserBookings wrapper:", error);
                 throw error;
             }
         });

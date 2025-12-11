@@ -10,6 +10,7 @@ export default boot(async ({ app }) => {
   
   // Track if we've already processed the current user to prevent infinite loops
   let lastProcessedUserId = null
+  let isProcessing = false // Guard to prevent concurrent processing
   
   // Get platform info
   const platform = Capacitor.getPlatform()
@@ -18,48 +19,76 @@ export default boot(async ({ app }) => {
   // Helper function to load user profile and get DynamoDB users table ID
   const loadUserProfileForProjects = async (user) => {
     try {
-      // Get email from user object
+      // Get email and Cognito sub from user object
       const cognitoAttrs = user.cognitoAttributes || user.attributes || {}
       const userEmail = user.email || cognitoAttrs.email || cognitoAttrs.Email || null
+      // Use Cognito sub (stored as 'id' in DynamoDB users table) - this is the primary key
+      const cognitoSub = cognitoAttrs.sub || user.attributes?.sub || user.uid
       
-      if (!userEmail) {
-        console.warn('App boot: No email available, using Cognito UID for projects')
-        return user.uid
+      // Try to get user from DynamoDB users table
+      const { getUserByEmail, getUserById } = await import('src/services/dynamoDBUsersService')
+      
+      let dynamoUser = null
+      
+      // First, try by ID (Cognito sub) - this is the primary key and most reliable
+      if (cognitoSub) {
+        try {
+          console.log('App boot: 🔍 Trying getUserById with Cognito sub:', cognitoSub)
+          dynamoUser = await getUserById(cognitoSub)
+          if (dynamoUser && dynamoUser.id) {
+            console.log('App boot: ✅ Found user in DynamoDB users table by ID (Cognito sub), using ID:', dynamoUser.id)
+            return dynamoUser.id
+          }
+        } catch (idError) {
+          console.warn('App boot: Error looking up user by ID (Cognito sub), trying email fallback:', idError)
+        }
       }
       
-      // Get user from DynamoDB users table by email
-      const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
-      const userByEmail = await getUserByEmail(userEmail.trim().toLowerCase())
-      
-      if (userByEmail && userByEmail.id) {
-        console.log('App boot: ✅ Found user in DynamoDB users table, using ID:', userByEmail.id)
-        return userByEmail.id
-      } else {
-        console.warn('App boot: User not found in DynamoDB users table by email, using Cognito UID')
-        return user.uid
+      // Fallback: Try by email if ID lookup failed
+      if (!dynamoUser && userEmail) {
+        try {
+          console.log('App boot: User not found by ID, trying email lookup...')
+          dynamoUser = await getUserByEmail(userEmail.trim().toLowerCase())
+          if (dynamoUser && dynamoUser.id) {
+            console.log('App boot: ✅ Found user in DynamoDB users table by email, using ID:', dynamoUser.id)
+            return dynamoUser.id
+          }
+        } catch (emailError) {
+          console.warn('App boot: Error looking up user by email:', emailError)
+        }
       }
+      
+      // If still not found, use Cognito sub as fallback (not email)
+      console.warn('App boot: User not found in DynamoDB users table (tried ID and email), using Cognito sub as fallback')
+      return cognitoSub || user.uid
     } catch (error) {
       console.error('App boot: Error loading user profile for projects:', error)
-      // Fallback to Cognito UID
-      return user.uid
+      // Fallback to Cognito sub
+      const cognitoAttrs = user.cognitoAttributes || user.attributes || {}
+      return cognitoAttrs.sub || user.attributes?.sub || user.uid
     }
   }
   
   // Listen for auth state changes and rehydrate project store
   const unsubscribe = optimizedAuthService.onAuthStateChanged(async (user) => {
-    console.log('App boot: Auth state changed, user:', user ? 'authenticated' : 'not authenticated')
-    
+    // Reduced logging - only log significant state changes
     if (user) {
+      // Guard: Prevent concurrent processing
+      if (isProcessing) {
+        // Silently skip - no need to log every duplicate
+        return
+      }
+      
       // Check if we need to fetch projects (either new user or no projects loaded)
       const needsFetch = lastProcessedUserId !== user.uid || projectStore.userProjects.length === 0
       
       if (!needsFetch) {
-        console.log('App boot: User already processed and has projects, validating selected project...')
-        // Still validate the selected project even if we have projects
+        // Silently validate - no need to log every time
         projectStore.validateAndFixSelectedProject()
         return
       }
       
+      isProcessing = true
       lastProcessedUserId = user.uid
       console.log('App boot: User authenticated, loading profile and projects...', 'User ID:', user.uid)
       console.log('App boot: Current projects count:', projectStore.userProjects.length)
@@ -78,25 +107,41 @@ export default boot(async ({ app }) => {
             console.log('App boot: Starting background profile preload...')
             // Import and call the profile loading logic
             // We'll create a simple profile cache that ProfilePage can use
-            const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
+            const { getUserByEmail, getUserById } = await import('src/services/dynamoDBUsersService')
             const cognitoAttrs = user.cognitoAttributes || user.attributes || {}
             const userEmail = user.email || cognitoAttrs.email || cognitoAttrs.Email || null
+            const cognitoSub = cognitoAttrs.sub || user.attributes?.sub || user.uid
             
-            if (userEmail) {
-              const userByEmail = await getUserByEmail(userEmail.trim().toLowerCase())
-              if (userByEmail) {
-                // Store in a global cache that ProfilePage can check
-                window.__profileCache = {
-                  data: userByEmail,
-                  userId: user.uid,
-                  timestamp: Date.now()
-                }
-                console.log('App boot: ✅ Profile data preloaded and cached in background')
-              } else {
-                console.log('App boot: User not found in DynamoDB for profile preload (non-critical)')
+            let profileUser = null
+            
+            // Try by ID (Cognito sub) first - this is the primary key and most reliable
+            if (cognitoSub) {
+              try {
+                profileUser = await getUserById(cognitoSub)
+              } catch (idError) {
+                console.warn('App boot: Error in background profile preload by ID (Cognito sub):', idError)
               }
+            }
+            
+            // Fallback to email lookup if ID lookup failed
+            if (!profileUser && userEmail) {
+              try {
+                profileUser = await getUserByEmail(userEmail.trim().toLowerCase())
+              } catch (emailError) {
+                console.warn('App boot: Error in background profile preload by email:', emailError)
+              }
+            }
+            
+            if (profileUser) {
+              // Store in a global cache that ProfilePage can check
+              window.__profileCache = {
+                data: profileUser,
+                userId: cognitoSub || user.uid,
+                timestamp: Date.now()
+              }
+              console.log('App boot: ✅ Profile data preloaded and cached in background')
             } else {
-              console.log('App boot: No email available for profile preload (non-critical)')
+              console.log('App boot: User not found in DynamoDB for profile preload (non-critical)')
             }
           } catch (error) {
             console.error('App boot: Error preloading profile (non-critical):', error)
@@ -144,10 +189,13 @@ export default boot(async ({ app }) => {
       } catch (error) {
         console.error('App boot: Error rehydrating project store:', error)
         lastProcessedUserId = null // Reset on error to allow retry
+      } finally {
+        isProcessing = false // Always clear the processing flag
       }
     } else {
       console.log('App boot: No user authenticated')
       lastProcessedUserId = null
+      isProcessing = false
       projectStore.resetStore()
     }
   })

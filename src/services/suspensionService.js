@@ -16,16 +16,19 @@ export const checkUserSuspension = async (userId, projectId = null) => {
     }
     
     if (!projectId) {
-      console.warn('⚠️ No project ID available for suspension check');
+      console.warn('⚠️ SuspensionService: No project ID available for suspension check');
       return {
         isSuspended: false,
         suspensionDetails: null
       };
     }
     
+    console.log('🔍 SuspensionService: Checking suspension for user:', userId, 'project:', projectId);
+    
     const userDoc = await firestoreService.getDoc(`users/${userId}`);
     
     if (!userDoc.exists()) {
+      console.warn('⚠️ SuspensionService: User document does not exist:', userId);
       return {
         isSuspended: false,
         suspensionDetails: null
@@ -34,33 +37,99 @@ export const checkUserSuspension = async (userId, projectId = null) => {
     
     const userData = userDoc.data();
     
+    if (!userData) {
+      console.warn('⚠️ SuspensionService: User data is null or undefined');
+      return {
+        isSuspended: false,
+        suspensionDetails: null
+      };
+    }
+    
+    // Ensure projects is an array
+    const projects = Array.isArray(userData.projects) ? userData.projects : [];
+    console.log('🔍 SuspensionService: User has', projects.length, 'projects');
+    
     // Find the project-specific data
-    const userProject = (userData.projects || []).find(p => p.projectId === projectId);
+    const userProject = projects.find(p => {
+      // Handle both direct projectId and nested projectId
+      const projId = p.projectId || p.M?.projectId?.S || p.M?.projectId;
+      return projId === projectId;
+    });
     
     if (!userProject) {
-      console.warn('⚠️ User not found in project:', projectId);
+      console.warn('⚠️ SuspensionService: User not found in project:', projectId);
+      console.log('🔍 SuspensionService: Available project IDs:', projects.map(p => p.projectId || p.M?.projectId?.S || p.M?.projectId));
       return {
         isSuspended: false,
         suspensionDetails: null
       };
     }
+    
+    // Extract isSuspended - handle both JavaScript format and DynamoDB format
+    let isSuspended = false;
+    if (userProject.isSuspended !== undefined) {
+      // JavaScript format
+      isSuspended = typeof userProject.isSuspended === 'boolean' 
+        ? userProject.isSuspended 
+        : userProject.isSuspended === true || userProject.isSuspended === 'true';
+    } else if (userProject.M?.isSuspended?.BOOL !== undefined) {
+      // DynamoDB format
+      isSuspended = userProject.M.isSuspended.BOOL;
+    } else if (userProject.M?.isSuspended?.S) {
+      // DynamoDB string format
+      isSuspended = userProject.M.isSuspended.S === 'true';
+    }
+    
+    console.log('🔍 SuspensionService: User project isSuspended:', isSuspended, 'for project:', projectId);
     
     // Check if user is suspended for THIS PROJECT
-    if (!userProject.isSuspended) {
+    if (!isSuspended) {
       return {
         isSuspended: false,
         suspensionDetails: null
       };
     }
     
+    // Extract suspension details - handle both JavaScript and DynamoDB formats
+    const extractField = (fieldName) => {
+      if (userProject[fieldName] !== undefined) {
+        return userProject[fieldName];
+      } else if (userProject.M?.[fieldName]?.S) {
+        return userProject.M[fieldName].S;
+      } else if (userProject.M?.[fieldName]?.BOOL !== undefined) {
+        return userProject.M[fieldName].BOOL;
+      } else if (userProject.M?.[fieldName]?.N) {
+        return Number(userProject.M[fieldName].N);
+      }
+      return null;
+    };
+    
+    const suspensionType = extractField('suspensionType');
+    const suspensionEndDate = extractField('suspensionEndDate');
+    const suspensionReason = extractField('suspensionReason');
+    const suspendedAt = extractField('suspendedAt');
+    const suspendedBy = extractField('suspendedBy');
+    
     // Check if temporary suspension has expired
-    if (userProject.suspensionType === 'temporary' && userProject.suspensionEndDate) {
-      const endDate = userProject.suspensionEndDate.toDate ? 
-        userProject.suspensionEndDate.toDate() : 
-        new Date(userProject.suspensionEndDate);
+    if (suspensionType === 'temporary' && suspensionEndDate) {
+      let endDate;
+      if (suspensionEndDate instanceof Date) {
+        endDate = suspensionEndDate;
+      } else if (suspensionEndDate.toDate) {
+        endDate = suspensionEndDate.toDate();
+      } else if (typeof suspensionEndDate === 'string') {
+        endDate = new Date(suspensionEndDate);
+      } else if (typeof suspensionEndDate === 'number') {
+        endDate = new Date(suspensionEndDate);
+      } else {
+        endDate = new Date(suspensionEndDate);
+      }
       
-      if (new Date() > endDate) {
+      if (isNaN(endDate.getTime())) {
+        console.warn('⚠️ SuspensionService: Invalid suspensionEndDate:', suspensionEndDate);
+      } else if (new Date() > endDate) {
         // Suspension has expired, automatically unsuspend for this project
+        console.log('⏰ SuspensionService: Temporary suspension has expired, auto-unsuspending');
         await unsuspendUser(userId, projectId);
         return {
           isSuspended: false,
@@ -70,15 +139,20 @@ export const checkUserSuspension = async (userId, projectId = null) => {
     }
     
     // User is suspended for this project
-    console.log('🚫 User is suspended for project:', projectId);
+    console.log('🚫 SuspensionService: User is suspended for project:', projectId, {
+      reason: suspensionReason,
+      type: suspensionType,
+      endDate: suspensionEndDate
+    });
+    
     return {
       isSuspended: true,
       suspensionDetails: {
-        reason: userProject.suspensionReason,
-        type: userProject.suspensionType,
-        suspendedAt: userProject.suspendedAt,
-        suspendedBy: userProject.suspendedBy,
-        suspensionEndDate: userProject.suspensionEndDate,
+        reason: suspensionReason,
+        type: suspensionType,
+        suspendedAt: suspendedAt,
+        suspendedBy: suspendedBy,
+        suspensionEndDate: suspensionEndDate,
         projectId: projectId
       }
     };

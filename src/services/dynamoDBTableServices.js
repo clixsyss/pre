@@ -64,6 +64,36 @@ export const usersNotificationReadStatusService = {
     }
   },
   
+  async getAllReadStatuses(userId) {
+    try {
+      const { scan } = await import('../aws/dynamodbClient')
+      const results = await scan(USERS_NOTIFICATION_READ_STATUS_TABLE, {
+        FilterExpression: 'userId = :userId',
+        ExpressionAttributeValues: {
+          ':userId': userId
+        }
+      })
+      
+      // Convert to Map for compatibility with existing code
+      const readStatusMap = new Map()
+      if (results && results.length > 0) {
+        results.forEach(item => {
+          if (item.notificationId && item.read) {
+            readStatusMap.set(item.notificationId, {
+              read: item.read,
+              readAt: item.readAt
+            })
+          }
+        })
+      }
+      return readStatusMap
+    } catch (error) {
+      console.error('[UsersNotificationReadStatusService] Error getting all read statuses:', error)
+      // Return empty map on error (assume all unread)
+      return new Map()
+    }
+  },
+  
   async markAsRead(userId, notificationId) {
     try {
       const item = {
@@ -76,6 +106,28 @@ export const usersNotificationReadStatusService = {
       return item
     } catch (error) {
       console.error('[UsersNotificationReadStatusService] Error:', error)
+      throw error
+    }
+  },
+  
+  async markMultipleAsRead(userId, notificationIds) {
+    try {
+      // Use Promise.all to mark multiple notifications as read in parallel
+      const promises = notificationIds.map(notificationId => 
+        this.markAsRead(userId, notificationId).catch(error => {
+          console.error(`[UsersNotificationReadStatusService] Failed to mark ${notificationId} as read:`, error)
+          // Continue with other notifications even if one fails
+          return null
+        })
+      )
+      
+      const results = await Promise.all(promises)
+      const successful = results.filter(r => r !== null)
+      
+      console.log(`[UsersNotificationReadStatusService] ✅ Marked ${successful.length}/${notificationIds.length} notifications as read`)
+      return successful
+    } catch (error) {
+      console.error('[UsersNotificationReadStatusService] Error marking multiple as read:', error)
       throw error
     }
   }

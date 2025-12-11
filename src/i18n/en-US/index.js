@@ -820,6 +820,7 @@ export default {
   searchUnitPlaceholder: 'Search units (e.g., D1A-1, D2A)...',
   roleLabel: 'Role *',
   ownerRole: 'Owner',
+  familyMember: 'Family Member',
   addThisProperty: 'Add This Property',
   additionalProperties: 'Additional Properties (Optional)',
   additionalPropertiesDesc: 'You can add more properties if you own or have access to multiple units',

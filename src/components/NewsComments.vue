@@ -674,10 +674,6 @@ const loadNewsReactions = async () => {
   transition: background 0.2s;
 }
 
-.cancel-reply-btn:hover {
-  background: #fee2e2;
-}
-
 .comment-input-wrapper {
   display: flex;
   align-items: center;

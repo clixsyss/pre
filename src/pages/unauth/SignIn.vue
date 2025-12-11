@@ -558,7 +558,53 @@ const handleSignIn = async () => {
 
     const user = signInResult.user
     const userId = user?.username || user?.attributes?.sub
+    const cognitoSub = user?.attributes?.sub || user?.cognitoAttributes?.sub
+    
+    // Verify user is from the correct user pool "rvfwv6"
+    // The configured Amplify user pool is already set in boot/amplify.js
+    // This verification ensures the token is from the expected pool
+    try {
+      const accessToken = user?.signInUserSession?.accessToken
+      const idToken = user?.signInUserSession?.idToken
+      
+      // Get the configured user pool ID from Amplify config
+      const { Amplify } = await import('aws-amplify')
+      const amplifyConfig = Amplify.configure()
+      const configuredUserPoolId = amplifyConfig?.Auth?.userPoolId || 'us-east-1_vuhaTK66l'
+      
+      console.log('[SignIn] 🔍 Verifying user pool...')
+      console.log('[SignIn] Configured user pool ID:', configuredUserPoolId)
+      
+      if (accessToken || idToken) {
+        const token = accessToken || idToken
+        const tokenPayload = token.payload || {}
+        const tokenIssuer = tokenPayload.iss || ''
+        const userPoolIdFromToken = tokenIssuer.split('/').pop() || ''
+        
+        console.log('[SignIn] Token issuer:', tokenIssuer)
+        console.log('[SignIn] User pool ID from token:', userPoolIdFromToken)
+        
+        // Verify token is from the configured user pool
+        if (userPoolIdFromToken && userPoolIdFromToken !== configuredUserPoolId) {
+          console.error('[SignIn] ❌ User pool mismatch!')
+          console.error('[SignIn] Expected pool:', configuredUserPoolId)
+          console.error('[SignIn] Token pool:', userPoolIdFromToken)
+          await optimizedAuthService.signOut()
+          notificationStore.showError('Authentication failed: User is not from the expected user pool. Please contact support.')
+          loading.value = false
+          return
+        }
+        
+        console.log('[SignIn] ✅ User pool verified - user is from the correct pool')
+      }
+    } catch (poolCheckError) {
+      console.warn('[SignIn] ⚠️ Could not verify user pool:', poolCheckError)
+      // Continue - pool verification failure is not critical, Amplify config ensures correct pool
+    }
+    
     console.log('[SignIn] ✅ Authentication successful:', userId)
+    console.log('[SignIn] 🔍 Cognito username:', user?.username)
+    console.log('[SignIn] 🔍 Cognito sub (unique ID):', cognitoSub)
     console.log('[SignIn] 🔍 SIGN-IN RESULT USER OBJECT:', JSON.stringify(user, null, 2))
     console.log('[SignIn] 🔍 User attributes:', user?.attributes)
     console.log('[SignIn] 🔍 User cognitoAttributes:', user?.cognitoAttributes)
@@ -569,8 +615,28 @@ const handleSignIn = async () => {
 
     // Check device key BEFORE proceeding
     console.log('[SignIn] 🔐 Checking device key...')
-    const deviceKeyService = (await import('../../services/deviceKeyService')).default
-    const deviceCheck = await deviceKeyService.handleLoginDeviceCheck(userId)
+    let deviceCheck
+    try {
+      const deviceKeyService = (await import('../../services/deviceKeyService')).default
+      // Add timeout to device key check
+      deviceCheck = await Promise.race([
+        deviceKeyService.handleLoginDeviceCheck(userId),
+        new Promise((_resolve, reject) => 
+          setTimeout(() => reject(new Error('Device key check timed out')), 10000)
+        )
+      ])
+    } catch (deviceKeyError) {
+      console.warn('[SignIn] ⚠️ Device key check failed or timed out:', deviceKeyError.message)
+      // In development, allow sign-in even if device key check fails
+      const isDevelopment = import.meta.env.DEV || import.meta.env.MODE === 'development'
+      if (isDevelopment) {
+        console.log('[SignIn] ⚠️ Development mode - allowing sign-in despite device key check failure')
+        deviceCheck = { allowed: true, action: 'skipped_dev_mode' }
+      } else {
+        // In production, treat as not allowed
+        deviceCheck = { allowed: false, message: deviceKeyError.message || 'Device key check failed' }
+      }
+    }
     
     if (!deviceCheck.allowed) {
       console.log('[SignIn] ❌ Device key check failed:', deviceCheck.message)
@@ -612,9 +678,12 @@ const handleSignIn = async () => {
 
     // Get user email from sign-in result
     const userEmail = user?.attributes?.email || user?.cognitoAttributes?.email || formData.email.trim()
+    // Store Cognito sub for later use in DynamoDB lookup
+    const cognitoSubForLookup = user?.attributes?.sub || user?.cognitoAttributes?.sub
     
     console.log('[SignIn] ========== STARTING VERIFICATION CHECKS ==========')
     console.log('[SignIn] User email:', userEmail)
+    console.log('[SignIn] Cognito sub for lookup:', cognitoSubForLookup)
     
     // If user successfully signed into Cognito, they MUST have a confirmed email
     // Cognito won't let unconfirmed users sign in
@@ -660,14 +729,114 @@ const handleSignIn = async () => {
     let dynamoUser = null
     let approvalCheckPassed = false
     
+    // Add timeout wrapper for DynamoDB operations
+    const withTimeout = async (promise, timeoutMs, operationName) => {
+      return Promise.race([
+        promise,
+        new Promise((_resolve, reject) => 
+          setTimeout(() => reject(new Error(`${operationName} timed out after ${timeoutMs}ms`)), timeoutMs)
+        )
+      ])
+    }
+    
     try {
-      const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
-      console.log('[SignIn] 🔍 Checking DynamoDB for email:', userEmail)
+      const { getUserByEmail, getUserById, getUserByAuthUid } = await import('src/services/dynamoDBUsersService')
+      console.log('[SignIn] 🔍 Checking DynamoDB for user...')
+      console.log('[SignIn] 🔍 Email:', userEmail)
       console.log('[SignIn] 🔍 Email type:', typeof userEmail)
       console.log('[SignIn] 🔍 Email length:', userEmail?.length)
       console.log('[SignIn] 🔍 Email normalized:', userEmail?.trim().toLowerCase())
+      console.log('[SignIn] 🔍 Cognito sub (authUid):', cognitoSubForLookup)
       
-      dynamoUser = await getUserByEmail(userEmail)
+      // PERFORMANCE OPTIMIZATION: Try authUid first (faster lookup if available)
+      // authUid is typically the Cognito sub and is indexed in DynamoDB
+      // Add timeout to prevent hanging
+      if (cognitoSubForLookup) {
+        console.log('[SignIn] 🔍 Attempting fast lookup by authUid first...')
+        try {
+          dynamoUser = await withTimeout(
+            getUserByAuthUid(cognitoSubForLookup),
+            8000, // 8 second timeout
+            'getUserByAuthUid'
+          )
+          if (dynamoUser) {
+            console.log('[SignIn] ✅ User found by authUid (fast lookup)')
+          }
+        } catch (authUidError) {
+          console.warn('[SignIn] ⚠️ Error or timeout getting user by authUid:', authUidError.message)
+          // Continue to email lookup
+        }
+      }
+      
+      // Fallback to email lookup if authUid lookup failed
+      if (!dynamoUser) {
+        console.log('[SignIn] 🔍 User not found by authUid, trying email lookup...')
+        try {
+          dynamoUser = await withTimeout(
+            getUserByEmail(userEmail),
+            8000, // 8 second timeout
+            'getUserByEmail'
+          )
+        } catch (emailError) {
+          console.warn('[SignIn] ⚠️ Error or timeout getting user by email:', emailError.message)
+        }
+        
+        // If not found by email, try finding by Cognito user ID (authUid) as last resort
+        // Use both username and sub (sub is more reliable as it's the unique Cognito ID)
+        if (!dynamoUser) {
+          const identifiersToTry = []
+          
+          if (cognitoSubForLookup && cognitoSubForLookup !== userId) {
+            identifiersToTry.push({ type: 'sub', value: cognitoSubForLookup })
+          }
+          if (userId) {
+            identifiersToTry.push({ type: 'username/id', value: userId })
+          }
+          
+          if (identifiersToTry.length > 0) {
+            console.log('[SignIn] ⚠️ User not found by email, trying to find by Cognito identifiers...')
+            console.log('[SignIn] Identifiers to try:', identifiersToTry)
+            
+            for (const identifier of identifiersToTry) {
+              try {
+                console.log(`[SignIn] Trying to find user by ${identifier.type}: ${identifier.value}`)
+                
+                // Try direct lookup by ID first (in case the ID in DynamoDB matches)
+                try {
+                  dynamoUser = await withTimeout(
+                    getUserById(identifier.value),
+                    5000, // 5 second timeout per identifier
+                    `getUserById(${identifier.type})`
+                  )
+                } catch (idError) {
+                  console.warn(`[SignIn] ⚠️ Error or timeout getting user by ID:`, idError.message)
+                }
+                
+                // If not found, try searching by authUid field (Cognito sub)
+                if (!dynamoUser) {
+                  try {
+                    dynamoUser = await withTimeout(
+                      getUserByAuthUid(identifier.value),
+                      5000, // 5 second timeout
+                      `getUserByAuthUid(${identifier.type})`
+                    )
+                  } catch (authUidError) {
+                    console.warn(`[SignIn] ⚠️ Error or timeout getting user by authUid:`, authUidError.message)
+                  }
+                }
+                
+                if (dynamoUser) {
+                  console.log(`[SignIn] ✅ Found user by ${identifier.type}:`, dynamoUser.id)
+                  break // Stop searching once we find the user
+                }
+              } catch (idSearchError) {
+                console.warn(`[SignIn] ⚠️ Error searching by ${identifier.type}:`, idSearchError)
+                // Continue trying other identifiers
+              }
+            }
+          }
+        }
+      }
       
       if (dynamoUser) {
         console.log('[SignIn] ✅ User found in DynamoDB:')
@@ -704,14 +873,17 @@ const handleSignIn = async () => {
         console.log('[SignIn] 🔍 Search details:')
         console.log('[SignIn]   - Searched email:', userEmail)
         console.log('[SignIn]   - Normalized search email:', userEmail?.trim().toLowerCase())
+        console.log('[SignIn]   - User ID from Cognito:', userId)
         console.log('[SignIn]   - This could mean:')
         console.log('[SignIn]     1. User does not exist in DynamoDB users table')
         console.log('[SignIn]     2. Email mismatch (case/whitespace)')
         console.log('[SignIn]     3. Scan pagination issue (should be fixed now)')
         console.log('[SignIn]     4. DynamoDB permissions issue')
+        console.log('[SignIn]     5. User completed registration but DynamoDB write failed')
+        console.log('[SignIn]     6. User account was deleted from DynamoDB')
         await optimizedAuthService.signOut()
         notificationStore.showError(
-          'Your account is not registered. Please contact support.'
+          'Your account is not registered in our system. This may happen if registration was incomplete. Please contact support or try registering again.'
         )
         loading.value = false
         return
@@ -722,13 +894,31 @@ const handleSignIn = async () => {
       console.error('[SignIn] Error stack:', dynamoError?.stack)
       console.error('[SignIn] Error name:', dynamoError?.name)
       console.error('[SignIn] Error code:', dynamoError?.code)
-      console.error('[SignIn] Full error object:', JSON.stringify(dynamoError, Object.getOwnPropertyNames(dynamoError)))
       
-      // On DynamoDB error, sign out and show error
-      await optimizedAuthService.signOut()
-      notificationStore.showError(
-        `Error verifying your account: ${dynamoError?.message || 'Unknown error'}. Please try again later.`
-      )
+      // Check if it's a timeout error
+      const isTimeout = dynamoError?.message?.includes('timed out')
+      
+      if (isTimeout) {
+        console.error('[SignIn] ⚠️ DynamoDB lookup timed out - this might be a network or permissions issue')
+        notificationStore.showError(
+          'Connection timeout while verifying your account. Please check your internet connection and try again.'
+        )
+      } else {
+        // On DynamoDB error, sign out and show error
+        notificationStore.showError(
+          `Error verifying your account: ${dynamoError?.message || 'Unknown error'}. Please try again later.`
+        )
+      }
+      
+      // Don't sign out on timeout - user might still be able to use the app
+      if (!isTimeout) {
+        try {
+          await optimizedAuthService.signOut()
+        } catch (signOutError) {
+          console.warn('[SignIn] Error signing out:', signOutError)
+        }
+      }
+      
       loading.value = false
       return
     }
