@@ -23,6 +23,12 @@
                   stroke-linejoin="round" />
               </svg>
             </div>
+            <!-- Upload Documents Button -->
+            <button @click="showUploadDocumentsModal = true" class="upload-documents-btn" title="Upload Profile Picture & ID Documents">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
           </div>
           <div class="hero-text">
             <h1 class="hero-title">{{ getFullName(userProfile?.firstName, userProfile?.lastName) || $t('loadingProfile') }}</h1>
@@ -1469,6 +1475,121 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Upload Documents Modal -->
+    <div v-if="showUploadDocumentsModal" class="modal-overlay" @click="showUploadDocumentsModal = false">
+      <div class="modal-content upload-documents-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Upload Documents</h3>
+          <button @click="showUploadDocumentsModal = false" class="close-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-subtitle">Upload your profile picture and ID documents. All images will be uploaded to AWS S3.</p>
+          
+          <!-- Profile Picture Upload -->
+          <div class="upload-section">
+            <label class="upload-label">
+              <span class="label-text">Profile Picture</span>
+              <span v-if="userProfile?.documents?.profilePictureUrl" class="label-status uploaded">✓ Uploaded</span>
+              <span v-else class="label-status missing">Required</span>
+            </label>
+            <div class="upload-area" @click="selectProfilePicture">
+              <input 
+                ref="profilePictureInput" 
+                type="file" 
+                accept="image/*" 
+                @change="handleProfilePictureSelect"
+                style="display: none;"
+              />
+              <div v-if="!profilePicturePreview && !userProfile?.documents?.profilePictureUrl" class="upload-placeholder">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Tap to upload</span>
+              </div>
+              <div v-else class="upload-preview">
+                <img :src="profilePicturePreview || userProfile?.documents?.profilePictureUrl" alt="Profile Preview" class="preview-image" />
+                <button v-if="profilePicturePreview" @click.stop="removeProfilePicture" class="remove-preview-btn">×</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Front ID Upload -->
+          <div class="upload-section">
+            <label class="upload-label">
+              <span class="label-text">Front of National ID</span>
+              <span v-if="userProfile?.documents?.frontIdUrl" class="label-status uploaded">✓ Uploaded</span>
+              <span v-else class="label-status missing">Required</span>
+            </label>
+            <div class="upload-area" @click="selectFrontId">
+              <input 
+                ref="frontIdInput" 
+                type="file" 
+                accept="image/*" 
+                @change="handleFrontIdSelect"
+                style="display: none;"
+              />
+              <div v-if="!frontIdPreview && !userProfile?.documents?.frontIdUrl" class="upload-placeholder">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Tap to upload</span>
+              </div>
+              <div v-else class="upload-preview">
+                <img :src="frontIdPreview || userProfile?.documents?.frontIdUrl" alt="Front ID Preview" class="preview-image" />
+                <button v-if="frontIdPreview" @click.stop="removeFrontId" class="remove-preview-btn">×</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Back ID Upload -->
+          <div class="upload-section">
+            <label class="upload-label">
+              <span class="label-text">Back of National ID</span>
+              <span v-if="userProfile?.documents?.backIdUrl" class="label-status uploaded">✓ Uploaded</span>
+              <span v-else class="label-status missing">Required</span>
+            </label>
+            <div class="upload-area" @click="selectBackId">
+              <input 
+                ref="backIdInput" 
+                type="file" 
+                accept="image/*" 
+                @change="handleBackIdSelect"
+                style="display: none;"
+              />
+              <div v-if="!backIdPreview && !userProfile?.documents?.backIdUrl" class="upload-placeholder">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Tap to upload</span>
+              </div>
+              <div v-else class="upload-preview">
+                <img :src="backIdPreview || userProfile?.documents?.backIdUrl" alt="Back ID Preview" class="preview-image" />
+                <button v-if="backIdPreview" @click.stop="removeBackId" class="remove-preview-btn">×</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button @click="showUploadDocumentsModal = false" class="cancel-btn" :disabled="uploadDocumentsLoading">{{ $t('cancel') }}</button>
+          <button @click="uploadDocuments" class="confirm-btn" :disabled="uploadDocumentsLoading || (!profilePictureFile && !frontIdFile && !backIdFile)">
+            <span v-if="uploadDocumentsLoading">
+              <svg class="spinner" width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/>
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/>
+              </svg>
+              Uploading...
+            </span>
+            <span v-else>Upload Documents</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1536,6 +1657,16 @@ const showEditProfileDialog = ref(false)
 const showAddProjectModal = ref(false)
 const addProjectLoading = ref(false)
 const projectJoinSuccess = ref(false)
+
+// Document upload state
+const showUploadDocumentsModal = ref(false)
+const uploadDocumentsLoading = ref(false)
+const profilePictureFile = ref(null)
+const frontIdFile = ref(null)
+const backIdFile = ref(null)
+const profilePicturePreview = ref(null)
+const frontIdPreview = ref(null)
+const backIdPreview = ref(null)
 
 // Delete account state (Apple App Store Requirement)
 const showDeleteAccountConfirm = ref(false)
@@ -2696,9 +2827,88 @@ const addNewProject = async () => {
       return
     }
 
+    // Get the correct user ID - use Cognito sub ID (userSub or attributes.sub) instead of uid
+    // uid might be the email, but the user document is stored with Cognito sub ID as the key
+    const userId = currentUser.userSub || currentUser.attributes?.sub || currentUser.id || currentUser.uid
+    console.log('ProfilePage: Using userId for addNewProject:', userId, 'uid was:', currentUser.uid)
+
     // Get current user document to add project to existing projects array
-    const userDoc = await firestoreService.getDoc(`users/${currentUser.uid}`)
+    const userDoc = await firestoreService.getDoc(`users/${userId}`)
     if (!userDoc.exists()) {
+      // If not found by ID, try to get by email as fallback
+      if (currentUser.uid && currentUser.uid.includes('@')) {
+        console.log('ProfilePage: User not found by ID, trying email lookup...')
+        const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
+        const userByEmail = await getUserByEmail(currentUser.uid)
+        if (userByEmail) {
+          console.log('ProfilePage: Found user by email, using ID:', userByEmail.id)
+          // Use the actual user ID from the database
+          const actualUserDoc = await firestoreService.getDoc(`users/${userByEmail.id}`)
+          if (actualUserDoc.exists()) {
+            const userData = actualUserDoc.data()
+            const currentProjects = userData.projects || []
+
+            // Create the project object to add to the user's projects array with pending approval status
+            const newUserProject = {
+              projectId: newProject.value.projectId,
+              role: newProject.value.userRole,
+              unit: newProject.value.userUnit,
+              approvalStatus: 'pending',
+              requestedAt: new Date(),
+              updatedAt: new Date()
+            }
+
+            // Use DynamoDB users service for more reliable updates
+            const { updateUser } = await import('src/services/dynamoDBUsersService')
+            
+            // Update user document with new project - preserve all existing fields
+            const updatedUserData = {
+              ...userData, // Preserve all existing user data
+              projects: [...currentProjects, newUserProject],
+              updatedAt: new Date().toISOString()
+            }
+            
+            console.log('ProfilePage: Updating user (email fallback) with data:', {
+              userId: userByEmail.id,
+              currentProjectsCount: currentProjects.length,
+              newProjectCount: 1,
+              totalProjectsAfterUpdate: updatedUserData.projects.length
+            })
+            
+            await updateUser(userByEmail.id, updatedUserData)
+
+            // Create a unit request document for admin review
+            const nowISO = new Date().toISOString()
+            await firestoreService.addDoc('unitRequests', {
+              userId: userByEmail.id,
+              userName: userData.name || userData.fullName || currentUser.displayName || currentUser.email,
+              userEmail: currentUser.email,
+              userPhone: userData.mobile || userData.phone || '',
+              projectId: newProject.value.projectId,
+              projectName: selectedProject.name,
+              unit: newProject.value.userUnit,
+              role: newProject.value.userRole,
+              status: 'pending',
+              requestedAt: nowISO,
+              createdAt: nowISO
+            })
+
+            notificationStore.showSuccess(`Unit request submitted for ${selectedProject.name}! Awaiting admin approval.`)
+
+            // Show success state briefly before closing
+            projectJoinSuccess.value = true
+            setTimeout(() => {
+              projectJoinSuccess.value = false
+              showAddProjectModal.value = false
+              resetNewProjectForm()
+            }, 1500)
+
+            // Refresh user's projects using the correct ID
+            await projectStore.fetchUserProjects(userByEmail.id)
+            return
+          }
+        }
+      }
       notificationStore.showError('User document not found')
       return
     }
@@ -2712,29 +2922,44 @@ const addNewProject = async () => {
       role: newProject.value.userRole,
       unit: newProject.value.userUnit,
       approvalStatus: 'pending', // New field for admin approval
-      requestedAt: new Date(),
-      updatedAt: new Date()
+      requestedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }
 
-    // Add the new project to the user's projects array
-    await firestoreService.updateDoc(`users/${currentUser.uid}`, {
+    // Use DynamoDB users service for more reliable updates
+    const { updateUser } = await import('src/services/dynamoDBUsersService')
+    
+    // Update user document with new project - preserve all existing fields
+    // Merge the new project into the existing projects array
+    const updatedUserData = {
+      ...userData, // Preserve all existing user data
       projects: [...currentProjects, newUserProject],
-      updatedAt: firestoreService.serverTimestamp()
+      updatedAt: new Date().toISOString()
+    }
+    
+    console.log('ProfilePage: Updating user with data:', {
+      userId,
+      currentProjectsCount: currentProjects.length,
+      newProjectCount: 1,
+      totalProjectsAfterUpdate: updatedUserData.projects.length
     })
+    
+    await updateUser(userId, updatedUserData)
 
     // Create a unit request document for admin review
+    const nowISO = new Date().toISOString()
     await firestoreService.addDoc('unitRequests', {
-      userId: currentUser.uid,
-      userName: userData.name || currentUser.displayName || currentUser.email,
+      userId: userId,
+      userName: userData.name || userData.fullName || currentUser.displayName || currentUser.email,
       userEmail: currentUser.email,
-      userPhone: userData.phone || '',
+      userPhone: userData.mobile || userData.phone || '',
       projectId: newProject.value.projectId,
       projectName: selectedProject.name,
       unit: newProject.value.userUnit,
       role: newProject.value.userRole,
       status: 'pending',
-      requestedAt: firestoreService.serverTimestamp(),
-      createdAt: firestoreService.serverTimestamp()
+      requestedAt: nowISO,
+      createdAt: nowISO
     })
 
     notificationStore.showSuccess(`Unit request submitted for ${selectedProject.name}! Awaiting admin approval.`)
@@ -2747,12 +2972,20 @@ const addNewProject = async () => {
       resetNewProjectForm()
     }, 1500)
 
-    // Refresh user's projects
-    await projectStore.fetchUserProjects(currentUser.uid)
+    // Refresh user's projects using the correct ID
+    await projectStore.fetchUserProjects(userId)
 
   } catch (err) {
     console.error('Error joining project:', err)
-    notificationStore.showError('Failed to join project. Please try again.')
+    console.error('Error details:', {
+      message: err?.message || 'Unknown error',
+      code: err?.code,
+      name: err?.name,
+      stack: err?.stack,
+      fullError: err
+    })
+    const errorMessage = err?.message || 'Failed to join project. Please try again.'
+    notificationStore.showError(errorMessage)
   } finally {
     addProjectLoading.value = false
   }
@@ -2763,6 +2996,209 @@ const resetNewProjectForm = () => {
     projectId: '',
     userUnit: '',
     userRole: ''
+  }
+}
+
+// Document upload functions
+const profilePictureInput = ref(null)
+const frontIdInput = ref(null)
+const backIdInput = ref(null)
+
+const selectProfilePicture = () => {
+  profilePictureInput.value?.click()
+}
+
+const selectFrontId = () => {
+  frontIdInput.value?.click()
+}
+
+const selectBackId = () => {
+  backIdInput.value?.click()
+}
+
+const handleProfilePictureSelect = (event) => {
+  const file = event.target.files?.[0]
+  if (file) {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      notificationStore.showError('Please select an image file')
+      return
+    }
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      notificationStore.showError('Image size must be less than 10MB')
+      return
+    }
+    profilePictureFile.value = file
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      profilePicturePreview.value = e.target.result
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const handleFrontIdSelect = (event) => {
+  const file = event.target.files?.[0]
+  if (file) {
+    if (!file.type.startsWith('image/')) {
+      notificationStore.showError('Please select an image file')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      notificationStore.showError('Image size must be less than 10MB')
+      return
+    }
+    frontIdFile.value = file
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      frontIdPreview.value = e.target.result
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const handleBackIdSelect = (event) => {
+  const file = event.target.files?.[0]
+  if (file) {
+    if (!file.type.startsWith('image/')) {
+      notificationStore.showError('Please select an image file')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      notificationStore.showError('Image size must be less than 10MB')
+      return
+    }
+    backIdFile.value = file
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      backIdPreview.value = e.target.result
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const removeProfilePicture = () => {
+  profilePictureFile.value = null
+  profilePicturePreview.value = null
+  if (profilePictureInput.value) {
+    profilePictureInput.value.value = ''
+  }
+}
+
+const removeFrontId = () => {
+  frontIdFile.value = null
+  frontIdPreview.value = null
+  if (frontIdInput.value) {
+    frontIdInput.value.value = ''
+  }
+}
+
+const removeBackId = () => {
+  backIdFile.value = null
+  backIdPreview.value = null
+  if (backIdInput.value) {
+    backIdInput.value.value = ''
+  }
+}
+
+const uploadDocuments = async () => {
+  if (!profilePictureFile.value && !frontIdFile.value && !backIdFile.value) {
+    notificationStore.showError('Please select at least one document to upload')
+    return
+  }
+
+  try {
+    uploadDocumentsLoading.value = true
+
+    // Get current user
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    if (!currentUser) {
+      notificationStore.showError('You must be logged in to upload documents')
+      return
+    }
+
+    // Get the correct user ID - use Cognito sub ID
+    const userId = currentUser.userSub || currentUser.attributes?.sub || currentUser.id || currentUser.uid
+    console.log('ProfilePage: Uploading documents for user:', userId)
+
+    // Import file upload service
+    const fileUploadService = (await import('../../services/fileUploadService')).default
+
+    // Upload documents to S3
+    const uploadedDocuments = await fileUploadService.uploadUserDocuments(
+      userId,
+      frontIdFile.value,
+      backIdFile.value,
+      profilePictureFile.value
+    )
+
+    console.log('ProfilePage: Documents uploaded to S3:', uploadedDocuments)
+
+    // Get current user document to update
+    const { getUserById, updateUser } = await import('src/services/dynamoDBUsersService')
+    const userData = await getUserById(userId)
+    
+    if (!userData) {
+      notificationStore.showError('User document not found')
+      return
+    }
+
+    // Update user document with new document URLs
+    // The uploadUserDocuments returns: { profilePicture: url, frontId: url, backId: url }
+    const updatedDocuments = {
+      ...(userData.documents || {}),
+      ...(uploadedDocuments.profilePicture && { profilePictureUrl: uploadedDocuments.profilePicture }),
+      ...(uploadedDocuments.frontId && { frontIdUrl: uploadedDocuments.frontId }),
+      ...(uploadedDocuments.backId && { backIdUrl: uploadedDocuments.backId })
+    }
+
+    const updatedUserData = {
+      ...userData,
+      documents: updatedDocuments,
+      updatedAt: new Date().toISOString()
+    }
+
+    await updateUser(userId, updatedUserData)
+
+    console.log('ProfilePage: User document updated with new document URLs:', updatedDocuments)
+
+    // Update local userProfile to reflect changes - merge all at once
+    userProfile.value.documents = {
+      ...(userProfile.value.documents || {}),
+      ...updatedDocuments
+    }
+    
+    // Force reactivity update
+    userProfile.value = { ...userProfile.value }
+
+    // Clear file selections and previews
+    profilePictureFile.value = null
+    frontIdFile.value = null
+    backIdFile.value = null
+    profilePicturePreview.value = null
+    frontIdPreview.value = null
+    backIdPreview.value = null
+    if (profilePictureInput.value) profilePictureInput.value.value = ''
+    if (frontIdInput.value) frontIdInput.value.value = ''
+    if (backIdInput.value) backIdInput.value.value = ''
+
+    notificationStore.showSuccess('Documents uploaded successfully!')
+    showUploadDocumentsModal.value = false
+
+  } catch (err) {
+    console.error('Error uploading documents:', err)
+    console.error('Error details:', {
+      message: err?.message || 'Unknown error',
+      code: err?.code,
+      name: err?.name,
+      stack: err?.stack
+    })
+    const errorMessage = err?.message || 'Failed to upload documents. Please try again.'
+    notificationStore.showError(errorMessage)
+  } finally {
+    uploadDocumentsLoading.value = false
   }
 }
 
@@ -3481,6 +3917,16 @@ watch(showDeviceManagementModal, (isOpen) => {
     document.body.classList.remove('hide-bottom-nav')
   }
 })
+
+watch(showUploadDocumentsModal, (isOpen) => {
+  if (isOpen) {
+    openModal()
+    document.body.classList.add('hide-bottom-nav')
+  } else {
+    closeModal()
+    document.body.classList.remove('hide-bottom-nav')
+  }
+})
 </script>
 
 <style scoped>
@@ -3557,6 +4003,8 @@ watch(showDeviceManagementModal, (isOpen) => {
 .profile-avatar {
   position: relative;
   flex-shrink: 0;
+  width: 80px;
+  height: 80px;
 }
 
 .avatar-image {
@@ -3609,6 +4057,40 @@ watch(showDeviceManagementModal, (isOpen) => {
 .avatar-status.status-completed {
   background: #10b981;
   color: white;
+}
+
+.upload-documents-btn {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #AF1E23 0%, #dc2626 100%);
+  color: white;
+  border: 3px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(175, 30, 35, 0.4);
+  transition: all 0.2s ease;
+  z-index: 10;
+  padding: 0;
+}
+
+.upload-documents-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(175, 30, 35, 0.5);
+}
+
+.upload-documents-btn:active {
+  transform: scale(0.95);
+}
+
+.upload-documents-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 .hero-text {
@@ -4460,16 +4942,18 @@ watch(showDeviceManagementModal, (isOpen) => {
   display: flex;
   align-items: flex-start; /* Changed from center to flex-start */
   justify-content: center;
-  z-index: 9999999; /* Increased to be above bottom nav */
+  z-index: 9999999 !important; /* Increased to be above bottom nav and top nav - use !important to override any conflicting styles */
   overflow-y: auto; /* Allow scrolling */
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   padding: 20px 0; /* Add padding for better spacing */
-  /* Ensure modal stays above bottom navigation */
+  /* Ensure modal stays above bottom navigation and top navigation */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
   /* Force hardware acceleration and proper stacking */
   will-change: transform;
   backface-visibility: hidden;
+  /* Create new stacking context to ensure it's above everything */
+  isolation: isolate;
 }
 
 .modal-content {
@@ -4490,7 +4974,7 @@ watch(showDeviceManagementModal, (isOpen) => {
 
 .modal-header h3 {
   margin: 0 0 16px 0;
-  color: #f3e5f5;
+  color: #f3e5f5 !important;
   font-weight: 600;
   font-size: 1.3rem;
 }
@@ -4507,8 +4991,11 @@ watch(showDeviceManagementModal, (isOpen) => {
 
 .modal-actions {
   display: flex;
-  gap: 12px;
+  width: 90%;
+  margin: auto;
+  gap: 10px;
   margin-top: 24px;
+  margin-bottom: 24px;
 }
 
 .cancel-btn,
@@ -4549,6 +5036,185 @@ watch(showDeviceManagementModal, (isOpen) => {
 /* Add Project Modal Styles */
 .add-project-modal {
   max-width: 500px;
+}
+
+.upload-documents-modal {
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.upload-documents-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.upload-documents-modal .modal-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.upload-documents-modal .close-btn {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  border-radius: 8px;
+}
+
+.upload-documents-modal .close-btn:hover {
+  color: #374151;
+  background: #f3f4f6;
+}
+
+.upload-documents-modal .modal-subtitle {
+  margin: 0 0 24px 0;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.upload-section {
+  margin-bottom: 24px;
+}
+
+.upload-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.label-text {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.label-status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.label-status.uploaded {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.label-status.missing {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.upload-area {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f9fafb;
+}
+
+.upload-area:hover {
+  border-color: #AF1E23;
+  background: #fef2f2;
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #6b7280;
+  padding: 40px;
+  text-align: center;
+}
+
+.upload-placeholder svg {
+  width: 48px;
+  height: 48px;
+  color: #9ca3af;
+}
+
+.upload-placeholder span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.upload-preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.preview-image {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.remove-preview-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: bold;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.remove-preview-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Success State */

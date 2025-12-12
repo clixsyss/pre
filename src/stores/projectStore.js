@@ -73,6 +73,21 @@ export const useProjectStore = defineStore('project', () => {
       let userData
       try {
         userData = await getUserById(userId)
+        
+        // If getUserById returns null and userId looks like an email, try to get Cognito sub ID
+        if (!userData && userId && userId.includes('@')) {
+          console.log('ProjectStore: User not found by email, trying to get Cognito sub ID...')
+          // Import optimizedAuthService to get the actual Cognito sub ID
+          const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
+          const currentUser = await optimizedAuthService.getCurrentUser()
+          if (currentUser && currentUser.id) {
+            console.log('ProjectStore: Found Cognito sub ID, trying again:', currentUser.id)
+            userData = await getUserById(currentUser.id)
+          } else if (currentUser && currentUser.userSub) {
+            console.log('ProjectStore: Found Cognito userSub, trying again:', currentUser.userSub)
+            userData = await getUserById(currentUser.userSub)
+          }
+        }
       } catch (userError) {
         console.error('ProjectStore: Error fetching user from DynamoDB:', userError)
         throw new Error(`Failed to fetch user: ${userError.message}`)
@@ -80,6 +95,8 @@ export const useProjectStore = defineStore('project', () => {
       
       if (!userData) {
         console.warn('ProjectStore: User not found in DynamoDB')
+        // Show user-friendly error message
+        error.value = 'User document not found. Please contact support if this issue persists.'
         userProjects.value = []
         loading.value = false
         return

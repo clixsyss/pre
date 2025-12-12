@@ -177,8 +177,8 @@ export async function getUserByAuthUid(authUid) {
 }
 
 /**
- * Get a user by ID
- * @param {string} userId - User ID
+ * Get a user by ID (supports both Cognito sub ID and email)
+ * @param {string} userId - User ID (Cognito sub ID) or email
  * @returns {Promise<Object|null>} User object or null if not found
  */
 export async function getUserById(userId) {
@@ -188,22 +188,42 @@ export async function getUserById(userId) {
     // Try different possible key structures
     let user = null
     
-    // Try with 'id' as key
+    // Try with 'id' as key (Cognito sub ID)
     try {
       user = await getItem(TABLE_NAME, { id: userId })
-    } catch {
-      // Try with 'userId' as key
-      try {
-        user = await getItem(TABLE_NAME, { userId: userId })
-      } catch {
-        console.warn(`[DynamoDBUsersService] User not found with id or userId: ${userId}`)
+      if (user) {
+        const convertedUser = convertUserFromDynamoDB(user)
+        console.log(`[DynamoDBUsersService] ✅ Found user by ID: ${convertedUser.email || userId}`)
+        return convertedUser
       }
+    } catch {
+      console.log(`[DynamoDBUsersService] User not found with id key: ${userId}`)
     }
     
-    if (user) {
-      const convertedUser = convertUserFromDynamoDB(user)
-      console.log(`[DynamoDBUsersService] ✅ Found user: ${convertedUser.email || userId}`)
-      return convertedUser
+    // Try with 'userId' as key
+    try {
+      user = await getItem(TABLE_NAME, { userId: userId })
+      if (user) {
+        const convertedUser = convertUserFromDynamoDB(user)
+        console.log(`[DynamoDBUsersService] ✅ Found user by userId key: ${convertedUser.email || userId}`)
+        return convertedUser
+      }
+    } catch {
+      console.log(`[DynamoDBUsersService] User not found with userId key: ${userId}`)
+    }
+    
+    // If userId looks like an email (contains @), try email lookup as fallback
+    if (userId && userId.includes('@')) {
+      console.log(`[DynamoDBUsersService] userId looks like an email, trying email lookup: ${userId}`)
+      try {
+        user = await getUserByEmail(userId)
+        if (user) {
+          console.log(`[DynamoDBUsersService] ✅ Found user by email: ${user.email}`)
+          return user
+        }
+      } catch (emailError) {
+        console.warn(`[DynamoDBUsersService] Email lookup also failed:`, emailError)
+      }
     }
     
     console.log(`[DynamoDBUsersService] ⚠️ User not found: ${userId}`)

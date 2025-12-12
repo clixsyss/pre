@@ -416,7 +416,10 @@ onMounted(async () => {
       // Ensure projects are loaded
       if (projectStore.userProjects.length === 0) {
         console.log('Home: Projects not loaded yet, fetching...')
-        await projectStore.fetchUserProjects(currentUser.uid)
+        // Use Cognito sub ID (userSub) if available, otherwise fall back to uid
+        const userIdToUse = currentUser.userSub || currentUser.attributes?.sub || currentUser.id || currentUser.uid
+        console.log('Home: Using userId for fetchUserProjects:', userIdToUse)
+        await projectStore.fetchUserProjects(userIdToUse)
       }
 
       // Check if project is selected, if not try to auto-select
