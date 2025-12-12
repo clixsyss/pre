@@ -179,10 +179,10 @@
     </div>
 
     <!-- Full Screen Image/Video Modal -->
-    <div v-if="showImagePreview" class="fullscreen-modal" @click="closeFullscreen">
+    <div v-if="showImagePreview" class="fullscreen-modal" @click.self="closeFullscreen">
       <div class="fullscreen-content" @click.stop>
         <div class="fullscreen-header">
-          <button @click="closeFullscreen" class="close-btn">
+          <button @click.stop="closeFullscreen" class="close-btn" type="button">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
@@ -410,6 +410,11 @@ const handleImageSelect = async (event) => {
 const viewImage = (imageUrl) => {
   previewImageUrl.value = imageUrl;
   showImagePreview.value = true;
+};
+
+const closeFullscreen = () => {
+  showImagePreview.value = false;
+  previewImageUrl.value = '';
 };
 
 const scrollToBottom = () => {
@@ -1391,6 +1396,13 @@ body.keyboard-open .unified-chat {
   justify-content: center;
   width: 48px;
   height: 48px;
+  z-index: 10000000;
+  position: relative;
+}
+
+.close-btn:active {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(0.95);
 }
 
 /* Mobile app - hover effects disabled */

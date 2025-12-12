@@ -132,7 +132,7 @@ const handleSendMessage = async (messageText) => {
 
 const handleImageUpload = async (file) => {
   try {
-    // Upload image to Firebase Storage
+    // Upload image to AWS S3
     const imageUrl = await uploadFineImage(projectStore.selectedProject.id, violationId.value, file);
     
     // Add message with image

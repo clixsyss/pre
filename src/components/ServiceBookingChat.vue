@@ -25,6 +25,7 @@ import serviceBookingService from '../services/serviceBookingService';
 import UnifiedChat from './UnifiedChat.vue';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
+import fileUploadService from '../services/fileUploadService';
 
 // Component name for ESLint
 defineOptions({
@@ -377,96 +378,25 @@ const handleImageUploadWithCapacitor = async () => {
     booking.value.messages.push(tempMessage);
     console.log(`📱 Added temporary upload message to local state`);
 
-    // Ensure user is authenticated before uploading
-    console.log(`📱 Ensuring user authentication before upload...`);
-    const { getAuth, signInAnonymously } = await import('firebase/auth');
-    const auth = getAuth();
+    // Upload using AWS S3 via fileUploadService
+    const timestamp = Date.now();
+    const fileExtension = blob.type.split('/')[1] || 'jpg';
+    const fileName = `service-booking_${timestamp}.${fileExtension}`;
+    const folderPath = `serviceBookings/${bookingId}/images/`;
     
-    // Check if user is authenticated
-    let currentUser = auth.currentUser;
-    console.log(`📱 Current auth state:`, { 
-      hasUser: !!currentUser, 
-      userId: currentUser?.uid,
-      isAnonymous: currentUser?.isAnonymous 
-    });
-    
-    if (!currentUser) {
-      console.log(`📱 No authenticated user, signing in anonymously...`);
-      try {
-        const userCredential = await signInAnonymously(auth);
-        currentUser = userCredential.user;
-        console.log(`📱 Anonymous sign-in successful:`, { 
-          uid: currentUser.uid,
-          isAnonymous: currentUser.isAnonymous 
-        });
-      } catch (authError) {
-        console.error('📱 Anonymous sign-in failed:', {
-          code: authError.code,
-          message: authError.message,
-          stack: authError.stack
-        });
-        throw new Error(`Authentication failed: ${authError.message}`);
-      }
-    } else {
-      console.log(`📱 User already authenticated:`, { 
-        uid: currentUser.uid,
-        isAnonymous: currentUser.isAnonymous 
-      });
-    }
-
-    // Upload using Firebase Storage REST API for iOS
-    const fileName = `image_${Date.now()}.jpg`;
-    const fullPath = `projects/${projectStore.selectedProject.id}/serviceBookings/${bookingId}/images/${fileName}`;
-    
-    console.log(`📱 Starting REST API upload with Blob...`, {
-      fullPath,
+    console.log(`📱 Starting AWS S3 upload with Blob...`, {
+      folderPath,
+      fileName,
       blobSize: blob.size,
-      blobType: blob.type,
-      userId: currentUser.uid,
-      isAnonymous: currentUser.isAnonymous
+      blobType: blob.type
     });
     
     try {
-      // Convert blob to ArrayBuffer for REST API
-      const arrayBuffer = await blob.arrayBuffer()
-      const uint8Array = new Uint8Array(arrayBuffer)
+      // Convert blob to File object for fileUploadService
+      const file = new File([blob], fileName, { type: blob.type });
       
-      // Convert to base64
-      let binary = ''
-      const len = uint8Array.byteLength
-      for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode(uint8Array[i])
-      }
-      const base64 = btoa(binary)
-      
-      console.log(`📱 Converted blob to base64, size:`, base64.length)
-      
-      // Upload using Storage REST API via Capacitor HTTP
-      const { Http } = await import('@capacitor-community/http')
-      const bucket = 'pre-group.firebasestorage.app'
-      const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fullPath)}`
-      
-      console.log(`📱 Uploading to:`, uploadUrl)
-      
-      const uploadResponse = await Http.request({
-        url: uploadUrl,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'image/jpeg'
-        },
-        data: base64,
-        connectTimeout: 60000,
-        readTimeout: 60000
-      })
-      
-      console.log(`📱 Upload response status:`, uploadResponse.status)
-      
-      if (uploadResponse.status < 200 || uploadResponse.status >= 300) {
-        throw new Error(`Upload failed with status ${uploadResponse.status}`)
-      }
-      
-      // Get download URL
-      const downloadURL = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
+      // Upload to AWS S3 using fileUploadService
+      const downloadURL = await fileUploadService.uploadFile(file, folderPath, fileName);
       
       console.log(`📱 Upload successful! URL:`, downloadURL);
       
@@ -529,25 +459,14 @@ const handleImageUploadWithCapacitor = async () => {
       }
     });
     
-    // Check if it's an authentication error and try to refresh
-    if (error.message.includes('Authentication') || error.message.includes('auth') || error.message.includes('timeout')) {
-      console.log(`📱 Authentication error detected, attempting to refresh auth...`);
+    // Retry upload once if it's a network error
+    if (error.message.includes('network') || error.message.includes('timeout') || error.message.includes('ECONNREFUSED')) {
+      console.log(`📱 Network error detected, retrying upload...`);
       try {
-        // Try to refresh the authentication
-        const { getAuth } = await import('firebase/auth');
-        const auth = getAuth();
-        const currentUser = auth.currentUser;
-        
-        if (currentUser) {
-          console.log(`📱 Refreshing authentication token...`);
-          await currentUser.getIdToken(true); // Force refresh
-          console.log(`📱 Authentication refreshed, retrying upload...`);
-          
-          // Retry the upload once
-          return await handleImageUploadWithCapacitor();
-        }
-      } catch (refreshError) {
-        console.error('📱 Failed to refresh authentication:', refreshError);
+        // Retry the upload once
+        return await handleImageUploadWithCapacitor();
+      } catch (retryError) {
+        console.error('📱 Retry also failed:', retryError);
       }
     }
     
@@ -600,112 +519,25 @@ const handleImageUploadWithFile = async (file) => {
   }
 
   try {
-    console.log('🔍 ServiceBookingChat: Starting image upload...');
-    
-    // Ensure user is authenticated before uploading
-    console.log('🌐 Ensuring user authentication before upload...');
-    const { getAuth, signInAnonymously } = await import('firebase/auth');
-    const auth = getAuth();
-    
-    // Check if user is authenticated
-    let currentUser = auth.currentUser;
-    console.log(`🌐 Current auth state:`, { 
-      hasUser: !!currentUser, 
-      userId: currentUser?.uid,
-      isAnonymous: currentUser?.isAnonymous 
-    });
-    
-    if (!currentUser) {
-      console.log('🌐 No authenticated user, signing in anonymously...');
-      try {
-        const userCredential = await signInAnonymously(auth);
-        currentUser = userCredential.user;
-        console.log(`🌐 Anonymous sign-in successful:`, { 
-          uid: currentUser.uid,
-          isAnonymous: currentUser.isAnonymous 
-        });
-      } catch (authError) {
-        console.error('🌐 Anonymous sign-in failed:', {
-          code: authError.code,
-          message: authError.message,
-          stack: authError.stack
-        });
-        throw new Error(`Authentication failed: ${authError.message}`);
-      }
-    } else {
-      console.log(`🌐 User already authenticated:`, { 
-        uid: currentUser.uid,
-        isAnonymous: currentUser.isAnonymous 
-      });
-    }
+    console.log('🔍 ServiceBookingChat: Starting image upload to AWS S3...');
     
     // Generate unique filename
     const timestamp = Date.now();
     const fileExtension = file.name.split('.').pop() || 'jpg';
-    const fileName = `image_${timestamp}.${fileExtension}`;
+    const fileName = `service-booking_${timestamp}.${fileExtension}`;
+    const folderPath = `serviceBookings/${bookingId}/images/`;
     
-    console.log('🌐 Uploading file:', {
+    console.log('🌐 Uploading file to AWS S3:', {
       fileName: fileName,
       fileSize: fileToUpload.size,
       fileType: fileToUpload.type,
-      userId: currentUser.uid
+      folderPath
     });
     
-    const fullPath = `projects/${projectStore.selectedProject.id}/serviceBookings/${bookingId}/images/${fileName}`;
+    // Upload to AWS S3 using fileUploadService
+    const imageUrl = await fileUploadService.uploadFile(fileToUpload, folderPath, fileName);
     
-    // Check if iOS and use REST API
-    const isNative = Capacitor.isNativePlatform(); const platform = Capacitor.getPlatform()
-    let imageUrl
-    
-    if (isNative && (platform === 'ios' || platform === 'android')) {
-      console.log(`📱 ${platform} detected, using Storage REST API for service booking chat...`)
-      
-      // Convert file to ArrayBuffer
-      const arrayBuffer = await fileToUpload.arrayBuffer()
-      const uint8Array = new Uint8Array(arrayBuffer)
-      
-      // Convert to base64
-      let binary = ''
-      const len = uint8Array.byteLength
-      for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode(uint8Array[i])
-      }
-      const base64 = btoa(binary)
-      
-      // Upload using Storage REST API
-      const { Http } = await import('@capacitor-community/http')
-      const bucket = 'pre-group.firebasestorage.app'
-      const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fullPath)}`
-      
-      const uploadResponse = await Http.request({
-        url: uploadUrl,
-        method: 'POST',
-        headers: {
-          'Content-Type': fileToUpload.type
-        },
-        data: base64,
-        connectTimeout: 60000,
-        readTimeout: 60000
-      })
-      
-      if (uploadResponse.status >= 200 && uploadResponse.status < 300) {
-        imageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(fullPath)}?alt=media`
-        console.log(`📱 ${platform}: ✅ Image uploaded successfully`)
-      } else {
-        throw new Error(`Upload failed with status ${uploadResponse.status}`)
-      }
-    } else {
-      // Use Web SDK for web and other platforms
-      console.log('🌐 Using Firebase Web SDK for upload...')
-      const { ref: storageRef, uploadBytes, getDownloadURL } = await import('firebase/storage');
-      const { storage } = await import('../boot/firebase');
-      
-      const fileRef = storageRef(storage, fullPath);
-      const snapshot = await uploadBytes(fileRef, fileToUpload);
-      imageUrl = await getDownloadURL(snapshot.ref);
-    }
-    
-    console.log('✅ ServiceBookingChat: Image uploaded successfully:', imageUrl);
+    console.log('✅ ServiceBookingChat: Image uploaded successfully to AWS S3:', imageUrl);
     
     // Remove the temporary upload message
     const tempIndex = booking.value.messages.findIndex(msg => msg.id === tempMessage.id);
