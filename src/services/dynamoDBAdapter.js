@@ -1,10 +1,10 @@
 /**
  * DynamoDB Adapter for Firestore Service
- * 
+ *
  * This adapter provides a Firestore-like API that uses DynamoDB underneath.
  * It maps Firestore collection paths to DynamoDB table names and maintains
  * compatibility with existing code.
- * 
+ *
  * IMPORTANT: Uses DynamoDB ONLY. No Firebase/Firestore fallbacks.
  */
 
@@ -54,22 +54,23 @@ const TABLES = {
  */
 const COLLECTION_TO_TABLE_MAP = {
   // Root collections
-  'users': TABLES.USERS,
-  'projects': TABLES.PROJECTS,
-  'unitRequests': TABLES.UNIT_REQUESTS,
-  'pushNotifications': TABLES.PUSH_NOTIFICATIONS,
-  'pendingAdmins': TABLES.PENDING_ADMINS,
-  'guestPassSettings': TABLES.GUEST_PASS_SETTINGS,
-  'deviceKeyResetRequests': TABLES.DEVICE_KEY_RESET_REQUESTS,
-  'admins': TABLES.ADMINS,
-  
+  users: TABLES.USERS,
+  projects: TABLES.PROJECTS,
+  unitRequests: TABLES.UNIT_REQUESTS,
+  pushNotifications: TABLES.PUSH_NOTIFICATIONS,
+  pendingAdmins: TABLES.PENDING_ADMINS,
+  guestPassSettings: TABLES.GUEST_PASS_SETTINGS,
+  deviceKeyResetRequests: TABLES.DEVICE_KEY_RESET_REQUESTS,
+  admins: TABLES.ADMINS,
+
   // Project subcollections (mapped to flat table names)
   'projects/{projectId}/news': TABLES.PROJECTS_NEWS,
   'projects/{projectId}/stores': TABLES.PROJECTS_STORES,
   'projects/{projectId}/sports': TABLES.PROJECTS_SPORTS,
   'projects/{projectId}/serviceCategories': TABLES.PROJECTS_SERVICE_CATEGORIES,
   'projects/{projectId}/serviceBookings': TABLES.PROJECTS_SERVICE_BOOKINGS,
-  'projects/{projectId}/serviceCategories/{categoryId}/services': TABLES.PROJECTS_SERVICE_CATEGORIES_SERVICES,
+  'projects/{projectId}/serviceCategories/{categoryId}/services':
+    TABLES.PROJECTS_SERVICE_CATEGORIES_SERVICES,
   'projects/{projectId}/stores/{storeId}/products': TABLES.PROJECTS_STORES_PRODUCTS,
   'projects/{projectId}/courts': TABLES.PROJECTS_COURTS,
   'projects/{projectId}/events': TABLES.PROJECTS_EVENTS,
@@ -99,7 +100,7 @@ const COLLECTION_TO_TABLE_MAP = {
  */
 function parseFirestorePath(path) {
   const parts = path.split('/')
-  
+
   // Root collection (e.g., 'users', 'projects')
   if (parts.length === 1) {
     return {
@@ -107,55 +108,55 @@ function parseFirestorePath(path) {
       projectId: null,
       itemId: null,
       parentId: null,
-      isCollection: true
+      isCollection: true,
     }
   }
-  
+
   // Document path (e.g., 'users/user123', 'projects/proj123')
   if (parts.length === 2) {
     const collection = parts[0]
     const docId = parts[1]
-    
+
     return {
       tableName: COLLECTION_TO_TABLE_MAP[collection] || collection,
       projectId: null,
       itemId: docId,
       parentId: null,
-      isCollection: false
+      isCollection: false,
     }
   }
-  
+
   // Project subcollection (e.g., 'projects/proj123/news')
   if (parts.length === 3 && parts[0] === 'projects') {
     const projectId = parts[1]
     const subcollection = parts[2]
     const pathPattern = `projects/{projectId}/${subcollection}`
-    
+
     return {
       tableName: COLLECTION_TO_TABLE_MAP[pathPattern] || `projects__${subcollection}`,
       projectId: projectId,
       itemId: null,
       parentId: projectId,
-      isCollection: true
+      isCollection: true,
     }
   }
-  
+
   // Project subcollection document (e.g., 'projects/proj123/news/news123')
   if (parts.length === 4 && parts[0] === 'projects') {
     const projectId = parts[1]
     const subcollection = parts[2]
     const itemId = parts[3]
     const pathPattern = `projects/{projectId}/${subcollection}`
-    
+
     return {
       tableName: COLLECTION_TO_TABLE_MAP[pathPattern] || `projects__${subcollection}`,
       projectId: projectId,
       itemId: itemId,
       parentId: projectId,
-      isCollection: false
+      isCollection: false,
     }
   }
-  
+
   // Nested subcollection (e.g., 'projects/proj123/serviceCategories/cat123/services')
   if (parts.length === 5 && parts[0] === 'projects') {
     const projectId = parts[1]
@@ -163,16 +164,17 @@ function parseFirestorePath(path) {
     const parentId = parts[3]
     const subcollection = parts[4]
     const pathPattern = `projects/{projectId}/${parentCollection}/{${parentCollection}Id}/${subcollection}`
-    
+
     return {
-      tableName: COLLECTION_TO_TABLE_MAP[pathPattern] || `projects__${parentCollection}__${subcollection}`,
+      tableName:
+        COLLECTION_TO_TABLE_MAP[pathPattern] || `projects__${parentCollection}__${subcollection}`,
       projectId: projectId,
       itemId: null,
       parentId: parentId,
-      isCollection: true
+      isCollection: true,
     }
   }
-  
+
   // Nested subcollection document
   if (parts.length === 6 && parts[0] === 'projects') {
     const projectId = parts[1]
@@ -181,16 +183,17 @@ function parseFirestorePath(path) {
     const subcollection = parts[4]
     const itemId = parts[5]
     const pathPattern = `projects/{projectId}/${parentCollection}/{${parentCollection}Id}/${subcollection}`
-    
+
     return {
-      tableName: COLLECTION_TO_TABLE_MAP[pathPattern] || `projects__${parentCollection}__${subcollection}`,
+      tableName:
+        COLLECTION_TO_TABLE_MAP[pathPattern] || `projects__${parentCollection}__${subcollection}`,
       projectId: projectId,
       itemId: itemId,
       parentId: parentId,
-      isCollection: false
+      isCollection: false,
     }
   }
-  
+
   // Deeply nested (e.g., 'projects/proj123/news/news123/comments')
   if (parts.length >= 5 && parts[0] === 'projects') {
     const projectId = parts[1]
@@ -199,23 +202,24 @@ function parseFirestorePath(path) {
     const subcollection = parts[4]
     const itemId = parts.length > 5 ? parts[5] : null
     const pathPattern = `projects/{projectId}/${collection}/{${collection}Id}/${subcollection}`
-    
+
     return {
-      tableName: COLLECTION_TO_TABLE_MAP[pathPattern] || `projects__${collection}__${subcollection}`,
+      tableName:
+        COLLECTION_TO_TABLE_MAP[pathPattern] || `projects__${collection}__${subcollection}`,
       projectId: projectId,
       itemId: itemId,
       parentId: parentId,
-      isCollection: !itemId
+      isCollection: !itemId,
     }
   }
-  
+
   // Fallback: use last part as table name
   return {
     tableName: parts[parts.length - 1],
     projectId: null,
     itemId: null,
     parentId: null,
-    isCollection: true
+    isCollection: true,
   }
 }
 
@@ -229,29 +233,29 @@ function convertQueryConstraints(constraints = [], projectId = null) {
   const options = {}
   const expressionAttributeNames = {}
   const expressionAttributeValues = {}
-  
+
   let keyCondition = null
   let filterExpression = null
   const filterParts = []
-  
+
   // Process constraints
   for (const constraint of constraints) {
     if (!constraint || typeof constraint !== 'object') continue
-    
+
     // Handle where clauses
     if (constraint._type === 'where' || constraint._queryConstraints) {
       const field = constraint.field?.segments?.[0] || constraint.fieldPath || constraint.field
       const operator = constraint.op || constraint.opStr || '=='
       const value = constraint.value
-      
+
       if (!field) continue
-      
+
       const fieldPlaceholder = `#${field.replace(/[^a-zA-Z0-9]/g, '_')}`
       const valuePlaceholder = `:${field.replace(/[^a-zA-Z0-9]/g, '_')}`
-      
+
       expressionAttributeNames[fieldPlaceholder] = field
       expressionAttributeValues[valuePlaceholder] = value
-      
+
       // If querying project table and field is projectId or parentId, use as key condition
       // DynamoDB project tables use 'parentId' as partition key
       if (projectId && (field === 'projectId' || field === 'parentId') && operator === '==') {
@@ -268,55 +272,55 @@ function convertQueryConstraints(constraints = [], projectId = null) {
         let op = operator
         if (op === '==') op = '='
         if (op === '!=') op = '<>'
-        
+
         filterParts.push(`${fieldPlaceholder} ${op} ${valuePlaceholder}`)
       }
     }
-    
+
     // Handle orderBy
     if (constraint._type === 'orderBy' || constraint.fieldPath) {
       const field = constraint.field?.segments?.[0] || constraint.fieldPath
       const direction = constraint.direction || 'ASC'
-      
+
       // Note: DynamoDB requires GSI for sorting, so we'll sort client-side
       // Store for client-side sorting
       options._sortBy = { field, direction }
     }
-    
+
     // Handle limit
     if (constraint._type === 'limit' || constraint.limitCount) {
       options.Limit = constraint.limitCount || constraint.limit
     }
   }
-  
+
   // Build expressions
   // For project tables, use parentId as the partition key (matching DynamoDB table structure)
   if (projectId && !keyCondition) {
     keyCondition = 'parentId = :parentId'
     expressionAttributeValues[':parentId'] = projectId
   }
-  
+
   if (filterParts.length > 0) {
     filterExpression = filterParts.join(' AND ')
   }
-  
+
   if (keyCondition) {
     options.KeyConditionExpression = keyCondition
   }
-  
+
   if (filterExpression) {
     options.FilterExpression = filterExpression
   }
-  
+
   // Only include ExpressionAttributeNames and ExpressionAttributeValues if they have entries
   if (Object.keys(expressionAttributeNames).length > 0) {
     options.ExpressionAttributeNames = expressionAttributeNames
   }
-  
+
   if (Object.keys(expressionAttributeValues).length > 0) {
     options.ExpressionAttributeValues = expressionAttributeValues
   }
-  
+
   return options
 }
 
@@ -333,41 +337,41 @@ class DynamoDBAdapter {
   async getDoc(path) {
     try {
       const parsed = parseFirestorePath(path)
-      
+
       if (parsed.isCollection) {
         throw new Error(`Path ${path} is a collection, not a document`)
       }
-      
+
       let key = {}
-      
+
       // Build primary key based on table structure
       if (parsed.projectId) {
         // Project subcollection: use composite key with parentId
         key = {
           parentId: parsed.projectId,
-          id: parsed.itemId
+          id: parsed.itemId,
         }
       } else {
         // Root collection: use id as key
         key = {
-          id: parsed.itemId
+          id: parsed.itemId,
         }
       }
-      
+
       const item = await getItem(parsed.tableName, key)
-      
+
       // Return Firestore-like snapshot
       return {
         exists: () => item !== null,
         data: () => item || {},
-        id: parsed.itemId
+        id: parsed.itemId,
       }
     } catch (error) {
       console.error(`[DynamoDBAdapter] Error getting doc ${path}:`, error)
       throw error
     }
   }
-  
+
   /**
    * Get multiple documents (Firestore-like API)
    * @param {string} collectionPath - Collection path (e.g., 'projects/proj123/news')
@@ -380,88 +384,95 @@ class DynamoDBAdapter {
   async getDocs(collectionPath, queryOptions = {}) {
     try {
       const parsed = parseFirestorePath(collectionPath)
-      
+
       if (!parsed.isCollection) {
         throw new Error(`Path ${collectionPath} is a document, not a collection`)
       }
-      
+
       // Handle both constraints array and filters object
       let constraints = queryOptions.constraints || []
-      
+
       // Convert filters object to constraints format if filters is provided
-      if (queryOptions.filters && typeof queryOptions.filters === 'object' && !Array.isArray(queryOptions.filters)) {
+      if (
+        queryOptions.filters &&
+        typeof queryOptions.filters === 'object' &&
+        !Array.isArray(queryOptions.filters)
+      ) {
         constraints = Object.entries(queryOptions.filters).map(([field, filterObj]) => {
           if (filterObj && typeof filterObj === 'object') {
             return {
               _type: 'where',
               field: field,
               op: filterObj.operator || '==',
-              value: filterObj.value
+              value: filterObj.value,
             }
           }
           return {
             _type: 'where',
             field: field,
             op: '==',
-            value: filterObj
+            value: filterObj,
           }
         })
       }
-      
+
       // Handle orderBy array
       if (queryOptions.orderBy && Array.isArray(queryOptions.orderBy)) {
-        queryOptions.orderBy.forEach(orderByItem => {
+        queryOptions.orderBy.forEach((orderByItem) => {
           constraints.push({
             _type: 'orderBy',
             field: orderByItem.field,
-            direction: orderByItem.direction || 'asc'
+            direction: orderByItem.direction || 'asc',
           })
         })
       }
-      
+
       const dynamoOptions = convertQueryConstraints(constraints, parsed.projectId)
-      
+
       let items = []
-      
+
       // Use Query if we have a key condition (projectId), otherwise Scan
       if (parsed.projectId || dynamoOptions.KeyConditionExpression) {
         items = await query(parsed.tableName, dynamoOptions)
       } else {
         items = await scan(parsed.tableName, dynamoOptions)
       }
-      
+
       // Client-side sorting if needed
       if (dynamoOptions._sortBy) {
         const { field, direction } = dynamoOptions._sortBy
         items.sort((a, b) => {
           const aVal = a[field]
           const bVal = b[field]
-          
+
           if (aVal === undefined || aVal === null) return 1
           if (bVal === undefined || bVal === null) return -1
-          
+
           const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0
           return direction === 'desc' ? -comparison : comparison
         })
       }
-      
+
       // Return Firestore-like snapshot
       return {
-        docs: items.map(item => ({
+        docs: items.map((item) => ({
           id: item.id || item.projectId || 'unknown',
           exists: () => true,
-          data: () => item
+          data: () => item,
         })),
         empty: items.length === 0,
-        size: items.length
+        size: items.length,
       }
     } catch (error) {
       // Log error but don't throw - let Firestore fallback handle it
-      console.warn(`[DynamoDBAdapter] Error getting docs ${collectionPath}, will fallback to Firestore:`, error.message)
+      console.warn(
+        `[DynamoDBAdapter] Error getting docs ${collectionPath}, will fallback to Firestore:`,
+        error.message,
+      )
       throw error
     }
   }
-  
+
   /**
    * Set a document (Firestore-like API)
    * @param {string} path - Document path
@@ -475,32 +486,32 @@ class DynamoDBAdapter {
       // eslint-disable-next-line no-unused-vars
       const _options = options
       const parsed = parseFirestorePath(path)
-      
+
       if (parsed.isCollection) {
         throw new Error(`Path ${path} is a collection, not a document`)
       }
-      
+
       // Build item with proper keys
       const item = {
         ...data,
-        id: parsed.itemId
+        id: parsed.itemId,
       }
-      
+
       if (parsed.projectId) {
         item.parentId = parsed.projectId
         item.projectId = parsed.projectId
       }
-      
+
       // Sanitize data for DynamoDB (convert Dates, remove undefined)
       const sanitizedItem = this.sanitizeForDynamoDB(item)
-      
+
       await putItem(parsed.tableName, sanitizedItem)
     } catch (error) {
       console.error(`[DynamoDBAdapter] Error setting doc ${path}:`, error)
       throw error
     }
   }
-  
+
   /**
    * Update a document (Firestore-like API)
    * @param {string} path - Document path
@@ -510,14 +521,14 @@ class DynamoDBAdapter {
   async updateDoc(path, updateData) {
     try {
       const parsed = parseFirestorePath(path)
-      
+
       if (parsed.isCollection) {
         throw new Error(`Path ${path} is a collection, not a document`)
       }
-      
+
       // Sanitize update data for DynamoDB (convert Dates, remove undefined)
       const sanitizedUpdateData = this.sanitizeForDynamoDB(updateData)
-      
+
       // Build key - use parentId for project tables
       let key = {}
       if (parsed.projectId) {
@@ -526,47 +537,49 @@ class DynamoDBAdapter {
       } else {
         key = { id: parsed.itemId }
       }
-      
+
       // Build update expression
       const updates = []
       const expressionAttributeNames = {}
       const expressionAttributeValues = {}
-      
+
       for (const [field, value] of Object.entries(sanitizedUpdateData)) {
         // Skip undefined values
         if (value === undefined) continue
-        
+
         const namePlaceholder = `#${field.replace(/[^a-zA-Z0-9]/g, '_')}`
         const valuePlaceholder = `:${field.replace(/[^a-zA-Z0-9]/g, '_')}`
-        
+
         expressionAttributeNames[namePlaceholder] = field
         expressionAttributeValues[valuePlaceholder] = value
         updates.push(`${namePlaceholder} = ${valuePlaceholder}`)
       }
-      
+
       if (updates.length === 0) {
         console.warn(`[DynamoDBAdapter] No valid fields to update for ${path}`)
         return
       }
-      
+
       const updateExpression = `SET ${updates.join(', ')}`
-      
+
       // Use UpdateCommand for updates
       const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb')
       const { docClient } = await import('../aws/dynamodbClient')
-      
+
       // Check if document exists first (optional - helps with better error messages)
       try {
         const { GetCommand } = await import('@aws-sdk/lib-dynamodb')
-        const getResult = await docClient.send(new GetCommand({
-          TableName: parsed.tableName,
-          Key: key
-        }))
-        
+        const getResult = await docClient.send(
+          new GetCommand({
+            TableName: parsed.tableName,
+            Key: key,
+          }),
+        )
+
         if (!getResult.Item) {
           console.error(`[DynamoDBAdapter] ❌ Document does not exist: ${path}`, {
             table: parsed.tableName,
-            key
+            key,
           })
           throw new Error(`Document not found: ${path}. The booking may not exist in DynamoDB.`)
         }
@@ -576,9 +589,12 @@ class DynamoDBAdapter {
           throw checkError
         }
         // Otherwise, log warning but continue with update attempt
-        console.warn(`[DynamoDBAdapter] ⚠️ Could not verify document existence, proceeding with update:`, checkError.message)
+        console.warn(
+          `[DynamoDBAdapter] ⚠️ Could not verify document existence, proceeding with update:`,
+          checkError.message,
+        )
       }
-      
+
       const updateParams = {
         TableName: parsed.tableName,
         Key: key,
@@ -586,42 +602,46 @@ class DynamoDBAdapter {
         ExpressionAttributeNames: expressionAttributeNames,
         ExpressionAttributeValues: expressionAttributeValues,
         // Return updated item attributes
-        ReturnValues: 'ALL_NEW'
+        ReturnValues: 'ALL_NEW',
       }
-      
+
       console.log(`[DynamoDBAdapter] Updating doc ${path}:`, {
         table: parsed.tableName,
         key,
         updateExpression,
         fields: Object.keys(sanitizedUpdateData),
-        updateData: sanitizedUpdateData
+        updateData: sanitizedUpdateData,
       })
-      
+
       try {
         const result = await docClient.send(new UpdateCommand(updateParams))
         console.log(`[DynamoDBAdapter] ✅ Successfully updated doc ${path}`, {
-          updatedAttributes: result.Attributes ? Object.keys(result.Attributes) : []
+          updatedAttributes: result.Attributes ? Object.keys(result.Attributes) : [],
         })
       } catch (updateError) {
         // Check for various "not found" error types
-        if (updateError.name === 'ResourceNotFoundException' || 
-            updateError.name === 'ConditionalCheckFailedException' ||
-            updateError.message?.includes('does not exist') ||
-            updateError.message?.includes('not found') ||
-            updateError.message?.includes('The provided key element does not match the schema')) {
+        if (
+          updateError.name === 'ResourceNotFoundException' ||
+          updateError.name === 'ConditionalCheckFailedException' ||
+          updateError.message?.includes('does not exist') ||
+          updateError.message?.includes('not found') ||
+          updateError.message?.includes('The provided key element does not match the schema')
+        ) {
           console.error(`[DynamoDBAdapter] ❌ Document not found or key mismatch: ${path}`, {
             table: parsed.tableName,
             key,
             error: updateError.message,
-            errorName: updateError.name
+            errorName: updateError.name,
           })
-          throw new Error(`Document not found: ${path}. The booking may not exist in DynamoDB or the key structure is incorrect.`)
+          throw new Error(
+            `Document not found: ${path}. The booking may not exist in DynamoDB or the key structure is incorrect.`,
+          )
         }
         // Re-throw other errors
         console.error(`[DynamoDBAdapter] ❌ Update failed with unexpected error:`, {
           name: updateError.name,
           message: updateError.message,
-          code: updateError.code
+          code: updateError.code,
         })
         throw updateError
       }
@@ -631,12 +651,12 @@ class DynamoDBAdapter {
         name: error.name,
         message: error.message,
         code: error.code,
-        path: path
+        path: path,
       })
       throw error
     }
   }
-  
+
   /**
    * Delete a document (Firestore-like API)
    * @param {string} path - Document path
@@ -645,11 +665,11 @@ class DynamoDBAdapter {
   async deleteDoc(path) {
     try {
       const parsed = parseFirestorePath(path)
-      
+
       if (parsed.isCollection) {
         throw new Error(`Path ${path} is a collection, not a document`)
       }
-      
+
       // Build key
       let key = {}
       if (parsed.projectId) {
@@ -657,20 +677,22 @@ class DynamoDBAdapter {
       } else {
         key = { id: parsed.itemId }
       }
-      
+
       const { DeleteCommand } = await import('@aws-sdk/lib-dynamodb')
       const { docClient } = await import('../aws/dynamodbClient')
-      
-      await docClient.send(new DeleteCommand({
-        TableName: parsed.tableName,
-        Key: key
-      }))
+
+      await docClient.send(
+        new DeleteCommand({
+          TableName: parsed.tableName,
+          Key: key,
+        }),
+      )
     } catch (error) {
       console.error(`[DynamoDBAdapter] Error deleting doc ${path}:`, error)
       throw error
     }
   }
-  
+
   /**
    * Convert data to DynamoDB-compatible format
    * - Convert Date objects to ISO strings
@@ -681,15 +703,15 @@ class DynamoDBAdapter {
     if (data === null || data === undefined) {
       return null
     }
-    
+
     if (data instanceof Date) {
       return data.toISOString()
     }
-    
+
     if (Array.isArray(data)) {
-      return data.map(item => this.sanitizeForDynamoDB(item))
+      return data.map((item) => this.sanitizeForDynamoDB(item))
     }
-    
+
     if (typeof data === 'object') {
       const sanitized = {}
       for (const [key, value] of Object.entries(data)) {
@@ -700,7 +722,7 @@ class DynamoDBAdapter {
       }
       return sanitized
     }
-    
+
     // Primitive types (string, number, boolean) are fine as-is
     return data
   }
@@ -714,45 +736,45 @@ class DynamoDBAdapter {
   async addDoc(collectionPath, data) {
     try {
       const parsed = parseFirestorePath(collectionPath)
-      
+
       if (!parsed.isCollection) {
         throw new Error(`Path ${collectionPath} is a document, not a collection`)
       }
-      
+
       // Generate ID if not provided
       const itemId = data.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      
+
       // Build item
       const item = {
         ...data,
-        id: itemId
+        id: itemId,
       }
-      
+
       // Set parentId (partition key for DynamoDB project tables)
       if (parsed.projectId) {
         item.parentId = parsed.projectId
         item.projectId = parsed.projectId // Also set projectId for compatibility
       }
-      
+
       // Ensure parentId is set even if projectId wasn't parsed
       if (!item.parentId && item.projectId) {
         item.parentId = item.projectId
       }
-      
+
       // Sanitize data for DynamoDB (convert Dates, remove undefined)
       const sanitizedItem = this.sanitizeForDynamoDB(item)
-      
-      console.log(`[DynamoDBAdapter] Adding doc to ${parsed.tableName}:`, { 
-        id: itemId, 
+
+      console.log(`[DynamoDBAdapter] Adding doc to ${parsed.tableName}:`, {
+        id: itemId,
         parentId: sanitizedItem.parentId,
         type: sanitizedItem.type,
         hasType: 'type' in sanitizedItem,
         createdAt: sanitizedItem.createdAt,
-        createdAtType: typeof sanitizedItem.createdAt
+        createdAtType: typeof sanitizedItem.createdAt,
       })
-      
+
       await putItem(parsed.tableName, sanitizedItem)
-      
+
       return { id: itemId, documentId: itemId }
     } catch (error) {
       console.error(`[DynamoDBAdapter] Error adding doc to ${collectionPath}:`, error)
@@ -763,4 +785,3 @@ class DynamoDBAdapter {
 
 // Export singleton instance
 export default new DynamoDBAdapter()
-

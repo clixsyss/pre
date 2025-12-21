@@ -498,7 +498,7 @@ class FCMService {
   }
 
   /**
-   * Save FCM token to Firestore
+   * Save FCM token to Firestore (for FCM messaging) AND DynamoDB (for Lambda notifications)
    */
   async saveTokenToFirestore(token, platform) {
     try {
@@ -516,7 +516,8 @@ class FCMService {
       const tokenId = this.hashToken(token);
       
       // Use Web SDK Firestore for all platforms (consistent with auth)
-      console.log('🌐 FCMService: Using Web SDK to save token...');
+      // KEEP THIS: Firebase FCM still needs Firestore token storage for messaging
+      console.log('🌐 FCMService: Using Web SDK to save token to Firestore...');
       const tokenRef = doc(db, 'users', userId, 'tokens', tokenId);
         
       await setDoc(tokenRef, {
@@ -532,15 +533,34 @@ class FCMService {
           }
       }, { merge: true });
         
-      console.log('✅ FCMService: Token saved successfully to subcollection!');
+      console.log('✅ FCMService: Token saved successfully to Firestore!');
       
       // Also store flat fcmToken on the user document for compatibility
       try {
         const userRef = doc(db, 'users', userId);
         await updateDoc(userRef, { fcmToken: token });
-        console.log('✅ FCMService: User fcmToken field updated');
+        console.log('✅ FCMService: User fcmToken field updated in Firestore');
       } catch (e) {
         console.warn('⚠️ FCMService: Failed to set flat fcmToken:', e?.message || e);
+      }
+
+      // Register token in DynamoDB for Lambda notification system
+      // This enables AWS Lambda to send push notifications to this device
+      // Best-effort: failures must NOT break login or the app
+      try {
+        const { registerUserToken } = await import('./tokenRegistrationService');
+        const result = await registerUserToken({
+          userId,
+          token,
+          platform: platform || this.platform || 'web'
+        });
+        if (result) {
+          console.log('✅ FCMService: Token registered in DynamoDB for Lambda notifications');
+        }
+      } catch (dynamoError) {
+        // Non-critical: token registration failure shouldn't break FCM setup
+        // Lambda notifications won't work, but Firebase FCM still works
+        console.warn('⚠️ FCMService: Failed to register token in DynamoDB (non-critical):', dynamoError?.message || dynamoError);
       }
       
       // Store current token in memory
