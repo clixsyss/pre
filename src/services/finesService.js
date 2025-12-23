@@ -79,10 +79,20 @@ export const getUserFines = async (projectId, userId) => {
         throw new Error('User not authenticated')
       }
       
-      // Verify the user ID matches
-      if (currentUser.uid !== userId) {
-        console.warn('⚠️ User ID mismatch:', { currentUserUid: currentUser.uid, requestedUserId: userId })
-      }
+      // Get Cognito sub (the actual user ID stored in fines) and email
+      const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.id || currentUser.userSub
+      const userEmail = currentUser.email || currentUser.attributes?.email || currentUser.cognitoAttributes?.email || userId
+      
+      // Use Cognito sub for query if available, otherwise fall back to userId parameter
+      const queryUserId = cognitoSub || userId
+      
+      console.log('🔍 User identifiers:', { 
+        userIdParam: userId, 
+        cognitoSub, 
+        userEmail, 
+        queryUserId,
+        currentUserUid: currentUser.uid 
+      })
       
       // Additional auth debugging
       console.log('🔍 Auth token:', currentUser.accessToken ? 'Present' : 'Missing')
@@ -93,17 +103,37 @@ export const getUserFines = async (projectId, userId) => {
       const collectionPath = `projects/${projectId}/fines`
       console.log('🔍 Collection path:', collectionPath)
       
-      // Use Firestore where clause for secure server-side filtering
+      // Query by userId (Cognito sub) - this is what fines are stored with
+      // Since DynamoDB doesn't support OR queries easily, we'll query by Cognito sub
+      // and use client-side filtering to also match by email
       const queryOptions = {
         filters: [
-          { field: 'userId', operator: '==', value: userId }
+          // Query by Cognito sub (primary) - this is what fines are stored with
+          { field: 'userId', operator: '==', value: queryUserId }
         ],
         orderBy: { field: 'createdAt', direction: 'desc' },
         timeoutMs: 8000
       }
       
       console.log('🔍 Query options (with server-side filtering):', queryOptions)
-      const result = await firestoreService.getDocs(collectionPath, queryOptions)
+      
+      // Try querying by Cognito sub first
+      let result = await firestoreService.getDocs(collectionPath, queryOptions)
+      
+      // If no results and we have an email, try querying by userEmail as fallback
+      if ((result.docs.length === 0 || result.empty) && userEmail && userEmail !== queryUserId) {
+        console.log('🔍 No results with Cognito sub, trying userEmail query...')
+        const emailQueryOptions = {
+          filters: [
+            { field: 'userEmail', operator: '==', value: userEmail }
+          ],
+          orderBy: { field: 'createdAt', direction: 'desc' },
+          timeoutMs: 8000
+        }
+        result = await firestoreService.getDocs(collectionPath, emailQueryOptions)
+        console.log('🔍 Email query result:', { count: result.docs.length, empty: result.empty })
+      }
+      
       console.log('✅ Query with server-side filtering succeeded')
       
       const userFines = result.docs.map(doc => ({
@@ -115,9 +145,26 @@ export const getUserFines = async (projectId, userId) => {
       console.log('🔍 User fines data (before client filter):', userFines)
       
       // Additional client-side filtering for extra security
+      // Match by either userId (Cognito sub) or userEmail to handle both cases
       const filteredFines = userFines.filter(fine => {
-        console.log('🔍 Checking fine:', { fineId: fine.id, fineUserId: fine.userId, currentUserId: userId })
-        return fine.userId === userId
+        const matchesUserId = fine.userId === queryUserId || fine.userId === cognitoSub || fine.userId === userId
+        const matchesEmail = fine.userEmail === userEmail || fine.userEmail === userId
+        const matches = matchesUserId || matchesEmail
+        
+        console.log('🔍 Checking fine:', { 
+          fineId: fine.id, 
+          fineUserId: fine.userId, 
+          fineUserEmail: fine.userEmail,
+          queryUserId,
+          cognitoSub,
+          userEmail,
+          userIdParam: userId,
+          matchesUserId,
+          matchesEmail,
+          matches
+        })
+        
+        return matches
       })
       console.log('✅ User fines after client-side filter:', filteredFines.length)
       

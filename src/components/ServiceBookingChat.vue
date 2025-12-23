@@ -463,8 +463,8 @@ const handleImageUploadWithCapacitor = async () => {
     if (error.message.includes('network') || error.message.includes('timeout') || error.message.includes('ECONNREFUSED')) {
       console.log(`📱 Network error detected, retrying upload...`);
       try {
-        // Retry the upload once
-        return await handleImageUploadWithCapacitor();
+          // Retry the upload once
+          return await handleImageUploadWithCapacitor();
       } catch (retryError) {
         console.error('📱 Retry also failed:', retryError);
       }

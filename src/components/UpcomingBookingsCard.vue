@@ -213,7 +213,7 @@ const fetchBookings = async () => {
         userId: user.uid,
         projectId: projectStore.selectedProject.id
       });
-      await academiesStore.fetchUserBookings(user.uid, projectStore.selectedProject.id);
+      await academiesStore.fetchUserBookings(user.uid, projectStore.selectedProject.id, true);
       await serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid);
     } else {
       console.log('Cannot fetch bookings - missing user or project:', {

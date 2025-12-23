@@ -172,7 +172,9 @@ const currentUserId = ref(null)
 // Initialize current user ID
 const initializeUserId = async () => {
   const user = await optimizedAuthService.getCurrentUser();
-  currentUserId.value = user?.uid;
+  // Use Cognito sub (the actual user ID) instead of uid (which might be email)
+  // This matches what fines are stored with in DynamoDB
+  currentUserId.value = user?.attributes?.sub || user?.cognitoAttributes?.sub || user?.id || user?.userSub || user?.uid;
 }
 
 const statusFilters = [

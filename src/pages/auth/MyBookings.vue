@@ -624,7 +624,7 @@ const cancelBooking = async (booking) => {
       // Refresh bookings after cancellation
       const user = await optimizedAuthService.getCurrentUser();
       if (user && projectId.value) {
-        await academiesStore.fetchUserBookings(user.uid, projectId.value);
+        await academiesStore.fetchUserBookings(user.uid, projectId.value, true);
         await serviceBookingStore.fetchUserBookings(projectId.value, user.uid);
       }
 
@@ -717,8 +717,8 @@ const fetchUserBookings = async () => {
       unsubscribeAcademyBookings.value = null;
     }
 
-    // Initial fetch for academy bookings (immediate data)
-    await academiesStore.fetchUserBookings(user.uid, projectId.value);
+    // Initial fetch for academy bookings (force refresh for latest data)
+    await academiesStore.fetchUserBookings(user.uid, projectId.value, true);
 
     // Set up real-time listener for service bookings (instant updates)
     unsubscribeServiceBookings.value = serviceBookingStore.subscribeToUserBookings(

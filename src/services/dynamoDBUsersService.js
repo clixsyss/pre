@@ -200,15 +200,15 @@ export async function getUserById(userId) {
       console.log(`[DynamoDBUsersService] User not found with id key: ${userId}`)
     }
     
-    // Try with 'userId' as key
-    try {
-      user = await getItem(TABLE_NAME, { userId: userId })
+      // Try with 'userId' as key
+      try {
+        user = await getItem(TABLE_NAME, { userId: userId })
       if (user) {
         const convertedUser = convertUserFromDynamoDB(user)
         console.log(`[DynamoDBUsersService] ✅ Found user by userId key: ${convertedUser.email || userId}`)
         return convertedUser
       }
-    } catch {
+      } catch {
       console.log(`[DynamoDBUsersService] User not found with userId key: ${userId}`)
     }
     
@@ -217,7 +217,7 @@ export async function getUserById(userId) {
       console.log(`[DynamoDBUsersService] userId looks like an email, trying email lookup: ${userId}`)
       try {
         user = await getUserByEmail(userId)
-        if (user) {
+    if (user) {
           console.log(`[DynamoDBUsersService] ✅ Found user by email: ${user.email}`)
           return user
         }

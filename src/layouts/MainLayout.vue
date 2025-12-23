@@ -557,9 +557,20 @@ const checkForViolations = async (forceShow = false) => {
       return
     }
     
+    // Get Cognito sub (the actual user ID stored in fines) instead of uid (which might be email)
+    const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.id || currentUser.userSub || currentUser.uid
+    const userEmail = currentUser.email || currentUser.attributes?.email || currentUser.cognitoAttributes?.email || currentUser.uid
+    
+    console.log('🔍 User identifiers for violation check:', { 
+      uid: currentUser.uid, 
+      cognitoSub, 
+      userEmail 
+    })
+    
     console.log('🔍 Checking for active violations...')
     // Check for any active violations (issued or disputed) that need attention
-    const result = await hasActiveViolations(currentProject.value.id, currentUser.uid)
+    // Use Cognito sub (primary) or email (fallback) - getUserFines handles both
+    const result = await hasActiveViolations(currentProject.value.id, cognitoSub || userEmail)
     
     console.log('✅ Violation check result:', result)
     
@@ -743,7 +754,18 @@ watch(
         }
       }, 800) // Shorter delay for better perceived performance
       
-      // Violation check removed - only show once on initial app load on home page
+      // Check for violations when project is first selected (initial load)
+      // Only check on initial selection (when oldProject is null/undefined)
+      if (!oldProject) {
+        setTimeout(async () => {
+          try {
+            await checkForViolations()
+            console.log('✅ Initial violation check completed after project selection')
+          } catch (error) {
+            console.error('❌ Error in checkForViolations after project selection:', error)
+          }
+        }, 1500) // Delay to ensure project and user are fully loaded
+      }
       
       // Emit a custom event that child components can listen to
       window.dispatchEvent(new CustomEvent('projectChanged', {

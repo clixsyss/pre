@@ -373,6 +373,14 @@ const checkAndLoadProjectData = async () => {
     if (projectStore.selectedProject?.id) {
       await smartMirrorStore.switchToProject(projectStore.selectedProject.id)
     }
+
+    // Always refresh user bookings for the current project when Home is (re)loaded
+    // Force refresh to bypass cache so new bookings appear without needing a full app refresh
+    try {
+      await academiesStore.fetchUserBookings(currentUser.uid, projectStore.selectedProject.id, true)
+    } catch (bookingError) {
+      console.error('Error refreshing user bookings in checkAndLoadProjectData:', bookingError)
+    }
   } catch (error) {
     console.error('Error switching to selected project:', error)
   }
@@ -386,10 +394,13 @@ const handleProjectChange = async (event) => {
     // Load device settings for the new project using the store method
     smartMirrorStore.loadDeviceSettingsForProject(newProject.id)
 
-    // Fetch user bookings for the new project
+    // Fetch user bookings for the new project (force refresh)
     if (user.value?.uid && newProject?.id) {
-      await academiesStore.fetchUserBookings(user.value.uid, newProject.id)
+      await academiesStore.fetchUserBookings(user.value.uid, newProject.id, true)
     }
+
+    // Restart polling for the new project
+    setupBookingsPolling()
 
     // Notifications now handled by Notification Center in header
     // await fetchNotifications()
@@ -398,14 +409,71 @@ const handleProjectChange = async (event) => {
   }
 }
 
+// Polling interval for refreshing bookings (every 30 seconds)
+let bookingsPollInterval = null
+
+// Setup polling for bookings
+const setupBookingsPolling = () => {
+  // Clear existing interval if any
+  if (bookingsPollInterval) {
+    clearInterval(bookingsPollInterval)
+  }
+
+  // Only poll if we have a user and project
+  const startPolling = async () => {
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    if (currentUser && projectStore.selectedProject?.id) {
+      bookingsPollInterval = setInterval(async () => {
+        try {
+          // Silently refresh bookings in the background
+          await academiesStore.fetchUserBookings(
+            currentUser.uid, 
+            projectStore.selectedProject.id, 
+            true // Force refresh to get latest updates
+          )
+        } catch (error) {
+          console.error('Error polling bookings:', error)
+        }
+      }, 30000) // Poll every 30 seconds
+    }
+  }
+
+  startPolling()
+}
+
+// Handle visibility change (when app comes to foreground)
+const handleVisibilityChange = async () => {
+  if (document.visibilityState === 'visible') {
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    if (currentUser && projectStore.selectedProject?.id) {
+      // Force refresh when app becomes visible
+      try {
+        await academiesStore.fetchUserBookings(
+          currentUser.uid, 
+          projectStore.selectedProject.id, 
+          true
+        )
+      } catch (error) {
+        console.error('Error refreshing bookings on visibility change:', error)
+      }
+    }
+  }
+}
+
 // Register cleanup - must be at top level, not inside async callback
 onUnmounted(() => {
   window.removeEventListener('projectChanged', handleProjectChange)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  if (bookingsPollInterval) {
+    clearInterval(bookingsPollInterval)
+    bookingsPollInterval = null
+  }
 })
 
 onMounted(async () => {
-  // Register event listener first (synchronously)
+  // Register event listeners first (synchronously)
   window.addEventListener('projectChanged', handleProjectChange)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
   
   // Wait for auth state to be established - use optimized auth service instead of direct auth.currentUser
   try {
@@ -434,11 +502,10 @@ onMounted(async () => {
         }
       }
 
-      // Fetch user bookings for the selected project
+      // Fetch user bookings for the selected project (force refresh on mount)
       try {
         if (projectStore.selectedProject?.id) {
-          await academiesStore.fetchUserBookings(currentUser.uid, projectStore.selectedProject.id)
-          console.log('User bookings fetched:', academiesStore.userBookings)
+          await academiesStore.fetchUserBookings(currentUser.uid, projectStore.selectedProject.id, true)
         }
       } catch (error) {
         console.error('Error fetching user bookings:', error)
@@ -453,6 +520,9 @@ onMounted(async () => {
       } catch (error) {
         console.error('Error initializing Smart Mirror app:', error)
       }
+
+      // Setup polling for bookings updates
+      setupBookingsPolling()
 
       // Notifications now handled by Notification Center in header
       // await fetchNotifications()
