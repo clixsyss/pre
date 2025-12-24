@@ -574,35 +574,40 @@ class FCMService {
 
   /**
    * Get current authenticated user ID (works on both native and web)
+   * Returns Cognito sub (DynamoDB user ID) for token registration compatibility with Lambda
    */
   async getCurrentUserId() {
     try {
-      // Always use Web SDK auth (matches optimizedAuthService behavior)
-      // The app uses Web SDK for authentication on all platforms
+      // Use optimizedAuthService to get Cognito user (which has Cognito sub)
+      // This ensures we get the DynamoDB user ID, not Firebase UID
+      const optimizedAuthService = await import('./optimizedAuthService').then(m => m.default);
+      const currentUser = await optimizedAuthService.getCurrentUser();
       
-      // Wait for auth to be ready (with timeout)
-      let userId = auth.currentUser?.uid;
-      
-      if (!userId) {
-        console.log('FCMService: Waiting for auth.currentUser to be available...');
+      if (!currentUser) {
+        console.log('FCMService: Waiting for authenticated user...');
         // Wait up to 3 seconds for auth to be ready
         for (let i = 0; i < 30; i++) {
           await new Promise(resolve => setTimeout(resolve, 100));
-          userId = auth.currentUser?.uid;
-          if (userId) {
+          const retryUser = await optimizedAuthService.getCurrentUser();
+          if (retryUser) {
             console.log(`FCMService: Auth ready after ${(i + 1) * 100}ms`);
-            break;
+            // Get Cognito sub (DynamoDB user ID)
+            const cognitoSub = retryUser.attributes?.sub || retryUser.cognitoAttributes?.sub || retryUser.userSub || retryUser.uid;
+            console.log(`FCMService: Got user ID (Cognito sub): ${cognitoSub}`);
+            return cognitoSub;
           }
         }
       }
       
-      if (!userId) {
+      if (!currentUser) {
         console.error('FCMService: No authenticated user found after waiting');
         return null;
       }
       
-      console.log(`FCMService: Got user ID: ${userId}`);
-      return userId;
+      // Get Cognito sub (DynamoDB user ID) - this is what Lambda uses
+      const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.userSub || currentUser.uid;
+      console.log(`FCMService: Got user ID (Cognito sub): ${cognitoSub}`);
+      return cognitoSub;
     } catch (error) {
       console.error('FCMService: Error getting current user:', error, error?.message, error?.stack);
       return null;
