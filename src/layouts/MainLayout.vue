@@ -287,6 +287,8 @@ import { markViolationsAsShown, hasActiveViolations, clearOldNotificationHistory
 import { checkUserSuspension, getSuspensionMessage } from '../services/suspensionService'
 import optimizedAuthService from '../services/optimizedAuthService'
 import { useDataPreloader } from '../services/dataPreloader'
+import permissionsService from '../services/permissionsService'
+import { Capacitor } from '@capacitor/core'
 
 // Component name for ESLint
 defineOptions({
@@ -646,6 +648,27 @@ const checkUserSuspensionStatus = async () => {
     showSuspensionMessage.value = false
   }
 
+// Handle visibility change for permission checking (defined outside onMounted so it can be removed in onUnmounted)
+const handleVisibilityChange = async () => {
+  if (document.visibilityState === 'visible') {
+    try {
+      const protocol = window.location.protocol
+      const hasIOSBridge = window.webkit?.messageHandlers !== undefined
+      const platform = Capacitor.getPlatform()
+      const isNative = platform === 'ios' || platform === 'android' || protocol === 'capacitor:' || hasIOSBridge
+      
+      // Only check if permissions were requested, don't force request again
+      // This is just for logging/debugging
+      if (isNative && !permissionsService.permissionsRequested) {
+        console.log('🔐 MainLayout: App became visible, permissions not requested yet')
+        // Don't auto-request here to avoid annoying users, just log
+      }
+    } catch (error) {
+      console.error('❌ MainLayout: Error checking permissions on visibility change:', error)
+    }
+  }
+}
+
   const handleContactSupport = () => {
     // Navigate to support page
     router.push('/support')
@@ -927,6 +950,27 @@ onMounted(async () => {
     window.dispatchEvent(new CustomEvent('appReady'))
   }, 2000) // Give time for app to fully initialize
   
+  // Fallback: Request permissions if they weren't requested yet (in case boot file missed it)
+  setTimeout(async () => {
+    try {
+      const protocol = window.location.protocol
+      const hasIOSBridge = window.webkit?.messageHandlers !== undefined
+      const platform = Capacitor.getPlatform()
+      const isNative = platform === 'ios' || platform === 'android' || protocol === 'capacitor:' || hasIOSBridge
+      
+      if (isNative && !permissionsService.permissionsRequested) {
+        console.log('🔐 MainLayout: Permissions not requested yet, requesting now as fallback...')
+        const results = await permissionsService.requestAllPermissions()
+        console.log('✅ MainLayout: Fallback permission request completed:', results)
+      }
+    } catch (error) {
+      console.error('❌ MainLayout: Error in fallback permission request:', error)
+    }
+  }, 3000) // Wait 3 seconds after mount
+  
+  // Register visibility change listener
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  
   window.addEventListener('showSuspensionMessage', handleSuspensionMessage)
   
   // Keyboard detection is now handled globally
@@ -979,6 +1023,7 @@ onMounted(async () => {
 
 // Cleanup event listeners on unmount
 onUnmounted(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
   window.removeEventListener('showSuspensionMessage', handleSuspensionMessage)
   window.removeEventListener('projectStoreReady', handleProjectStoreReady)
   

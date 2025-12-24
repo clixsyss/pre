@@ -33,24 +33,59 @@ class PermissionsService {
       return
     }
 
+    // Re-check platform to ensure accuracy
+    const protocol = window.location.protocol
+    const hasIOSBridge = window.webkit?.messageHandlers !== undefined
+    
+    // Enhanced platform detection
+    if (protocol === 'capacitor:' || hasIOSBridge) {
+      this.platform = 'ios'
+    } else {
+      this.platform = Capacitor.getPlatform()
+    }
+
     console.log('📋 Requesting critical permissions...')
     console.log('📋 Platform:', this.platform)
+    console.log('📋 Platform detection details:', { 
+      protocol, 
+      hasIOSBridge, 
+      capacitorPlatform: Capacitor.getPlatform(),
+      isNative: Capacitor.isNativePlatform()
+    })
     
     // Only request permissions on native platforms
     if (this.platform === 'web') {
-      console.log('📋 Web platform detected - skipping native permission requests')
-      this.permissionsRequested = true
-      return { location: false, bluetooth: false }
+      // Double-check if we're actually on web or if detection failed
+      const isActuallyNative = protocol === 'capacitor:' || hasIOSBridge || Capacitor.isNativePlatform()
+      if (isActuallyNative) {
+        console.log('⚠️ Platform detected as web but appears to be native, correcting...')
+        this.platform = Capacitor.getPlatform() || 'ios'
+      } else {
+        console.log('📋 Web platform detected - skipping native permission requests')
+        this.permissionsRequested = true
+        return { location: false, bluetooth: false, notifications: false }
+      }
     }
     
     const results = {
       location: false,
-      bluetooth: false
+      bluetooth: false,
+      notifications: false
+    }
+    
+    // Request Notification Permission (needed for push notifications)
+    try {
+      console.log('🔔 [1/3] Requesting Notification Permission...')
+      results.notifications = await this.requestNotificationPermission()
+      console.log(`🔔 Notification permission result: ${results.notifications ? 'SUCCESS ✅' : 'FAILED ❌'}`)
+    } catch (error) {
+      console.error('❌ Error requesting notification permission:', error)
+      results.notifications = false
     }
     
     // Request Location Permission (needed for guest passes)
     try {
-      console.log('📍 [1/2] Requesting Location Permission...')
+      console.log('📍 [2/3] Requesting Location Permission...')
       results.location = await this.requestLocationPermission()
       console.log(`📍 Location permission result: ${results.location ? 'SUCCESS ✅' : 'FAILED ❌'}`)
     } catch (error) {
@@ -60,7 +95,7 @@ class PermissionsService {
     
     // Request Bluetooth Permission (needed for gate control)
     try {
-      console.log('📶 [2/2] Requesting Bluetooth Permission...')
+      console.log('📶 [3/3] Requesting Bluetooth Permission...')
       results.bluetooth = await this.requestBluetoothPermission()
       console.log(`📶 Bluetooth permission result: ${results.bluetooth ? 'SUCCESS ✅' : 'FAILED ❌'}`)
     } catch (error) {
@@ -73,6 +108,78 @@ class PermissionsService {
     console.log('📊 Results:', results)
     
     return results
+  }
+
+  /**
+   * Request Notification Permission
+   * Required for push notifications
+   */
+  async requestNotificationPermission() {
+    try {
+      console.log('🔔 Checking notification permissions...')
+      
+      // Check if we're on a native platform
+      if (this.platform === 'web') {
+        // Use browser Notification API
+        if (!('Notification' in window)) {
+          console.log('⚠️ Browser does not support notifications')
+          return false
+        }
+        
+        const permission = Notification.permission
+        console.log('🔔 Current notification permission:', permission)
+        
+        if (permission === 'granted') {
+          console.log('✅ Notification permission already granted')
+          return true
+        }
+        
+        if (permission === 'denied') {
+          console.log('⚠️ Notification permission previously denied')
+          return false
+        }
+        
+        // Request permission
+        console.log('🔔 Requesting notification permission...')
+        const result = await Notification.requestPermission()
+        console.log('🔔 Notification permission result:', result)
+        
+        return result === 'granted'
+      } else {
+        // Native platform - use Capacitor Firebase Messaging
+        try {
+          // Ensure the plugin module is loaded (registers the plugin)
+          await import('@capacitor-firebase/messaging')
+          
+          // Access the native plugin from window.Capacitor (where iOS bridge registers it)
+          if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.FirebaseMessaging) {
+            console.error('❌ FirebaseMessaging plugin not available in window.Capacitor.Plugins')
+            return false
+          }
+          
+          const FirebaseMessagingPlugin = window.Capacitor.Plugins.FirebaseMessaging
+          console.log('🔔 FirebaseMessaging plugin loaded from window.Capacitor.Plugins')
+          
+          console.log('🔔 Requesting notification permission via Capacitor Firebase...')
+          const result = await FirebaseMessagingPlugin.requestPermissions()
+          console.log('🔔 Notification permission result:', result)
+          
+          if (result.receive === 'granted') {
+            console.log('✅ Notification permission granted')
+            return true
+          } else {
+            console.log('⚠️ Notification permission denied')
+            return false
+          }
+        } catch (error) {
+          console.error('❌ Error requesting notification permission:', error)
+          return false
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error requesting notification permission:', error)
+      return false
+    }
   }
 
   /**
@@ -228,15 +335,39 @@ class PermissionsService {
         console.warn('Bluetooth check failed:', error)
       }
       
+      let notificationPermission = 'prompt'
+      try {
+        if (this.platform === 'web') {
+          notificationPermission = Notification.permission || 'prompt'
+        } else {
+          // Native platform - check via Capacitor Firebase Messaging
+          await import('@capacitor-firebase/messaging')
+          if (window.Capacitor?.Plugins?.FirebaseMessaging) {
+            // Note: There's no checkPermissions method, so we'll try to get token
+            // If we can get token, permission is granted
+            try {
+              const result = await window.Capacitor.Plugins.FirebaseMessaging.getToken()
+              notificationPermission = result?.token ? 'granted' : 'denied'
+            } catch {
+              notificationPermission = 'denied'
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Notification permission check failed:', error)
+      }
+      
       return {
         location: locationPermission.location,
         bluetooth: bluetoothAvailable,
+        notifications: notificationPermission,
       }
     } catch (error) {
       console.error('Error checking permission status:', error)
       return {
         location: 'prompt',
         bluetooth: false,
+        notifications: 'prompt',
       }
     }
   }

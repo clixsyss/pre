@@ -12,9 +12,18 @@ export default boot(async ({ app }) => {
   let lastProcessedUserId = null
   let isProcessing = false // Guard to prevent concurrent processing
   
-  // Get platform info
-  const platform = Capacitor.getPlatform()
+  // Get platform info - use enhanced detection like permissionsService
+  const protocol = window.location.protocol
+  const hasIOSBridge = window.webkit?.messageHandlers !== undefined
+  let platform = Capacitor.getPlatform()
+  
+  // Enhanced platform detection for iOS (more reliable)
+  if (protocol === 'capacitor:' || hasIOSBridge) {
+    platform = 'ios'
+  }
+  
   const isNativePlatform = platform === 'ios' || platform === 'android'
+  console.log('🔍 App boot: Platform detection:', { platform, isNativePlatform, protocol, hasIOSBridge })
   
   // Helper function to load user profile and get DynamoDB users table ID
   const loadUserProfileForProjects = async (user) => {
@@ -175,16 +184,33 @@ export default boot(async ({ app }) => {
         }
         
         // Request permissions after successful authentication (like orange-app pattern)
-        if (isNativePlatform && !permissionsService.permissionsRequested) {
+        // Use enhanced platform detection to ensure we're really on native
+        const isReallyNative = isNativePlatform || protocol === 'capacitor:' || hasIOSBridge
+        
+        if (isReallyNative && !permissionsService.permissionsRequested) {
           console.log('🔐 Requesting app permissions after authentication...')
+          console.log('🔐 Platform check:', { isNativePlatform, isReallyNative, platform, permissionsRequested: permissionsService.permissionsRequested })
+          
+          // Request permissions with a delay to ensure everything is ready
           setTimeout(async () => {
             try {
-              await permissionsService.requestAllPermissions()
-              console.log('✅ All permissions requested')
+              console.log('🔐 Starting permission requests...')
+              const results = await permissionsService.requestAllPermissions()
+              console.log('✅ All permissions requested:', results)
             } catch (error) {
               console.error('❌ Error requesting permissions:', error)
+              console.error('❌ Error stack:', error.stack)
             }
-          }, 1500)
+          }, 2000) // Increased delay to 2 seconds
+        } else {
+          console.log('🔐 Skipping permission requests:', { 
+            isNativePlatform, 
+            isReallyNative, 
+            platform, 
+            permissionsRequested: permissionsService.permissionsRequested,
+            protocol,
+            hasIOSBridge
+          })
         }
       } catch (error) {
         console.error('App boot: Error rehydrating project store:', error)
