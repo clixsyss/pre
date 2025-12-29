@@ -6,7 +6,6 @@
 
 import { defineBoot } from '#q-app/wrappers';
 import { fcmService } from 'src/services/fcmService';
-import { auth } from 'src/boot/firebase';
 import optimizedAuthService from 'src/services/optimizedAuthService';
 
 export default defineBoot(async ({ app, router }) => {
@@ -48,26 +47,40 @@ export default defineBoot(async ({ app, router }) => {
     }
   };
 
-  // Check if user is already authenticated (works for web)
-  const currentUser = auth.currentUser;
-  if (currentUser) {
-    console.log('FCM Boot: User already authenticated (Web SDK), initializing FCM...');
-    // Delay to ensure everything is ready
-    setTimeout(() => {
-      initializeFCM('auth.currentUser');
-    }, 1000);
-  }
+  // Detect platform early (before any platform-specific checks)
+  const detectPlatform = () => {
+    try {
+      const protocol = window.location.protocol;
+      const hasIOSBridge = window.webkit?.messageHandlers !== undefined;
+      if (protocol === 'capacitor:' || hasIOSBridge) {
+        return 'ios';
+      }
+      // Try Capacitor API
+      if (window.Capacitor) {
+        const platform = window.Capacitor.getPlatform();
+        if (platform === 'android' || platform === 'ios') {
+          return platform;
+        }
+      }
+    } catch (e) {
+      console.warn('FCM Boot: Error detecting platform:', e);
+    }
+    return 'web';
+  };
 
-  // Listen for auth state changes (works for all platforms)
-  auth.onAuthStateChanged(async (user) => {
+  const detectedPlatform = detectPlatform();
+  console.log('FCM Boot: Detected platform:', detectedPlatform);
+
+  // Listen for Cognito auth state changes (AWS-only, no Firebase Auth)
+  optimizedAuthService.onAuthStateChanged(async (user) => {
     if (user) {
-      console.log('FCM Boot: Auth state changed - user authenticated');
+      console.log('FCM Boot: Cognito auth state changed - user authenticated');
       
       // Delay to ensure everything is ready (longer for iOS)
-      const delay = fcmService.platform === 'ios' ? 2000 : 500;
+      const delay = detectedPlatform === 'ios' ? 3000 : 1000;
       
       setTimeout(() => {
-        initializeFCM('onAuthStateChanged');
+        initializeFCM('optimizedAuthService.onAuthStateChanged');
       }, delay);
     } else {
       console.log('FCM Boot: User logged out, unregistering FCM...');
@@ -80,27 +93,25 @@ export default defineBoot(async ({ app, router }) => {
     }
   });
 
-  // iOS-specific: Check for authenticated user after a delay
-  // This handles cases where Capacitor Firebase Auth uses persistence
-  // and onAuthStateChanged doesn't fire on app launch
-  if (fcmService.platform === 'ios') {
-    console.log('FCM Boot: iOS detected - Setting up fallback user check...');
+  // iOS-specific: Check for authenticated user after a delay using Cognito
+  // This handles cases where auth state doesn't fire on app launch
+  if (detectedPlatform === 'ios') {
+    console.log('FCM Boot: iOS detected - Setting up fallback user check (Cognito)...');
     
     setTimeout(async () => {
-      // Import Capacitor Firebase Authentication
       try {
-        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
-        const { user } = await FirebaseAuthentication.getCurrentUser();
+        const currentUser = await optimizedAuthService.getCurrentUser();
         
-        if (user && user.uid && !fcmService.isInitialized) {
-          console.log('FCM Boot: iOS fallback - Found authenticated user, initializing FCM...');
-          console.log('FCM Boot: User ID:', user.uid);
+        if (currentUser && !fcmService.isInitialized) {
+          console.log('FCM Boot: iOS fallback - Found authenticated user (Cognito), initializing FCM...');
+          const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.userSub;
+          console.log('FCM Boot: User ID (Cognito sub):', cognitoSub);
           
           // Wait a bit more to ensure auth context is fully ready
           setTimeout(() => {
-            initializeFCM('ios-fallback-check');
+            initializeFCM('ios-fallback-check-cognito');
           }, 1000);
-        } else if (!user) {
+        } else if (!currentUser) {
           console.log('FCM Boot: iOS fallback - No user authenticated');
         } else if (fcmService.isInitialized) {
           console.log('FCM Boot: iOS fallback - FCM already initialized, skipping');
@@ -108,7 +119,7 @@ export default defineBoot(async ({ app, router }) => {
       } catch (error) {
         console.error('FCM Boot: iOS fallback check failed:', error);
       }
-    }, 5000); // Increased to 5 seconds after boot
+    }, 5000); // Check after 5 seconds to allow auth to restore
   }
 
   // Listen for navigation messages from service worker
@@ -152,6 +163,22 @@ export default defineBoot(async ({ app, router }) => {
     console.warn('FCM Boot: Authentication state not ready after timeout, proceeding anyway');
     return false;
   };
+
+  // Check if user is already authenticated via Cognito (on app startup)
+  setTimeout(async () => {
+    try {
+      const currentUser = await optimizedAuthService.getCurrentUser();
+      if (currentUser && !fcmService.isInitialized) {
+        console.log('FCM Boot: Found authenticated user on startup, initializing FCM...');
+        const delay = detectedPlatform === 'ios' ? 3000 : 1000;
+        setTimeout(() => {
+          initializeFCM('startup-check');
+        }, delay);
+      }
+    } catch (error) {
+      console.warn('FCM Boot: Error checking for authenticated user on startup:', error);
+    }
+  }, 2000); // Check after 2 seconds to allow auth to restore
 
   console.log('FCM Boot: Complete');
 });

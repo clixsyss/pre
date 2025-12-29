@@ -10,18 +10,10 @@
  * - Bilingual notification support (English/Arabic)
  */
 
+// Firebase Messaging is still required to get FCM tokens (push notification tokens come from Firebase)
+// But we only use AWS (DynamoDB) for storage and Cognito for auth
 import { getMessaging, getToken, onMessage, deleteToken } from 'firebase/messaging';
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  deleteDoc, 
-  serverTimestamp, 
-  query, 
-  getDocs,
-  updateDoc
-} from 'firebase/firestore';
-import { db, auth, detectPlatformFromUrl } from 'src/boot/firebase';
+import { detectPlatformFromUrl } from 'src/boot/firebase';
 import { Notify } from 'quasar';
 
 class FCMService {
@@ -119,23 +111,10 @@ class FCMService {
           console.log('🎉 FCMService: Token length:', token.length);
           this.currentToken = token;
           
-          // Mirror orange-pharmacies: write flat fcmToken immediately after retrieval
-          try {
-            const userId = await this.getCurrentUserId();
-            if (userId) {
-              const { FirebaseFirestore } = await import('@capacitor-firebase/firestore');
-              await FirebaseFirestore.setDocument({
-                reference: `users/${userId}`,
-                data: { fcmToken: token },
-                merge: true
-              });
-              console.log('✅ FCMService: Immediate user fcmToken updated (native)');
-            }
-          } catch (e) {
-            console.warn('⚠️ FCMService: Immediate flat fcmToken write failed (native):', e);
-          }
+          // No longer writing to Firestore - only DynamoDB
+          // Token will be saved to DynamoDB in saveTokenWithRetry below
 
-          // Save token to Firestore with retry for subcollection record
+          // Save token to DynamoDB (AWS-only, no Firestore)
           await this.saveTokenWithRetry(token, this.platform);
         } else {
           console.warn('⚠️ FCMService: No token received');
@@ -163,9 +142,9 @@ class FCMService {
       const currentUserId = await this.getCurrentUserId();
       
       if (currentUserId) {
-        console.log('🎉 FCMService: Saving token to Firestore for user:', currentUserId);
+        console.log('🎉 FCMService: Saving token to DynamoDB for user:', currentUserId);
         await this.saveTokenToFirestore(token, platform);
-        console.log('✅ FCMService: Token saved successfully!');
+        console.log('✅ FCMService: Token saved successfully to DynamoDB!');
       } else if (retryCount < 10) {
         console.log(`⚠️ FCMService: No authenticated user yet, retrying in 1s... (attempt ${retryCount + 1}/10)`);
         setTimeout(() => this.saveTokenWithRetry(token, platform, retryCount + 1), 1000);
@@ -255,8 +234,9 @@ class FCMService {
       console.log('FCMService: Got web FCM token:', token);
       this.currentToken = token;
       
-      // Save token to Firestore
-      if (auth.currentUser) {
+      // Save token to DynamoDB (AWS-only)
+      const userId = await this.getCurrentUserId();
+      if (userId) {
         await this.saveTokenToFirestore(token, 'web');
       }
       
@@ -290,8 +270,8 @@ class FCMService {
       console.log('🎉 FCMService: New token:', event.token);
       this.currentToken = event.token;
       
-      // Update token in Firestore (use retry logic)
-      console.log('🔄 FCMService: Triggering token save after refresh...');
+      // Update token in DynamoDB (use retry logic)
+      console.log('🔄 FCMService: Token refreshed, updating in DynamoDB...');
       await this.saveTokenWithRetry(event.token, this.platform);
     });
 
@@ -412,20 +392,13 @@ class FCMService {
     
     while (elapsed < maxWaitTime) {
       try {
-        let currentUser = null;
+        // Use Cognito auth only (AWS-only, no Firebase Auth)
+        const optimizedAuthService = await import('./optimizedAuthService').then(m => m.default);
+        const currentUser = await optimizedAuthService.getCurrentUser();
         
-        if (this.isNative) {
-          // Use Capacitor Firebase Authentication on native
-          const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
-          const { user } = await FirebaseAuthentication.getCurrentUser();
-          currentUser = user;
-        } else {
-          // Use Web SDK
-          currentUser = auth.currentUser;
-        }
-        
-        if (currentUser && currentUser.uid) {
-          console.log('FCMService: Authentication state ready, user:', currentUser.uid);
+        if (currentUser) {
+          const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.userSub;
+          console.log('FCMService: Authentication state ready, user (Cognito sub):', cognitoSub);
           console.log(`FCMService: Auth ready after ${elapsed}ms`);
           return true;
         }
@@ -456,7 +429,7 @@ class FCMService {
       // Still allow navigation, router guards will handle redirect if needed
     }
     
-    // iOS needs extra time for Firebase Auth persistence to fully restore
+    // iOS needs extra time for Cognito auth persistence to fully restore
     // and for the app initialization to complete before navigation
     const additionalDelay = this.platform === 'ios' ? 1500 : 500;
     console.log(`FCMService: Waiting ${additionalDelay}ms before navigation (platform: ${this.platform})`);
@@ -498,11 +471,12 @@ class FCMService {
   }
 
   /**
-   * Save FCM token to Firestore (for FCM messaging) AND DynamoDB (for Lambda notifications)
+   * Save FCM token to DynamoDB (AWS-only storage)
+   * No longer uses Firestore - only AWS DynamoDB for token storage
    */
   async saveTokenToFirestore(token, platform) {
     try {
-      // Use getCurrentUserId which handles Web SDK auth for all platforms
+      // Use getCurrentUserId which gets Cognito sub (DynamoDB user ID)
       const userId = await this.getCurrentUserId();
       
       if (!userId) {
@@ -510,43 +484,14 @@ class FCMService {
         throw new Error('No authenticated user');
       }
 
-      console.log('💾 FCMService: Preparing to save token to Firestore:', { token, platform, userId });
-
-      // Create a unique ID for this token
-      const tokenId = this.hashToken(token);
-      
-      // Use Web SDK Firestore for all platforms (consistent with auth)
-      // KEEP THIS: Firebase FCM still needs Firestore token storage for messaging
-      console.log('🌐 FCMService: Using Web SDK to save token to Firestore...');
-      const tokenRef = doc(db, 'users', userId, 'tokens', tokenId);
-        
-      await setDoc(tokenRef, {
-        token,
-        platform,
-        isActive: true,
-        createdAt: serverTimestamp(),
-        lastSeenAt: serverTimestamp(),
-        deviceInfo: {
-          userAgent: navigator.userAgent || 'Unknown',
-            isNative: this.isNative,
-            platformType: this.platform
-          }
-      }, { merge: true });
-        
-      console.log('✅ FCMService: Token saved successfully to Firestore!');
-      
-      // Also store flat fcmToken on the user document for compatibility
-      try {
-        const userRef = doc(db, 'users', userId);
-        await updateDoc(userRef, { fcmToken: token });
-        console.log('✅ FCMService: User fcmToken field updated in Firestore');
-      } catch (e) {
-        console.warn('⚠️ FCMService: Failed to set flat fcmToken:', e?.message || e);
-      }
+      console.log('💾 FCMService: Registering token in DynamoDB (AWS-only storage)...', { 
+        userId, 
+        platform: platform || this.platform || 'web', 
+        tokenLength: token?.length 
+      });
 
       // Register token in DynamoDB for Lambda notification system
-      // This enables AWS Lambda to send push notifications to this device
-      // Best-effort: failures must NOT break login or the app
+      // This is the ONLY storage location - no Firestore
       try {
         const { registerUserToken } = await import('./tokenRegistrationService');
         const result = await registerUserToken({
@@ -555,12 +500,23 @@ class FCMService {
           platform: platform || this.platform || 'web'
         });
         if (result) {
-          console.log('✅ FCMService: Token registered in DynamoDB for Lambda notifications');
+          console.log('✅ FCMService: Token registered in DynamoDB userTokens table', { 
+            userId, 
+            tokenId: result.id, 
+            platform: result.platform 
+          });
+        } else {
+          console.warn('⚠️ FCMService: Token registration returned null (may have been cached or failed silently)');
         }
       } catch (dynamoError) {
-        // Non-critical: token registration failure shouldn't break FCM setup
-        // Lambda notifications won't work, but Firebase FCM still works
-        console.warn('⚠️ FCMService: Failed to register token in DynamoDB (non-critical):', dynamoError?.message || dynamoError);
+        // Critical: token registration failure means notifications won't work
+        console.error('❌ FCMService: Failed to register token in DynamoDB:', {
+          error: dynamoError?.message || dynamoError,
+          stack: dynamoError?.stack,
+          userId,
+          platform: platform || this.platform || 'web'
+        });
+        // Don't throw - allow app to continue, but log the error
       }
       
       // Store current token in memory
@@ -592,7 +548,15 @@ class FCMService {
           if (retryUser) {
             console.log(`FCMService: Auth ready after ${(i + 1) * 100}ms`);
             // Get Cognito sub (DynamoDB user ID)
-            const cognitoSub = retryUser.attributes?.sub || retryUser.cognitoAttributes?.sub || retryUser.userSub || retryUser.uid;
+            // Priority: attributes.sub > cognitoAttributes.sub > userSub
+            // DO NOT fall back to uid as it might be Firebase UID or username
+            const cognitoSub = retryUser.attributes?.sub || retryUser.cognitoAttributes?.sub || retryUser.userSub;
+            
+            if (!cognitoSub) {
+              console.error('FCMService: No Cognito sub found in retry user object');
+              continue; // Try again
+            }
+            
             console.log(`FCMService: Got user ID (Cognito sub): ${cognitoSub}`);
             return cognitoSub;
           }
@@ -605,7 +569,30 @@ class FCMService {
       }
       
       // Get Cognito sub (DynamoDB user ID) - this is what Lambda uses
-      const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.userSub || currentUser.uid;
+      // Priority: attributes.sub > cognitoAttributes.sub > userSub
+      // DO NOT fall back to uid as it might be Firebase UID or username
+      const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.userSub;
+      
+      if (!cognitoSub) {
+        console.error('FCMService: No Cognito sub found in user object. Available fields:', {
+          hasAttributes: !!currentUser.attributes,
+          hasCognitoAttributes: !!currentUser.cognitoAttributes,
+          hasUserSub: !!currentUser.userSub,
+          hasUid: !!currentUser.uid,
+          uidValue: currentUser.uid,
+          attributesKeys: currentUser.attributes ? Object.keys(currentUser.attributes) : [],
+          cognitoAttributesKeys: currentUser.cognitoAttributes ? Object.keys(currentUser.cognitoAttributes) : []
+        });
+        return null;
+      }
+      
+      // Validate that it's a Cognito sub format (UUID v4 format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+      const cognitoSubPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!cognitoSubPattern.test(cognitoSub)) {
+        console.warn(`FCMService: User ID "${cognitoSub}" doesn't match Cognito sub format. This might be a Firebase UID or username.`);
+        // Still return it, but log a warning
+      }
+      
       console.log(`FCMService: Got user ID (Cognito sub): ${cognitoSub}`);
       return cognitoSub;
     } catch (error) {
@@ -615,7 +602,7 @@ class FCMService {
   }
 
   /**
-   * Update token's last seen timestamp
+   * Update token's last seen timestamp in DynamoDB
    */
   async updateTokenLastSeen() {
     try {
@@ -624,21 +611,43 @@ class FCMService {
         return;
       }
 
-      const tokenId = this.hashToken(this.currentToken);
-      const tokenRef = doc(db, 'users', userId, 'tokens', tokenId);
+      // Update token in DynamoDB
+      const { updateItem, query } = await import('../aws/dynamodbClient');
       
-      await updateDoc(tokenRef, {
-        lastSeenAt: serverTimestamp()
+      // Query to find the token first
+      const existingTokens = await query('userTokens', {
+        KeyConditionExpression: 'userId = :userId',
+        FilterExpression: '#token = :token',
+        ExpressionAttributeNames: {
+          '#token': 'token',
+        },
+        ExpressionAttributeValues: {
+          ':userId': userId,
+          ':token': this.currentToken,
+        },
       });
 
-      console.log('FCMService: Token last seen updated');
+      if (existingTokens.length > 0) {
+        const existingToken = existingTokens[0];
+        await updateItem(
+          'userTokens',
+          { userId, id: existingToken.id },
+          {
+            UpdateExpression: 'SET updatedAt = :updatedAt',
+            ExpressionAttributeValues: {
+              ':updatedAt': Date.now(),
+            },
+          }
+        );
+        console.log('FCMService: Token last seen updated in DynamoDB');
+      }
     } catch (error) {
       console.error('FCMService: Error updating token last seen:', error);
     }
   }
 
   /**
-   * Remove FCM token from Firestore
+   * Remove FCM token from DynamoDB (mark as inactive)
    */
   async removeTokenFromFirestore(token) {
     try {
@@ -648,22 +657,45 @@ class FCMService {
         return;
       }
 
-      console.log('FCMService: Removing token from Firestore:', token);
+      console.log('FCMService: Marking token as inactive in DynamoDB:', token);
 
-      const tokenId = this.hashToken(token);
-      const tokenRef = doc(db, 'users', userId, 'tokens', tokenId);
-      
-      await deleteDoc(tokenRef);
+      // Find token in DynamoDB
+      const { query, updateItem } = await import('../aws/dynamodbClient');
+      const existingTokens = await query('userTokens', {
+        KeyConditionExpression: 'userId = :userId',
+        FilterExpression: '#token = :token',
+        ExpressionAttributeNames: {
+          '#token': 'token',
+        },
+        ExpressionAttributeValues: {
+          ':userId': userId,
+          ':token': token,
+        },
+      });
 
-      console.log('FCMService: Token removed successfully');
+      if (existingTokens.length > 0) {
+        // Mark token as inactive instead of deleting
+        await updateItem(
+          'userTokens',
+          { userId, id: existingTokens[0].id },
+          {
+            UpdateExpression: 'SET isActive = :isActive, updatedAt = :updatedAt',
+            ExpressionAttributeValues: {
+              ':isActive': false,
+              ':updatedAt': Date.now(),
+            },
+          }
+        );
+        console.log('FCMService: Token marked as inactive in DynamoDB');
+      }
     } catch (error) {
       console.error('FCMService: Error removing token:', error);
-      throw error;
+      // Don't throw - token removal failure shouldn't break logout
     }
   }
 
   /**
-   * Remove all tokens for current user
+   * Remove all tokens for current user (mark as inactive in DynamoDB)
    */
   async removeAllTokens() {
     try {
@@ -672,19 +704,39 @@ class FCMService {
         return;
       }
 
-      console.log('FCMService: Removing all tokens for user:', userId);
+      console.log('FCMService: Marking all tokens as inactive for user:', userId);
 
-      const tokensRef = collection(db, 'users', userId, 'tokens');
-      const q = query(tokensRef);
-      const snapshot = await getDocs(q);
+      // Query all active tokens for this user
+      const { query, updateItem } = await import('../aws/dynamodbClient');
+      const tokens = await query('userTokens', {
+        KeyConditionExpression: 'userId = :userId',
+        FilterExpression: 'isActive = :isActive',
+        ExpressionAttributeValues: {
+          ':userId': userId,
+          ':isActive': true,
+        },
+      });
 
-      const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
-      await Promise.all(deletePromises);
+      // Mark all as inactive
+      const updatePromises = tokens.map(token => 
+        updateItem(
+          'userTokens',
+          { userId, id: token.id },
+          {
+            UpdateExpression: 'SET isActive = :isActive, updatedAt = :updatedAt',
+            ExpressionAttributeValues: {
+              ':isActive': false,
+              ':updatedAt': Date.now(),
+            },
+          }
+        )
+      );
+      await Promise.all(updatePromises);
 
-      console.log('FCMService: All tokens removed');
+      console.log('FCMService: All tokens marked as inactive in DynamoDB');
     } catch (error) {
       console.error('FCMService: Error removing all tokens:', error);
-      throw error;
+      // Don't throw - token removal failure shouldn't break logout
     }
   }
 
@@ -695,7 +747,7 @@ class FCMService {
     try {
       console.log('FCMService: Unregistering from push notifications...');
 
-      // Remove token from Firestore
+      // Remove token from DynamoDB (mark as inactive)
       if (this.currentToken) {
         await this.removeTokenFromFirestore(this.currentToken);
       }

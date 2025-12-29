@@ -67,10 +67,16 @@ const log = {
  * Uses DynamoDB Query (not Scan) for efficient lookup by partition key (userId).
  * FilterExpression is used to find exact token match within user's tokens.
  *
+ * IMPORTANT: iOS devices using Firebase Cloud Messaging generate FCM tokens
+ * (format: contains colons, starts with FCM patterns). These tokens should be
+ * saved with platform='ios' (correct - it's from an iOS device), but the Lambda
+ * will detect the FCM format and use GCM/FCM SNS platform for sending.
+ *
  * @param {Object} params - Registration parameters
  * @param {string} params.userId - User ID (Cognito/Firebase Auth user ID)
  * @param {string} params.token - FCM token string
  * @param {string} [params.platform='web'] - Platform: 'web', 'ios', or 'android'
+ *   Note: iOS devices can have FCM tokens (Firebase format) or native APNS tokens (hex format)
  * @returns {Promise<Object|null>} Registered token object or null if failed
  */
 export async function registerUserToken({ userId, token, platform = 'web' }) {

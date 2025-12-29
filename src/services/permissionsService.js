@@ -61,8 +61,8 @@ class PermissionsService {
         console.log('⚠️ Platform detected as web but appears to be native, correcting...')
         this.platform = Capacitor.getPlatform() || 'ios'
       } else {
-        console.log('📋 Web platform detected - skipping native permission requests')
-        this.permissionsRequested = true
+      console.log('📋 Web platform detected - skipping native permission requests')
+      this.permissionsRequested = true
         return { location: false, bluetooth: false, notifications: false }
       }
     }

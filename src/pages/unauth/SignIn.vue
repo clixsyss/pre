@@ -978,8 +978,23 @@ const handleSignIn = async () => {
     
     console.log('[SignIn] Proceeding to home...')
     
-    // FCM will be handled by the boot file after auth state change
-    console.log('[SignIn] ✅ FCM will be initialized by boot file')
+    // Register FCM token for push notifications (explicit initialization for iOS reliability)
+    console.log('[SignIn] 📱 Registering FCM token for notifications...')
+    try {
+      const { fcmService } = await import('../../services/fcmService')
+      // Initialize FCM with a delay to ensure auth state is fully established
+      setTimeout(async () => {
+        try {
+          await fcmService.initialize()
+          console.log('[SignIn] ✅ FCM token registered successfully')
+        } catch (fcmError) {
+          console.warn('[SignIn] ⚠️ FCM registration failed (non-critical):', fcmError)
+          // Don't block login if FCM fails
+        }
+      }, 1000) // 1 second delay for iOS to ensure auth state is ready
+    } catch (fcmImportError) {
+      console.warn('[SignIn] ⚠️ Failed to import FCM service (non-critical):', fcmImportError)
+    }
 
     // Wait a bit to ensure auth state is fully established
     await new Promise((resolve) => setTimeout(resolve, 500))

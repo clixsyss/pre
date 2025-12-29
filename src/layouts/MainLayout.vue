@@ -667,7 +667,7 @@ const handleVisibilityChange = async () => {
       console.error('❌ MainLayout: Error checking permissions on visibility change:', error)
     }
   }
-}
+  }
 
   const handleContactSupport = () => {
     // Navigate to support page
