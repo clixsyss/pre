@@ -57,10 +57,23 @@ export async function getCurrentPosition() {
         throw error
       }
       
-      // If permission was just granted or is prompt, try again
+      // If permission was just granted or is prompt, continue
       if (requestResult.location === 'prompt') {
         console.log('📍 Permission is in prompt state, user needs to respond to dialog')
+        // On iOS, if it's in prompt state, we should wait a moment for the user to respond
+        // But we'll try to get position anyway - if it fails, the error will be handled below
       }
+      
+      // If permission was just granted, check again to ensure it's actually granted
+      if (requestResult.location === 'granted') {
+        console.log('✅ Location permission granted')
+      } else {
+        // Still not granted after request - might be denied or prompt
+        // Try to get position anyway, but it will likely fail
+        console.log('⚠️ Location permission not fully granted, attempting to get position anyway...')
+      }
+    } else {
+      console.log('✅ Location permission already granted')
     }
 
     console.log('📍 Getting current position with high accuracy...')

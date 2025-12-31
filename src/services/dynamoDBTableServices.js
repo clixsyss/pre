@@ -272,9 +272,10 @@ const PROJECTS_UNIT_GUEST_PASS_SETTINGS_TABLE = 'projects__unitGuestPassSettings
 export const projectsUnitGuestPassSettingsService = {
   async getSettings(projectId, unitId) {
     try {
+      // Project tables use parentId as partition key and id as sort key
       return await getItem(PROJECTS_UNIT_GUEST_PASS_SETTINGS_TABLE, {
-        projectId,
-        unitId
+        parentId: projectId,
+        id: unitId
       })
     } catch (error) {
       console.error('[ProjectsUnitGuestPassSettingsService] Error:', error)
@@ -284,9 +285,12 @@ export const projectsUnitGuestPassSettingsService = {
   
   async updateSettings(projectId, unitId, settings) {
     try {
+      // Project tables use parentId as partition key and id as sort key
       const item = {
-        projectId,
-        unitId,
+        parentId: projectId,
+        id: unitId,
+        projectId, // Keep for backward compatibility
+        unitId, // Keep for backward compatibility
         ...settings,
         updatedAt: new Date().toISOString()
       }

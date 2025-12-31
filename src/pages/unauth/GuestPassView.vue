@@ -111,7 +111,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import QRCode from 'qrcode'
-import firestoreService from '../../services/firestoreService'
+import { getGuestPass } from '../../api/guestPassAPI'
 
 defineOptions({
   name: 'GuestPassView'
@@ -134,9 +134,13 @@ const isExpired = computed(() => {
   let expiryDate
   const dateValue = pass.value.validUntil
   
-  // Handle Firestore Timestamp
+  // Handle Firestore Timestamp (legacy support)
   if (dateValue && typeof dateValue === 'object' && 'seconds' in dateValue) {
     expiryDate = new Date(dateValue.seconds * 1000)
+  } 
+  // Handle ISO string or number (DynamoDB stores as number/timestamp)
+  else if (typeof dateValue === 'number') {
+    expiryDate = new Date(dateValue)
   } else {
     expiryDate = new Date(dateValue)
   }
@@ -152,9 +156,13 @@ const remainingTime = computed(() => {
   const dateValue = pass.value.validUntil
   
   let expiryDate
-  // Handle Firestore Timestamp
+  // Handle Firestore Timestamp (legacy support)
   if (dateValue && typeof dateValue === 'object' && 'seconds' in dateValue) {
     expiryDate = new Date(dateValue.seconds * 1000)
+  } 
+  // Handle number (DynamoDB stores as timestamp in milliseconds)
+  else if (typeof dateValue === 'number') {
+    expiryDate = new Date(dateValue)
   } else {
     expiryDate = new Date(dateValue)
   }
@@ -182,10 +190,14 @@ const formatDateTime = (dateValue) => {
   
   let date
   
-  // Handle Firestore Timestamp objects
+  // Handle Firestore Timestamp objects (legacy support)
   if (dateValue && typeof dateValue === 'object' && 'seconds' in dateValue) {
     date = new Date(dateValue.seconds * 1000)
   } 
+  // Handle number (DynamoDB stores as timestamp in milliseconds)
+  else if (typeof dateValue === 'number') {
+    date = new Date(dateValue)
+  }
   // Handle ISO strings or Date objects
   else {
     date = new Date(dateValue)
@@ -207,7 +219,7 @@ const formatDateTime = (dateValue) => {
   })
 }
 
-// Load guest pass from Firestore
+// Load guest pass from DynamoDB (AWS)
 const loadGuestPass = async () => {
   try {
     loading.value = true
@@ -217,28 +229,28 @@ const loadGuestPass = async () => {
       throw new Error('Invalid pass link. Please check the URL.')
     }
 
-    console.log('📥 Loading guest pass:', passId.value, 'for project:', projectId.value)
+    console.log('📥 Loading guest pass from DynamoDB:', passId.value, 'for project:', projectId.value)
 
-    // Fetch pass from Firestore
-    const passDoc = await firestoreService.getDoc(`projects/${projectId.value}/guestPasses/${passId.value}`)
+    // Fetch pass from DynamoDB using AWS-based API
+    const passData = await getGuestPass(projectId.value, passId.value)
     
-    if (!passDoc.exists()) {
+    if (!passData) {
       throw new Error('Guest pass not found. It may have been deleted or the link is invalid.')
     }
 
-    const passData = passDoc.data()
-    
-    console.log('🔍 Raw Firestore data:', {
+    console.log('🔍 Pass data from DynamoDB:', {
+      id: passData.id,
+      guestName: passData.guestName,
       validUntil: passData.validUntil,
       validUntilType: typeof passData.validUntil,
-      validUntilKeys: passData.validUntil ? Object.keys(passData.validUntil) : null,
       createdAt: passData.createdAt,
-      createdAtType: typeof passData.createdAt
+      createdAtType: typeof passData.createdAt,
+      qrCodeUrl: passData.qrCodeUrl ? 'present (S3)' : 'missing'
     })
     
     pass.value = {
-      id: passId.value,
-      projectId: projectId.value,
+      id: passData.id,
+      projectId: passData.projectId,
       guestName: passData.guestName,
       purpose: passData.purpose || 'Guest Visit',
       userName: passData.userName,
@@ -246,10 +258,21 @@ const loadGuestPass = async () => {
       createdAt: passData.createdAt,
       used: passData.used || false,
       usedAt: passData.usedAt || null,
-      qrCodeUrl: passData.qrCodeUrl || null,
+      qrCodeUrl: passData.qrCodeUrl || null, // This should be an S3 URL
     }
 
-    console.log('✅ Guest pass loaded:', pass.value)
+    console.log('✅ Guest pass loaded from DynamoDB:', pass.value)
+    
+    // Verify QR code URL is from S3, not Firebase
+    if (pass.value.qrCodeUrl) {
+      const isS3 = pass.value.qrCodeUrl.includes('s3.amazonaws.com') || pass.value.qrCodeUrl.includes('.s3.')
+      const isFirebase = pass.value.qrCodeUrl.includes('firebasestorage.googleapis.com') || pass.value.qrCodeUrl.includes('firebase')
+      console.log('🔍 QR code URL check:', { isS3, isFirebase, url: pass.value.qrCodeUrl })
+      
+      if (isFirebase) {
+        console.warn('⚠️ WARNING: QR code URL is from Firebase, not S3. This is an old pass.')
+      }
+    }
 
     // If no QR code URL, generate QR code on canvas
     if (!pass.value.qrCodeUrl && qrCanvas.value) {

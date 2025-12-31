@@ -1,20 +1,27 @@
-import { doc, getDoc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { db, storage } from 'src/boot/firebase'
-import firestoreService from '../services/firestoreService'
+/**
+ * AWS-Based Guest Pass API
+ * 
+ * This API provides guest pass functionality using AWS services:
+ * - DynamoDB for data storage (projects__guestPasses table)
+ * - S3 for QR code image storage
+ * - Cognito for user authentication
+ * 
+ * Replaces Firebase/Firestore implementation with AWS-only solution
+ */
+
+import { putItem, query, getItem, updateItem } from '../aws/dynamodbClient'
+import fileUploadService from '../services/fileUploadService'
+import { projectsUnitGuestPassSettingsService } from '../services/dynamoDBTableServices'
 import QRCode from 'qrcode'
 
-/**
- * Centralized Guest Pass API
- *
- * This API provides the correct way to check user eligibility and create guest passes.
- * Always use these functions instead of direct Firebase queries to ensure consistency.
- */
+const GUEST_PASSES_TABLE = 'projects__guestPasses'
+const GUEST_PASS_SETTINGS_TABLE = 'guestPassSettings'
+const USERS_TABLE = 'users'
 
 /**
  * Check if a user is eligible to generate guest passes
- * @param {string} projectId - Project ID (optional for now)
- * @param {string} userId - User ID to check
+ * @param {string} projectId - Project ID
+ * @param {string} userId - User ID (Cognito sub)
  * @returns {Promise<Object>} Eligibility result
  */
 export const checkUserEligibility = async (projectId, userId) => {
@@ -29,11 +36,10 @@ export const checkUserEligibility = async (projectId, userId) => {
 
     console.log(`🔍 Checking user eligibility for project ${projectId}`)
 
-    // Check if user exists and get their data
-    const userDocRef = doc(db, 'users', userId)
-    const userDoc = await getDoc(userDocRef)
+    // Get user from DynamoDB
+    const user = await getItem(USERS_TABLE, { id: userId })
 
-    if (!userDoc.exists()) {
+    if (!user) {
       return {
         success: false,
         error: 'User not found',
@@ -46,23 +52,10 @@ export const checkUserEligibility = async (projectId, userId) => {
       }
     }
 
-    const userData = userDoc.data()
-    
     // Check if user belongs to this project
-    if (!userData.projects || !Array.isArray(userData.projects)) {
-      return {
-        success: false,
-        error: 'User not in project',
-        message: 'User does not belong to this project',
-        data: {
-          canGenerate: false,
-          reason: 'not_in_project',
-          user: null,
-        },
-      }
-    }
+    const userProjects = user.projects || []
+    const projectInfo = userProjects.find(project => project.projectId === projectId)
     
-    const projectInfo = userData.projects.find(project => project.projectId === projectId)
     if (!projectInfo) {
       return {
         success: false,
@@ -76,57 +69,15 @@ export const checkUserEligibility = async (projectId, userId) => {
       }
     }
 
-    // Get per-project user settings
-    let userSettings = {}
-    try {
-      const userSettingsResult = await firestoreService.getDoc(`projects/${projectId}/userGuestPassSettings/${userId}`)
-      userSettings = userSettingsResult?.data?.() || userSettingsResult || {}
-      console.log(`📋 Per-project settings for user ${userId}:`, userSettings)
-    } catch {
-      console.log(`ℹ️ No per-project settings found for user ${userId}, will use defaults`)
-      userSettings = {} // Ensure it's always an object
-    }
-
-    // Check if user is blocked in this specific project
-    const blocked = userSettings.blocked ?? false
-    if (blocked) {
-      return {
-        success: false,
-        error: 'User blocked',
-        message: 'User is blocked from generating passes in this project',
-        data: {
-          canGenerate: false,
-          reason: 'blocked',
-          user: userData,
-          blockingDetails: {
-            reason: userSettings.blockedReason || 'Blocked by admin',
-            blockedAt: userSettings.blockedAt || null,
-          },
-        },
-      }
-    }
-
-    // Get monthly limit - per-unit hierarchy:
-    // 1. Check if project-wide blocking is enabled → block everyone
-    // 2. Check if unit is blocked → block entire unit
-    // 3. If unit has custom limit → use that
-    // 4. If NO custom unit limit → use global project limit
-    // This allows different limits per unit (property/apartment)
-    
-    let monthlyLimit = 30 // Final fallback
-    const userUnit = projectInfo.unit || userData.unit || ''
-    
-    console.log(`🏠 User unit: ${userUnit}`)
-    
     // Get global settings for this project
     let globalSettings = {}
     try {
-      const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
-      globalSettings = globalSettingsResult?.data?.() || globalSettingsResult || {}
+      // guestPassSettings table uses 'id' as the partition key
+      const settings = await getItem(GUEST_PASS_SETTINGS_TABLE, { id: projectId })
+      globalSettings = settings || {}
       
       // Check if project-wide blocking is enabled
       if (globalSettings.blockAllUsers === true) {
-        console.log(`🚫 Project-wide blocking is ENABLED for project ${projectId}`)
         return {
           success: false,
           error: 'Project blocked',
@@ -134,17 +85,14 @@ export const checkUserEligibility = async (projectId, userId) => {
           data: {
             canGenerate: false,
             reason: 'project_blocked',
-            user: userData,
+            user: user,
           },
         }
       }
       
-      // Check if family members are blocked (role-based blocking)
-      const userRole = projectInfo.role || userData.role || ''
-      console.log(`👥 User role in project: ${userRole}`)
-      
+      // Check if family members are blocked
+      const userRole = projectInfo.role || user.role || ''
       if (globalSettings.blockFamilyMembers === true && userRole === 'family') {
-        console.log(`🚫 Family members blocking is ENABLED for project ${projectId}`)
         return {
           success: false,
           error: 'Family members blocked',
@@ -152,117 +100,85 @@ export const checkUserEligibility = async (projectId, userId) => {
           data: {
             canGenerate: false,
             reason: 'family_members_blocked',
-            user: userData,
+            user: user,
           },
         }
       }
-      
-      if (globalSettings.monthlyLimit) {
-        // Handle both string and number values
-        monthlyLimit = typeof globalSettings.monthlyLimit === 'string'
-          ? parseInt(globalSettings.monthlyLimit, 10)
-          : globalSettings.monthlyLimit
-        console.log(`🌐 Global limit for project ${projectId}:`, monthlyLimit)
-      } else {
-        console.warn(`⚠️ No global limit found for project ${projectId}, using fallback: ${monthlyLimit}`)
-      }
     } catch (settingsError) {
       console.warn('⚠️ Could not fetch global settings:', settingsError)
-      console.log(`Using fallback limit: ${monthlyLimit}`)
-      globalSettings = {} // Ensure it's always an object
+      globalSettings = {}
     }
+
+    // Get monthly limit (default: 30)
+    let monthlyLimit = globalSettings.monthlyLimit || 30
+    let unitBlocked = false
+    const userUnit = projectInfo.unit || user.unit || ''
     
-    // Check if unit is blocked (per-unit blocking takes precedence)
-    let unitSettings = {}
+    // Check per-unit settings if unit exists
     if (userUnit) {
       try {
-        const unitSettingsResult = await firestoreService.getDoc(`projects/${projectId}/unitGuestPassSettings/${userUnit}`)
-        unitSettings = unitSettingsResult?.data?.() || unitSettingsResult || {}
-        console.log(`🏠 Per-unit settings for unit ${userUnit}:`, unitSettings)
+        const unitSettings = await projectsUnitGuestPassSettingsService.getSettings(projectId, userUnit)
+        console.log(`🏠 Unit settings for ${userUnit}:`, unitSettings)
         
-        // Check if unit is blocked
-        if (unitSettings.blocked === true) {
-          return {
-            success: false,
-            error: 'Unit blocked',
-            message: 'Guest pass generation is blocked for your unit',
-            data: {
-              canGenerate: false,
-              reason: 'unit_blocked',
-              user: userData,
-              blockingDetails: {
-                reason: unitSettings.blockedReason || 'Blocked by admin',
-                blockedAt: unitSettings.blockedAt || null,
-              },
-            },
+        if (unitSettings) {
+          // Use unit-specific limit if set
+          if (unitSettings.monthlyLimit !== undefined && unitSettings.monthlyLimit !== null) {
+            monthlyLimit = unitSettings.monthlyLimit
+            console.log(`📊 Using unit-specific limit: ${monthlyLimit} for unit ${userUnit}`)
+          }
+          
+          // Check if unit is blocked
+          if (unitSettings.blocked === true) {
+            unitBlocked = true
+            console.log(`🚫 Unit ${userUnit} is blocked`)
           }
         }
-        
-        // Override with per-unit limit if set
-        if (unitSettings.monthlyLimit !== undefined && unitSettings.monthlyLimit !== null) {
-          monthlyLimit = typeof unitSettings.monthlyLimit === 'string'
-            ? parseInt(unitSettings.monthlyLimit, 10)
-            : unitSettings.monthlyLimit
-          console.log(`🎯 Unit ${userUnit} has CUSTOM limit:`, monthlyLimit)
-        } else {
-          console.log(`🌐 Unit ${userUnit} using GLOBAL limit:`, monthlyLimit)
-        }
-      } catch {
-        console.log(`ℹ️ No per-unit settings found for unit ${userUnit}, using global limit`)
-        unitSettings = {} // Ensure it's always an object
+      } catch (error) {
+        console.warn('⚠️ Could not fetch unit settings:', error)
+        // Use global limit if unit settings not found
       }
     }
     
-    // Backward compatibility: Check old per-user settings (DEPRECATED)
-    // This will be removed in future versions
-    if (userSettings.blocked === true) {
-      console.warn('⚠️ Using DEPRECATED per-user blocking. Please migrate to per-unit blocking.')
+    // Check if unit is blocked
+    if (unitBlocked) {
       return {
         success: false,
-        error: 'User blocked',
-        message: 'You are blocked from generating passes in this project',
+        error: 'Unit blocked',
+        message: 'Guest pass generation is blocked for your unit',
         data: {
           canGenerate: false,
-          reason: 'blocked',
-          user: userData,
+          reason: 'unit_blocked',
+          user: user,
         },
       }
     }
-    
-    // Count actual passes for this month PER USER
-    // Each user in a unit gets their own independent limit
+
+    // Count passes created this month for this user
     let usedThisMonth = 0
-    
     try {
       const now = new Date()
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
       
-      console.log(`📊 Counting passes for USER ${userId} in unit ${userUnit} since ${firstDayOfMonth}`)
-      
-      // Always count PER USER (not per unit)
-      // Query passes created this month for this USER in this project
-      const result = await firestoreService.getDocs(
-        `projects/${projectId}/guestPasses`,
-        {
-          filters: [
-            { field: 'userId', operator: '==', value: userId },
-            { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
-          ]
-        },
-        8000 // timeout - force fresh query, bypass cache
-      )
-      
-      // Filter out soft-deleted passes (they don't count toward limit anymore)
-      const activePasses = (result?.docs || []).filter(docSnapshot => {
-        const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
-        return !docData.deleted // Exclude passes with deleted: true
+      // Query passes for this project (partition key is parentId, not projectId)
+      // Then filter by userId and createdAt in application code
+      const passes = await query(GUEST_PASSES_TABLE, {
+        KeyConditionExpression: 'parentId = :parentId',
+        ExpressionAttributeValues: {
+          ':parentId': projectId
+        }
       })
       
-      usedThisMonth = activePasses.length
-      console.log(`📊 Counted ${usedThisMonth} ACTIVE passes this month for USER ${userId} in unit ${userUnit} (${result?.docs?.length || 0} total, excluding deleted)`)
+      // Filter in application code: userId, createdAt, and not deleted
+      const firstDayTimestamp = firstDayOfMonth.getTime()
+      usedThisMonth = passes.filter(p => 
+        p.userId === userId && 
+        p.createdAt >= firstDayTimestamp && 
+        !p.deleted
+      ).length
+      
+      console.log(`📊 Counted ${usedThisMonth} active passes this month for user ${userId}`)
     } catch (error) {
       console.error('❌ Error counting monthly passes:', error)
-      // If counting fails, fall back to 0
       usedThisMonth = 0
     }
 
@@ -274,7 +190,7 @@ export const checkUserEligibility = async (projectId, userId) => {
         data: {
           canGenerate: false,
           reason: 'limit_reached',
-          user: userData,
+          user: user,
           usedThisMonth,
           monthlyLimit,
           remainingQuota: 0,
@@ -290,7 +206,7 @@ export const checkUserEligibility = async (projectId, userId) => {
       data: {
         canGenerate: true,
         reason: 'eligible',
-        user: userData,
+        user: user,
         usedThisMonth,
         monthlyLimit,
         remainingQuota: monthlyLimit - usedThisMonth,
@@ -312,9 +228,9 @@ export const checkUserEligibility = async (projectId, userId) => {
 }
 
 /**
- * Create a guest pass record in Firebase
+ * Create a guest pass record in DynamoDB
  * @param {string} projectId - Project ID
- * @param {string} userId - User ID creating the pass
+ * @param {string} userId - User ID (Cognito sub)
  * @param {string} userName - Name of the user creating the pass
  * @param {string} guestName - Name of the guest
  * @param {string} purpose - Purpose of the visit
@@ -340,9 +256,9 @@ export const createGuestPass = async (
     // Get global settings to determine validity duration
     let validityDurationHours = 2 // Default: 2 hours
     try {
-      const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
-      const globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
-      validityDurationHours = globalSettingsDoc?.validityDurationHours || 2
+      // guestPassSettings table uses 'id' as the partition key
+      const globalSettings = await getItem(GUEST_PASS_SETTINGS_TABLE, { id: projectId })
+      validityDurationHours = globalSettings?.validityDurationHours || 2
       console.log(`📋 Using validity duration: ${validityDurationHours} hours`)
     } catch {
       console.log('ℹ️ No global settings found, using default validity duration: 2 hours')
@@ -382,18 +298,34 @@ export const createGuestPass = async (
     const response = await fetch(qrCodeDataUrl)
     const blob = await response.blob()
 
-    // Upload QR code to Firebase Storage
-    console.log('☁️ Uploading QR code to Firebase Storage...')
-    const storageRef = ref(storage, `guestPasses/${projectId}/${passId}.png`)
-    await uploadBytes(storageRef, blob)
-    const qrCodeUrl = await getDownloadURL(storageRef)
-    console.log('✅ QR code uploaded successfully:', qrCodeUrl)
+    // Convert blob to File for S3 upload
+    const qrCodeFile = new File([blob], `${passId}.png`, { type: 'image/png' })
 
-    // Get user's unit info (reuse eligibility data from earlier check)
-    const userDoc = await getDoc(doc(db, 'users', userId))
-    const userData = userDoc.data()
-    const projectInfo = userData.projects?.find(p => p.projectId === projectId)
-    const userUnit = projectInfo?.unit || userData.unit || ''
+    // Upload QR code to S3 (AWS, NOT Firebase)
+    console.log('☁️ Uploading QR code to S3 (AWS)...')
+    const qrCodeUrl = await fileUploadService.uploadFile(
+      qrCodeFile,
+      `guestPasses/${projectId}/`,
+      `${passId}.png`
+    )
+    console.log('✅ QR code uploaded successfully to S3:', qrCodeUrl)
+    console.log('🔍 QR code URL type check:', {
+      isS3: qrCodeUrl.includes('s3.amazonaws.com') || qrCodeUrl.includes('.s3.'),
+      isFirebase: qrCodeUrl.includes('firebasestorage.googleapis.com') || qrCodeUrl.includes('firebase'),
+      url: qrCodeUrl
+    })
+    
+    // Verify it's an S3 URL, not Firebase
+    if (qrCodeUrl.includes('firebasestorage.googleapis.com') || qrCodeUrl.includes('firebase')) {
+      console.error('❌ ERROR: QR code URL is still pointing to Firebase! This should be an S3 URL.')
+      throw new Error('QR code upload failed - URL is pointing to Firebase instead of S3')
+    }
+
+    // Get user's unit info
+    const user = await getItem(USERS_TABLE, { id: userId })
+    const userProjects = user?.projects || []
+    const projectInfo = userProjects.find(p => p.projectId === projectId)
+    const userUnit = projectInfo?.unit || user?.unit || ''
     
     console.log(`🏠 Creating pass for unit: ${userUnit}`)
     
@@ -403,92 +335,50 @@ export const createGuestPass = async (
       projectId: projectId,
       userId: userId,
       userName: userName,
-      unit: userUnit, // Store unit for per-unit tracking
+      unit: userUnit,
       guestName: guestName,
       purpose: purpose,
-      validFrom: createdAt, // ✅ Add validFrom field
-      validUntil: validUntil,
+      validFrom: createdAt.getTime(),
+      validUntil: validUntil.getTime(),
       phoneNumber: phoneNumber,
-      createdAt: createdAt,
+      createdAt: createdAt.getTime(),
       sentStatus: false,
       sentAt: null,
       qrCodeUrl: qrCodeUrl,
       used: false,
       usedAt: null,
       verificationToken: verificationToken,
-      updatedAt: createdAt,
+      updatedAt: createdAt.getTime(),
+      deleted: false
     }
     
-    console.log('💾 Saving pass to Firestore:', {
+    console.log('💾 Saving pass to DynamoDB:', {
       passId,
       projectId,
       userId,
       guestName,
       purpose,
       unit: userUnit,
-      path: `projects/${projectId}/guestPasses/${passId}`
     })
     
-    // Create pass record in Firebase - use passId as document ID for easy public lookup
-    const passRef = doc(db, `projects/${projectId}/guestPasses`, passId)
-    await setDoc(passRef, passData)
+    // Save pass to DynamoDB
+    // Note: DynamoDB requires a partition key and sort key
+    // Project tables use parentId as partition key and id as sort key
+    await putItem(GUEST_PASSES_TABLE, {
+      parentId: projectId, // Partition key (project tables use parentId)
+      id: passId, // Sort key
+      projectId: projectId, // Also store projectId for reference
+      ...passData
+    })
     
-    console.log('✅ Pass saved to Firestore with ID:', passId)
-
-    // Update UNIT usage count in per-unit settings
-    if (userUnit) {
-      const unitSettingsRef = doc(db, `projects/${projectId}/unitGuestPassSettings`, userUnit)
-      
-      // Count current passes for this UNIT to get accurate count
-      const now = new Date()
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-      const result = await firestoreService.getDocs(
-        `projects/${projectId}/guestPasses`,
-        {
-          filters: [
-            { field: 'unit', operator: '==', value: userUnit },
-            { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
-          ]
-        }
-      )
-      const newUsed = result?.docs?.length || 0
-      
-      // Update or create per-unit settings
-      try {
-        const unitSettingsDoc = await getDoc(unitSettingsRef)
-        if (unitSettingsDoc.exists()) {
-          await updateDoc(unitSettingsRef, {
-            usedThisMonth: newUsed,
-            lastPassCreated: serverTimestamp(),
-            lastPassCreatedBy: userId,
-            lastPassCreatedByName: userName,
-            updatedAt: serverTimestamp(),
-          })
-        } else {
-          // Create new settings document
-          await setDoc(unitSettingsRef, {
-            usedThisMonth: newUsed,
-            lastPassCreated: serverTimestamp(),
-            lastPassCreatedBy: userId,
-            lastPassCreatedByName: userName,
-            updatedAt: serverTimestamp(),
-            createdAt: serverTimestamp(),
-          })
-        }
-        
-        console.log(`✅ Updated per-unit settings for unit ${userUnit} in project ${projectId}: used=${newUsed}`)
-      } catch (error) {
-        console.warn('⚠️ Could not update per-unit settings:', error)
-        // Continue anyway, the pass was created successfully
-      }
-    }
+    console.log('✅ Pass saved to DynamoDB with ID:', passId)
 
     console.log('✅ Guest pass created successfully:', passId)
 
     return {
       success: true,
       passId: passId,
-      passRef: passId, // Document ID is now the same as passId
+      passRef: passId,
       qrCodeUrl: qrCodeUrl,
       data: {
         id: passId,
@@ -499,7 +389,7 @@ export const createGuestPass = async (
         purpose: purpose,
         validUntil: validUntil,
         phoneNumber: phoneNumber,
-        createdAt: new Date(),
+        createdAt: createdAt,
       },
     }
   } catch (error) {
@@ -510,22 +400,24 @@ export const createGuestPass = async (
 
 /**
  * Mark a pass as sent (after WhatsApp delivery)
- * @param {string} passRefId - Firebase document ID of the pass
- * @param {string} projectId - Project ID (required for project-specific collection)
+ * @param {string} passId - Pass ID
+ * @param {string} projectId - Project ID
  * @returns {Promise<boolean>} Success status
  */
-export const markPassAsSent = async (passRefId, projectId) => {
+export const markPassAsSent = async (passId, projectId) => {
   try {
     if (!projectId) {
       throw new Error('Project ID is required to mark pass as sent')
     }
 
-    const passRef = doc(db, `projects/${projectId}/guestPasses`, passRefId)
-
-    await updateDoc(passRef, {
-      sentStatus: true,
-      sentAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+    // Project tables use parentId as partition key
+    await updateItem(GUEST_PASSES_TABLE, { parentId: projectId, id: passId }, {
+      UpdateExpression: 'SET sentStatus = :sentStatus, sentAt = :sentAt, updatedAt = :updatedAt',
+      ExpressionAttributeValues: {
+        ':sentStatus': true,
+        ':sentAt': Date.now(),
+        ':updatedAt': Date.now()
+      }
     })
 
     console.log('✅ Pass marked as sent successfully')
@@ -537,30 +429,188 @@ export const markPassAsSent = async (passRefId, projectId) => {
 }
 
 /**
+ * Verify and mark a guest pass as used (one-time use)
+ * @param {string} projectId - Project ID
+ * @param {string} passId - Pass ID
+ * @param {string} verificationToken - Verification token from QR code
+ * @returns {Promise<Object>} Verification result
+ */
+export const verifyAndUsePass = async (projectId, passId, verificationToken) => {
+  try {
+    console.log(`🔍 Verifying pass ${passId} in project ${projectId}`)
+
+    // Get the pass from DynamoDB (project tables use parentId as partition key)
+    const pass = await getItem(GUEST_PASSES_TABLE, { parentId: projectId, id: passId })
+
+    if (!pass) {
+      return {
+        success: false,
+        error: 'Pass not found',
+        message: 'This guest pass does not exist'
+      }
+    }
+
+    // Verify the token
+    if (pass.verificationToken !== verificationToken) {
+      return {
+        success: false,
+        error: 'Invalid token',
+        message: 'Invalid verification token'
+      }
+    }
+
+    // Check if already used
+    if (pass.used) {
+      return {
+        success: false,
+        error: 'Already used',
+        message: 'This pass has already been used',
+        data: {
+          usedAt: pass.usedAt
+        }
+      }
+    }
+
+    // Check if expired
+    const now = new Date()
+    const validUntil = new Date(pass.validUntil)
+    if (now > validUntil) {
+      return {
+        success: false,
+        error: 'Expired',
+        message: 'This pass has expired'
+      }
+    }
+
+    // Mark as used (project tables use parentId as partition key)
+    await updateItem(GUEST_PASSES_TABLE, { parentId: projectId, id: passId }, {
+      UpdateExpression: 'SET #used = :used, usedAt = :usedAt, updatedAt = :updatedAt',
+      ExpressionAttributeNames: {
+        '#used': 'used'
+      },
+      ExpressionAttributeValues: {
+        ':used': true,
+        ':usedAt': Date.now(),
+        ':updatedAt': Date.now()
+      }
+    })
+
+    console.log(`✅ Pass ${passId} marked as used`)
+
+    return {
+      success: true,
+      message: 'Pass verified and marked as used',
+      data: {
+        passId: passId,
+        guestName: pass.guestName,
+        purpose: pass.purpose,
+        usedAt: new Date()
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error verifying pass:', error)
+    return {
+      success: false,
+      error: 'Verification failed',
+      message: 'Unable to verify pass. Please try again.'
+    }
+  }
+}
+
+/**
+ * Get a guest pass by ID (for public viewing)
+ * @param {string} projectId - Project ID
+ * @param {string} passId - Pass ID
+ * @returns {Promise<Object>} Pass data or null if not found
+ */
+export const getGuestPass = async (projectId, passId) => {
+  try {
+    if (!projectId || !passId) {
+      throw new Error('Project ID and Pass ID are required')
+    }
+
+    console.log(`📥 Loading guest pass: ${passId} for project: ${projectId}`)
+
+    // Get the pass from DynamoDB (project tables use parentId as partition key)
+    const pass = await getItem(GUEST_PASSES_TABLE, { parentId: projectId, id: passId })
+
+    if (!pass) {
+      console.log('❌ Guest pass not found in DynamoDB')
+      return null
+    }
+
+    // Check if pass is deleted
+    if (pass.deleted) {
+      console.log('⚠️ Guest pass is marked as deleted')
+      return null
+    }
+
+    console.log('✅ Guest pass loaded from DynamoDB:', {
+      id: pass.id,
+      guestName: pass.guestName,
+      validUntil: pass.validUntil,
+      used: pass.used,
+      qrCodeUrl: pass.qrCodeUrl ? 'present' : 'missing'
+    })
+
+    // Convert DynamoDB timestamp (number) to Date/ISO string for compatibility
+    const convertTimestamp = (timestamp) => {
+      if (!timestamp) return null
+      // If it's already a number (milliseconds), convert to Date
+      if (typeof timestamp === 'number') {
+        return new Date(timestamp).toISOString()
+      }
+      // If it's already a Date or ISO string, return as is
+      return timestamp
+    }
+
+    return {
+      id: pass.id,
+      projectId: pass.projectId || projectId,
+      userId: pass.userId,
+      userName: pass.userName,
+      guestName: pass.guestName,
+      purpose: pass.purpose || 'Guest Visit',
+      unit: pass.unit,
+      validFrom: convertTimestamp(pass.validFrom),
+      validUntil: convertTimestamp(pass.validUntil),
+      createdAt: convertTimestamp(pass.createdAt),
+      phoneNumber: pass.phoneNumber || null,
+      sentStatus: pass.sentStatus || false,
+      sentAt: convertTimestamp(pass.sentAt),
+      qrCodeUrl: pass.qrCodeUrl || null,
+      used: pass.used || false,
+      usedAt: convertTimestamp(pass.usedAt),
+      verificationToken: pass.verificationToken,
+    }
+  } catch (error) {
+    console.error('❌ Error getting guest pass:', error)
+    throw error
+  }
+}
+
+/**
  * Get user status and limits
- * @param {string} userId - User ID
- * @param {string} projectId - Project ID (optional, for global settings)
+ * @param {string} userId - User ID (Cognito sub)
+ * @param {string} projectId - Project ID
  * @returns {Promise<Object>} User status
  */
 export const getUserStatus = async (userId, projectId = null) => {
   try {
-    const userDocRef = doc(db, 'users', userId)
-    const userDoc = await getDoc(userDocRef)
+    const user = await getItem(USERS_TABLE, { id: userId })
 
-    if (!userDoc.exists()) {
+    if (!user) {
       throw new Error('User not found')
     }
 
-    const userData = userDoc.data()
-    
     // If no projectId provided, return basic user info
     if (!projectId) {
       return {
         success: true,
         data: {
           userId: userId,
-          name: userData.fullName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
-          email: userData.email,
+          name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+          email: user.email,
           blocked: false,
           monthlyLimit: 10,
           usedThisMonth: 0,
@@ -570,92 +620,81 @@ export const getUserStatus = async (userId, projectId = null) => {
     }
 
     // Get user's unit and role
-    const projectInfo = userData.projects?.find(p => p.projectId === projectId)
-    const userUnit = projectInfo?.unit || userData.unit || ''
-    const userRole = projectInfo?.role || userData.role || ''
-    const isFamilyMember = userRole === 'family'
+    const userProjects = user.projects || []
+    const projectInfo = userProjects.find(p => p.projectId === projectId)
+    const userUnit = projectInfo?.unit || user.unit || ''
+    const userRole = projectInfo?.role || user.role || ''
     
-    // Get monthly limit - check global settings first, then per-unit settings
+    // Get monthly limit from global settings
     let monthlyLimit = 30
     let blocked = false
     
     try {
-      const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
-      const globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
+      // guestPassSettings table uses 'id' as the partition key
+      const globalSettings = await getItem(GUEST_PASS_SETTINGS_TABLE, { id: projectId })
       
-      // Check project-wide blocking
-      if (globalSettingsDoc?.blockAllUsers === true) {
+      if (globalSettings?.blockAllUsers === true) {
         blocked = true
       }
       
-      // Check family members blocking
-      if (globalSettingsDoc?.blockFamilyMembers === true && isFamilyMember) {
+      if (globalSettings?.blockFamilyMembers === true && userRole === 'family') {
         blocked = true
       }
       
-      if (globalSettingsDoc?.monthlyLimit) {
-        // Handle both string and number values
-        monthlyLimit = typeof globalSettingsDoc.monthlyLimit === 'string'
-          ? parseInt(globalSettingsDoc.monthlyLimit, 10)
-          : globalSettingsDoc.monthlyLimit
+      if (globalSettings?.monthlyLimit) {
+        monthlyLimit = globalSettings.monthlyLimit
       }
     } catch (settingsError) {
       console.warn('⚠️ Could not fetch global settings:', settingsError)
     }
     
-    // Get per-unit settings
-    let unitSettings = {}
+    // Check per-unit settings if unit exists
     if (userUnit) {
       try {
-        const unitSettingsResult = await firestoreService.getDoc(`projects/${projectId}/unitGuestPassSettings/${userUnit}`)
-        unitSettings = unitSettingsResult.data ? unitSettingsResult.data() : unitSettingsResult
+        const unitSettings = await projectsUnitGuestPassSettingsService.getSettings(projectId, userUnit)
+        console.log(`🏠 Unit settings for ${userUnit}:`, unitSettings)
         
-        // Check if unit is blocked
-        if (unitSettings.blocked === true) {
-          blocked = true
+        if (unitSettings) {
+          // Use unit-specific limit if set
+          if (unitSettings.monthlyLimit !== undefined && unitSettings.monthlyLimit !== null) {
+            monthlyLimit = unitSettings.monthlyLimit
+            console.log(`📊 Using unit-specific limit: ${monthlyLimit} for unit ${userUnit}`)
+          }
+          
+          // Check if unit is blocked
+          if (unitSettings.blocked === true) {
+            blocked = true
+            console.log(`🚫 Unit ${userUnit} is blocked`)
+          }
         }
-        
-        // Override with per-unit limit if set
-        if (unitSettings.monthlyLimit !== undefined && unitSettings.monthlyLimit !== null) {
-          monthlyLimit = typeof unitSettings.monthlyLimit === 'string'
-            ? parseInt(unitSettings.monthlyLimit, 10)
-            : unitSettings.monthlyLimit
-        }
-      } catch {
-        console.log(`ℹ️ No per-unit settings found for unit ${userUnit} in project ${projectId}`)
+      } catch (error) {
+        console.warn('⚠️ Could not fetch unit settings:', error)
+        // Use global limit if unit settings not found
       }
     }
     
-    // Get actual usage for this UNIT this month
+    // Get actual usage for this user this month
     let usedThisMonth = 0
     try {
       const now = new Date()
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
       
-      if (userUnit) {
-        const result = await firestoreService.getDocs(
-          `projects/${projectId}/guestPasses`,
-          {
-            filters: [
-              { field: 'unit', operator: '==', value: userUnit },
-              { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
-            ]
-          }
-        )
-        usedThisMonth = result?.docs?.length || 0
-      } else {
-        // Fallback to per-user for backward compatibility
-        const result = await firestoreService.getDocs(
-          `projects/${projectId}/guestPasses`,
-          {
-            filters: [
-              { field: 'userId', operator: '==', value: userId },
-              { field: 'createdAt', operator: '>=', value: firstDayOfMonth }
-            ]
-          }
-        )
-        usedThisMonth = result?.docs?.length || 0
-      }
+      // Query passes for this project (partition key is parentId, not projectId)
+      // Then filter in application code
+      const passes = await query(GUEST_PASSES_TABLE, {
+        KeyConditionExpression: 'parentId = :parentId',
+        ExpressionAttributeValues: {
+          ':parentId': projectId
+        }
+      })
+      
+      // Filter in application code
+      const firstDayTimestamp = firstDayOfMonth.getTime()
+      usedThisMonth = passes.filter(p => 
+        p.userId === userId && 
+        p.createdAt >= firstDayTimestamp && 
+        !p.deleted
+      ).length
     } catch (error) {
       console.error('❌ Error counting passes:', error)
     }
@@ -664,8 +703,8 @@ export const getUserStatus = async (userId, projectId = null) => {
       success: true,
       data: {
         userId: userId,
-        name: userData.fullName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
-        email: userData.email,
+        name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        email: user.email,
         unit: userUnit,
         blocked: blocked,
         monthlyLimit: monthlyLimit,
@@ -680,136 +719,82 @@ export const getUserStatus = async (userId, projectId = null) => {
 }
 
 /**
- * Initialize user with guest pass data (call when user first accesses guest passes)
- * @param {string} userId - User ID
+ * Get all guest passes for a unit (or user if no unit), sorted by newest first
  * @param {string} projectId - Project ID
- * @returns {Promise<boolean>} Success status
+ * @param {string} userId - User ID (Cognito sub)
+ * @param {string} unit - Unit ID (optional)
+ * @returns {Promise<Array>} Array of pass objects sorted by createdAt descending
  */
-/**
- * Verify and mark a guest pass as used (one-time use)
- * @param {string} projectId - Project ID
- * @param {string} passId - Pass ID
- * @param {string} verificationToken - Verification token from QR code
- * @returns {Promise<Object>} Verification result
- */
-export const verifyAndUsePass = async (projectId, passId, verificationToken) => {
+export const getGuestPassesForUnit = async (projectId, userId, unit = null) => {
   try {
-    console.log(`🔍 Verifying pass ${passId} in project ${projectId}`)
-
-    // Find the pass document
-    const passesResult = await firestoreService.getDocs(
-      `projects/${projectId}/guestPasses`,
-      {
-        filters: [
-          { field: 'id', operator: '==', value: passId }
-        ]
+    console.log(`📥 Loading guest passes for project ${projectId}, unit: ${unit || 'NO UNIT (using userId)'}`)
+    
+    // Query all passes for this project (partition key is parentId)
+    const passes = await query(GUEST_PASSES_TABLE, {
+      KeyConditionExpression: 'parentId = :parentId',
+      ExpressionAttributeValues: {
+        ':parentId': projectId
       }
-    )
-
-    if (!passesResult?.docs || passesResult.docs.length === 0) {
-      return {
-        success: false,
-        error: 'Pass not found',
-        message: 'This guest pass does not exist'
-      }
-    }
-
-    const passDoc = passesResult.docs[0]
-    const passData = passDoc.data ? passDoc.data() : passDoc
-    const passRef = doc(db, `projects/${projectId}/guestPasses`, passDoc.id)
-
-    // Verify the token
-    if (passData.verificationToken !== verificationToken) {
-      return {
-        success: false,
-        error: 'Invalid token',
-        message: 'Invalid verification token'
-      }
-    }
-
-    // Check if already used
-    if (passData.used) {
-      return {
-        success: false,
-        error: 'Already used',
-        message: 'This pass has already been used',
-        data: {
-          usedAt: passData.usedAt
-        }
-      }
-    }
-
-    // Check if expired
-    const now = new Date()
-    const validUntil = new Date(passData.validUntil)
-    if (now > validUntil) {
-      return {
-        success: false,
-        error: 'Expired',
-        message: 'This pass has expired'
-      }
-    }
-
-    // Mark as used
-    await updateDoc(passRef, {
-      used: true,
-      usedAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
     })
-
-    console.log(`✅ Pass ${passId} marked as used`)
-
-    return {
-      success: true,
-      message: 'Pass verified and marked as used',
-      data: {
-        passId: passId,
-        guestName: passData.guestName,
-        purpose: passData.purpose,
-        usedAt: new Date()
-      }
-    }
-  } catch (error) {
-    console.error('❌ Error verifying pass:', error)
-    return {
-      success: false,
-      error: 'Verification failed',
-      message: 'Unable to verify pass. Please try again.'
-    }
-  }
-}
-
-export const initializeUser = async (userId) => {
-  try {
-    const userDocRef = doc(db, 'users', userId)
-    const userDoc = await getDoc(userDocRef)
-
-    if (!userDoc.exists()) {
-      throw new Error('User not found')
-    }
-
-    const userData = userDoc.data()
-    const guestPassData = userData.guestPassData || {}
-
-    // Only initialize if not already initialized
-    if (!guestPassData.monthlyLimit) {
-      await updateDoc(userDocRef, {
-        guestPassData: {
-          ...guestPassData,
-          monthlyLimit: 10,
-          usedThisMonth: 0,
-          blocked: false,
-          updatedAt: serverTimestamp(),
-        },
-        updatedAt: serverTimestamp(),
+    
+    console.log(`📊 Found ${passes.length} total passes for project`)
+    
+    // Filter passes:
+    // 1. Not deleted
+    // 2. Match unit (if unit provided) OR match userId (if no unit)
+    // 3. Sort by createdAt descending (newest first)
+    const filteredPasses = passes
+      .filter(p => {
+        // Filter out deleted passes
+        if (p.deleted === true) return false
+        
+        // Filter by unit or userId
+        if (unit) {
+          return p.unit === unit
+        } else {
+          return p.userId === userId
+        }
       })
-
-      console.log('✅ User initialized with guest pass data')
+      .sort((a, b) => {
+        // Sort by createdAt descending (newest first)
+        const aTime = a.createdAt || 0
+        const bTime = b.createdAt || 0
+        return bTime - aTime
+      })
+    
+    console.log(`✅ Filtered to ${filteredPasses.length} passes for ${unit ? `unit ${unit}` : `user ${userId}`}`)
+    
+    // Convert timestamps to ISO strings for compatibility
+    const convertTimestamp = (timestamp) => {
+      if (!timestamp) return null
+      if (typeof timestamp === 'number') {
+        return new Date(timestamp).toISOString()
+      }
+      return timestamp
     }
-
-    return true
+    
+    // Format passes for display
+    return filteredPasses.map(pass => ({
+      id: pass.id,
+      projectId: pass.projectId || projectId,
+      userId: pass.userId,
+      userName: pass.userName || 'Unknown User',
+      guestName: pass.guestName || 'Unknown Guest',
+      purpose: pass.purpose || 'Guest Visit',
+      unit: pass.unit,
+      validFrom: convertTimestamp(pass.validFrom),
+      validUntil: convertTimestamp(pass.validUntil),
+      createdAt: convertTimestamp(pass.createdAt),
+      phoneNumber: pass.phoneNumber || null,
+      sentStatus: pass.sentStatus || false,
+      sentAt: convertTimestamp(pass.sentAt),
+      qrCodeUrl: pass.qrCodeUrl || null,
+      used: pass.used || false,
+      usedAt: convertTimestamp(pass.usedAt),
+      verificationToken: pass.verificationToken,
+    }))
   } catch (error) {
-    console.error('❌ Error initializing user:', error)
+    console.error('❌ Error loading guest passes:', error)
     throw error
   }
 }

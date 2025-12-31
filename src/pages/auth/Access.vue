@@ -797,7 +797,7 @@ import { useModalState } from '../../composables/useModalState'
 import QRCode from 'qrcode'
 import PageHeader from '../../components/PageHeader.vue'
 import sharingService from '../../services/whatsappService'
-import { createGuestPass, markPassAsSent, checkUserEligibility } from '../../api/guestPassAPI'
+import { createGuestPass, markPassAsSent, checkUserEligibility, getGuestPassesForUnit, getUserStatus } from '../../api/guestPassAPI'
 import { auth, db } from '../../boot/firebase'
 import firestoreService from '../../services/firestoreService'
 import optimizedAuthService from '../../services/optimizedAuthService'
@@ -1099,7 +1099,10 @@ const getUserUnitInfo = () => {
  * 
  * All family members in the same unit share ONE limit!
  * Example: Unit A has 20 passes/month (shared by all family), Unit B has 50, Unit C is blocked
+ * 
+ * NOTE: This function is no longer used. Replaced by loadPassesFromAWS()
  */
+// eslint-disable-next-line no-unused-vars
 const loadPassesFromFirebase = async () => {
   try {
     const user = await optimizedAuthService.getCurrentUser()
@@ -1347,6 +1350,98 @@ const loadPassesFromFirebase = async () => {
     console.error('❌ Error code:', error?.code)
     console.error('❌ Error message:', error?.message)
     passes.value = []
+  }
+}
+
+/**
+ * Load guest passes from AWS DynamoDB (replaces Firebase)
+ * Loads passes for the current user's unit, sorted by newest first
+ */
+const loadPassesFromAWS = async () => {
+  try {
+    const user = await optimizedAuthService.getCurrentUser()
+    const projectId = projectStore.selectedProject?.id
+    
+    if (!user || !projectId) {
+      console.log('👤 No user or project, skipping pass load')
+      passes.value = []
+      passLimits.value = {
+        monthlyLimit: 30,
+        usedThisMonth: 0,
+        remainingQuota: 30,
+      }
+      return
+    }
+
+    // Get user ID (Cognito sub)
+    const userId = user.attributes?.sub || user.cognitoAttributes?.sub || user.userSub || user.uid
+    console.log('📥 Loading passes from AWS for project:', projectId)
+    console.log('👤 User ID:', userId)
+
+    // Get user status (includes unit info and limits)
+    const userStatus = await getUserStatus(userId, projectId)
+    const userUnit = userStatus.data?.unit || ''
+    
+    console.log('🏠 User unit:', userUnit)
+    console.log('📊 User status:', userStatus.data)
+
+    // Update blocking status
+    userBlockingStatus.value = {
+      isBlocked: userStatus.data?.blocked || false,
+      blockingDetails: userStatus.data?.blocked 
+        ? { reason: 'Guest pass generation is currently disabled' }
+        : null,
+      loading: false,
+    }
+
+    // Update limits
+    passLimits.value = {
+      monthlyLimit: userStatus.data?.monthlyLimit || 30,
+      usedThisMonth: userStatus.data?.usedThisMonth || 0,
+      remainingQuota: userStatus.data?.remainingQuota || 30,
+    }
+
+    console.log('✅ Pass limits set:', passLimits.value)
+
+    // Load passes for this unit (or user if no unit)
+    // This function already sorts by newest first
+    const loadedPasses = await getGuestPassesForUnit(projectId, userId, userUnit || null)
+    
+    console.log(`✅ Loaded ${loadedPasses.length} passes from AWS (sorted newest first)`)
+
+    // Map passes to the format expected by the component
+    passes.value = loadedPasses.map(pass => ({
+      id: pass.id,
+      projectId: pass.projectId,
+      userName: pass.userName,
+      guestName: pass.guestName,
+      purpose: pass.purpose,
+      validUntil: pass.validUntil,
+      status: 'active',
+      createdAt: pass.createdAt,
+      code: pass.id,
+      firebaseRef: pass.id, // Keep for compatibility
+      qrCodeUrl: pass.qrCodeUrl,
+      used: pass.used || false,
+      usedAt: pass.usedAt,
+    }))
+
+    // Generate QR codes for all passes
+    if (passes.value.length > 0) {
+      await nextTick()
+      setTimeout(async () => {
+        for (const pass of passes.value) {
+          try {
+            await generateQRCode(pass)
+          } catch (qrError) {
+            console.error('❌ Error generating QR for pass:', pass.id, qrError)
+          }
+        }
+      }, 200)
+    }
+  } catch (error) {
+    console.error('❌ Error loading passes from AWS:', error)
+    passes.value = []
     passLimits.value = {
       monthlyLimit: 30,
       usedThisMonth: 0,
@@ -1481,7 +1576,7 @@ const switchToPassesTab = async () => {
   displayedPassesCount.value = 5 // Reset to show 5 passes initially
   // Load passes (this also calculates limits) and check blocking status
   await Promise.all([
-    loadPassesFromFirebase(),
+    loadPassesFromAWS(),
     checkUserBlockingStatus(),
     checkLocationRestrictionStatus()
   ])
@@ -1538,7 +1633,20 @@ const generatePass = async () => {
 
     // Double-check eligibility via API before creating pass
     console.log('🔍 Checking eligibility via API before generating pass...')
-    const eligibilityResult = await checkUserEligibility(projectId, user.uid)
+    
+    // Get Cognito sub (user ID)
+    const userId = user.attributes?.sub || 
+                   user.cognitoAttributes?.sub || 
+                   user.userSub || 
+                   user.uid
+    
+    if (!userId) {
+      notificationStore.showError('Unable to get user ID. Please log out and log back in.')
+      isGeneratingPass.value = false
+      return
+    }
+    
+    const eligibilityResult = await checkUserEligibility(projectId, userId)
     
     if (!eligibilityResult.success || !eligibilityResult.data?.canGenerate) {
       console.error('❌ User not eligible:', eligibilityResult)
@@ -1547,7 +1655,7 @@ const generatePass = async () => {
       )
       
       // Refresh limits from server
-      await loadPassesFromFirebase()
+      await loadPassesFromAWS()
       isGeneratingPass.value = false
       return
     }
@@ -1601,10 +1709,19 @@ const generatePass = async () => {
       // This is temporary until permissions boot file is deployed
     }
 
-    const userName = user.displayName || user.email || 'Unknown User'
+    // Get user name from Cognito attributes
+    const userName = user.attributes?.name || 
+                     user.attributes?.fullName || 
+                     user.cognitoAttributes?.name ||
+                     user.cognitoAttributes?.fullName ||
+                     user.displayName || 
+                     user.email || 
+                     'Unknown User'
+    
+    // userId is already declared above (line 1543), reuse it
     const result = await createGuestPass(
       projectId,
-      user.uid,
+      userId,
       userName,
       sanitizedGuestName,
       sanitizedPurpose,
@@ -2135,7 +2252,7 @@ onMounted(async () => {
   // Load passes and check blocking status  
   try {
     await Promise.all([
-      loadPassesFromFirebase(), // This also sets passLimits
+      loadPassesFromAWS(), // This also sets passLimits
       checkUserBlockingStatus()
     ])
   } catch (error) {

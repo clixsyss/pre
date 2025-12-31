@@ -102,9 +102,16 @@ _This is an automated message from PRE Group Management System._`
       throw new Error('Invalid pass data - missing ID or project ID')
     }
     
-    // Use production URL 
-    // Using .firebaseapp.com instead of .web.app to prevent iOS from opening in-app
-    const baseUrl = 'https://pre-group.firebaseapp.com'
+    // Get base URL from environment variable (AWS hosting)
+    // Falls back to Firebase for backward compatibility during migration
+    const baseUrl = 
+      import.meta.env.VITE_GUEST_PASS_BASE_URL || 
+      import.meta.env.VITE_PUBLIC_URL ||
+      process.env.VITE_GUEST_PASS_BASE_URL ||
+      process.env.VITE_PUBLIC_URL ||
+      'https://pre-group.firebaseapp.com' // Fallback to Firebase during migration
+    
+    console.log('🌐 Using base URL for guest pass:', baseUrl)
     
     const url = `${baseUrl}/#/guest-pass/${projectId}/${passId}`
     console.log('🔗 Generated URL:', url)

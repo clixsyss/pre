@@ -605,13 +605,59 @@ router.beforeEach(async (to, from, next) => {
 
         } catch (dynamoError) {
           console.error('[Router] ❌ Error checking DynamoDB users table:', dynamoError)
+          
+          // Check if this might be a notification-triggered navigation (app opening from notification)
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                        (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
+          const mightBeNotificationNavigation = from.path === '/' || from.name === null || from.name === undefined
+          
+          // If this might be notification navigation on iOS, wait a bit more for auth to restore
+          if (isIOS && mightBeNotificationNavigation) {
+            console.log('[Router] ⚠️ Possible notification navigation on iOS - waiting for auth state...')
+            try {
+              // Wait up to 3 more seconds for auth state to restore
+              const retryUser = await optimizedAuthService.waitForAuthState(3000)
+              if (retryUser) {
+                console.log('[Router] ✅ Auth state restored after wait, retrying DynamoDB check...')
+                // Retry the DynamoDB check with the restored user
+                const userEmail = retryUser?.attributes?.email || retryUser?.cognitoAttributes?.email
+                if (userEmail) {
+                  const { getUserByEmail, getUserById } = await import('../services/dynamoDBUsersService')
+                  const cognitoSub = retryUser?.attributes?.sub || retryUser?.cognitoAttributes?.sub || retryUser?.uid
+                  let dynamoUser = null
+                  
+                  if (cognitoSub) {
+                    dynamoUser = await getUserById(cognitoSub)
+                  }
+                  if (!dynamoUser && userEmail) {
+                    dynamoUser = await getUserByEmail(userEmail)
+                  }
+                  
+                  if (dynamoUser) {
+                    const approvalStatus = String(dynamoUser.approvalStatus || '').trim().toLowerCase()
+                    if (approvalStatus === 'approved') {
+                      console.log('[Router] ✅ User found and approved after retry, allowing access')
+                      next('/home')
+                      return
+                    }
+                  }
+                }
+              }
+            } catch (retryError) {
+              console.warn('[Router] ⚠️ Retry after wait also failed:', retryError)
+            }
+          }
+          
           // In development, allow access even if DynamoDB check fails
           if (isDevelopment) {
             console.log('[Router] ⚠️ Development mode - allowing access despite DynamoDB error')
             next('/home')
             return
           }
+          
           // On error, sign out to be safe (production only)
+          // But only if we're sure this isn't a transient auth restoration issue
+          console.log('[Router] ⚠️ DynamoDB check failed - signing out user')
           try {
             await optimizedAuthService.signOut()
           } catch (signOutError) {
@@ -647,15 +693,23 @@ router.beforeEach(async (to, from, next) => {
   return new Promise((resolve) => {
     let resolved = false
 
-    // Wait longer for authentication state to be established, especially for iOS
+    // Detect if this might be notification navigation
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
+    const mightBeNotificationNavigation = from.path === '/' || from.name === null || from.name === undefined
+    
+    // Wait longer for authentication state to be established, especially for iOS notification navigation
+    // iOS cold starts from notifications can take 5-10 seconds to restore Cognito session
+    const timeoutDuration = (isIOS && mightBeNotificationNavigation) ? 10000 : 5000
     const timeout = setTimeout(() => {
       if (!resolved) {
-        console.log('Auth check timeout, allowing navigation')
+        console.log(`Auth check timeout after ${timeoutDuration}ms, allowing navigation`)
         resolved = true
+        // Don't sign out on timeout - allow navigation and let app handle auth state
         next()
         resolve()
       }
-    }, 5000) // Increased to 5s to allow auth state to establish
+    }, timeoutDuration)
 
     // Add a delay to allow authentication state to be established
     const checkAuth = async () => {
@@ -691,11 +745,12 @@ router.beforeEach(async (to, from, next) => {
         if (isNotificationNavigation && !currentUser) {
           console.log('Notification navigation: waiting for auth state...')
           
-          // On iOS, use waitForAuthState; on others, use shorter wait
+          // On iOS, use waitForAuthState with longer timeout for cold starts
+          // iOS cold starts from notifications can take 5-8 seconds to restore Cognito session
           const retryUser = isIOS 
-            ? await optimizedAuthService.waitForAuthState(3000) // 3s max for retry
+            ? await optimizedAuthService.waitForAuthState(8000) // 8s max for iOS cold starts
             : await (async () => {
-                await new Promise((resolve) => setTimeout(resolve, 1000))
+                await new Promise((resolve) => setTimeout(resolve, 2000)) // 2s for Android/web
                 return await optimizedAuthService.getCurrentUser()
               })()
           
@@ -705,6 +760,10 @@ router.beforeEach(async (to, from, next) => {
             resolved = true
             processAuthState(retryUser, to, from, next, resolve, requiresAuth)
             return
+          } else {
+            console.warn('Notification navigation: auth state still not ready after wait - this might cause issues')
+            // Don't sign out - allow navigation and let the app handle it
+            // The user might still be authenticated, just not restored yet
           }
         }
 

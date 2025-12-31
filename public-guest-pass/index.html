@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- Set API Gateway URL here or via window.API_BASE_URL before script loads -->
+  <!-- <meta name="api-base-url" content="https://YOUR_API_GATEWAY_ID.execute-api.us-east-1.amazonaws.com/prod"> -->
   <title>PRE Group - Guest Pass</title>
   <style>
     * {
@@ -305,7 +307,7 @@
   <!-- Pass Container -->
   <div id="pass" class="pass-container">
     <div class="pass-header">
-      <img src="https://firebasestorage.googleapis.com/v0/b/pre-group.firebasestorage.app/o/logo.png?alt=media&token=85e3ad0a-ce08-4f0c-b6d4-394e41914467" alt="PRE Group" />
+      <h1>PRE Group</h1>
       <p>Guest Pass</p>
     </div>
 
@@ -371,60 +373,109 @@
     </div>
   </div>
 
-  <!-- Firebase SDK -->
+  <!-- AWS API Script -->
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'
-    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'
-
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyDpYVhP_uLDecqds0VD7g409N_AMj-OMF8",
-      authDomain: "pre-group.firebaseapp.com",
-      projectId: "pre-group",
-      storageBucket: "pre-group.firebasestorage.app",
-      messagingSenderId: "588019395133",
-      appId: "1:588019395133:web:1e37de7f2f1e81eb22a4ca"
-    }
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig)
-    const db = getFirestore(app)
-
-    // Get pass ID from URL hash
-    const hash = window.location.hash
-    const match = hash.match(/#\/guest-pass\/([^\/]+)\/([^\/]+)/)
+    // Get API Gateway endpoint URL
+    // Option 1: Set via window.API_BASE_URL before this script loads
+    // Option 2: Set via environment variable when building/deploying
+    // Option 3: Replace this placeholder with your actual API Gateway URL
+    const API_BASE_URL = window.API_BASE_URL || 
+      (() => {
+        // Try to get from meta tag if set during build
+        const metaTag = document.querySelector('meta[name="api-base-url"]');
+        if (metaTag) return metaTag.getAttribute('content');
+        
+        // Default placeholder - MUST be replaced before deployment
+        return 'https://si18ux2jx5.execute-api.us-east-1.amazonaws.com/prod';
+      })();
     
-    if (!match) {
+    if (API_BASE_URL.includes('YOUR_API_GATEWAY_ID')) {
+      console.error('❌ API Gateway URL not configured! Please set window.API_BASE_URL or update the placeholder in index.html');
+    }
+    
+    console.log('🌐 Using API Gateway URL:', API_BASE_URL);
+
+    // Get pass ID from URL hash or path
+    // Support both formats: /#/guest-pass/{projectId}/{passId} and /guest-pass/{projectId}/{passId}
+    let projectId, passId;
+    
+    const hash = window.location.hash;
+    const hashMatch = hash.match(/#\/guest-pass\/([^\/]+)\/([^\/]+)/);
+    
+    if (hashMatch) {
+      // Hash format: #/guest-pass/{projectId}/{passId}
+      projectId = hashMatch[1];
+      passId = hashMatch[2];
+    } else {
+      // Path format: /guest-pass/{projectId}/{passId}
+      const pathMatch = window.location.pathname.match(/\/guest-pass\/([^\/]+)\/([^\/]+)/);
+      if (pathMatch) {
+        projectId = pathMatch[1];
+        passId = pathMatch[2];
+      }
+    }
+    
+    if (!projectId || !passId) {
       showError('Invalid pass link. Please check the URL.')
     } else {
-      const projectId = match[1]
-      const passId = match[2]
       loadGuestPass(projectId, passId)
     }
 
     async function loadGuestPass(projectId, passId) {
       try {
-        console.log('📥 Loading guest pass:', passId, 'for project:', projectId)
+        console.log('📥 Loading guest pass from AWS API:', passId, 'for project:', projectId)
 
-        // Direct lookup by pass ID (document ID matches pass ID)
-        const passRef = doc(db, `projects/${projectId}/guestPasses/${passId}`)
-        const passDoc = await getDoc(passRef)
+        // Call AWS API Gateway endpoint
+        const apiUrl = `${API_BASE_URL}/guest-pass/${projectId}/${passId}`;
+        console.log('🔗 API URL:', apiUrl);
+        
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
 
-        if (!passDoc.exists()) {
-          throw new Error('Guest pass not found. It may have been deleted or the link is invalid.')
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `Failed to load guest pass (${response.status})`);
         }
 
-        const passData = passDoc.data()
-        console.log('✅ Guest pass loaded:', passData)
+        const result = await response.json();
+        
+        if (!result.success || !result.data) {
+          throw new Error(result.message || 'Guest pass not found');
+        }
 
-        // Format date helper
+        const passData = result.data;
+        console.log('✅ Guest pass loaded from AWS:', passData)
+        
+        // Verify QR code URL is from S3
+        if (passData.qrCodeUrl) {
+          const isS3 = passData.qrCodeUrl.includes('s3.amazonaws.com') || passData.qrCodeUrl.includes('.s3.');
+          const isFirebase = passData.qrCodeUrl.includes('firebasestorage.googleapis.com');
+          console.log('🔍 QR code URL check:', { isS3, isFirebase, url: passData.qrCodeUrl });
+          
+          if (isFirebase) {
+            console.warn('⚠️ WARNING: QR code URL is from Firebase, not S3. This is an old pass.');
+          }
+        }
+
+        // Format date helper (supports ISO strings, numbers, and legacy Firestore timestamps)
         function formatDate(dateValue) {
           if (!dateValue) return 'Invalid date'
           
           let date
+          // Handle legacy Firestore Timestamp objects
           if (dateValue && typeof dateValue === 'object' && dateValue.seconds) {
             date = new Date(dateValue.seconds * 1000)
-          } else {
+          } 
+          // Handle number (DynamoDB stores as timestamp in milliseconds)
+          else if (typeof dateValue === 'number') {
+            date = new Date(dateValue)
+          } 
+          // Handle ISO strings or Date objects
+          else {
             date = new Date(dateValue)
           }
           
@@ -440,26 +491,40 @@
           })
         }
 
-        // Check if expired
+        // Check if expired (supports ISO strings, numbers, and legacy Firestore timestamps)
         function isExpired(dateValue) {
           if (!dateValue) return false
+          
           let date
+          // Handle legacy Firestore Timestamp objects
           if (dateValue && typeof dateValue === 'object' && dateValue.seconds) {
             date = new Date(dateValue.seconds * 1000)
-          } else {
+          } 
+          // Handle number (DynamoDB stores as timestamp in milliseconds)
+          else if (typeof dateValue === 'number') {
+            date = new Date(dateValue)
+          } 
+          else {
             date = new Date(dateValue)
           }
+          
           return new Date() > date
         }
 
-        // Get remaining time
+        // Get remaining time (supports ISO strings, numbers, and legacy Firestore timestamps)
         function getRemainingTime(dateValue) {
           if (!dateValue) return null
           
           let expiryDate
+          // Handle legacy Firestore Timestamp objects
           if (dateValue && typeof dateValue === 'object' && dateValue.seconds) {
             expiryDate = new Date(dateValue.seconds * 1000)
-          } else {
+          } 
+          // Handle number (DynamoDB stores as timestamp in milliseconds)
+          else if (typeof dateValue === 'number') {
+            expiryDate = new Date(dateValue)
+          } 
+          else {
             expiryDate = new Date(dateValue)
           }
           

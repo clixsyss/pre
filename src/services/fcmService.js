@@ -381,20 +381,26 @@ class FCMService {
   /**
    * Wait for authentication state to be ready
    * This is critical when app opens from a notification tap
+   * iOS cold starts from notifications can take 8-10 seconds to restore Cognito session
    */
   async waitForAuthenticationState() {
     // iOS needs more time to restore auth state on app launch from notification
-    const maxWaitTime = this.platform === 'ios' ? 8000 : 5000; // 8s for iOS, 5s for others
-    const checkInterval = 100; // Check every 100ms
+    // Cold starts on iOS can take 8-10 seconds for Cognito to restore session from keychain
+    const maxWaitTime = this.platform === 'ios' ? 10000 : 5000; // 10s for iOS, 5s for others
+    const checkInterval = 200; // Check every 200ms (less frequent to reduce CPU usage)
     let elapsed = 0;
     
-    console.log(`FCMService: Waiting for authentication state before navigation (max: ${maxWaitTime}ms)...`);
+    console.log(`FCMService: Waiting for authentication state before navigation (max: ${maxWaitTime}ms, platform: ${this.platform})...`);
     
     while (elapsed < maxWaitTime) {
       try {
         // Use Cognito auth only (AWS-only, no Firebase Auth)
         const optimizedAuthService = await import('./optimizedAuthService').then(m => m.default);
-        const currentUser = await optimizedAuthService.getCurrentUser();
+        
+        // Use waitForAuthState for better reliability on iOS
+        const currentUser = this.platform === 'ios' 
+          ? await optimizedAuthService.waitForAuthState(Math.min(maxWaitTime - elapsed, 3000))
+          : await optimizedAuthService.getCurrentUser();
         
         if (currentUser) {
           const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.userSub;
@@ -411,6 +417,7 @@ class FCMService {
     }
     
     console.warn(`FCMService: Authentication state not ready after ${maxWaitTime}ms timeout`);
+    console.warn('FCMService: This might cause navigation issues, but not signing out - auth may restore later');
     return false;
   }
 
@@ -431,7 +438,8 @@ class FCMService {
     
     // iOS needs extra time for Cognito auth persistence to fully restore
     // and for the app initialization to complete before navigation
-    const additionalDelay = this.platform === 'ios' ? 1500 : 500;
+    // After waiting for auth state above, add a small delay to ensure router is ready
+    const additionalDelay = this.platform === 'ios' ? 2000 : 1000; // Increased for iOS
     console.log(`FCMService: Waiting ${additionalDelay}ms before navigation (platform: ${this.platform})`);
     await new Promise(resolve => setTimeout(resolve, additionalDelay));
     
