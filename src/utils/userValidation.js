@@ -4,7 +4,7 @@
  */
 
 import { collection, query, where, getDocs } from 'firebase/firestore'
-import { db } from '../boot/firebase'
+import { smartMirrorDb as db } from '../boot/smartMirrorFirebase'
 
 /**
  * Check if a user exists in the system by email

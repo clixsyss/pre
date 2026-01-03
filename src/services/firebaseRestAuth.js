@@ -57,7 +57,7 @@ class FirebaseRestAuth {
 
         // Fallback to Firebase Web SDK
         try {
-          const { auth } = await import('../boot/firebase')
+          const { smartMirrorAuth: auth } = await import('../boot/smartMirrorFirebase')
           const { createUserWithEmailAndPassword } = await import('firebase/auth')
 
           const userCredential = await createUserWithEmailAndPassword(auth, email, password)
@@ -205,3 +205,4 @@ class FirebaseRestAuth {
 }
 
 export default new FirebaseRestAuth()
+

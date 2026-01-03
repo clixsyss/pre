@@ -199,7 +199,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { collection, getDocs, addDoc, query, where, serverTimestamp } from 'firebase/firestore'
-import { db } from '../boot/firebase'
+import { smartMirrorDb as db } from '../boot/smartMirrorFirebase'
 import { Notify } from 'quasar'
 
 defineProps({

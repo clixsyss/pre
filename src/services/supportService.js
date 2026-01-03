@@ -191,7 +191,7 @@ export const addMessageToSupportChat = async (projectId, chatId, message) => {
       const docPath = `projects/${projectId}/supportChats/${chatId}`
       const chatResult = await firestoreService.getDoc(docPath)
       
-      if (!chatResult.exists) {
+      if (!chatResult.exists()) {
         throw new Error('Support chat not found');
       }
 
@@ -214,8 +214,8 @@ export const addMessageToSupportChat = async (projectId, chatId, message) => {
 
       await firestoreService.updateDoc(docPath, {
         messages: updatedMessages,
-        lastMessageAt: now,
-        updatedAt: now
+        lastMessageAt: now.toISOString(),
+        updatedAt: now.toISOString()
       });
 
       console.log('✅ Message added to support chat successfully')

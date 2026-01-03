@@ -1,5 +1,5 @@
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore'
-import { db } from '../boot/firebase'
+import { smartMirrorDb as db } from '../boot/smartMirrorFirebase'
 
 /**
  * User Management Functions

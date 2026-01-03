@@ -143,7 +143,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '../boot/firebase'
+import { smartMirrorDb as db } from '../boot/smartMirrorFirebase'
 import fileUploadService from '../services/fileUploadService'
 import optimizedAuthService from '../services/optimizedAuthService'
 import { useNotificationStore } from '../stores/notifications'

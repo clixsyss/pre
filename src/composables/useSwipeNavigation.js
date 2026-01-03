@@ -29,7 +29,7 @@ export function useSwipeNavigation() {
   const mainTabs = [
     { path: '/home', name: 'Home' },
     { path: '/services', name: 'Services' },
-    { path: '/facilities', name: 'Requests' },
+    { path: '/requests', name: 'Requests' },
     { path: '/profile', name: 'Profile' }
   ]
   
@@ -51,15 +51,9 @@ export function useSwipeNavigation() {
                  currentPath === '/news' ||
                  currentPath === '/smart-devices'
         
-        case '/facilities':
-          return currentPath === '/court-booking' ||
-                 currentPath === '/academy-programs' ||
-                 currentPath === '/academy-details' ||
-                 currentPath === '/academy-registration' ||
-                 currentPath === '/academy-booking' ||
-                 currentPath === '/stores-shopping' ||
-                 currentPath.startsWith('/store') ||
-                 currentPath === '/shopping-cart'
+        case '/requests':
+          return currentPath.startsWith('/request-chat/') ||
+                 currentPath.startsWith('/request-category/')
         
         case '/complaints':
           return currentPath.startsWith('/complaints/')

@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, onSnapshot } from 'firebase/firestore'
-import { auth, db } from '../boot/firebase'
+import { smartMirrorAuth as auth, smartMirrorDb as db } from '../boot/smartMirrorFirebase'
 
 export function useDocumentVerification() {
   const showDocumentModal = ref(false)

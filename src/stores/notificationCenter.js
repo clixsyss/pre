@@ -13,7 +13,7 @@ import {
   Timestamp,
   limit
 } from 'firebase/firestore'
-import { db, detectPlatformFromUrl } from '../boot/firebase'
+import { smartMirrorDb as db, detectPlatformFromUrl } from '../boot/smartMirrorFirebase'
 
 export const useNotificationCenterStore = defineStore('notificationCenter', () => {
   // State

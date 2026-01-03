@@ -167,7 +167,7 @@
 import { onMounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../../stores/projectStore'
-import { auth } from '../../boot/firebase'
+import { smartMirrorAuth as auth } from '../../boot/smartMirrorFirebase'
 import optimizedAuthService from '../../services/optimizedAuthService'
 
 // Component name for ESLint

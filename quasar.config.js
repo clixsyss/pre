@@ -16,9 +16,7 @@ export default defineConfig((ctx) => {
       'amplify',
       'i18n',
       'axios',
-      'capacitorFirebase',
-      'firebase',
-      'smartMirrorFirebase',
+      'smartMirrorFirebase', // Keep for Smart Mirror integration
       'projectStore',
       'fcm',
       'permissions',
@@ -44,9 +42,16 @@ export default defineConfig((ctx) => {
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
     build: {
       target: {
-        browser: ['es2022', 'firefox115', 'chrome115', 'safari14'],
+        // iOS-optimized: Safari 14+ for better iOS performance
+        browser: ['es2022', 'safari14', 'chrome115', 'firefox115'],
         node: 'node20',
       },
+      
+      // iOS-optimized: Enable minification and tree-shaking for smaller bundle
+      minify: true,
+      
+      // iOS-optimized: Enable source maps only in development
+      sourcemap: ctx.dev,
 
       vueRouterMode: 'hash', // available values: 'hash', 'history'
       // vueRouterBase,

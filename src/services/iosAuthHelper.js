@@ -4,7 +4,7 @@
  */
 
 import { Capacitor } from '@capacitor/core'
-import { auth } from '../boot/firebase'
+import { smartMirrorAuth as auth } from '../boot/smartMirrorFirebase'
 
 class IOSAuthHelper {
   constructor() {

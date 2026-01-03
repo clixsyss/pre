@@ -6,7 +6,7 @@
 
 import { FirebaseMessaging } from '@capacitor-firebase/messaging'
 import { doc, updateDoc } from 'firebase/firestore'
-import { db } from '../boot/firebase'
+import { smartMirrorDb as db } from '../boot/smartMirrorFirebase'
 
 class NotificationService {
   constructor() {

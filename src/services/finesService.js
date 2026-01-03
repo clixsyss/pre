@@ -5,7 +5,11 @@ import optimizedAuthService from './optimizedAuthService'
 import { createViolationNotification } from './notificationCenterService'
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore'
 import { ref, deleteObject } from 'firebase/storage'
-import { db, storage } from '../boot/firebase'
+import { smartMirrorDb as db } from '../boot/smartMirrorFirebase'
+// Note: Storage should be migrated to S3 - using Smart Mirror Firebase for now
+import { getStorage } from 'firebase/storage'
+import { smartMirrorApp } from '../boot/smartMirrorFirebase'
+const storage = getStorage(smartMirrorApp)
 
 // Create a new fine/violation
 export const createFine = async (projectId, fineData) => {
@@ -302,23 +306,28 @@ export const updateFineDetails = async (projectId, fineId, updates, reason = '')
 // Add message to fine chat
 export const addMessage = async (projectId, fineId, messageData) => {
   try {
-    const fineDoc = doc(db, 'projects', projectId, 'fines', fineId);
+    // Use firestoreService which routes to DynamoDB (not Firebase Firestore)
+    const { default: firestoreService } = await import('./firestoreService');
+    await firestoreService.initialize();
     
     // Get current fine to append message
     const currentFine = await getFine(projectId, fineId);
     
+    const now = new Date();
     const newMessage = {
       id: Date.now().toString(),
       ...messageData,
-      timestamp: new Date()
+      timestamp: now
     };
 
     const updatedMessages = [...(currentFine.messages || []), newMessage];
 
-    await updateDoc(fineDoc, {
+    // Use firestoreService.updateDoc which routes to DynamoDB
+    const docPath = `projects/${projectId}/fines/${fineId}`;
+    await firestoreService.updateDoc(docPath, {
       messages: updatedMessages,
-      lastMessageAt: new Date(),
-      updatedAt: new Date()
+      lastMessageAt: now.toISOString(),
+      updatedAt: now.toISOString()
     });
 
     // Send notification if admin is replying to user

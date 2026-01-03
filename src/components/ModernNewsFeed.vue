@@ -237,7 +237,10 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { getDownloadURL, ref as storageRef } from 'firebase/storage'
-import { storage, isNative } from '../boot/firebase'
+import { getStorage } from 'firebase/storage'
+import { smartMirrorApp, detectPlatformFromUrl } from '../boot/smartMirrorFirebase'
+const storage = getStorage(smartMirrorApp)
+const { isNative } = detectPlatformFromUrl()
 import NewsComments from './NewsComments.vue'
 import { useModalState } from '../composables/useModalState'
 import newsService from '../services/newsService'
@@ -652,8 +655,8 @@ const loadDefaultLogo = async () => {
       if (!storageInstance && isNative) {
         console.log('📱 Native platform detected, getting storage instance from app')
         const { getStorage } = await import('firebase/storage')
-        const { app } = await import('../boot/firebase')
-        storageInstance = getStorage(app)
+        const { smartMirrorApp } = await import('../boot/smartMirrorFirebase')
+        storageInstance = getStorage(smartMirrorApp)
       }
       
       if (!storageInstance) {

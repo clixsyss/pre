@@ -6,7 +6,9 @@ import {
   getDownloadURL, 
   deleteObject 
 } from 'firebase/storage';
-import { storage } from '../boot/firebase';
+import { getStorage } from 'firebase/storage'
+import { smartMirrorApp } from '../boot/smartMirrorFirebase'
+const storage = getStorage(smartMirrorApp)
 
 // Get all ads for a project (optimized)
 export const getAds = async (projectId) => {

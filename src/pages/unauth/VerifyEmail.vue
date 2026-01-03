@@ -230,7 +230,7 @@ import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { auth, db } from '../../boot/firebase'
+import { smartMirrorAuth as auth, smartMirrorDb as db } from '../../boot/smartMirrorFirebase'
 import { Capacitor } from '@capacitor/core'
 import iosAuthHelper from '../../services/iosAuthHelper'
 

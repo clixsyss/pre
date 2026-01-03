@@ -4,9 +4,15 @@
  * Supports both web (popup) and native (Capacitor) platforms
  */
 
-import { signInWithPopup, signOut } from 'firebase/auth'
+import { signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { auth, googleProvider, db } from '../boot/firebase'
+import { smartMirrorAuth as auth, smartMirrorDb as db } from '../boot/smartMirrorFirebase'
+
+// Initialize Google Auth Provider
+const googleProvider = new GoogleAuthProvider()
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+})
 import { canUseGoogleSignIn } from './userValidation'
 import { Capacitor } from '@capacitor/core'
 

@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import optimizedAuthService from '../services/optimizedAuthService'
 import firestoreService from '../services/firestoreService'
 import { canUserAccessRoute, checkUserSuspension } from '../services/suspensionService'
+import logger from '../utils/logger'
 
 
 // Import pages
@@ -297,7 +298,7 @@ const router = createRouter({
 async function processAuthState(user, to, from, next, resolve, requiresAuth) {
   // Allow navigation to onboarding during registration process
   if (to.path === '/onboarding' && from.path && from.path.startsWith('/register')) {
-    console.log('Allowing navigation to onboarding from registration')
+    logger.log('Allowing navigation to onboarding from registration')
     next()
     resolve()
     return
@@ -305,7 +306,7 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
 
   // Allow navigation from onboarding to registration/signin flow
   if ((to.path === '/register' || to.path === '/signin' || to.path.startsWith('/register/')) && from.path === '/onboarding') {
-    console.log('Allowing navigation from onboarding to', to.path)
+    logger.log('Allowing navigation from onboarding to', to.path)
     next()
     resolve()
     return
@@ -316,7 +317,7 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
     // Store the intended route for later redirect
     if (to.path !== '/onboarding') {
       localStorage.setItem('intendedRoute', to.path)
-      console.log('Storing intended route for later redirect:', to.path)
+      logger.log('Storing intended route for later redirect:', to.path)
     }
     next('/onboarding')
     resolve()
@@ -325,7 +326,7 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
     // Check if there's an intended route to redirect to
     const intendedRoute = localStorage.getItem('intendedRoute')
     if (intendedRoute) {
-      console.log('Redirecting to intended route:', intendedRoute)
+      logger.log('Redirecting to intended route:', intendedRoute)
       localStorage.removeItem('intendedRoute')
       next(intendedRoute)
       resolve()
@@ -359,17 +360,17 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
             userData.firstName && userData.lastName && userData.mobile && userData.email
 
           if (hasRequiredFields) {
-            console.log('Profile has required fields but marked incomplete, fixing...')
+            logger.log('Profile has required fields but marked incomplete, fixing...')
             // Import and use markProfileComplete
             const { markProfileComplete } = await import('../utils/firestore')
             try {
               await markProfileComplete(user.uid)
-              console.log('Profile marked as complete in navigation guard')
+              logger.log('Profile marked as complete in navigation guard')
             } catch (error) {
-              console.error('Error marking profile complete:', error)
+              logger.error('Error marking profile complete:', error)
             }
           } else {
-            console.log('Profile incomplete and missing required fields, redirecting to onboarding')
+            logger.log('Profile incomplete and missing required fields, redirecting to onboarding')
             next('/onboarding')
             resolve()
             return
@@ -379,7 +380,7 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
 
       // Check suspension status
       if (suspensionResult.status === 'fulfilled' && !suspensionResult.value) {
-        console.log('User is suspended and cannot access this route:', to.path)
+        logger.log('User is suspended and cannot access this route:', to.path)
 
         // Check suspension details to show proper message
         try {
@@ -396,7 +397,7 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
             )
           }
         } catch (error) {
-          console.error('Error checking suspension details:', error)
+          logger.error('Error checking suspension details:', error)
         }
 
         // Redirect to home page for suspended users
@@ -409,7 +410,7 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
       next()
       resolve()
     } catch (error) {
-      console.error('Error in auth state processing:', error)
+      logger.error('Error in auth state processing:', error)
       // On error, allow access to prevent blocking
       next()
       resolve()
@@ -423,7 +424,7 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
 
 // Navigation guard
 router.beforeEach(async (to, from, next) => {
-  console.log('Navigation guard - to:', to.path, 'from:', from.path)
+  logger.log('Navigation guard - to:', to.path, 'from:', from.path)
   
   // Check if running on web (not native app)
   const isWeb = !window.Capacitor || window.Capacitor.getPlatform() === 'web'
@@ -436,7 +437,7 @@ router.beforeEach(async (to, from, next) => {
   let guardTimeout
   if (isDevelopment) {
     guardTimeout = setTimeout(() => {
-      console.warn('⚠️ Navigation guard timeout - allowing navigation to prevent blank page')
+      logger.warn('⚠️ Navigation guard timeout - allowing navigation to prevent blank page')
       if (to.path === '/') {
         next('/onboarding')
       } else {
@@ -448,39 +449,39 @@ router.beforeEach(async (to, from, next) => {
   // WEB PLATFORM: ONLY allow guest pass pages, block everything else (but allow in development)
   if (isWeb && !isDevelopment) {
     if (to.path.startsWith('/guest-pass/')) {
-      console.log('Navigation guard: Guest pass page on WEB - allowing')
+      logger.log('Navigation guard: Guest pass page on WEB - allowing')
       next()
       return
     }
     
     // Block all other routes on web (production only)
-    console.log('Navigation guard: Blocking non-guest-pass route on WEB')
-    console.log('⛔ This app is only available on iOS/Android')
+    logger.log('Navigation guard: Blocking non-guest-pass route on WEB')
+    logger.log('⛔ This app is only available on iOS/Android')
     next(false) // Cancel navigation
     return
   }
   
   // In development mode, allow all routes on web (continue to normal guard logic)
   if (isWeb && isDevelopment) {
-    console.log('Navigation guard: Development mode - allowing web access, continuing with normal guard')
+    logger.log('Navigation guard: Development mode - allowing web access, continuing with normal guard')
   }
   
   const requiresAuth = to.meta.requiresAuth
 
   // Guest pass pages should NEVER redirect - allow direct access (native app)
   if (to.path.startsWith('/guest-pass/')) {
-    console.log('Navigation guard: Guest pass page - allowing direct access')
+    logger.log('Navigation guard: Guest pass page - allowing direct access')
     next()
     return
   }
 
   // Handle root route specially
   if (to.path === '/') {
-    console.log('Navigation guard: Handling root route')
+    logger.log('Navigation guard: Handling root route')
     
     // In development, skip complex checks and redirect immediately
     if (isDevelopment && isWeb) {
-      console.log('Navigation guard: Development mode - skipping auth checks, redirecting to onboarding')
+      logger.log('Navigation guard: Development mode - skipping auth checks, redirecting to onboarding')
       if (guardTimeout) clearTimeout(guardTimeout)
       next('/onboarding')
       return
@@ -491,31 +492,62 @@ router.beforeEach(async (to, from, next) => {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                     (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
       
+      // Detect if this might be notification-triggered navigation
+      // When app opens from notification, from.path is usually '/' or from.name is null
+      const mightBeNotificationNavigation = from.path === '/' || from.name === null || from.name === undefined
+      
       // On iOS, wait for auth state to be restored (can take several seconds)
       // On other platforms, use shorter wait
+      // CRITICAL: If this is notification navigation on iOS, wait MUCH longer (up to 10 seconds)
+      // because iOS cold starts from notifications can take 8-10 seconds to restore Cognito session
       let currentUser
       try {
-        if (isIOS) {
-          console.log('Navigation guard: iOS detected, waiting for auth state to restore...')
-          currentUser = await optimizedAuthService.waitForAuthState()
-          console.log(
-            'Navigation guard: Current user check result (iOS):',
-            currentUser ? 'authenticated' : 'not authenticated',
-          )
+        // iOS-optimized: Use faster timeout with localStorage cache
+        // BUT: If this is notification navigation on iOS, wait much longer
+        if (isIOS && mightBeNotificationNavigation) {
+          logger.log('Navigation guard: iOS notification navigation detected, waiting longer for auth state (max 10000ms)...')
+          currentUser = await optimizedAuthService.waitForAuthState(10000) // 10 seconds for iOS notification navigation
+        } else if (isIOS) {
+          logger.log('Navigation guard: iOS detected, waiting for auth state (max 1500ms, cache-optimized)...')
+          currentUser = await optimizedAuthService.waitForAuthState(1500) // iOS-optimized: 1500ms (was 3000ms)
         } else {
           // For non-iOS, use shorter wait
-          await new Promise((resolve) => setTimeout(resolve, 300))
-          currentUser = await optimizedAuthService.getCurrentUser()
-          console.log(
-            'Navigation guard: Current user check result:',
-            currentUser ? 'authenticated' : 'not authenticated',
-          )
+          currentUser = await optimizedAuthService.waitForAuthState(1000) // Optimized: 1000ms (was 2000ms)
         }
+        logger.log(
+          'Navigation guard: Current user check result:',
+          currentUser ? 'authenticated' : 'not authenticated',
+        )
       } catch (authError) {
-        console.warn('Navigation guard: Error checking auth state, redirecting to onboarding:', authError)
-        if (guardTimeout) clearTimeout(guardTimeout)
-        next('/onboarding')
-        return
+        // If this is notification navigation on iOS, don't immediately redirect to onboarding
+        // Auth state might still be restoring
+        if (isIOS && mightBeNotificationNavigation) {
+          logger.warn('Navigation guard: Error checking auth state on iOS notification navigation, waiting 3 more seconds before redirecting...')
+          try {
+            // Wait 3 more seconds and retry
+            await new Promise(resolve => setTimeout(resolve, 3000))
+            const retryUser = await optimizedAuthService.waitForAuthState(3000)
+            if (retryUser) {
+              logger.log('Navigation guard: Auth state restored after retry, user authenticated')
+              currentUser = retryUser
+            } else {
+              logger.warn('Navigation guard: Auth state still not ready after retry, redirecting to onboarding')
+              if (guardTimeout) clearTimeout(guardTimeout)
+              next('/onboarding')
+              return
+            }
+          } catch (retryError) {
+            logger.warn('Navigation guard: Retry also failed, redirecting to onboarding:', retryError)
+            if (guardTimeout) clearTimeout(guardTimeout)
+            next('/onboarding')
+            return
+          }
+        } else {
+          logger.warn('Navigation guard: Error checking auth state, redirecting to onboarding:', authError)
+          if (guardTimeout) clearTimeout(guardTimeout)
+          next('/onboarding')
+          return
+        }
       }
 
       if (currentUser) {
@@ -526,21 +558,21 @@ router.beforeEach(async (to, from, next) => {
                              currentUser?.attributes?.email_verified === 'true' ||
                              currentUser?.attributes?.email_verified === true
         
-        console.log('[Router] 📧 Cognito email verification status:', emailVerified)
+        logger.log('[Router] 📧 Cognito email verification status:', emailVerified)
 
         // Don't sign out for unverified emails - user can still sign in, so allow them to proceed
         // Email verification can be handled elsewhere if needed
         if (!emailVerified) {
-          console.log('[Router] ⚠️ User email is not confirmed in Cognito, but allowing access (user can sign in)')
+          logger.log('[Router] ⚠️ User email is not confirmed in Cognito, but allowing access (user can sign in)')
         } else {
-          console.log('[Router] ✅ User email is confirmed in Cognito')
+          logger.log('[Router] ✅ User email is confirmed in Cognito')
         }
 
         // Check DynamoDB for user approval status
         try {
           const userEmail = currentUser?.attributes?.email || currentUser?.cognitoAttributes?.email
           if (!userEmail) {
-            console.log('[Router] ❌ Could not get user email, signing out')
+            logger.log('[Router] ❌ Could not get user email, signing out')
             await optimizedAuthService.signOut()
             next('/signin')
             return
@@ -554,57 +586,57 @@ router.beforeEach(async (to, from, next) => {
           
           // First, try by ID (Cognito sub) - this is the primary key and most reliable
           if (cognitoSub) {
-            console.log('[Router] 🔍 Checking DynamoDB users table by ID (Cognito sub):', cognitoSub)
+            logger.log('[Router] 🔍 Checking DynamoDB users table by ID (Cognito sub):', cognitoSub)
             dynamoUser = await getUserById(cognitoSub)
             
             if (dynamoUser) {
-              console.log('[Router] ✅ User found by ID (Cognito sub) in DynamoDB')
+              logger.log('[Router] ✅ User found by ID (Cognito sub) in DynamoDB')
             }
           }
           
           // Fallback: If not found by ID, try by email
           if (!dynamoUser && userEmail) {
-            console.log('[Router] ⚠️ User not found by ID, trying email lookup:', userEmail)
+            logger.log('[Router] ⚠️ User not found by ID, trying email lookup:', userEmail)
             dynamoUser = await getUserByEmail(userEmail)
             
             if (dynamoUser) {
-              console.log('[Router] ✅ User found by email in DynamoDB')
+              logger.log('[Router] ✅ User found by email in DynamoDB')
             }
           }
           
           if (!dynamoUser) {
-            console.log('[Router] ⚠️ User not found in DynamoDB users table (tried email and ID)')
-            console.log('[Router] ⚠️ This might be a new user or data sync issue. Allowing access but user may need to complete registration.')
+            logger.log('[Router] ⚠️ User not found in DynamoDB users table (tried email and ID)')
+            logger.log('[Router] ⚠️ This might be a new user or data sync issue. Allowing access but user may need to complete registration.')
             // Don't sign out - allow user to proceed, they might need to complete registration
             // The app should handle missing user data gracefully
             next('/home')
             return
           }
 
-          console.log('[Router] 📋 User found in DynamoDB, approvalStatus:', dynamoUser.approvalStatus)
+          logger.log('[Router] 📋 User found in DynamoDB, approvalStatus:', dynamoUser.approvalStatus)
 
           // Check if approvalStatus is "approved" (case-insensitive)
           const approvalStatus = String(dynamoUser.approvalStatus || '').trim().toLowerCase()
           const isApproved = approvalStatus === 'approved'
           
-          console.log('[Router] Approval status check:')
-          console.log('[Router]   - Raw:', dynamoUser.approvalStatus)
-          console.log('[Router]   - Normalized:', approvalStatus)
-          console.log('[Router]   - Is approved?:', isApproved)
+          logger.log('[Router] Approval status check:')
+          logger.log('[Router]   - Raw:', dynamoUser.approvalStatus)
+          logger.log('[Router]   - Normalized:', approvalStatus)
+          logger.log('[Router]   - Is approved?:', isApproved)
           
           if (!isApproved) {
-            console.log('[Router] ❌ User approval status is not approved, signing out')
+            logger.log('[Router] ❌ User approval status is not approved, signing out')
             await optimizedAuthService.signOut()
             next('/signin')
             return
           }
 
-          console.log('[Router] ✅ User approval status is approved in DynamoDB, allowing access')
+          logger.log('[Router] ✅ User approval status is approved in DynamoDB, allowing access')
           next('/home')
           return
 
         } catch (dynamoError) {
-          console.error('[Router] ❌ Error checking DynamoDB users table:', dynamoError)
+          logger.error('[Router] ❌ Error checking DynamoDB users table:', dynamoError)
           
           // Check if this might be a notification-triggered navigation (app opening from notification)
           const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
@@ -613,12 +645,12 @@ router.beforeEach(async (to, from, next) => {
           
           // If this might be notification navigation on iOS, wait a bit more for auth to restore
           if (isIOS && mightBeNotificationNavigation) {
-            console.log('[Router] ⚠️ Possible notification navigation on iOS - waiting for auth state...')
+            logger.log('[Router] ⚠️ Possible notification navigation on iOS - waiting for auth state...')
             try {
               // Wait up to 3 more seconds for auth state to restore
               const retryUser = await optimizedAuthService.waitForAuthState(3000)
               if (retryUser) {
-                console.log('[Router] ✅ Auth state restored after wait, retrying DynamoDB check...')
+                logger.log('[Router] ✅ Auth state restored after wait, retrying DynamoDB check...')
                 // Retry the DynamoDB check with the restored user
                 const userEmail = retryUser?.attributes?.email || retryUser?.cognitoAttributes?.email
                 if (userEmail) {
@@ -636,7 +668,7 @@ router.beforeEach(async (to, from, next) => {
                   if (dynamoUser) {
                     const approvalStatus = String(dynamoUser.approvalStatus || '').trim().toLowerCase()
                     if (approvalStatus === 'approved') {
-                      console.log('[Router] ✅ User found and approved after retry, allowing access')
+                      logger.log('[Router] ✅ User found and approved after retry, allowing access')
                       next('/home')
                       return
                     }
@@ -644,38 +676,38 @@ router.beforeEach(async (to, from, next) => {
                 }
               }
             } catch (retryError) {
-              console.warn('[Router] ⚠️ Retry after wait also failed:', retryError)
+              logger.warn('[Router] ⚠️ Retry after wait also failed:', retryError)
             }
           }
           
           // In development, allow access even if DynamoDB check fails
           if (isDevelopment) {
-            console.log('[Router] ⚠️ Development mode - allowing access despite DynamoDB error')
+            logger.log('[Router] ⚠️ Development mode - allowing access despite DynamoDB error')
             next('/home')
             return
           }
           
           // On error, sign out to be safe (production only)
           // But only if we're sure this isn't a transient auth restoration issue
-          console.log('[Router] ⚠️ DynamoDB check failed - signing out user')
+          logger.log('[Router] ⚠️ DynamoDB check failed - signing out user')
           try {
             await optimizedAuthService.signOut()
           } catch (signOutError) {
-            console.warn('Error signing out:', signOutError)
+            logger.warn('Error signing out:', signOutError)
           }
           next('/signin')
           return
         }
       } else {
-        console.log('Navigation guard: User not authenticated, redirecting to /onboarding')
+        logger.log('Navigation guard: User not authenticated, redirecting to /onboarding')
         if (guardTimeout) clearTimeout(guardTimeout)
         next('/onboarding')
         return
       }
     } catch (error) {
-      console.error('Navigation guard: Error checking auth state:', error)
+      logger.error('Navigation guard: Error checking auth state:', error)
       // In development, always allow navigation to onboarding
-      console.log('Navigation guard: Development mode - redirecting to onboarding despite error')
+      logger.log('Navigation guard: Development mode - redirecting to onboarding despite error')
       if (guardTimeout) clearTimeout(guardTimeout)
       next('/onboarding')
       return
@@ -703,7 +735,7 @@ router.beforeEach(async (to, from, next) => {
     const timeoutDuration = (isIOS && mightBeNotificationNavigation) ? 10000 : 5000
     const timeout = setTimeout(() => {
       if (!resolved) {
-        console.log(`Auth check timeout after ${timeoutDuration}ms, allowing navigation`)
+        logger.log(`Auth check timeout after ${timeoutDuration}ms, allowing navigation`)
         resolved = true
         // Don't sign out on timeout - allow navigation and let app handle auth state
         next()
@@ -724,7 +756,7 @@ router.beforeEach(async (to, from, next) => {
         let currentUser
         if (isIOS) {
           // On iOS, use waitForAuthState to ensure auth is restored
-          console.log('Navigation guard: iOS detected, waiting for auth state...')
+          logger.log('Navigation guard: iOS detected, waiting for auth state...')
           currentUser = await optimizedAuthService.waitForAuthState()
         } else {
           // For non-iOS, use shorter wait
@@ -735,7 +767,7 @@ router.beforeEach(async (to, from, next) => {
 
         if (resolved) return
 
-        console.log(
+        logger.log(
           'Current user from authService:',
           currentUser ? 'authenticated' : 'not authenticated',
           isNotificationNavigation ? '(notification-triggered)' : ''
@@ -743,7 +775,7 @@ router.beforeEach(async (to, from, next) => {
 
         // If this is notification-triggered and no user yet, wait a bit more
         if (isNotificationNavigation && !currentUser) {
-          console.log('Notification navigation: waiting for auth state...')
+          logger.log('Notification navigation: waiting for auth state...')
           
           // On iOS, use waitForAuthState with longer timeout for cold starts
           // iOS cold starts from notifications can take 5-8 seconds to restore Cognito session
@@ -755,13 +787,13 @@ router.beforeEach(async (to, from, next) => {
               })()
           
           if (retryUser) {
-            console.log('Notification navigation: auth state ready on retry')
+            logger.log('Notification navigation: auth state ready on retry')
             clearTimeout(timeout)
             resolved = true
             processAuthState(retryUser, to, from, next, resolve, requiresAuth)
             return
           } else {
-            console.warn('Notification navigation: auth state still not ready after wait - this might cause issues')
+            logger.warn('Notification navigation: auth state still not ready after wait - this might cause issues')
             // Don't sign out - allow navigation and let the app handle it
             // The user might still be authenticated, just not restored yet
           }
@@ -776,7 +808,7 @@ router.beforeEach(async (to, from, next) => {
       } catch (error) {
         if (resolved) return
 
-        console.error('Error getting current user:', error)
+        logger.error('Error getting current user:', error)
         clearTimeout(timeout)
         if (guardTimeout) clearTimeout(guardTimeout)
         resolved = true
@@ -784,7 +816,7 @@ router.beforeEach(async (to, from, next) => {
         // On error, allow navigation to prevent blocking
         // In development, always allow navigation
         if (isDevelopment) {
-          console.log('Development mode - allowing navigation despite error')
+          logger.log('Development mode - allowing navigation despite error')
         }
         next()
         resolve()

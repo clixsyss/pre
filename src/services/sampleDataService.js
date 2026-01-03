@@ -1,4 +1,4 @@
-import { db } from "boot/firebase";
+import { smartMirrorDb as db } from "src/boot/smartMirrorFirebase";
 import {
     collection,
     doc,

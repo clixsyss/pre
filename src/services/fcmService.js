@@ -13,8 +13,9 @@
 // Firebase Messaging is still required to get FCM tokens (push notification tokens come from Firebase)
 // But we only use AWS (DynamoDB) for storage and Cognito for auth
 import { getMessaging, getToken, onMessage, deleteToken } from 'firebase/messaging';
-import { detectPlatformFromUrl } from 'src/boot/firebase';
+import { detectPlatformFromUrl } from 'src/boot/smartMirrorFirebase';
 import { Notify } from 'quasar';
+import logger from 'src/utils/logger';
 
 class FCMService {
   constructor() {
@@ -31,7 +32,7 @@ class FCMService {
     // VAPID key for web push - uses environment variable with fallback
     this.vapidKey = import.meta.env.VITE_FCM_VAPID_KEY || 'BDL03mUP_fsEjpZLMLwj-EW0XGFUPXDu8alAQgAKrlcGrHe39yxSF8DH1yn75Y93vOYc-5nNcRctEhMoBPvQatQ';
     
-    console.log('FCMService: Constructor called (platform detection deferred)');
+    logger.log('FCMService: Constructor called (platform detection deferred)');
   }
 
   /**
@@ -44,16 +45,16 @@ class FCMService {
         const platformInfo = detectPlatformFromUrl();
         this.isNative = platformInfo.isNative;
         this.platform = platformInfo.platform;
-        console.log('FCMService: Platform detected', { isNative: this.isNative, platform: this.platform });
+        logger.log('FCMService: Platform detected', { isNative: this.isNative, platform: this.platform });
       }
       
       // Prevent duplicate initialization
       if (this.isInitialized) {
-        console.log('FCMService: Already initialized, skipping...');
+        logger.log('FCMService: Already initialized, skipping...');
         return true;
       }
       
-      console.log('FCMService: Starting initialization...');
+      logger.log('FCMService: Starting initialization...');
       
       if (this.isNative) {
         await this.initializeNative();
@@ -62,10 +63,10 @@ class FCMService {
       }
       
       this.isInitialized = true;
-      console.log('FCMService: Initialization complete');
+      logger.log('FCMService: Initialization complete');
       return true;
     } catch (error) {
-      console.error('FCMService: Initialization failed:', error);
+      logger.error('FCMService: Initialization failed:', error);
       return false;
     }
   }
@@ -74,7 +75,7 @@ class FCMService {
    * Initialize FCM for native platforms (iOS/Android) using @capacitor-firebase/messaging
    */
   async initializeNative() {
-    console.log('FCMService: Initializing native Firebase Messaging...');
+    logger.log('FCMService: Initializing native Firebase Messaging...');
     
     try {
       // Ensure the plugin module is loaded (registers the plugin)
@@ -87,28 +88,28 @@ class FCMService {
       
       const FirebaseMessaging = window.Capacitor.Plugins.FirebaseMessaging;
       this.FirebaseMessaging = FirebaseMessaging;
-      console.log('FCMService: FirebaseMessaging plugin loaded from window.Capacitor.Plugins');
-      console.log('FCMService: Has requestPermissions?', typeof FirebaseMessaging?.requestPermissions);
+      logger.log('FCMService: FirebaseMessaging plugin loaded from window.Capacitor.Plugins');
+      logger.log('FCMService: Has requestPermissions?', typeof FirebaseMessaging?.requestPermissions);
       
       // Request permissions
-      console.log('FCMService: Requesting notification permissions...');
+      logger.log('FCMService: Requesting notification permissions...');
       const permissionResult = await FirebaseMessaging.requestPermissions();
-      console.log('FCMService: Permission result:', permissionResult);
+      logger.log('FCMService: Permission result:', permissionResult);
       
       if (permissionResult.receive === 'granted') {
-        console.log('FCMService: Permission granted ✅');
+        logger.log('FCMService: Permission granted ✅');
         
         // Set up listeners FIRST
         this.setupNativeListeners();
         
         // Get the FCM token
-        console.log('FCMService: Getting FCM token...');
+        logger.log('FCMService: Getting FCM token...');
         const result = await FirebaseMessaging.getToken();
         const token = result.token;
         
         if (token) {
-          console.log('🎉 FCMService: Got FCM token:', token);
-          console.log('🎉 FCMService: Token length:', token.length);
+          logger.log('🎉 FCMService: Got FCM token:', token);
+          logger.log('🎉 FCMService: Token length:', token.length);
           this.currentToken = token;
           
           // No longer writing to Firestore - only DynamoDB
@@ -117,17 +118,17 @@ class FCMService {
           // Save token to DynamoDB (AWS-only, no Firestore)
           await this.saveTokenWithRetry(token, this.platform);
         } else {
-          console.warn('⚠️ FCMService: No token received');
+          logger.warn('⚠️ FCMService: No token received');
         }
         
-        console.log('✅ FCMService: Native initialization complete');
+        logger.log('✅ FCMService: Native initialization complete');
       } else {
-        console.warn('FCMService: Push notification permission denied');
+        logger.warn('FCMService: Push notification permission denied');
         throw new Error('Push notification permission denied');
       }
     } catch (error) {
-      console.error('FCMService: Native initialization error:', error);
-      console.error('FCMService: Error details:', error.message);
+      logger.error('FCMService: Native initialization error:', error);
+      logger.error('FCMService: Error details:', error.message);
       throw error;
     }
   }
@@ -138,27 +139,27 @@ class FCMService {
   async saveTokenWithRetry(token, platform, retryCount = 0) {
     try {
       // Use getCurrentUserId which handles Web SDK auth with wait logic
-      console.log(`🔍 FCMService: Getting user ID (attempt ${retryCount + 1}/10)...`);
+      logger.log(`🔍 FCMService: Getting user ID (attempt ${retryCount + 1}/10)...`);
       const currentUserId = await this.getCurrentUserId();
       
       if (currentUserId) {
-        console.log('🎉 FCMService: Saving token to DynamoDB for user:', currentUserId);
+        logger.log('🎉 FCMService: Saving token to DynamoDB for user:', currentUserId);
         await this.saveTokenToFirestore(token, platform);
-        console.log('✅ FCMService: Token saved successfully to DynamoDB!');
+        logger.log('✅ FCMService: Token saved successfully to DynamoDB!');
       } else if (retryCount < 10) {
-        console.log(`⚠️ FCMService: No authenticated user yet, retrying in 1s... (attempt ${retryCount + 1}/10)`);
+        logger.log(`⚠️ FCMService: No authenticated user yet, retrying in 1s... (attempt ${retryCount + 1}/10)`);
         setTimeout(() => this.saveTokenWithRetry(token, platform, retryCount + 1), 1000);
       } else {
-        console.error('⚠️ FCMService: No authenticated user after 10 attempts, token not saved');
+        logger.error('⚠️ FCMService: No authenticated user after 10 attempts, token not saved');
         throw new Error('Failed to save token: No authenticated user');
       }
     } catch (error) {
-      console.error('❌ FCMService: Error in saveTokenWithRetry:', error, 'Message:', error?.message, 'Stack:', error?.stack);
+      logger.error('❌ FCMService: Error in saveTokenWithRetry:', error, 'Message:', error?.message, 'Stack:', error?.stack);
       if (retryCount < 10) {
-        console.log(`⚠️ FCMService: Retrying after error... (attempt ${retryCount + 1}/10)`);
+        logger.log(`⚠️ FCMService: Retrying after error... (attempt ${retryCount + 1}/10)`);
         setTimeout(() => this.saveTokenWithRetry(token, platform, retryCount + 1), 1000);
       } else {
-        console.error('❌ FCMService: Max retries reached, giving up');
+        logger.error('❌ FCMService: Max retries reached, giving up');
         throw error;
       }
     }
@@ -168,23 +169,23 @@ class FCMService {
    * Initialize FCM for web platform
    */
   async initializeWeb() {
-    console.log('FCMService: Initializing web push notifications...');
+    logger.log('FCMService: Initializing web push notifications...');
     
     try {
       // Check if messaging is supported
       if (!('Notification' in window)) {
-        console.warn('FCMService: Notifications not supported in this browser');
+        logger.warn('FCMService: Notifications not supported in this browser');
         return;
       }
       
       // Initialize messaging
-      const { app } = await import('src/boot/firebase');
-      this.messaging = getMessaging(app);
-      console.log('FCMService: Messaging instance created');
+      const { smartMirrorApp } = await import('src/boot/smartMirrorFirebase');
+      this.messaging = getMessaging(smartMirrorApp);
+      logger.log('FCMService: Messaging instance created');
       
       // Request permission
       const permission = await Notification.requestPermission();
-      console.log('FCMService: Notification permission:', permission);
+      logger.log('FCMService: Notification permission:', permission);
       
       if (permission === 'granted') {
         // Get FCM token
@@ -193,11 +194,11 @@ class FCMService {
         // Set up foreground message handler
         this.setupWebListeners();
       } else {
-        console.warn('FCMService: Notification permission denied');
+        logger.warn('FCMService: Notification permission denied');
         throw new Error('Notification permission denied');
       }
     } catch (error) {
-      console.error('FCMService: Web initialization error:', error);
+      logger.error('FCMService: Web initialization error:', error);
       throw error;
     }
   }
@@ -207,21 +208,21 @@ class FCMService {
    */
   async getWebToken() {
     try {
-      console.log('FCMService: Attempting to get FCM token...');
+      logger.log('FCMService: Attempting to get FCM token...');
       
       // Check if service worker is registered
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
-        console.log('FCMService: Service worker registrations:', registrations.length);
+        logger.log('FCMService: Service worker registrations:', registrations.length);
         
         if (registrations.length === 0) {
-          console.warn('FCMService: No service worker registered, registering now...');
+          logger.warn('FCMService: No service worker registered, registering now...');
           try {
             const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-            console.log('FCMService: Service worker registered successfully:', registration.scope);
+            logger.log('FCMService: Service worker registered successfully:', registration.scope);
             await navigator.serviceWorker.ready;
           } catch (swError) {
-            console.error('FCMService: Service worker registration failed:', swError);
+            logger.error('FCMService: Service worker registration failed:', swError);
             throw new Error('Service worker registration failed: ' + swError.message);
           }
         }
@@ -231,7 +232,7 @@ class FCMService {
         vapidKey: this.vapidKey
       });
       
-      console.log('FCMService: Got web FCM token:', token);
+      logger.log('FCMService: Got web FCM token:', token);
       this.currentToken = token;
       
       // Save token to DynamoDB (AWS-only)
@@ -242,7 +243,7 @@ class FCMService {
       
       return token;
     } catch (error) {
-      console.error('FCMService: Error getting web token:', error);
+      logger.error('FCMService: Error getting web token:', error);
       throw error;
     }
   }
@@ -251,55 +252,55 @@ class FCMService {
    * Set up native platform listeners using @capacitor-firebase/messaging
    */
   setupNativeListeners() {
-    console.log('FCMService: Setting up native listeners...');
+    logger.log('FCMService: Setting up native listeners...');
     
     if (!this.FirebaseMessaging) {
-      console.error('FCMService: FirebaseMessaging plugin not loaded');
+      logger.error('FCMService: FirebaseMessaging plugin not loaded');
       return;
     }
 
     // Check if listeners already set up to prevent duplicates
     if (this.listenersSetup) {
-      console.log('FCMService: Native listeners already set up, skipping...');
+      logger.log('FCMService: Native listeners already set up, skipping...');
       return;
     }
 
     // Listen for token refresh
     this.FirebaseMessaging.addListener('tokenReceived', async (event) => {
-      console.log('🎉 FCMService: Token refreshed!');
-      console.log('🎉 FCMService: New token:', event.token);
+      logger.log('🎉 FCMService: Token refreshed!');
+      logger.log('🎉 FCMService: New token:', event.token);
       this.currentToken = event.token;
       
       // Update token in DynamoDB (use retry logic)
-      console.log('🔄 FCMService: Token refreshed, updating in DynamoDB...');
+      logger.log('🔄 FCMService: Token refreshed, updating in DynamoDB...');
       await this.saveTokenWithRetry(event.token, this.platform);
     });
 
     // Listen for notification received (foreground)
     this.FirebaseMessaging.addListener('notificationReceived', (event) => {
-      console.log('📬 FCMService: Notification received (foreground):', event.notification);
+      logger.log('📬 FCMService: Notification received (foreground):', event.notification);
       this.handleForegroundNotification(event.notification);
     });
 
     // Listen for notification action performed (tap)
     this.FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
-      console.log('👆 FCMService: Notification tapped:', event.notification);
+      logger.log('👆 FCMService: Notification tapped:', event.notification);
       this.handleNotificationTap(event);
     });
     
     this.listenersSetup = true;
-    console.log('✅ FCMService: Native listeners set up successfully');
+    logger.log('✅ FCMService: Native listeners set up successfully');
   }
 
   /**
    * Set up web platform listeners
    */
   setupWebListeners() {
-    console.log('FCMService: Setting up web listeners...');
+    logger.log('FCMService: Setting up web listeners...');
     
     // Handle foreground messages
     onMessage(this.messaging, (payload) => {
-      console.log('FCMService: Message received (foreground):', payload);
+      logger.log('FCMService: Message received (foreground):', payload);
       this.handleForegroundNotification(payload);
     });
   }
@@ -308,7 +309,7 @@ class FCMService {
    * Handle foreground notifications
    */
   handleForegroundNotification(notification) {
-    console.log('FCMService: Handling foreground notification:', notification);
+    logger.log('FCMService: Handling foreground notification:', notification);
     
     // Extract notification data based on platform
     let title, body, data;
@@ -361,7 +362,7 @@ class FCMService {
       try {
         handler({ title, body, data });
       } catch (error) {
-        console.error('FCMService: Handler error:', error);
+        logger.error('FCMService: Handler error:', error);
       }
     });
   }
@@ -370,7 +371,7 @@ class FCMService {
    * Handle notification tap
    */
   async handleNotificationTap(event) {
-    console.log('FCMService: Handling notification tap:', event);
+    logger.log('FCMService: Handling notification tap:', event);
     
     // Extract data
     const data = event.notification?.data || {};
@@ -390,7 +391,7 @@ class FCMService {
     const checkInterval = 200; // Check every 200ms (less frequent to reduce CPU usage)
     let elapsed = 0;
     
-    console.log(`FCMService: Waiting for authentication state before navigation (max: ${maxWaitTime}ms, platform: ${this.platform})...`);
+    logger.log(`FCMService: Waiting for authentication state before navigation (max: ${maxWaitTime}ms, platform: ${this.platform})...`);
     
     while (elapsed < maxWaitTime) {
       try {
@@ -404,20 +405,20 @@ class FCMService {
         
         if (currentUser) {
           const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.userSub;
-          console.log('FCMService: Authentication state ready, user (Cognito sub):', cognitoSub);
-          console.log(`FCMService: Auth ready after ${elapsed}ms`);
+          logger.log('FCMService: Authentication state ready, user (Cognito sub):', cognitoSub);
+          logger.log(`FCMService: Auth ready after ${elapsed}ms`);
           return true;
         }
       } catch (error) {
-        console.warn('FCMService: Error checking auth state:', error);
+        logger.warn('FCMService: Error checking auth state:', error);
       }
       
       await new Promise(resolve => setTimeout(resolve, checkInterval));
       elapsed += checkInterval;
     }
     
-    console.warn(`FCMService: Authentication state not ready after ${maxWaitTime}ms timeout`);
-    console.warn('FCMService: This might cause navigation issues, but not signing out - auth may restore later');
+    logger.warn(`FCMService: Authentication state not ready after ${maxWaitTime}ms timeout`);
+    logger.warn('FCMService: This might cause navigation issues, but not signing out - auth may restore later');
     return false;
   }
 
@@ -425,14 +426,14 @@ class FCMService {
    * Handle notification action (routing/navigation)
    */
   async handleNotificationAction(data) {
-    console.log('FCMService: Handling notification action:', data);
+    logger.log('FCMService: Handling notification action:', data);
     
     // CRITICAL: Wait for authentication state to be ready before navigating
     // This prevents the "logout" issue when opening app from notification
     const isAuthReady = await this.waitForAuthenticationState();
     
     if (!isAuthReady) {
-      console.error('FCMService: Authentication not ready, cannot navigate from notification');
+      logger.error('FCMService: Authentication not ready, cannot navigate from notification');
       // Still allow navigation, router guards will handle redirect if needed
     }
     
@@ -440,12 +441,12 @@ class FCMService {
     // and for the app initialization to complete before navigation
     // After waiting for auth state above, add a small delay to ensure router is ready
     const additionalDelay = this.platform === 'ios' ? 2000 : 1000; // Increased for iOS
-    console.log(`FCMService: Waiting ${additionalDelay}ms before navigation (platform: ${this.platform})`);
+    logger.log(`FCMService: Waiting ${additionalDelay}ms before navigation (platform: ${this.platform})`);
     await new Promise(resolve => setTimeout(resolve, additionalDelay));
     
     // Import router dynamically to avoid circular dependencies
     import('src/router').then(({ default: router }) => {
-      console.log('FCMService: Router loaded, navigating to:', data.type);
+      logger.log('FCMService: Router loaded, navigating to:', data.type);
       
       // Handle different notification types
       switch (data.type) {
@@ -474,7 +475,7 @@ class FCMService {
           router.push('/notifications');
       }
     }).catch(error => {
-      console.error('FCMService: Error loading router:', error);
+      logger.error('FCMService: Error loading router:', error);
     });
   }
 
@@ -488,11 +489,11 @@ class FCMService {
       const userId = await this.getCurrentUserId();
       
       if (!userId) {
-        console.error('FCMService: No authenticated user, cannot save token');
+        logger.error('FCMService: No authenticated user, cannot save token');
         throw new Error('No authenticated user');
       }
 
-      console.log('💾 FCMService: Registering token in DynamoDB (AWS-only storage)...', { 
+      logger.log('💾 FCMService: Registering token in DynamoDB (AWS-only storage)...', { 
         userId, 
         platform: platform || this.platform || 'web', 
         tokenLength: token?.length 
@@ -508,17 +509,17 @@ class FCMService {
           platform: platform || this.platform || 'web'
         });
         if (result) {
-          console.log('✅ FCMService: Token registered in DynamoDB userTokens table', { 
+          logger.log('✅ FCMService: Token registered in DynamoDB userTokens table', { 
             userId, 
             tokenId: result.id, 
             platform: result.platform 
           });
         } else {
-          console.warn('⚠️ FCMService: Token registration returned null (may have been cached or failed silently)');
+          logger.warn('⚠️ FCMService: Token registration returned null (may have been cached or failed silently)');
         }
       } catch (dynamoError) {
         // Critical: token registration failure means notifications won't work
-        console.error('❌ FCMService: Failed to register token in DynamoDB:', {
+        logger.error('❌ FCMService: Failed to register token in DynamoDB:', {
           error: dynamoError?.message || dynamoError,
           stack: dynamoError?.stack,
           userId,
@@ -531,7 +532,7 @@ class FCMService {
       this.currentToken = token;
       
     } catch (error) {
-      console.error('❌ FCMService: Error saving token:', error, 'Message:', error?.message, 'Code:', error?.code);
+      logger.error('❌ FCMService: Error saving token:', error, 'Message:', error?.message, 'Code:', error?.code);
       throw error;
     }
   }
@@ -548,31 +549,31 @@ class FCMService {
       const currentUser = await optimizedAuthService.getCurrentUser();
       
       if (!currentUser) {
-        console.log('FCMService: Waiting for authenticated user...');
+        logger.log('FCMService: Waiting for authenticated user...');
         // Wait up to 3 seconds for auth to be ready
         for (let i = 0; i < 30; i++) {
           await new Promise(resolve => setTimeout(resolve, 100));
           const retryUser = await optimizedAuthService.getCurrentUser();
           if (retryUser) {
-            console.log(`FCMService: Auth ready after ${(i + 1) * 100}ms`);
+            logger.log(`FCMService: Auth ready after ${(i + 1) * 100}ms`);
             // Get Cognito sub (DynamoDB user ID)
             // Priority: attributes.sub > cognitoAttributes.sub > userSub
             // DO NOT fall back to uid as it might be Firebase UID or username
             const cognitoSub = retryUser.attributes?.sub || retryUser.cognitoAttributes?.sub || retryUser.userSub;
             
             if (!cognitoSub) {
-              console.error('FCMService: No Cognito sub found in retry user object');
+              logger.error('FCMService: No Cognito sub found in retry user object');
               continue; // Try again
             }
             
-            console.log(`FCMService: Got user ID (Cognito sub): ${cognitoSub}`);
+            logger.log(`FCMService: Got user ID (Cognito sub): ${cognitoSub}`);
             return cognitoSub;
           }
         }
       }
       
       if (!currentUser) {
-        console.error('FCMService: No authenticated user found after waiting');
+        logger.error('FCMService: No authenticated user found after waiting');
         return null;
       }
       
@@ -582,7 +583,7 @@ class FCMService {
       const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.userSub;
       
       if (!cognitoSub) {
-        console.error('FCMService: No Cognito sub found in user object. Available fields:', {
+        logger.error('FCMService: No Cognito sub found in user object. Available fields:', {
           hasAttributes: !!currentUser.attributes,
           hasCognitoAttributes: !!currentUser.cognitoAttributes,
           hasUserSub: !!currentUser.userSub,
@@ -597,14 +598,14 @@ class FCMService {
       // Validate that it's a Cognito sub format (UUID v4 format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
       const cognitoSubPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!cognitoSubPattern.test(cognitoSub)) {
-        console.warn(`FCMService: User ID "${cognitoSub}" doesn't match Cognito sub format. This might be a Firebase UID or username.`);
+        logger.warn(`FCMService: User ID "${cognitoSub}" doesn't match Cognito sub format. This might be a Firebase UID or username.`);
         // Still return it, but log a warning
       }
       
-      console.log(`FCMService: Got user ID (Cognito sub): ${cognitoSub}`);
+      logger.log(`FCMService: Got user ID (Cognito sub): ${cognitoSub}`);
       return cognitoSub;
     } catch (error) {
-      console.error('FCMService: Error getting current user:', error, error?.message, error?.stack);
+      logger.error('FCMService: Error getting current user:', error, error?.message, error?.stack);
       return null;
     }
   }
@@ -647,10 +648,10 @@ class FCMService {
             },
           }
         );
-        console.log('FCMService: Token last seen updated in DynamoDB');
+        logger.log('FCMService: Token last seen updated in DynamoDB');
       }
     } catch (error) {
-      console.error('FCMService: Error updating token last seen:', error);
+      logger.error('FCMService: Error updating token last seen:', error);
     }
   }
 
@@ -661,11 +662,11 @@ class FCMService {
     try {
       const userId = await this.getCurrentUserId();
       if (!userId) {
-        console.warn('FCMService: No authenticated user, skipping token removal');
+        logger.warn('FCMService: No authenticated user, skipping token removal');
         return;
       }
 
-      console.log('FCMService: Marking token as inactive in DynamoDB:', token);
+      logger.log('FCMService: Marking token as inactive in DynamoDB:', token);
 
       // Find token in DynamoDB
       const { query, updateItem } = await import('../aws/dynamodbClient');
@@ -694,10 +695,10 @@ class FCMService {
             },
           }
         );
-        console.log('FCMService: Token marked as inactive in DynamoDB');
+        logger.log('FCMService: Token marked as inactive in DynamoDB');
       }
     } catch (error) {
-      console.error('FCMService: Error removing token:', error);
+      logger.error('FCMService: Error removing token:', error);
       // Don't throw - token removal failure shouldn't break logout
     }
   }
@@ -712,7 +713,7 @@ class FCMService {
         return;
       }
 
-      console.log('FCMService: Marking all tokens as inactive for user:', userId);
+      logger.log('FCMService: Marking all tokens as inactive for user:', userId);
 
       // Query all active tokens for this user
       const { query, updateItem } = await import('../aws/dynamodbClient');
@@ -741,9 +742,9 @@ class FCMService {
       );
       await Promise.all(updatePromises);
 
-      console.log('FCMService: All tokens marked as inactive in DynamoDB');
+      logger.log('FCMService: All tokens marked as inactive in DynamoDB');
     } catch (error) {
-      console.error('FCMService: Error removing all tokens:', error);
+      logger.error('FCMService: Error removing all tokens:', error);
       // Don't throw - token removal failure shouldn't break logout
     }
   }
@@ -753,7 +754,7 @@ class FCMService {
    */
   async unregister() {
     try {
-      console.log('FCMService: Unregistering from push notifications...');
+      logger.log('FCMService: Unregistering from push notifications...');
 
       // Remove token from DynamoDB (mark as inactive)
       if (this.currentToken) {
@@ -763,19 +764,19 @@ class FCMService {
       // Platform-specific unregistration
       if (this.isNative && this.FirebaseMessaging) {
         await this.FirebaseMessaging.removeAllListeners();
-        console.log('FCMService: Native listeners removed');
+        logger.log('FCMService: Native listeners removed');
         this.listenersSetup = false; // Reset listener flag
       } else if (this.messaging) {
         // Delete token from FCM
         await deleteToken(this.messaging);
-        console.log('FCMService: Web token deleted');
+        logger.log('FCMService: Web token deleted');
       }
 
       this.currentToken = null;
       this.isInitialized = false; // Reset initialization flag
-      console.log('FCMService: Unregistered successfully');
+      logger.log('FCMService: Unregistered successfully');
     } catch (error) {
-      console.error('FCMService: Error unregistering:', error);
+      logger.error('FCMService: Error unregistering:', error);
       throw error;
     }
   }
@@ -811,7 +812,7 @@ class FCMService {
    * Note: Topic subscription must be done server-side via Cloud Functions
    */
   async subscribeToTopic(topic) {
-    console.log('FCMService: Topic subscription must be done server-side:', topic);
+    logger.log('FCMService: Topic subscription must be done server-side:', topic);
     // This should be implemented as a Cloud Function
   }
 
@@ -820,7 +821,7 @@ class FCMService {
    * Note: Topic unsubscription must be done server-side via Cloud Functions
    */
   async unsubscribeFromTopic(topic) {
-    console.log('FCMService: Topic unsubscription must be done server-side:', topic);
+    logger.log('FCMService: Topic unsubscription must be done server-side:', topic);
     // This should be implemented as a Cloud Function
   }
 

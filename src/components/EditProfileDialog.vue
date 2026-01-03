@@ -292,7 +292,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../boot/firebase';
+import { smartMirrorAuth as auth, smartMirrorDb as db } from '../boot/smartMirrorFirebase';
 import { useNotificationStore } from '../stores/notifications';
 import { useModalState } from '../composables/useModalState';
 import { updateUserProfile } from '../services/userService';

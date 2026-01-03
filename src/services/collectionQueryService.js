@@ -1,4 +1,5 @@
-import { db, isNative } from '../boot/firebase'
+import { smartMirrorDb as db, detectPlatformFromUrl } from '../boot/smartMirrorFirebase'
+const { isNative } = detectPlatformFromUrl()
 import {
   collection,
   getDocs,
@@ -28,8 +29,8 @@ class CollectionQueryService {
           console.warn('CollectionQueryService: Firebase Web SDK db not available, trying to reinitialize...')
           // Try to reinitialize Firebase Web SDK
           const { getFirestore } = await import('firebase/firestore')
-          const { app } = await import('../boot/firebase')
-          this.db = getFirestore(app)
+          const { smartMirrorApp } = await import('../boot/smartMirrorFirebase')
+          this.db = getFirestore(smartMirrorApp)
           console.log('CollectionQueryService: Reinitialized Firebase Web SDK db')
         }
         

@@ -11,6 +11,73 @@ class OptimizedAuthService {
     this.userCache = new Map()
     this.authListeners = new Set()
     this.hubListener = null
+    // Request deduplication: share the same promise for concurrent requests
+    this._fetchPromise = null
+    this._fetchPromiseTimestamp = null
+    // Cache auth state in localStorage for faster startup
+    this.AUTH_CACHE_KEY = 'pre_auth_state_cache'
+    this.AUTH_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+  }
+
+  /**
+   * Get cache duration (iOS-optimized: longer for iOS)
+   */
+  _getCacheDuration() {
+    if (this.AUTH_CACHE_DURATION) {
+      return this.AUTH_CACHE_DURATION
+    }
+    
+    // Detect iOS platform
+    const isIOS = typeof window !== 'undefined' && (
+      window.location.protocol === 'capacitor:' ||
+      window.webkit?.messageHandlers !== undefined ||
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
+    )
+    
+    // iOS-optimized: Longer cache duration for iOS (10 minutes) since sessions are more stable
+    this.AUTH_CACHE_DURATION = isIOS ? 10 * 60 * 1000 : 5 * 60 * 1000
+    return this.AUTH_CACHE_DURATION
+  }
+
+  /**
+   * Load cached auth state from localStorage
+   */
+  _loadCachedAuthState() {
+    try {
+      const cached = localStorage.getItem(this.AUTH_CACHE_KEY)
+      if (!cached) return null
+      
+      const { user, timestamp } = JSON.parse(cached)
+      const age = Date.now() - timestamp
+      
+      // Only use cache if it's fresh (iOS-optimized duration)
+      const cacheDuration = this._getCacheDuration()
+      if (age < cacheDuration && user) {
+        return user
+      }
+    } catch {
+      // Ignore cache errors
+    }
+    return null
+  }
+
+  /**
+   * Save auth state to localStorage
+   */
+  _saveCachedAuthState(user) {
+    try {
+      if (user) {
+        localStorage.setItem(this.AUTH_CACHE_KEY, JSON.stringify({
+          user,
+          timestamp: Date.now()
+        }))
+      } else {
+        localStorage.removeItem(this.AUTH_CACHE_KEY)
+      }
+    } catch {
+      // Ignore cache errors (localStorage might be full)
+    }
   }
 
   ensureHubListener() {
@@ -61,33 +128,59 @@ class OptimizedAuthService {
       // Use cached user first - don't call Cognito if we have cached user
       // This prevents 400 errors right after sign-in
       if (this.currentUser) {
-        console.log('🚀 OptimizedAuthService: fetchCurrentUser returning cached user (avoiding Cognito call)')
         return this.currentUser
       }
       
-      // Only call Cognito if we don't have a cached user
-      // Use cache first (faster and avoids 400 errors)
-      let user
-      try {
-        user = await Auth.currentAuthenticatedUser({ bypassCache: false })
-      } catch (cacheError) {
-        // If cache fails, try bypassCache (but this might cause 400 errors right after sign-in)
-        console.warn('⚠️ OptimizedAuthService: Cache fetch failed, trying bypassCache:', cacheError?.message || cacheError)
+      // Check localStorage cache for faster startup
+      const cachedUser = this._loadCachedAuthState()
+      if (cachedUser) {
+        this.currentUser = cachedUser
+        return cachedUser
+      }
+      
+      // Request deduplication: if a fetch is already in progress, return the same promise
+      const now = Date.now()
+      if (this._fetchPromise && this._fetchPromiseTimestamp && (now - this._fetchPromiseTimestamp) < 2000) {
+        return this._fetchPromise
+      }
+      
+      // Create new fetch promise
+      this._fetchPromiseTimestamp = now
+      this._fetchPromise = (async () => {
         try {
-          user = await Auth.currentAuthenticatedUser({ bypassCache: true })
-        } catch (bypassError) {
-          console.warn('⚠️ OptimizedAuthService: Both cache and bypassCache failed:', bypassError?.message || bypassError)
-          throw bypassError
-        }
-      }
-      
-      // Add uid property for Firebase compatibility (use username or sub)
-      if (user && !user.uid) {
-        user.uid = user.username || user.attributes?.sub || user.attributes?.email
-      }
-      
-      // Enhance user object with all Cognito attributes
-      if (user && user.attributes) {
+          // Only call Cognito if we don't have a cached user
+          // Use cache first (faster and avoids 400 errors)
+          let user
+          try {
+            user = await Auth.currentAuthenticatedUser({ bypassCache: false })
+          } catch (cacheError) {
+            // If cache fails and error indicates user is not authenticated, don't try bypassCache
+            // This prevents hundreds of failed attempts
+            if (cacheError?.code === 'NotAuthorizedException' || 
+                cacheError?.message?.includes('not authenticated') ||
+                cacheError?.message?.includes('No current user')) {
+              // User is clearly not authenticated, don't retry
+              this._saveCachedAuthState(null)
+              throw cacheError
+            }
+            
+            // Only try bypassCache for other errors (network issues, etc.)
+            try {
+              user = await Auth.currentAuthenticatedUser({ bypassCache: true })
+            } catch (bypassError) {
+              // If both fail, cache the failure to prevent repeated attempts
+              this._saveCachedAuthState(null)
+              throw bypassError
+            }
+          }
+          
+          // Add uid property for Firebase compatibility (use username or sub)
+          if (user && !user.uid) {
+            user.uid = user.username || user.attributes?.sub || user.attributes?.email
+          }
+          
+          // Enhance user object with all Cognito attributes
+          if (user && user.attributes) {
         // Parse birthdate if it exists (format: DD/MM/YYYY or YYYY-MM-DD)
         let birthdate = null
         if (user.attributes.birthdate) {
@@ -130,22 +223,31 @@ class OptimizedAuthService {
           ...user.attributes
         }
         
-        // Reduced logging - only log in debug mode or first time
-        // Commented out to reduce console spam
-        // console.log('🚀 OptimizedAuthService: Fetched Cognito attributes:', {
-        //   email: user.cognitoAttributes.email,
-        //   name: user.cognitoAttributes.name,
-        //   phoneNumber: user.cognitoAttributes.phoneNumber,
-        //   gender: user.cognitoAttributes.gender,
-        //   birthdate: user.cognitoAttributes.birthdate
-        // })
-      }
+          }
+          
+          // Cache the user in memory and localStorage
+          this.currentUser = user
+          this._saveCachedAuthState(user)
+          
+          // Clear fetch promise
+          this._fetchPromise = null
+          this._fetchPromiseTimestamp = null
+          
+          return user
+        } catch (error) {
+          // Clear fetch promise on error
+          this._fetchPromise = null
+          this._fetchPromiseTimestamp = null
+          throw error
+        }
+      })()
       
-      this.currentUser = user
-      return user
-    } catch {
-      this.currentUser = null
-      return null
+      return this._fetchPromise
+    } catch (error) {
+      // Fallback error handling
+      this._fetchPromise = null
+      this._fetchPromiseTimestamp = null
+      throw error
     }
   }
 
@@ -154,59 +256,90 @@ class OptimizedAuthService {
    */
   clearCachedUser() {
     this.currentUser = null
+    this._saveCachedAuthState(null) // Clear localStorage cache too
+    this._fetchPromise = null // Clear any pending fetch
+    this._fetchPromiseTimestamp = null
     console.log('🚀 OptimizedAuthService: Cleared cached user')
   }
 
   /**
    * Wait for authentication state to be restored (especially important on iOS)
-   * @param {number} maxWaitTime - Maximum time to wait in ms (default: 5000ms, 8000ms for iOS)
+   * Optimized with exponential backoff and early exit
+   * iOS-optimized: Uses localStorage cache first, then minimal polling
+   * @param {number} maxWaitTime - Maximum time to wait in ms (default: 1500ms for iOS, 1000ms for others)
    * @returns {Promise<Object|null>} - User object or null
    */
   async waitForAuthState(maxWaitTime = null) {
-    // Detect iOS platform
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    // Detect iOS platform (more reliable detection)
+    const protocol = window.location.protocol
+    const hasIOSBridge = window.webkit?.messageHandlers !== undefined
+    const isIOS = protocol === 'capacitor:' || hasIOSBridge || 
+                  /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                   (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
     
-    // iOS needs more time to restore auth state
-    const waitTime = maxWaitTime || (isIOS ? 8000 : 5000)
-    const checkInterval = 100 // Check every 100ms
-    let elapsed = 0
+    // iOS-optimized: Much shorter wait time since we have localStorage cache
+    // 1500ms for iOS (was 3000ms), 1000ms for others (was 2000ms)
+    const waitTime = maxWaitTime || (isIOS ? 1500 : 1000)
     
-    console.log(`🚀 OptimizedAuthService: Waiting for auth state (max: ${waitTime}ms, iOS: ${isIOS})...`)
-    
-    // First check if we already have a cached user
+    // First check if we already have a cached user (memory or localStorage)
     if (this.currentUser) {
-      // Reduced logging - cached user access is frequent and not critical
       return this.currentUser
     }
     
+    // Check localStorage cache first (fastest)
+    const cachedUser = this._loadCachedAuthState()
+    if (cachedUser) {
+      this.currentUser = cachedUser
+      return cachedUser
+    }
+    
+    // Try immediate fetch (might work if auth is already ready)
+    try {
+      const user = await this.fetchCurrentUser()
+      if (user) {
+        return user
+      }
+    } catch (error) {
+      // If error clearly indicates user is not authenticated, exit early
+      if (error?.code === 'NotAuthorizedException' || 
+          error?.message?.includes('not authenticated') ||
+          error?.message?.includes('No current user')) {
+        return null
+      }
+    }
+    
+    // iOS-optimized: Use longer intervals to reduce API calls
+    // iOS needs fewer checks since localStorage cache is fast
+    let checkInterval = isIOS ? 300 : 200 // Start with 300ms for iOS, 200ms for others
+    let elapsed = 0
+    const maxInterval = isIOS ? 800 : 1000 // Max 800ms for iOS, 1000ms for others
+    
     while (elapsed < waitTime) {
+      await new Promise(resolve => setTimeout(resolve, checkInterval))
+      elapsed += checkInterval
+      
       try {
         const user = await this.fetchCurrentUser()
         if (user) {
-          console.log(`🚀 OptimizedAuthService: Auth state ready after ${elapsed}ms`)
-          this.currentUser = user
           return user
         }
-      } catch {
-        // Ignore errors during polling - auth might not be ready yet
-        if (elapsed > 1000) {
-          // Only log after 1 second to avoid spam
-          console.log(`🚀 OptimizedAuthService: Auth not ready yet (${elapsed}ms)...`)
+      } catch (error) {
+        // If error clearly indicates user is not authenticated, exit early
+        if (error?.code === 'NotAuthorizedException' || 
+            error?.message?.includes('not authenticated') ||
+            error?.message?.includes('No current user')) {
+          return null
         }
+        // For other errors, continue polling but increase interval
+        checkInterval = Math.min(checkInterval * 1.5, maxInterval)
       }
-      
-      await new Promise(resolve => setTimeout(resolve, checkInterval))
-      elapsed += checkInterval
     }
     
-    console.warn(`🚀 OptimizedAuthService: Auth state not ready after ${waitTime}ms timeout`)
     // Final attempt
     try {
-      this.currentUser = await this.fetchCurrentUser()
-      return this.currentUser
+      const user = await this.fetchCurrentUser()
+      return user || null
     } catch {
-      this.currentUser = null
       return null
     }
   }
@@ -357,6 +490,10 @@ class OptimizedAuthService {
       
       console.log('✅ Sign in successful, using sign-in result directly:', enhancedUser?.username)
       console.log('✅ Email verified from sign-in result:', enhancedUser?.cognitoAttributes?.emailVerified)
+      
+      // Cache the user immediately after sign-in
+      this.currentUser = enhancedUser
+      this._saveCachedAuthState(enhancedUser)
       console.log('✅ Raw email_verified attribute:', enhancedUser?.attributes?.email_verified, 'type:', typeof enhancedUser?.attributes?.email_verified)
       console.log('✅ All user attributes keys:', enhancedUser?.attributes ? Object.keys(enhancedUser.attributes) : 'no attributes')
       

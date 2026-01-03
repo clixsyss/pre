@@ -241,23 +241,52 @@ export class BookingService {
                 const result = await firestoreService.getDocs(collectionPath, { filters })
                 const bookedSlots = [];
                 
+                // Normalize date formats for comparison (handle both YYYY-MM-DD and Date objects)
+                const normalizeDate = (dateValue) => {
+                    if (!dateValue) return null;
+                    if (typeof dateValue === 'string') {
+                        // Already in YYYY-MM-DD format
+                        return dateValue;
+                    }
+                    if (dateValue instanceof Date) {
+                        return dateValue.toISOString().split('T')[0];
+                    }
+                    // Try to parse if it's a timestamp or other format
+                    try {
+                        return new Date(dateValue).toISOString().split('T')[0];
+                    } catch {
+                        return String(dateValue);
+                    }
+                };
+                
+                const normalizedQueryDate = normalizeDate(date);
+                
                 result.docs.forEach((doc) => {
                     const booking = doc.data();
-                    if (booking.timeSlots) {
-                        // Normalize time format to match generated slots (add leading zeros)
-                        const normalizedSlots = booking.timeSlots.map(time => {
-                            // Convert "2:00 PM" to "02:00 PM", "7:00 AM" to "07:00 AM", etc.
-                            if (time.match(/^\d:\d{2} [AP]M$/)) {
-                                return '0' + time;
-                            }
-                            return time;
-                        });
-                        bookedSlots.push(...normalizedSlots);
-                        console.log('🔍 Debug: Original slots:', booking.timeSlots, 'Normalized slots:', normalizedSlots);
+                    const bookingDate = booking.date;
+                    const normalizedBookingDate = normalizeDate(bookingDate);
+                    const status = booking.status || 'pending';
+                    
+                    // Only consider confirmed and pending bookings for the EXACT date
+                    if ((status === 'confirmed' || status === 'pending') && normalizedBookingDate === normalizedQueryDate) {
+                        if (booking.timeSlots) {
+                            // Normalize time format to match generated slots (add leading zeros)
+                            const normalizedSlots = booking.timeSlots.map(time => {
+                                // Convert "2:00 PM" to "02:00 PM", "7:00 AM" to "07:00 AM", etc.
+                                if (time.match(/^\d:\d{2} [AP]M$/)) {
+                                    return '0' + time;
+                                }
+                                return time;
+                            });
+                            bookedSlots.push(...normalizedSlots);
+                            console.log('🔍 Debug: Original slots:', booking.timeSlots, 'Normalized slots:', normalizedSlots);
+                        }
+                    } else if (normalizedBookingDate !== normalizedQueryDate) {
+                        console.log(`⚠️ Skipping booking from different date: ${normalizedBookingDate} (query date: ${normalizedQueryDate})`);
                     }
                 });
                 
-                console.log('🔍 Debug: Booked slots from database:', bookedSlots);
+                console.log('🔍 Debug: Booked slots from database (date:', date, '):', bookedSlots);
                 console.log('🔍 Debug: Generated base slots:', baseSlots.map(s => s.time));
                 console.log('🔍 Debug: Sample booking data:', result.docs.slice(0, 3).map(doc => ({
                     id: doc.id,
@@ -401,13 +430,35 @@ export class BookingService {
                 
                 const bookedSlots = [];
                 
-                // Filter by status in JavaScript (faster than compound query)
+                // Filter by status AND date in JavaScript (double-check date matches)
                 result.docs.forEach((doc) => {
                     const booking = doc.data();
                     const status = booking.status || 'pending';
+                    const bookingDate = booking.date;
                     
-                    // Only consider confirmed and pending bookings
-                    if (status === 'confirmed' || status === 'pending') {
+                    // Normalize date formats for comparison (handle both YYYY-MM-DD and Date objects)
+                    const normalizeDate = (dateValue) => {
+                        if (!dateValue) return null;
+                        if (typeof dateValue === 'string') {
+                            // Already in YYYY-MM-DD format
+                            return dateValue;
+                        }
+                        if (dateValue instanceof Date) {
+                            return dateValue.toISOString().split('T')[0];
+                        }
+                        // Try to parse if it's a timestamp or other format
+                        try {
+                            return new Date(dateValue).toISOString().split('T')[0];
+                        } catch {
+                            return String(dateValue);
+                        }
+                    };
+                    
+                    const normalizedBookingDate = normalizeDate(bookingDate);
+                    const normalizedQueryDate = normalizeDate(date);
+                    
+                    // Only consider confirmed and pending bookings for the EXACT date
+                    if ((status === 'confirmed' || status === 'pending') && normalizedBookingDate === normalizedQueryDate) {
                         if (booking.timeSlots) {
                             const normalizedSlots = booking.timeSlots.map(time => {
                                 if (time.match(/^\d:\d{2} [AP]M$/)) {
@@ -417,10 +468,12 @@ export class BookingService {
                             });
                             bookedSlots.push(...normalizedSlots);
                         }
+                    } else if (normalizedBookingDate !== normalizedQueryDate) {
+                        console.log(`⚠️ Skipping booking from different date: ${normalizedBookingDate} (query date: ${normalizedQueryDate})`);
                     }
                 });
                 
-                console.log('📅 Booked slots after filtering:', bookedSlots);
+                console.log('📅 Booked slots after filtering (date:', date, '):', bookedSlots);
                 
                 // Mark reserved slots
                 const availableSlots = baseSlots.map(slot => ({

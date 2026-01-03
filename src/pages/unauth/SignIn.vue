@@ -356,7 +356,7 @@ const loadAvailableProjects = async () => {
     // Use Firebase Web SDK (works on all platforms including iOS)
     console.log('[SignIn] Using Firebase Web SDK...')
     const { collection, getDocs } = await import('firebase/firestore')
-    const { db } = await import('../../boot/firebase')
+    const { smartMirrorDb: db } = await import('../../boot/smartMirrorFirebase')
     
     const projectsRef = collection(db, 'projects')
     const snapshot = await getDocs(projectsRef)
@@ -1284,7 +1284,7 @@ const handleDeviceKeyResetSubmit = async () => {
     // Use direct Firebase SDK for better reliability
     const { collection, addDoc, serverTimestamp } = await import('firebase/firestore')
     const { signInAnonymously, signOut } = await import('firebase/auth')
-    const { db, auth } = await import('../../boot/firebase')
+    const { smartMirrorDb: db, smartMirrorAuth: auth } = await import('../../boot/smartMirrorFirebase')
     
     // iOS native apps require authentication to write to Firestore, even with "allow create: if true"
     // Sign in anonymously first to get write permissions

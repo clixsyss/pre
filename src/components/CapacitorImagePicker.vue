@@ -29,7 +29,9 @@ import { ref } from 'vue';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../boot/firebase';
+import { getStorage } from 'firebase/storage'
+import { smartMirrorApp } from '../boot/smartMirrorFirebase'
+const storage = getStorage(smartMirrorApp)
 
 // Component name for ESLint
 defineOptions({

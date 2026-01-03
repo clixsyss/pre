@@ -1,4 +1,5 @@
-import { db, isNative } from '../boot/firebase'
+import { smartMirrorDb as db, detectPlatformFromUrl } from '../boot/smartMirrorFirebase'
+const { isNative } = detectPlatformFromUrl()
 
 class UnifiedFirestoreService {
   constructor() {

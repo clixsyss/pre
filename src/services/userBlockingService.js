@@ -1,5 +1,5 @@
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '../boot/firebase'
+import { smartMirrorDb as db } from '../boot/smartMirrorFirebase'
 
 /**
  * Input validation and sanitization utilities

@@ -3,6 +3,7 @@ import { initializeApp, getApps } from 'firebase/app'
 import { getAuth, indexedDBLocalPersistence, initializeAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { Capacitor } from '@capacitor/core'
+import logger from 'src/utils/logger'
 
 // Smart Mirror Firebase configuration (Web SDK config)
 const smartMirrorFirebaseConfig = {
@@ -56,7 +57,7 @@ let { isNative, platform } = detectPlatformFromUrl()
 // For Web: Use smartMirrorApp
 const appName = 'smartMirrorApp'
 
-console.log('Smart Mirror Firebase Boot: Platform detected:', platform, 'Native:', isNative, 'App name:', appName)
+logger.log('Smart Mirror Firebase Boot: Platform detected:', platform, 'Native:', isNative, 'App name:', appName)
 
 // Initialize Smart Mirror Firebase app (separate from PRE app)
 let smartMirrorApp
@@ -68,16 +69,16 @@ const initializeSmartMirrorApp = () => {
   const existingApp = existingApps.find(app => app.name === appName)
 
   if (existingApp) {
-    console.log('Smart Mirror Firebase Boot: Using existing app instance:', appName)
+    logger.log('Smart Mirror Firebase Boot: Using existing app instance:', appName)
     smartMirrorApp = existingApp
   } else {
-    console.log('Smart Mirror Firebase Boot: Creating new app instance:', appName)
+    logger.log('Smart Mirror Firebase Boot: Creating new app instance:', appName)
     smartMirrorApp = initializeApp(smartMirrorFirebaseConfig, appName)
   }
 
   // For native platforms (iOS/Android), use Web SDK Auth exclusively
   if (isNative) {
-    console.log(`Smart Mirror Firebase Boot: ${platform} - Initializing Web SDK Auth with persistence`)
+    logger.log(`Smart Mirror Firebase Boot: ${platform} - Initializing Web SDK Auth with persistence`)
     try {
       // Try to initialize auth with persistence for native platforms
       smartMirrorAuth = initializeAuth(smartMirrorApp, {
@@ -85,8 +86,8 @@ const initializeSmartMirrorApp = () => {
       })
     } catch (err) {
       // If already initialized, just get it
-      console.log('Smart Mirror Firebase Boot: Auth already initialized, using existing instance')
-      console.log('Smart Mirror Firebase Boot: Init error (expected):', err.message)
+      logger.log('Smart Mirror Firebase Boot: Auth already initialized, using existing instance')
+      logger.log('Smart Mirror Firebase Boot: Init error (expected):', err.message)
       smartMirrorAuth = getAuth(smartMirrorApp)
     }
   } else {
@@ -96,7 +97,7 @@ const initializeSmartMirrorApp = () => {
   
   smartMirrorDb = getFirestore(smartMirrorApp)
   
-  console.log('✅ Smart Mirror Firebase services initialized:', {
+  logger.log('✅ Smart Mirror Firebase services initialized:', {
     platform,
     isNative,
     appName,
@@ -122,13 +123,20 @@ export default defineBoot(async ({ app }) => {
   isNative = platformInfo.isNative
   platform = platformInfo.platform
   
-  console.log('Smart Mirror Firebase Boot: Platform re-checked:', platform, 'Native:', isNative)
+  logger.log('Smart Mirror Firebase Boot: Platform re-checked:', platform, 'Native:', isNative)
   
-  // For native platforms (iOS/Android), wait briefly for services to stabilize
+  // iOS-optimized: Minimal delay for iOS (services are fast with localStorage cache)
   if (isNative) {
-    console.log(`Smart Mirror Firebase Boot: ${platform} detected - stabilizing services...`)
-    await new Promise(resolve => setTimeout(resolve, 300))
-    console.log(`Smart Mirror Firebase Boot: ${platform} services stable ✅`)
+    if (platform === 'ios') {
+      // iOS: Very short delay since we use localStorage cache
+      logger.log(`Smart Mirror Firebase Boot: iOS detected - minimal delay for cache...`)
+      await new Promise(resolve => setTimeout(resolve, 100))
+    } else {
+      // Android: Slightly longer delay
+      logger.log(`Smart Mirror Firebase Boot: ${platform} detected - stabilizing services...`)
+      await new Promise(resolve => setTimeout(resolve, 300))
+    }
+    logger.log(`Smart Mirror Firebase Boot: ${platform} services stable ✅`)
   }
   
   // Make Smart Mirror Firebase services available globally
@@ -136,9 +144,9 @@ export default defineBoot(async ({ app }) => {
   app.config.globalProperties.$smartMirrorDb = smartMirrorDb
   app.config.globalProperties.$smartMirrorApp = smartMirrorApp
   
-  console.log('Smart Mirror Firebase Boot: Global properties set ✅')
-  console.log('Smart Mirror Firebase Boot: Ready for authentication requests')
+  logger.log('Smart Mirror Firebase Boot: Global properties set ✅')
+  logger.log('Smart Mirror Firebase Boot: Ready for authentication requests')
 })
 
 // Export Smart Mirror Firebase services for use in components
-export { smartMirrorApp, smartMirrorAuth, smartMirrorDb }
+export { smartMirrorApp, smartMirrorAuth, smartMirrorDb, detectPlatformFromUrl }

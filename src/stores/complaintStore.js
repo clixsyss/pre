@@ -450,7 +450,7 @@ export const useComplaintStore = defineStore('complaint', () => {
         console.log('📡 Project ID:', projectId)
 
         const { collection, getDocs, query, where, orderBy } = await import('firebase/firestore')
-        const { db } = await import('../boot/firebase')
+        const { smartMirrorDb: db } = await import('../boot/smartMirrorFirebase')
 
         const categoriesRef = collection(db, `projects/${projectId}/complaintCategories`)
 

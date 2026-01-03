@@ -35,9 +35,10 @@
 </template>
 
 <script setup>
-console.log('🚀🚀🚀 JavaScript is executing! App.vue script setup started!')
-
 import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
+import logger from 'src/utils/logger'
+
+logger.log('🚀🚀🚀 JavaScript is executing! App.vue script setup started!')
 import { useRoute } from 'vue-router'
 import SplashScreen from './components/SplashScreen.vue'
 import NotificationPopup from './components/NotificationPopup.vue'
@@ -61,7 +62,7 @@ const splashStore = useSplashStore()
 // Safety timeout: Always show content after 3 seconds, even if initialization fails
 setTimeout(() => {
   if (isRouterLoading.value) {
-    console.warn('⚠️ App.vue: Safety timeout reached, forcing isRouterLoading to false')
+    logger.warn('⚠️ App.vue: Safety timeout reached, forcing isRouterLoading to false')
     isRouterLoading.value = false
   }
 }, 3000)
@@ -80,8 +81,8 @@ const {
 
 // Global error handler - enhanced
 window.addEventListener('error', (event) => {
-  console.error('❌ Global JavaScript error:', event.error)
-  console.error('❌ Error details:', {
+  logger.error('❌ Global JavaScript error:', event.error)
+  logger.error('❌ Error details:', {
     message: event.message,
     filename: event.filename,
     lineno: event.lineno,
@@ -93,21 +94,21 @@ window.addEventListener('error', (event) => {
 })
 
 window.addEventListener('unhandledrejection', (event) => {
-  console.error('❌ Unhandled promise rejection:', event.reason)
+  logger.error('❌ Unhandled promise rejection:', event.reason)
   // Prevent the rejection from crashing the app
   event.preventDefault()
 })
 
 // Catch any synchronous errors
 try {
-  console.log('🚀 App.vue: Setting up error handlers')
+  logger.log('🚀 App.vue: Setting up error handlers')
 } catch (error) {
-  console.error('❌ Error setting up error handlers:', error)
+  logger.error('❌ Error setting up error handlers:', error)
 }
 
 onMounted(async () => {
   try {
-    console.log('🚀 App.vue: Starting app initialization...')
+    logger.log('🚀 App.vue: Starting app initialization...')
     
     // Show splash screen and set loading state
     splashStore.showSplash()
@@ -115,69 +116,79 @@ onMounted(async () => {
     splashStore.setLoadingMessage('Loading...')
     
     // Initialize network monitoring first
-    console.log('🌐 App.vue: Initializing network monitoring...')
+    logger.log('🌐 App.vue: Initializing network monitoring...')
     await initNetworkMonitoring()
-    console.log('✅ Network monitoring initialized')
+    logger.log('✅ Network monitoring initialized')
     
     // Wait for Vue to be fully ready
     await nextTick()
-    console.log('🚀 App.vue: Vue app mounted')
+    logger.log('🚀 App.vue: Vue app mounted')
     
     // Services are already initialized via boot files
     // Just verify they're available
-    console.log('🔍 App.vue: Verifying services availability...')
+    logger.log('🔍 App.vue: Verifying services availability...')
     
     try {
       const authCheck = optimizedAuthService ? 'available' : 'not available'
-      console.log('🔍 optimizedAuthService:', authCheck)
+      logger.log('🔍 optimizedAuthService:', authCheck)
     } catch (e) {
-      console.warn('⚠️ Error checking auth service:', e)
+      logger.warn('⚠️ Error checking auth service:', e)
     }
     
-    console.log('🚀 App.vue: Services verification completed')
+    logger.log('🚀 App.vue: Services verification completed')
     
-    // Wait for smooth initialization
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // iOS-optimized: Detect platform for optimized delays
+    const protocol = window.location.protocol
+    const hasIOSBridge = window.webkit?.messageHandlers !== undefined
+    const isIOS = protocol === 'capacitor:' || hasIOSBridge || 
+                  (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
+    
+    // iOS-optimized: Shorter delays since cache is fast
+    const initDelay = isIOS ? 200 : 500
+    const paintDelay = isIOS ? 300 : 800
+    
+    // Wait for smooth initialization (iOS-optimized)
+    await new Promise(resolve => setTimeout(resolve, initDelay))
     
     // Show app content (always set to false, even if there were errors)
-    console.log('🔍 App.vue: Setting isRouterLoading to false...')
+    logger.log('🔍 App.vue: Setting isRouterLoading to false...')
     isRouterLoading.value = false
     
     // Wait for Vue to render the content
     await nextTick()
     
     // Wait additional time for the DOM to paint
-    // This prevents white screen flash on iOS
-    await new Promise(resolve => setTimeout(resolve, 800))
+    // iOS-optimized: Shorter delay since cache makes everything faster
+    await new Promise(resolve => setTimeout(resolve, paintDelay))
     
-    console.log('🔍 App.vue: Checking if content is rendered...')
+    logger.log('🔍 App.vue: Checking if content is rendered...')
     const mainContent = document.querySelector('.main-layout, .auth-layout')
     if (mainContent) {
-      console.log('✅ App.vue: Main content found in DOM')
+      logger.log('✅ App.vue: Main content found in DOM')
     } else {
-      console.warn('⚠️ App.vue: Main content not yet rendered, waiting...')
+      logger.warn('⚠️ App.vue: Main content not yet rendered, waiting...')
       await new Promise(resolve => setTimeout(resolve, 500))
     }
     
     // Notify splash store that app is initialized
     // The splash will hide when both video AND app are ready
-    console.log('🚀 App.vue: Notifying splash that app is initialized')
+    logger.log('🚀 App.vue: Notifying splash that app is initialized')
     splashStore.setAppInitialized()
     
     // Initialize document verification after app is ready
-    console.log('🔍 App.vue: Initializing document verification...')
+    logger.log('🔍 App.vue: Initializing document verification...')
     initializeDocumentVerification()
     
   } catch (error) {
-    console.error('❌ App.vue: Critical error during initialization:', error)
-    console.error('❌ Error stack:', error.stack)
+    logger.error('❌ App.vue: Critical error during initialization:', error)
+    logger.error('❌ Error stack:', error.stack)
     
     // Always show app content, even on error
     isRouterLoading.value = false
     
     // Hide splash even if there's an error
     setTimeout(() => {
-      console.log('🔍 App.vue: Force hiding splash due to critical error...')
+      logger.log('🔍 App.vue: Force hiding splash due to critical error...')
       // Force both flags to hide splash immediately on error
       splashStore.setVideoCompleted()
       splashStore.setAppInitialized()
@@ -187,7 +198,7 @@ onMounted(async () => {
 
 // Cleanup network monitoring and document verification on unmount
 onUnmounted(async () => {
-  console.log('🛑 App.vue: Cleaning up...')
+  logger.log('🛑 App.vue: Cleaning up...')
   await stopNetworkMonitoring()
   cleanupDocumentVerification()
 })
@@ -232,7 +243,7 @@ const isGuestPassPage = computed(() => {
 })
 
 const isAuthenticatedPage = computed(() => {
-  console.log('🔍 App.vue: Checking route:', { 
+  logger.log('🔍 App.vue: Checking route:', { 
     currentPath: route.path, 
     isRouterLoading: isRouterLoading.value,
     isGuestPass: isGuestPassPage.value
@@ -245,18 +256,18 @@ const isAuthenticatedPage = computed(() => {
   
   // Check exact matches first
   if (authenticatedRoutes.includes(route.path)) {
-    console.log('🔍 App.vue: Exact match found, showing main layout')
+    logger.log('🔍 App.vue: Exact match found, showing main layout')
     return true
   }
   
   // Check dynamic routes
   if (route.path.startsWith('/academy-details/')) {
-    console.log('🔍 App.vue: Academy details route, showing main layout')
+    logger.log('🔍 App.vue: Academy details route, showing main layout')
     return true
   }
   
   if (route.path.startsWith('/academy-registration/')) {
-    console.log('🔍 App.vue: Academy registration route, showing main layout')
+    logger.log('🔍 App.vue: Academy registration route, showing main layout')
     return true
   }
   

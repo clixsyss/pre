@@ -1,6 +1,6 @@
 import fileUploadService from './fileUploadService';
 import { createRequestNotification } from './notificationCenterService';
-import { db } from '../boot/firebase';
+import { smartMirrorDb as db } from '../boot/smartMirrorFirebase';
 
 class RequestSubmissionService {
   /**
@@ -564,6 +564,7 @@ class RequestSubmissionService {
 
   /**
    * Add a message to a request submission
+   * Messages are stored as an array in the request submission document (DynamoDB compatible)
    * @param {string} projectId - The project ID
    * @param {string} submissionId - The submission ID
    * @param {Object} messageData - Message data
@@ -576,18 +577,39 @@ class RequestSubmissionService {
         submissionId
       });
 
-      const { addDoc, collection } = await import('firebase/firestore');
+      // Use firestoreService which routes to DynamoDB
+      const { default: firestoreService } = await import('./firestoreService');
+      await firestoreService.initialize();
       
-      const messagesRef = collection(db, `projects/${projectId}/requestSubmissions/${submissionId}/messages`);
-      const messageDoc = {
+      // Get current request submission to get existing messages
+      const requestPath = `projects/${projectId}/requestSubmissions/${submissionId}`;
+      const requestSnap = await firestoreService.getDoc(requestPath);
+      
+      if (!requestSnap.exists) {
+        throw new Error('Request submission not found');
+      }
+      
+      const requestData = requestSnap.data();
+      const existingMessages = Array.isArray(requestData.messages) ? requestData.messages : [];
+      
+      // Create new message object
+      const messageId = Date.now().toString();
+      const message = {
+        id: messageId,
         ...messageData,
-        createdAt: new Date().toISOString() // Use ISO string instead of serverTimestamp for iOS compatibility
+        createdAt: new Date().toISOString() // Use ISO string for compatibility
       };
       
-      const docRef = await addDoc(messagesRef, messageDoc);
+      // Add message to messages array in the request submission document
+      const updatedMessages = [...existingMessages, message];
+      await firestoreService.updateDoc(requestPath, {
+        messages: updatedMessages,
+        lastMessageAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
       
       console.log('✅ RequestSubmissionService: Message added successfully', {
-        messageId: docRef.id
+        messageId: messageId
       });
 
       // Send notification if admin is replying to user (in the background, don't await)
@@ -618,7 +640,7 @@ class RequestSubmissionService {
           });
       }
 
-      return docRef.id;
+      return messageId;
 
     } catch (error) {
       console.error('❌ RequestSubmissionService: Error adding message:', error);

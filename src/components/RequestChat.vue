@@ -51,7 +51,7 @@ const projectId = computed(() => props.projectId || projectStore.selectedProject
 const messages = ref([]);
 const loading = ref(false);
 const requestData = ref(null);
-const unsubscribe = ref(null);
+const pollInterval = ref(null);
 
 // Load messages when component mounts
 onMounted(async () => {
@@ -96,34 +96,20 @@ const loadRequestData = async () => {
 };
 
 const loadMessages = async () => {
-  try {
-    if (!projectId.value || !requestId.value) {
-      console.error('Missing projectId or requestId for messages', { projectId: projectId.value, requestId: requestId.value });
-      return;
-    }
-    
-    // Try to load messages from subcollection (if table exists)
-    // Note: Messages might be stored in the request submission document itself
-    const messagesPath = `projects/${projectId.value}/requestSubmissions/${requestId.value}/messages`;
-    const queryOptions = {
-      orderBy: { field: 'createdAt', direction: 'asc' },
-      timeoutMs: 10000
-    };
-    
-    let result
     try {
-      result = await firestoreService.getDocs(messagesPath, queryOptions);
-    } catch (error) {
-      // If messages table doesn't exist, try to get messages from the request submission document
-      console.warn('⚠️ RequestChat: Messages subcollection not found, checking request document for messages field:', error.message);
+      if (!projectId.value || !requestId.value) {
+        console.error('Missing projectId or requestId for messages', { projectId: projectId.value, requestId: requestId.value });
+        return;
+      }
       
-      // Try to get messages from the request submission document itself
+      // Messages are stored as an array in the request submission document (DynamoDB compatible)
       const requestPath = `projects/${projectId.value}/requestSubmissions/${requestId.value}`;
       const requestSnap = await firestoreService.getDoc(requestPath);
       
+      let result;
       if (requestSnap.exists()) {
         const requestData = requestSnap.data();
-        // If messages are stored as an array in the document
+        // Messages are stored as an array in the document
         if (Array.isArray(requestData.messages)) {
           result = {
             docs: requestData.messages.map((msg, index) => ({
@@ -148,7 +134,6 @@ const loadMessages = async () => {
           size: 0
         };
       }
-    }
     
     messages.value = result.docs.map(doc => {
       const data = doc.data();
@@ -162,55 +147,40 @@ const loadMessages = async () => {
     
     console.log('✅ RequestChat: Initial messages loaded:', messages.value.length);
     
-    // Set up real-time listener for instant message updates on iOS/Android
-    console.log('🔍 RequestChat: Setting up real-time listener for messages collection');
+    // Set up polling for real-time updates (DynamoDB doesn't support subcollection listeners)
+    // Poll every 2 seconds to get new messages
+    console.log('🔍 RequestChat: Setting up polling for message updates (DynamoDB)');
     
-    // Clean up any existing listener
-    if (unsubscribe.value) {
-      unsubscribe.value();
+    // Clean up any existing interval
+    if (pollInterval.value) {
+      clearInterval(pollInterval.value);
     }
     
-    // Use subscribeToQuery for collection-level real-time updates
-    try {
-      unsubscribe.value = firestoreService.subscribeToQuery(
-        messagesPath,
-        {
-          orderByField: 'createdAt',
-          orderDirection: 'asc'
-        },
-        (snapshot) => {
-          // Handle real-time updates
-          const newMessages = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-              timestamp: data.createdAt
-            };
-          });
-          
-          console.log('🔍 RequestChat: Real-time messages update received:', newMessages.length);
-          messages.value = newMessages;
-        },
-        (error) => {
-          console.error('❌ RequestChat: Real-time listener error:', error);
-          console.error('Error details:', {
-            message: error?.message,
-            code: error?.code,
-            stack: error?.stack
-          });
+    // Poll for new messages every 2 seconds
+    pollInterval.value = setInterval(async () => {
+      try {
+        const requestSnap = await firestoreService.getDoc(requestPath, { useCache: false });
+        if (requestSnap.exists()) {
+          const requestData = requestSnap.data();
+          if (Array.isArray(requestData.messages)) {
+            const newMessages = requestData.messages.map((msg, index) => ({
+              id: msg.id || `msg-${index}`,
+              ...msg,
+              timestamp: msg.createdAt || msg.timestamp
+            }));
+            // Only update if messages changed
+            if (JSON.stringify(newMessages) !== JSON.stringify(messages.value)) {
+              messages.value = newMessages;
+              console.log('🔍 RequestChat: Messages updated via polling:', newMessages.length);
+            }
+          }
         }
-      );
-    } catch (err) {
-      console.error('❌ RequestChat: Error setting up real-time listener:', err);
-      console.error('Error details:', {
-        message: err?.message,
-        code: err?.code,
-        stack: err?.stack
-      });
-    }
+      } catch (err) {
+        console.error('❌ RequestChat: Error polling messages:', err);
+      }
+    }, 2000);
     
-    console.log('✅ RequestChat: Real-time listener setup successfully');
+    console.log('✅ RequestChat: Polling setup successfully');
     
   } catch (error) {
     console.error('Error loading messages:', error);
@@ -253,10 +223,12 @@ const handleSendMessage = async (messageText) => {
       createdAt: new Date()
     };
 
-    const messagesPath = `projects/${projectId.value}/requestSubmissions/${requestId.value}/messages`;
-    await firestoreService.addDoc(messagesPath, messageData);
+    // Messages are stored as array in request submission document (not subcollection)
+    // Use requestSubmissionService.addMessage which handles this correctly
+    const { default: requestSubmissionService } = await import('../services/requestSubmissionService');
+    await requestSubmissionService.addMessage(projectId.value, requestId.value, messageData);
     
-    console.log('✅ RequestChat: Message sent to server, real-time listener will update');
+    console.log('✅ RequestChat: Message sent to server, polling will update');
   } catch (error) {
     console.error('Error sending message:', error);
     
@@ -330,11 +302,11 @@ const onImageUploaded = () => {
 
 // Cleanup on unmount
 onUnmounted(() => {
-  // Clean up real-time listener
-  if (unsubscribe.value) {
-    console.log('🧹 RequestChat: Cleaning up real-time listener');
-    unsubscribe.value();
-    unsubscribe.value = null;
+  // Clean up polling interval
+  if (pollInterval.value) {
+    console.log('🧹 RequestChat: Cleaning up polling interval');
+    clearInterval(pollInterval.value);
+    pollInterval.value = null;
   }
 });
 </script>
