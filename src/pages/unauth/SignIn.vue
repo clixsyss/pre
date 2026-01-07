@@ -454,63 +454,59 @@ const togglePassword = () => {
   showPassword.value = !showPassword.value
 }
 
-// Check if user needs migration (exists in Firestore with oldId but not in Firebase Auth)
-// Uses firestoreService for direct access (more reliable on iOS)
+// Check if user needs migration (exists in DynamoDB with oldId but no authUid/password)
+// This checks BEFORE attempting Cognito login
 const checkForMigration = async (email) => {
   try {
     console.log('🔍 Checking for migration need for email:', email)
-    console.log('📞 Using direct Firestore check via firestoreService')
     
     const normalizedEmail = email.toLowerCase().trim()
+    console.log('🔍 Normalized email for search:', normalizedEmail)
     
-    // Use firestoreService to get user by email
-    // This works better on iOS than Cloud Functions or direct Web SDK queries
-    console.log('🔍 Querying Firestore for user...')
+    // Use DynamoDB service to get user by email
+    console.log('🔍 Querying DynamoDB for user (will scan up to 5000 items if needed)...')
     const startTime = Date.now()
     
-    // Try to get user document - we'll check multiple potential document IDs
-    // since we don't know the exact document ID
     try {
-      // Option 1: Try getting all users and filtering (if collection is small)
-      console.log('🔍 Attempting to fetch users collection...')
-      const result = await firestoreService.getDocs('users', {
-        filters: [{ field: 'email', operator: '==', value: normalizedEmail }],
-        timeoutMs: 8000
-      })
+      const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
+      const userData = await getUserByEmail(normalizedEmail)
       
       const duration = Date.now() - startTime
-      console.log(`✅ Firestore query completed in ${duration}ms, found ${result.size} user(s)`)
+      console.log(`✅ DynamoDB query completed in ${duration}ms`)
       
-      if (result && !result.empty && result.docs.length > 0) {
-        const userDoc = result.docs[0]
-        const userData = userDoc.data()
+      if (userData) {
+        console.log('📋 Found user in DynamoDB:', userData.id)
+        console.log('📋 User email in DB:', userData.email)
+        console.log('📋 User has oldId:', !!userData.oldId, userData.oldId ? '(value: ' + userData.oldId + ')' : '')
+        console.log('📋 User has authUid:', !!userData.authUid, userData.authUid ? '(value: ' + userData.authUid + ')' : '')
         
-        console.log('📋 Found user:', userDoc.id)
-        console.log('📋 User has oldId:', !!userData.oldId)
-        console.log('📋 User migrated status:', userData.migrated)
-        
-              // Check if user has oldId and is NOT migrated
-              if (userData.oldId && userData.migrated !== true) {
-                console.log('✅ User needs migration!')
-                console.log('📋 Storing user ID for migration:', userDoc.id)
-                return { needsMigration: true, userId: userDoc.id, userData }
-              } else if (userData.oldId && userData.migrated === true) {
-                console.log('ℹ️ User has oldId but already migrated')
-                return { needsMigration: false }
-              } else {
-                console.log('ℹ️ User has no oldId, no migration needed')
-                return { needsMigration: false }
-              }
+        // Check if user has oldId but no authUid (hasn't migrated to Cognito yet)
+        // This means they need to set up a password
+        if (userData.oldId && (!userData.authUid || userData.authUid === '')) {
+          console.log('✅ User needs migration! (has oldId but no authUid)')
+          console.log('📋 Storing user data for migration:', userData.id)
+          return { needsMigration: true, userId: userData.id, userData }
+        } else if (userData.oldId && userData.authUid) {
+          console.log('ℹ️ User has oldId and authUid - already migrated, no migration needed')
+          return { needsMigration: false }
+        } else {
+          console.log('ℹ️ User has no oldId, no migration needed')
+          return { needsMigration: false }
+        }
       }
       
-      console.log('❌ No user found with that email')
+      console.log('❌ No user found with that email in DynamoDB')
+      console.log('⚠️ This could mean:')
+      console.log('   1. User does not exist in DynamoDB')
+      console.log('   2. Email format in DB is different (case, spacing, etc.)')
+      console.log('   3. User is beyond the 5000 item scan limit')
       return { needsMigration: false }
       
-    } catch (firestoreError) {
-      console.error('❌ Firestore query error:', firestoreError)
+    } catch (dbError) {
+      console.error('❌ DynamoDB query error:', dbError)
       console.error('❌ Error details:', {
-        message: firestoreError?.message,
-        code: firestoreError?.code
+        message: dbError?.message,
+        code: dbError?.code
       })
       
       // Return false on error to avoid blocking sign in
@@ -530,6 +526,30 @@ const handleSignIn = async () => {
 
   try {
     console.log('[SignIn] Starting sign in...')
+
+    // Check if user needs migration BEFORE attempting login
+    // This is for users who exist in DB with oldId but don't have a password set up yet
+    console.log('[SignIn] 🔍 Pre-login: Checking for migration need...')
+    const migrationCheck = await checkForMigration(formData.email.trim())
+    
+    if (migrationCheck.needsMigration) {
+      console.log('[SignIn] ✅ User needs migration, redirecting to migration page')
+      const registrationStore = useRegistrationStore()
+      registrationStore.setPersonalData({ email: formData.email.trim() })
+      registrationStore.setMigrationChallenge({
+        type: 'MIGRATION_REQUIRED',
+        email: formData.email.trim(),
+        userData: migrationCheck.userData
+      })
+      registrationStore.setFirestoreUserId(migrationCheck.userId)
+      
+      notificationStore.showInfo('Please set a new password to complete your account migration.')
+      loading.value = false
+      router.push('/migrate-account')
+      return
+    } else {
+      console.log('[SignIn] ℹ️ Pre-login: User not found in DynamoDB or doesn\'t need migration, proceeding with normal login')
+    }
 
     // Use optimized auth service (works on all platforms)
     console.log('[SignIn] Starting authentication...')
@@ -1013,26 +1033,44 @@ const handleSignIn = async () => {
     const errorCode = error.code || error.name
 
     // Check if user needs migration (legacy Firebase account)
-    if (errorCode === 'UserNotFoundException' || errorCode === 'NotAuthorizedException') {
+    // Check for migration on ANY auth error (wrong password, user not found, etc.)
+    // Users with oldId but no authUid need migration regardless of the error type
+    if (errorCode === 'UserNotFoundException' || 
+        errorCode === 'NotAuthorizedException' || 
+        errorCode === 'auth/wrong-password' ||
+        errorCode === 'auth/user-not-found' ||
+        errorCode === 'auth/invalid-credential') {
       console.log('[SignIn] 🔍 Auth error detected, checking for migration...', errorCode)
-      const migrationCheck = await checkForMigration(formData.email)
+      console.log('[SignIn] 🔍 Checking if user exists in DynamoDB and needs migration...')
+      
+      const migrationCheck = await checkForMigration(formData.email.trim())
       
       if (migrationCheck.needsMigration) {
         console.log('[SignIn] ✅ User needs migration, redirecting to migration page')
         // Store email AND user ID in registration store for migration page
         const registrationStore = useRegistrationStore()
-        registrationStore.setPersonalData({ email: formData.email })
+        registrationStore.setPersonalData({ email: formData.email.trim() })
+        registrationStore.setMigrationChallenge({
+          type: 'MIGRATION_REQUIRED',
+          email: formData.email.trim(),
+          userData: migrationCheck.userData
+        })
         registrationStore.setFirestoreUserId(migrationCheck.userId)
         
         console.log('[SignIn] 📋 Stored user ID for migration:', migrationCheck.userId)
+        console.log('[SignIn] 📋 Migration challenge set:', {
+          type: 'MIGRATION_REQUIRED',
+          email: formData.email.trim(),
+          userId: migrationCheck.userId
+        })
         
         notificationStore.showInfo('Please set a new password to complete your account migration.')
+        loading.value = false
         router.push('/migrate-account')
         return
+      } else {
+        console.log('[SignIn] ℹ️ User does not need migration (not found in DynamoDB or already migrated)')
       }
-      
-      // If migration check fails, continue to show appropriate error
-      console.log('[SignIn] ℹ️ User does not need migration, showing error')
     }
     
     // Provide user-friendly error messages

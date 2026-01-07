@@ -38,6 +38,13 @@ export const useRegistrationStore = defineStore('registration', () => {
     confirmPassword: '',
   })
 
+  const faceVerificationPhotos = reactive({
+    frontPhoto: null,
+    leftPhoto: null,
+    rightPhoto: null,
+    allPhotos: [],
+  })
+
   // Methods
   const setPersonalData = (data) => {
     Object.assign(personalData, data)
@@ -49,6 +56,10 @@ export const useRegistrationStore = defineStore('registration', () => {
 
   const setUserDetails = (data) => {
     Object.assign(userDetails, data)
+  }
+
+  const setFaceVerificationPhotos = (data) => {
+    Object.assign(faceVerificationPhotos, data)
   }
 
   const setEmailVerified = (verified) => {
@@ -102,6 +113,12 @@ export const useRegistrationStore = defineStore('registration', () => {
       password: '',
       confirmPassword: '',
     })
+    Object.assign(faceVerificationPhotos, {
+      frontPhoto: null,
+      leftPhoto: null,
+      rightPhoto: null,
+      allPhotos: [],
+    })
   }
 
   const getRegistrationData = () => {
@@ -123,6 +140,7 @@ export const useRegistrationStore = defineStore('registration', () => {
     propertyData,
     userDetails,
     migrationChallenge,
+    faceVerificationPhotos,
 
     // Methods
     setPersonalData,
@@ -137,5 +155,6 @@ export const useRegistrationStore = defineStore('registration', () => {
     getRegistrationData,
     setMigrationChallenge,
     clearMigrationChallenge,
+    setFaceVerificationPhotos,
   }
 })

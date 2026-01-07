@@ -59,6 +59,12 @@ const routes = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/register/face-verification',
+    name: 'FaceVerification',
+    component: () => import('../pages/unauth/FaceVerificationPage.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
     path: '/migrate-account',
     name: 'MigrateAccount',
     component: MigrateAccount,

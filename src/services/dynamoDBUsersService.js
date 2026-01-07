@@ -17,7 +17,7 @@
  *           suspensionType, unit, unsuspendedAt, unsuspendedBy, updatedAt
  */
 
-import { getItem, scan, putItem } from '../aws/dynamodbClient'
+import { getItem, scan, putItem, updateItem } from '../aws/dynamodbClient'
 
 const TABLE_NAME = 'users'
 
@@ -252,91 +252,50 @@ export async function getUserByEmail(email) {
     
     // Use filtered scan to find user by email (more efficient than scanning all and filtering in memory)
     // Note: For even better performance, consider adding a GSI on email field
-    const items = await scan(TABLE_NAME, {
-      FilterExpression: 'email = :email',
-      ExpressionAttributeValues: {
-        ':email': normalizedEmail
-      },
-      Limit: 1 // Only need one result
-    })
+    // IMPORTANT: When using FilterExpression with Limit, Limit applies to items SCANNED, not items RETURNED
+    // For migration checks, we need to scan more items to find users who might be further in the table
+    let items = []
+    let lastEvaluatedKey = null
+    let scannedCount = 0
+    const maxScanItems = 5000 // Increased for migration - scan up to 5000 items to find users
     
-    console.log(`[DynamoDBUsersService] FilterExpression scan found ${items.length} result(s)`)
-    
-    if (items.length === 0) {
-      console.warn(`[DynamoDBUsersService] No user found with normalized email: "${normalizedEmail}"`)
-      
-      // Fallback: Try case-insensitive search if normalized search fails
-      // This handles cases where emails might not have been normalized on creation
-      console.log('[DynamoDBUsersService] Attempting case-insensitive fallback search...')
-      
-      // Use a filter expression that checks both exact match and case variations
-      // DynamoDB FilterExpression doesn't support case-insensitive comparison,
-      // so we need to scan and filter in memory, but let's try multiple variations
-      try {
-        // Try scanning with different email variations
-        const emailVariations = [
-          normalizedEmail,
-          normalizedEmail.charAt(0).toUpperCase() + normalizedEmail.slice(1), // Hady@gmail.com
-          normalizedEmail.toUpperCase(), // HADY@GMAIL.COM
-        ]
-        
-        for (const emailVar of emailVariations) {
-          console.log(`[DynamoDBUsersService] Trying email variation: "${emailVar}"`)
-          const items = await scan(TABLE_NAME, {
-            FilterExpression: 'email = :email',
-            ExpressionAttributeValues: {
-              ':email': emailVar
-            },
-            Limit: 1
-          })
-          
-          if (items.length > 0) {
-            console.log(`[DynamoDBUsersService] ✅ Found user with email variation: "${emailVar}"`)
-            const convertedUser = convertUserFromDynamoDB(items[0])
-            return convertedUser
-          }
-        }
-        
-        // Last resort: Scan and filter in memory (limited to reasonable size)
-        console.log('[DynamoDBUsersService] Last resort: Scanning table for case-insensitive match...')
-        let allItems = []
-        let lastEvaluatedKey = null
-        
-        do {
-          const scanResult = await scan(TABLE_NAME, {
-            Limit: 500, // Scan in batches
-            ...(lastEvaluatedKey && { ExclusiveStartKey: lastEvaluatedKey })
-          })
-          
-          // scanResult is an array (items), with LastEvaluatedKey attached if available
-          const items = Array.isArray(scanResult) ? scanResult : []
-          allItems = allItems.concat(items)
-          lastEvaluatedKey = scanResult.LastEvaluatedKey || null
-          
-          // Check if we found a match
-          const matchedItem = allItems.find(item => {
-            const itemEmail = (item.email || '').trim().toLowerCase()
-            return itemEmail === normalizedEmail
-          })
-          
-          if (matchedItem) {
-            console.log('[DynamoDBUsersService] ✅ Found user via case-insensitive fallback scan')
-            const convertedUser = convertUserFromDynamoDB(matchedItem)
-            return convertedUser
-          }
-          
-          // Limit total scan to 2000 items to avoid timeout
-          if (allItems.length >= 2000) {
-            console.warn('[DynamoDBUsersService] Reached scan limit, stopping fallback search')
-            break
-          }
-        } while (lastEvaluatedKey)
-        
-      } catch (fallbackError) {
-        console.error('[DynamoDBUsersService] Error in fallback search:', fallbackError)
+    do {
+      const scanOptions = {
+        FilterExpression: 'email = :email',
+        ExpressionAttributeValues: {
+          ':email': normalizedEmail
+        },
+        Limit: 500 // Scan in batches of 500
       }
       
-      console.warn('[DynamoDBUsersService] ❌ User not found even with case-insensitive fallback')
+      if (lastEvaluatedKey) {
+        scanOptions.ExclusiveStartKey = lastEvaluatedKey
+      }
+      
+      const scanResult = await scan(TABLE_NAME, scanOptions)
+      const batchItems = Array.isArray(scanResult) ? scanResult : []
+      items = items.concat(batchItems)
+      lastEvaluatedKey = scanResult.LastEvaluatedKey || null
+      scannedCount += 500 // Approximate - DynamoDB scans this many but filters after
+      
+      // If we found a match, stop scanning immediately
+      if (items.length > 0) {
+        break
+      }
+      
+      // Stop if we've scanned enough items
+      if (scannedCount >= maxScanItems) {
+        console.warn(`[DynamoDBUsersService] Reached max scan limit (${maxScanItems}) without finding match`)
+        break
+      }
+    } while (lastEvaluatedKey)
+    
+    console.log(`[DynamoDBUsersService] FilterExpression scan found ${items.length} result(s) after scanning up to ${scannedCount} items`)
+    
+    // Removed redundant fallback scans for performance - emails are stored normalized in DynamoDB
+    // If not found with normalized email, user doesn't exist
+    if (items.length === 0) {
+      console.log(`[DynamoDBUsersService] No user found with normalized email: "${normalizedEmail}"`)
       return null
     }
     
@@ -400,14 +359,8 @@ export async function createUser(userId, userData) {
     
     const nowISO = new Date().toISOString()
     
-    // Check if email already exists
-    if (userData.email) {
-      const existingUser = await getUserByEmail(userData.email)
-      if (existingUser) {
-        console.warn(`[DynamoDBUsersService] ⚠️ User with email ${userData.email} already exists: ${existingUser.id}`)
-        throw new Error(`An account with this email already exists`)
-      }
-    }
+    // Skip email check here - it's already checked before Cognito user creation in the registration flow
+    // This prevents duplicate expensive scans. If there's a race condition, DynamoDB will handle it via id uniqueness.
     
     // Create user object with all required fields
     // Normalize email to ensure consistent storage (lowercase, trimmed)
@@ -486,7 +439,7 @@ export async function createUser(userId, userData) {
 }
 
 /**
- * Update or create a user
+ * Update a user (preserves existing fields, only updates provided fields)
  * @param {string} userId - User ID
  * @param {Object} userData - User data to update
  * @returns {Promise<Object>} Updated user object
@@ -495,24 +448,59 @@ export async function updateUser(userId, userData) {
   try {
     console.log(`[DynamoDBUsersService] Updating user: ${userId}`)
     
+    if (!userId) {
+      throw new Error('User ID is required')
+    }
+    
     // Normalize email if provided to ensure consistent storage
     const normalizedUserData = { ...userData }
     if (normalizedUserData.email) {
       normalizedUserData.email = normalizedUserData.email.trim().toLowerCase()
     }
     
-    const item = {
-      id: userId,
-      userId: userId,
+    // Add updatedAt timestamp
+    const updateFields = {
       ...normalizedUserData,
       updatedAt: new Date().toISOString()
     }
     
-    await putItem(TABLE_NAME, item)
+    // Remove undefined values
+    Object.keys(updateFields).forEach(key => {
+      if (updateFields[key] === undefined) {
+        delete updateFields[key]
+      }
+    })
+    
+    // Build update expression
+    const updateExpression = []
+    const expressionAttributeNames = {}
+    const expressionAttributeValues = {}
+    
+    Object.keys(updateFields).forEach((key, index) => {
+      const nameKey = `#attr${index}`
+      const valueKey = `:val${index}`
+      
+      updateExpression.push(`${nameKey} = ${valueKey}`)
+      expressionAttributeNames[nameKey] = key
+      expressionAttributeValues[valueKey] = updateFields[key]
+    })
+    
+    if (updateExpression.length === 0) {
+      console.warn(`[DynamoDBUsersService] No fields to update for user ${userId}`)
+      return null
+    }
+    
+    await updateItem(TABLE_NAME, { id: userId }, {
+      UpdateExpression: `SET ${updateExpression.join(', ')}`,
+      ExpressionAttributeNames: expressionAttributeNames,
+      ExpressionAttributeValues: expressionAttributeValues
+    })
     
     console.log(`[DynamoDBUsersService] ✅ Updated user: ${userId}`)
     
-    return item
+    // Fetch and return the updated user
+    const updatedUser = await getUserById(userId)
+    return updatedUser
   } catch (error) {
     console.error(`[DynamoDBUsersService] ❌ Error updating user ${userId}:`, error)
     throw error

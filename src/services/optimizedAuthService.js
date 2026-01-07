@@ -686,6 +686,21 @@ class OptimizedAuthService {
   }
 
   /**
+   * Resend sign up confirmation code
+   * Used for sending verification email to newly created users
+   */
+  async resendSignUpConfirmationCode(email) {
+    try {
+      console.log('🔐 Resending signup confirmation code to:', email)
+      await Auth.resendSignUp(email.trim().toLowerCase())
+      console.log('✅ Confirmation code sent successfully')
+    } catch (error) {
+      console.error('❌ Error resending confirmation code:', error)
+      throw this._normalizeError(error)
+    }
+  }
+
+  /**
    * Update profile
    */
   async updateProfile(user, profile) {

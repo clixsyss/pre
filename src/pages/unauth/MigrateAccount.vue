@@ -29,7 +29,7 @@
           <label for="password" class="form-label">New Password</label>
           <div class="password-input-wrapper">
             <input id="password" v-model="formData.password" :type="showPassword ? 'text' : 'password'"
-              class="form-input" placeholder="Enter new password" required minlength="6" autofocus />
+              class="form-input" placeholder="Enter new password" required minlength="8" autofocus />
             <button type="button" @click="togglePassword" class="password-toggle">
               <svg v-if="showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none"
                 xmlns="http://www.w3.org/2000/svg">
@@ -50,7 +50,34 @@
             </button>
           </div>
           <div class="password-requirements">
-            <small>Password must be at least 6 characters long</small>
+            <small class="requirements-title">Password requirements:</small>
+            <ul class="requirements-list">
+              <li :class="{ valid: hasMinLength }">
+                <span v-if="hasMinLength">✓</span>
+                <span v-else>•</span>
+                At least 8 characters long
+              </li>
+              <li :class="{ valid: hasUpperCase }">
+                <span v-if="hasUpperCase">✓</span>
+                <span v-else>•</span>
+                Contains at least one uppercase letter
+              </li>
+              <li :class="{ valid: hasLowerCase }">
+                <span v-if="hasLowerCase">✓</span>
+                <span v-else>•</span>
+                Contains at least one lowercase letter
+              </li>
+              <li :class="{ valid: hasNumber }">
+                <span v-if="hasNumber">✓</span>
+                <span v-else>•</span>
+                Contains at least one number
+              </li>
+              <li :class="{ valid: hasSpecialChar }">
+                <span v-if="hasSpecialChar">✓</span>
+                <span v-else>•</span>
+                Contains at least one special character
+              </li>
+            </ul>
           </div>
         </div>
 
@@ -59,7 +86,7 @@
           <div class="password-input-wrapper">
             <input id="confirmPassword" v-model="formData.confirmPassword"
               :type="showConfirmPassword ? 'text' : 'password'" class="form-input" placeholder="Confirm new password"
-              required minlength="6" />
+              required minlength="8" />
             <button type="button" @click="toggleConfirmPassword" class="password-toggle">
               <svg v-if="showConfirmPassword" width="20" height="20" viewBox="0 0 24 24" fill="none"
                 xmlns="http://www.w3.org/2000/svg">
@@ -157,7 +184,8 @@ onMounted(() => {
   const challenge = registrationStore.migrationChallenge
   const email = challenge.email || registrationStore.personalData.email
 
-  if (!challenge.cognitoUser || !email) {
+  // Check if we have either a cognitoUser (NEW_PASSWORD_REQUIRED) or userData (MIGRATION_REQUIRED)
+  if ((!challenge.cognitoUser && challenge.type !== 'MIGRATION_REQUIRED') || !email) {
     notificationStore.showError('No pending migration found. Please try signing in again.')
     router.push('/signin')
     return
@@ -188,20 +216,41 @@ const toggleConfirmPassword = () => {
   showConfirmPassword.value = !showConfirmPassword.value
 }
 
+// Password validation computed properties
+const hasMinLength = computed(() => formData.password.length >= 8)
+const hasUpperCase = computed(() => /[A-Z]/.test(formData.password))
+const hasLowerCase = computed(() => /[a-z]/.test(formData.password))
+const hasNumber = computed(() => /[0-9]/.test(formData.password))
+const hasSpecialChar = computed(() => /[^A-Za-z0-9]/.test(formData.password))
+
+const isPasswordValid = computed(() => {
+  const pwd = formData.password
+  return pwd.length >= 8 &&
+    /[A-Z]/.test(pwd) &&
+    /[a-z]/.test(pwd) &&
+    /[0-9]/.test(pwd) &&
+    /[^A-Za-z0-9]/.test(pwd)
+})
+
 const canSubmit = computed(() =>
   formData.email &&
   formData.password &&
   formData.confirmPassword &&
   formData.password === formData.confirmPassword &&
-  formData.password.length >= 6 &&
+  isPasswordValid.value &&
   !loading.value,
 )
 
 const handleMigration = async () => {
   if (loading.value) return
 
-  if (!formData.password || formData.password.length < 6) {
-    notificationStore.showError('Password must be at least 6 characters long')
+  if (!formData.password) {
+    notificationStore.showError('Please enter a password')
+    return
+  }
+  
+  if (!isPasswordValid.value) {
+    notificationStore.showError('Password does not meet requirements. Please check the requirements below.')
     return
   }
 
@@ -211,7 +260,9 @@ const handleMigration = async () => {
   }
 
   const challenge = registrationStore.migrationChallenge
-  if (!challenge.cognitoUser) {
+  const migrationType = challenge.type || (challenge.cognitoUser ? 'NEW_PASSWORD_REQUIRED' : 'MIGRATION_REQUIRED')
+  
+  if (migrationType === 'NEW_PASSWORD_REQUIRED' && !challenge.cognitoUser) {
     notificationStore.showError('Migration session has expired. Please sign in again.')
     router.push('/signin')
     return
@@ -221,19 +272,80 @@ const handleMigration = async () => {
 
   try {
     console.log('[MigrateAccount] Completing migration for:', formData.email)
+    console.log('[MigrateAccount] Migration type:', migrationType)
 
+    if (migrationType === 'NEW_PASSWORD_REQUIRED') {
+      // Existing flow: User exists in Cognito but needs to set password
     await optimizedAuthService.completeNewPassword(challenge.cognitoUser, formData.password)
+    } else if (migrationType === 'MIGRATION_REQUIRED') {
+      // Migration flow: Instantly confirm user without email verification
+      console.log('[MigrateAccount] Starting instant confirmation for migrated user...')
+      
+      // Use the migration service to instantly confirm and sign in the user
+      const { instantlyConfirmMigratedUser } = await import('src/services/migrationService')
+      const migrationResult = await instantlyConfirmMigratedUser(
+        formData.email.trim(),
+        formData.password
+      )
+      
+      // Always update DynamoDB with cognitoUserId if we have it
+      const cognitoUserId = migrationResult.cognitoUserId
+      if (registrationStore.firestoreUserId && cognitoUserId) {
+        console.log('[MigrateAccount] Updating DynamoDB user with authUid...')
+        const { updateUser } = await import('src/services/dynamoDBUsersService')
+        await updateUser(registrationStore.firestoreUserId, {
+          authUid: cognitoUserId,
+          emailVerified: migrationResult.confirmed || false
+        })
+        console.log('[MigrateAccount] ✅ DynamoDB user updated with authUid:', cognitoUserId)
+      }
 
+      // Check if migration was successful
+      if (!migrationResult.success) {
+        // Migration failed - show error and redirect
+        let errorMessage = migrationResult.message || 'Failed to migrate account. Please try again or contact support.'
+        console.error('[MigrateAccount] Migration failed:', migrationResult)
+        notificationStore.showError(errorMessage)
+        
+        setTimeout(() => {
+          router.push({
+            path: '/signin',
+            query: {
+              message: 'Migration failed. Please try again or contact support.',
+              email: formData.email.trim()
+            }
+          })
+        }, 2000)
+        
+        return
+      }
+      
+      // Success! User is confirmed (but not signed in - they'll sign in manually)
+      console.log('[MigrateAccount] ✅ User migrated and confirmed successfully')
+      console.log('[MigrateAccount] User will sign in manually with their new password')
+      
+      // Update DynamoDB was already done above
+    } else {
+      throw new Error('Unknown migration type')
+    }
+
+    // Clear migration challenge before redirecting
     registrationStore.clearMigrationChallenge()
     registrationStore.setPersonalData({ email: '' })
 
-    notificationStore.showSuccess(
-      'Account migrated successfully! Please sign in with your new password.',
-    )
+    // Show success message and redirect to sign-in - user will sign in manually
+    notificationStore.showSuccess('Account migrated successfully! Please sign in with your new password.')
 
+    // Always redirect to sign-in - user will sign in manually
     setTimeout(() => {
-      router.push('/signin')
-    }, 800)
+      router.push({
+        path: '/signin',
+        query: {
+          message: 'Account migration completed! Please sign in with your new password.',
+          email: formData.email.trim()
+        }
+      })
+    }, 1500)
   } catch (error) {
     console.error('[MigrateAccount] ❌ Migration error:', error)
     console.error('[MigrateAccount] Error details:', {
@@ -249,6 +361,10 @@ const handleMigration = async () => {
         'Password does not meet complexity requirements. Please choose a stronger password.'
     } else if (error.code === 'NotAuthorizedException') {
       errorMessage = 'The migration session has expired. Please try signing in again.'
+    } else if (error.code === 'UsernameExistsException' || error.message?.includes('already exists')) {
+      errorMessage = 'An account with this email already exists. Please try signing in instead.'
+    } else if (error.message === 'USER_NOT_CONFIRMED' || error.code === 'UserNotConfirmedException' || error.code === 'auth/email-not-verified') {
+      errorMessage = 'Your account has been created successfully, but it needs to be confirmed by an administrator before you can sign in. Please contact support to confirm your account, or wait for an administrator to approve it.'
     } else if (error.message) {
       errorMessage = error.message
     }
@@ -405,9 +521,54 @@ const handleMigration = async () => {
 }
 
 .password-requirements {
-  margin-top: 5px;
-  color: #666;
+  margin-top: 10px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e1e5e9;
+}
+
+.requirements-title {
+  display: block;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
   font-size: 0.85rem;
+}
+
+.requirements-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.requirements-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-size: 0.8rem;
+  margin-bottom: 6px;
+  transition: color 0.2s;
+}
+
+.requirements-list li:last-child {
+  margin-bottom: 0;
+}
+
+.requirements-list li.valid {
+  color: #388e3c;
+  font-weight: 500;
+}
+
+.requirements-list li span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  font-weight: bold;
 }
 
 .validation-feedback {

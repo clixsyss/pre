@@ -4,7 +4,8 @@
     <div class="header">
       <button @click="goToOnboarding" class="back-btn">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 12H5M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19 12H5M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
         </svg>
       </button>
       <h1 class="page-title">Registration</h1>
@@ -51,73 +52,41 @@
       <form @submit.prevent="handleSubmit" class="personal-form">
         <div class="form-group">
           <label for="email" class="form-label">E-mail</label>
-          <input
-            id="email"
-            v-model="formData.email"
-            type="email"
-            class="form-input"
-            placeholder="Example@gmail.com"
-            readonly
-          />
+          <input id="email" v-model="formData.email" type="email" class="form-input" placeholder="Example@gmail.com"
+            readonly />
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label for="firstName" class="form-label">First Name</label>
-            <input
-              id="firstName"
-              v-model="formData.firstName"
-              type="text"
-              class="form-input"
-              placeholder="John"
-              required
-              @input="saveToStore"
-            />
+            <input id="firstName" v-model="formData.firstName" type="text" class="form-input" placeholder="John"
+              required @input="saveToStore" />
           </div>
 
           <div class="form-group">
             <label for="lastName" class="form-label">Last Name</label>
-            <input
-              id="lastName"
-              v-model="formData.lastName"
-              type="text"
-              class="form-input"
-              placeholder="Doe"
-              required
-              @input="saveToStore"
-            />
+            <input id="lastName" v-model="formData.lastName" type="text" class="form-input" placeholder="Doe" required
+              @input="saveToStore" />
           </div>
         </div>
 
         <div class="form-group">
           <label for="mobile" class="form-label">Mobile Number</label>
-                      <input
-              id="mobile"
-              v-model="formData.mobile"
-              type="tel"
-              class="form-input"
-              placeholder="+20 123 456 7890"
-              required
-              @input="saveToStore"
-            />
+          <input id="mobile" v-model="formData.mobile" type="tel" class="form-input" placeholder="+20 123 456 7890"
+            required @input="saveToStore" />
         </div>
 
         <div class="form-group">
           <label for="dateOfBirth" class="form-label">Date of Birth</label>
           <div class="date-input-wrapper">
-            <input
-              id="dateOfBirth"
-              v-model="formData.dateOfBirth"
-              type="date"
-              class="form-input"
-              required
-              @change="saveToStore"
-            />
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="calendar-icon">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-              <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
-              <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/>
-              <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+            <input id="dateOfBirth" v-model="formData.dateOfBirth" type="date" class="form-input" required
+              @change="saveToStore" />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+              class="calendar-icon">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+              <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" />
+              <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" />
+              <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" />
             </svg>
           </div>
         </div>
@@ -125,34 +94,21 @@
         <div class="form-group">
           <label class="form-label">Gender</label>
           <div class="gender-buttons">
-                          <button 
-                type="button"
-                @click="() => { formData.gender = 'male'; saveToStore(); }"
-                :class="['gender-btn', { active: formData.gender === 'male' }]"
-              >
-                Male
-              </button>
-                          <button 
-                type="button"
-                @click="() => { formData.gender = 'female'; saveToStore(); }"
-                :class="['gender-btn', { active: formData.gender === 'female' }]"
-              >
-                Female
-              </button>
+            <button type="button" @click="() => { formData.gender = 'male'; saveToStore(); }"
+              :class="['gender-btn', { active: formData.gender === 'male' }]">
+              Male
+            </button>
+            <button type="button" @click="() => { formData.gender = 'female'; saveToStore(); }"
+              :class="['gender-btn', { active: formData.gender === 'female' }]">
+              Female
+            </button>
           </div>
         </div>
 
         <div class="form-group">
           <label for="nationalId" class="form-label">National ID</label>
-                      <input
-              id="nationalId"
-              v-model="formData.nationalId"
-              type="text"
-              class="form-input"
-              placeholder="29912345678901"
-              required
-              @input="saveToStore"
-            />
+          <input id="nationalId" v-model="formData.nationalId" type="text" class="form-input"
+            placeholder="29912345678901" required @input="saveToStore" />
         </div>
 
         <div class="form-group">
@@ -160,20 +116,16 @@
           <div class="media-upload-options">
             <button type="button" @click="selectProfilePicture" class="upload-option-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
-                <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+                <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
               Upload Image
             </button>
           </div>
-          <input
-            ref="profilePictureInput"
-            type="file"
-            accept="image/*"
-            @change="handleProfilePictureUpload"
-            style="display: none"
-          />
+          <input ref="profilePictureInput" type="file" accept="image/*" @change="handleProfilePictureUpload"
+            style="display: none" />
           <div v-if="profilePictureFile" class="file-preview">
             <img :src="profilePicturePreview" alt="Profile Picture Preview" class="preview-image" />
             <button type="button" @click="removeProfilePicture" class="remove-file-btn">✕ Remove</button>
@@ -186,20 +138,16 @@
             <div class="media-upload-options">
               <button type="button" @click="selectFrontIdFromGallery" class="upload-option-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
-                  <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+                  <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
                 Upload Image
               </button>
             </div>
-            <input
-              ref="frontIdInput"
-              type="file"
-              accept="image/*"
-              @change="handleFrontIdUpload"
-              style="display: none"
-            />
+            <input ref="frontIdInput" type="file" accept="image/*" @change="handleFrontIdUpload"
+              style="display: none" />
             <div v-if="frontIdFile" class="file-preview">
               <img :src="frontIdPreview" alt="Front ID Preview" class="preview-image" />
               <button type="button" @click="removeFrontId" class="remove-file-btn">✕ Remove</button>
@@ -211,20 +159,15 @@
             <div class="media-upload-options">
               <button type="button" @click="selectBackIdFromGallery" class="upload-option-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
-                  <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+                  <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
                 </svg>
                 Upload Image
               </button>
             </div>
-            <input
-              ref="backIdInput"
-              type="file"
-              accept="image/*"
-              @change="handleBackIdUpload"
-              style="display: none"
-            />
+            <input ref="backIdInput" type="file" accept="image/*" @change="handleBackIdUpload" style="display: none" />
             <div v-if="backIdFile" class="file-preview">
               <img :src="backIdPreview" alt="Back ID Preview" class="preview-image" />
               <button type="button" @click="removeBackId" class="remove-file-btn">✕ Remove</button>
@@ -289,7 +232,7 @@ onMounted(() => {
   // Get email from registration store
   const email = registrationStore.personalData.email || 'Example@gmail.com'
   formData.email = email
-  
+
   // Load existing data from store if available
   if (registrationStore.userDetails.firstName) {
     formData.firstName = registrationStore.userDetails.firstName
@@ -392,10 +335,10 @@ const removeBackId = () => {
 
 const handleSubmit = async () => {
   if (loading.value) return
-  
+
   // Validate required fields
-  if (!formData.firstName || !formData.lastName || !formData.mobile || 
-      !formData.dateOfBirth || !formData.nationalId) {
+  if (!formData.firstName || !formData.lastName || !formData.mobile ||
+    !formData.dateOfBirth || !formData.nationalId) {
     notificationStore.showError('Please fill in all required fields')
     return
   }
@@ -405,27 +348,27 @@ const handleSubmit = async () => {
     notificationStore.showError('Please upload both front and back National ID pictures')
     return
   }
-  
+
   // Validate profile picture is uploaded
   if (!profilePictureFile.value) {
     notificationStore.showError('Please upload a profile picture')
     return
   }
-  
+
   loading.value = true
-  
+
   try {
     console.log('[PersonalDetails] Getting user ID...')
-    
+
     // Get the DynamoDB user ID (MongoDB ObjectId format) instead of Cognito userSub
     // This ensures S3 folders match the existing structure
     let userId = registrationStore.tempUserId // Fallback to Cognito userSub
-    
+
     // Try to get the DynamoDB user by email to get the actual user ID
     try {
       const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
       const dynamoUser = await getUserByEmail(formData.email.trim().toLowerCase())
-      
+
       if (dynamoUser && dynamoUser.id) {
         // Use DynamoDB user ID (MongoDB ObjectId format) for S3 uploads
         userId = dynamoUser.id
@@ -436,14 +379,14 @@ const handleSubmit = async () => {
     } catch (error) {
       console.warn('[PersonalDetails] ⚠️ Could not fetch DynamoDB user, using Cognito userSub:', error.message)
     }
-    
+
     if (!userId) {
       console.error('[PersonalDetails] ❌ No userId found. Registration may have failed.')
       throw new Error('User ID not found. Please start registration over.')
     }
-    
+
     console.log('[PersonalDetails] Using userId for S3 upload:', userId)
-    
+
     // Upload files with detailed logging
     console.log('[PersonalDetails] Starting file upload...', {
       userId,
@@ -451,7 +394,7 @@ const handleSubmit = async () => {
       hasBackId: !!backIdFile.value,
       hasProfile: !!profilePictureFile.value
     })
-    
+
     const uploadedDocuments = await fileUploadService.uploadUserDocuments(
       userId,
       frontIdFile.value,
@@ -469,9 +412,9 @@ const handleSubmit = async () => {
       gender: formData.gender,
       nationalId: formData.nationalId,
     })
-    
+
     console.log('[PersonalDetails] Saving user data to Firestore (non-blocking)...')
-    
+
     // Save user details to store (for property page to use)
     registrationStore.setUserDetails({
       ...registrationStore.userDetails,
@@ -487,46 +430,46 @@ const handleSubmit = async () => {
         profilePictureUrl: uploadedDocuments.profilePicture || null
       }
     })
-    
+
     // Save to DynamoDB users table (non-blocking - don't wait)
     console.log('[PersonalDetails] Saving to DynamoDB users table (background)...')
-    ;(async () => {
-      try {
-        const { updateUser } = await import('src/services/dynamoDBUsersService')
-        await updateUser(userId, {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          mobile: formData.mobile,
-          dateOfBirth: formData.dateOfBirth,
-          gender: formData.gender,
-          nationalId: formData.nationalId,
-          email: formData.email.trim().toLowerCase(),
-          fullName: `${formData.firstName} ${formData.lastName}`,
-          documents: {
-            frontIdUrl: uploadedDocuments.frontId,
-            backIdUrl: uploadedDocuments.backId,
-            profilePictureUrl: uploadedDocuments.profilePicture || null
-          },
-          registrationStep: 'personal_complete',
-          registrationStatus: 'pending', // Still pending admin approval
-          isProfileComplete: true
-        })
-        console.log('[PersonalDetails] ✅ DynamoDB save completed')
-      } catch (e) {
-        console.warn('[PersonalDetails] Background DynamoDB save failed:', e)
-      }
-    })()
-    
+      ; (async () => {
+        try {
+          const { updateUser } = await import('src/services/dynamoDBUsersService')
+          await updateUser(userId, {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            mobile: formData.mobile,
+            dateOfBirth: formData.dateOfBirth,
+            gender: formData.gender,
+            nationalId: formData.nationalId,
+            email: formData.email.trim().toLowerCase(),
+            fullName: `${formData.firstName} ${formData.lastName}`,
+            documents: {
+              frontIdUrl: uploadedDocuments.frontId,
+              backIdUrl: uploadedDocuments.backId,
+              profilePictureUrl: uploadedDocuments.profilePicture || null
+            },
+            registrationStep: 'personal_complete',
+            registrationStatus: 'pending', // Still pending admin approval
+            isProfileComplete: true
+          })
+          console.log('[PersonalDetails] ✅ DynamoDB save completed')
+        } catch (e) {
+          console.warn('[PersonalDetails] Background DynamoDB save failed:', e)
+        }
+      })()
+
     console.log('[PersonalDetails] DynamoDB save initiated in background')
-    
+
     // DON'T clear password/token yet - needed for final save in Register.vue
     // Will be cleared after complete registration
-      
+
     console.log('[PersonalDetails] Showing success notification')
-    notificationStore.showSuccess('Details saved! Continue to property selection.')
-      
-    console.log('[PersonalDetails] NAVIGATING to /register')
-    router.push('/register')
+    notificationStore.showSuccess('Details saved! Now let\'s verify your face.')
+
+    console.log('[PersonalDetails] NAVIGATING to /register/face-verification')
+    router.push('/register/face-verification')
     console.log('[PersonalDetails] ✅ Navigation triggered')
   } catch (error) {
     console.error('[PersonalDetails] ❌ Save error:', error)
@@ -534,7 +477,7 @@ const handleSubmit = async () => {
     console.error('[PersonalDetails] Error code:', error?.code)
     console.error('[PersonalDetails] Error message:', error?.message)
     console.error('[PersonalDetails] Error stack:', error?.stack)
-    
+
     notificationStore.showError('Failed to save: ' + (error?.message || 'Unknown error'))
   } finally {
     loading.value = false
@@ -759,11 +702,13 @@ const handleSubmit = async () => {
 .completion-info {
   display: flex;
   align-items: center;
-  background-color: #e8f5e9; /* Light green background */
+  background-color: #e8f5e9;
+  /* Light green background */
   padding: 15px 20px;
   margin-bottom: 20px;
   border-radius: 8px;
-  border: 1px solid #a5d6a7; /* Green border */
+  border: 1px solid #a5d6a7;
+  /* Green border */
 }
 
 .info-icon {
@@ -771,7 +716,8 @@ const handleSubmit = async () => {
 }
 
 .info-icon svg {
-  color: #4caf50; /* Green color for the icon */
+  color: #4caf50;
+  /* Green color for the icon */
 }
 
 .info-content h3 {
@@ -968,7 +914,7 @@ const handleSubmit = async () => {
 /* Media Upload Options */
 .media-upload-options {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -1102,8 +1048,8 @@ const handleSubmit = async () => {
 /* Responsive design */
 @media (max-width: 768px) {
   .form-row {
-    grid-template-columns: 1fr;
-    gap: 0;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px;
   }
 }
 
@@ -1111,13 +1057,9 @@ const handleSubmit = async () => {
   .content {
     padding: 30px 15px;
   }
-  
+
   .form-input {
     padding: 14px;
-  }
-  
-  .gender-buttons {
-    flex-direction: column;
   }
 }
 </style>
