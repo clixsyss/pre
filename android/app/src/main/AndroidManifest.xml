@@ -73,11 +73,10 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     
     <!-- Location Permissions (required for BLE scanning and Guest Pass Verification) -->
-    <!-- For Android 12+ (API 31+), need to specify max SDK for coarse location -->
+    <!-- For Android 10 and below (API 30 and below), coarse location is needed for BLE -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30" />
+    <!-- Fine location permission for location-based features (Guest Pass Verification) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <!-- Android 12+ (API 31+) approximate location permission -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
     <uses-feature android:name="android.hardware.location.network" android:required="false" />
     
