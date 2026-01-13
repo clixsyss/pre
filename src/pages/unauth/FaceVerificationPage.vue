@@ -1,7 +1,7 @@
 <template>
   <div class="face-verification-page">
     <FaceVerification 
-      :auto-start="true"
+      :required="true"
       @complete="handleVerificationComplete"
       @cancel="handleCancel"
     />
@@ -27,20 +27,19 @@ const handleVerificationComplete = async (data) => {
   try {
     console.log('[FaceVerificationPage] Face verification completed:', data)
     
+    // Face verification is required in registration, so skip is not allowed
     if (data.skipped) {
-      // User skipped face verification
-      console.log('[FaceVerificationPage] Face verification was skipped')
-      registrationStore.setFaceVerificationPhotos({
-        frontPhoto: null,
-        leftPhoto: null,
-        rightPhoto: null,
-        allPhotos: [],
-        skipped: true
-      })
-      
-      notificationStore.showInfo('Face verification skipped. You can complete it later from your profile settings.')
-    } else {
-      // User completed face verification - upload to AWS S3
+      console.warn('[FaceVerificationPage] Face verification was skipped, but it is required')
+      notificationStore.showError('Face verification is required to complete registration. Please complete it to continue.')
+      return // Don't proceed if skipped
+    }
+    
+    if (!data.photos || data.photos.length < 3) {
+      notificationStore.showError('Please complete all three face verification photos to continue.')
+      return
+    }
+    
+    // User completed face verification - upload to AWS S3
       console.log('[FaceVerificationPage] Uploading face verification photos to AWS S3...')
       
       try {
@@ -124,7 +123,6 @@ const handleVerificationComplete = async (data) => {
         })
         notificationStore.showWarning('Face verification completed, but photos will be saved after account creation.')
       }
-    }
     
     // Navigate to property selection
     setTimeout(() => {

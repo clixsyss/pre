@@ -1,6 +1,6 @@
 <template>
-  <div class="document-verification-overlay">
-    <div class="document-verification-container">
+  <div class="document-verification-overlay" @click.stop>
+    <div class="document-verification-container" @click.stop>
       <!-- Header -->
       <div class="verification-header">
         <h2 class="verification-title">Complete Your Profile</h2>
@@ -11,8 +11,8 @@
       <div class="verification-body">
         <!-- Upload Sections -->
         <div class="upload-sections">
-        <!-- Profile Picture -->
-        <div class="upload-section" :class="{ 'uploaded': profilePicturePreview }">
+        <!-- Profile Picture - Only show if missing -->
+        <div v-if="missingDocuments.profilePicture" class="upload-section" :class="{ 'uploaded': profilePicturePreview }">
           <div class="section-header">
             <div class="section-icon profile">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -45,8 +45,8 @@
           <button v-if="profilePicturePreview" @click.stop="removeProfilePicture" class="remove-btn">Remove</button>
         </div>
 
-        <!-- Front ID -->
-        <div class="upload-section" :class="{ 'uploaded': frontIdPreview }">
+        <!-- Front ID - Only show if missing -->
+        <div v-if="missingDocuments.frontId" class="upload-section" :class="{ 'uploaded': frontIdPreview }">
           <div class="section-header">
             <div class="section-icon id">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -79,8 +79,8 @@
           <button v-if="frontIdPreview" @click.stop="removeFrontId" class="remove-btn">Remove</button>
         </div>
 
-        <!-- Back ID -->
-        <div class="upload-section" :class="{ 'uploaded': backIdPreview }">
+        <!-- Back ID - Only show if missing -->
+        <div v-if="missingDocuments.backId" class="upload-section" :class="{ 'uploaded': backIdPreview }">
           <div class="section-header">
             <div class="section-icon id">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -142,10 +142,9 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
-import { smartMirrorDb as db } from '../boot/smartMirrorFirebase'
 import fileUploadService from '../services/fileUploadService'
 import optimizedAuthService from '../services/optimizedAuthService'
+import { updateUser, getUserById } from '../services/dynamoDBUsersService'
 import { useNotificationStore } from '../stores/notifications'
 
 const notificationStore = useNotificationStore()
@@ -276,7 +275,26 @@ const handleSubmit = async () => {
       throw new Error('No authenticated user found')
     }
 
-    const userId = currentUser.uid
+    // Get user ID - try different possible fields
+    let userId = currentUser.uid || currentUser.userSub || currentUser.id || currentUser.username
+    
+    // If userId looks like an email, try to get DynamoDB user ID
+    if (userId && userId.includes('@')) {
+      try {
+        const { getUserByEmail } = await import('../services/dynamoDBUsersService')
+        const dynamoUser = await getUserByEmail(userId)
+        if (dynamoUser && dynamoUser.id) {
+          userId = dynamoUser.id
+          console.log('[DocumentVerification] Using DynamoDB user ID:', userId)
+        }
+      } catch (error) {
+        console.warn('[DocumentVerification] Could not fetch DynamoDB user by email:', error)
+      }
+    }
+    
+    if (!userId) {
+      throw new Error('User ID not found')
+    }
 
     // Prepare files to upload (only upload missing documents)
     const filesToUpload = {
@@ -302,26 +320,33 @@ const handleSubmit = async () => {
 
     console.log('[DocumentVerification] Documents uploaded:', uploadedDocuments)
 
-    // Update user document in Firestore
-    const userDocRef = doc(db, 'users', userId)
-    const updateData = {
-      updatedAt: serverTimestamp()
+    // Get existing user to preserve existing documents
+    const existingUser = await getUserById(userId)
+    const existingDocuments = existingUser?.documents || {}
+
+    // Merge uploaded documents with existing documents
+    const updatedDocuments = {
+      ...existingDocuments
     }
 
     // Only update the documents that were uploaded
     if (uploadedDocuments.profilePicture) {
-      updateData['documents.profilePictureUrl'] = uploadedDocuments.profilePicture
+      updatedDocuments.profilePictureUrl = uploadedDocuments.profilePicture
     }
     if (uploadedDocuments.frontId) {
-      updateData['documents.frontIdUrl'] = uploadedDocuments.frontId
+      updatedDocuments.frontIdUrl = uploadedDocuments.frontId
     }
     if (uploadedDocuments.backId) {
-      updateData['documents.backIdUrl'] = uploadedDocuments.backId
+      updatedDocuments.backIdUrl = uploadedDocuments.backId
     }
 
-    await updateDoc(userDocRef, updateData)
+    // Update user document in DynamoDB
+    await updateUser(userId, {
+      documents: updatedDocuments,
+      updatedAt: new Date().toISOString()
+    })
 
-    console.log('[DocumentVerification] Firestore updated successfully')
+    console.log('[DocumentVerification] DynamoDB updated successfully')
 
     notificationStore.showSuccess('Documents uploaded successfully!')
 
@@ -337,28 +362,31 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-/* Modal Overlay - matches app's dark theme */
+/* Modal Overlay - matches app's dark theme - non-skippable */
 .document-verification-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 999999;
   padding: 20px;
+  /* Prevent clicking outside modal - make it non-skippable */
+  pointer-events: auto;
+  /* Prevent scrolling when modal is open */
+  overflow: hidden;
 }
 
 /* Modal Container - matches app's card styling */
 .document-verification-container {
   background: white;
   border-radius: 8px;
-  max-width: 95%;
-  width: 95%;
-  max-height: 90vh;
+  width: 100%;
+  max-height: 93vh;
   overflow-y: auto;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
@@ -599,7 +627,6 @@ const handleSubmit = async () => {
 /* Responsive Design */
 @media (max-width: 480px) {
   .document-verification-container {
-    margin: 10px;
     border-radius: 6px;
   }
   

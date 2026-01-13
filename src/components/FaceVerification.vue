@@ -11,17 +11,28 @@
           </svg>
         </div>
         <h2 class="welcome-title">Face Verification</h2>
-        <p class="welcome-description">
+        <p class="welcome-description" v-if="!required">
           We'll take photos of your face from different angles to help you access the gates of your compound securely.
         </p>
-        <p class="welcome-subdescription">
+        <div v-else class="welcome-description-container">
+          <p class="welcome-description">
+            <strong>Face verification is required</strong> to complete your registration and access your compound.
+          </p>
+          <p class="welcome-description">
+            We'll take clear photos of your face from different angles. These photos will be used to verify your identity when you enter the compound gates using Face ID.
+          </p>
+          <p class="welcome-subdescription">
+            <strong>Important:</strong> Please ensure you're in a well-lit area and your face is clearly visible. Take your time to position yourself properly for the best results.
+          </p>
+        </div>
+        <p class="welcome-subdescription" v-if="!required">
           Make sure you're in a well-lit area and follow the on-screen instructions.
         </p>
         <div class="welcome-buttons">
           <button @click="startVerification" class="start-btn primary">
             Get Started
           </button>
-          <button @click="skipVerification" class="start-btn secondary">
+          <button v-if="!required" @click="skipVerification" class="start-btn secondary">
             Skip for Now
           </button>
         </div>
@@ -49,6 +60,25 @@
         <div class="instructions-box">
           <h3 class="instruction-title">{{ instructionTitle }}</h3>
           <p class="instruction-text">{{ instructionText }}</p>
+          <!-- Face Detection Feedback -->
+          <div v-if="isCameraActive && isFaceDetecting" class="face-detection-feedback">
+            <div v-if="isLoadingFaceModels" class="detection-status loading">
+              <span class="status-icon">⏳</span>
+              <span>Loading face detection...</span>
+            </div>
+            <div v-else-if="faceDetected && isFaceWellPositioned()" class="detection-status success">
+              <span class="status-icon">✓</span>
+              <span>Face detected and positioned correctly</span>
+            </div>
+            <div v-else-if="faceDetected" class="detection-status warning">
+              <span class="status-icon">⚠</span>
+              <span>Face detected. Please center your face in the frame.</span>
+            </div>
+            <div v-else class="detection-status error">
+              <span class="status-icon">👤</span>
+              <span>Position your face in the camera frame</span>
+            </div>
+          </div>
         </div>
 
         <!-- Preview/Photo Display -->
@@ -70,8 +100,8 @@
               </div>
             </div>
           </div>
-          <!-- Live Camera Preview -->
-          <div v-else-if="isCameraActive" class="live-camera-preview">
+          <!-- Live Camera Preview / Placeholder -->
+          <div v-else class="live-camera-preview" :class="{ 'camera-placeholder': !isCameraActive }">
             <video ref="videoElement" autoplay playsinline class="camera-video" :class="currentPhotoType"></video>
             <div class="camera-overlay">
               <div class="face-guide" :class="currentPhotoType">
@@ -86,21 +116,7 @@
                 </div>
               </div>
             </div>
-          </div>
-          <!-- Placeholder (when camera not started) -->
-          <div v-else class="camera-placeholder">
-            <div class="face-guide" :class="currentPhotoType">
-              <div class="guide-circle"></div>
-              <div class="guide-lines">
-                <div class="guide-line horizontal top"></div>
-                <div class="guide-line horizontal middle"></div>
-                <div class="guide-line horizontal bottom"></div>
-                <div class="guide-line vertical left" v-if="currentPhotoType !== 'front'"></div>
-                <div class="guide-line vertical center"></div>
-                <div class="guide-line vertical right" v-if="currentPhotoType !== 'front'"></div>
-              </div>
-            </div>
-            <p class="placeholder-text">Position your face within the guide</p>
+            <p v-if="!isCameraActive" class="placeholder-text">Position your face within the guide</p>
             <p v-if="cameraError" class="camera-error-text">{{ cameraError }}</p>
           </div>
         </div>
@@ -134,7 +150,7 @@
             <span v-else>{{ currentPhoto ? 'Use This Photo' : 'Take Photo' }}</span>
           </button>
         </div>
-        <button @click="skipVerification" class="action-btn skip">
+        <button v-if="!required" @click="skipVerification" class="action-btn skip">
           Skip for Now
         </button>
       </div>
@@ -194,6 +210,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { Capacitor } from '@capacitor/core'
+import { useFaceDetection } from '../composables/useFaceDetection'
 
 // Component name
 defineOptions({
@@ -211,6 +228,10 @@ const props = defineProps({
     default: null
   },
   readOnly: {
+    type: Boolean,
+    default: false
+  },
+  required: {
     type: Boolean,
     default: false
   }
@@ -231,6 +252,17 @@ const cameraStream = ref(null)
 const videoElement = ref(null)
 const isCameraActive = ref(false)
 const cameraError = ref(null)
+const isStartingCamera = ref(false) // Flag to prevent multiple simultaneous camera requests
+
+// Face detection
+const {
+  isDetecting: isFaceDetecting,
+  faceDetected,
+  isLoadingModels: isLoadingFaceModels,
+  startDetection: startFaceDetection,
+  stopDetection: stopFaceDetection,
+  isFaceWellPositioned
+} = useFaceDetection()
 
 const photoTypes = ['front', 'left', 'right']
 const photoLabels = ['Front View', 'Left Side', 'Right Side']
@@ -249,12 +281,16 @@ const instructionTitle = computed(() => {
 })
 
 const instructionText = computed(() => {
+  const baseInstruction = props.required 
+    ? 'Take a clear, well-lit photo. This is required for compound access via Face ID.'
+    : ''
+  
   if (currentPhotoType.value === 'front') {
-    return 'Position your face straight on, looking at the camera. Make sure your face is centered and fully visible.'
+    return baseInstruction + ' Position your face straight on, looking at the camera. Make sure your face is centered, fully visible, and well-lit.'
   } else if (currentPhotoType.value === 'left') {
-    return 'Slowly turn your head to the left until you can see your left profile. Keep your shoulders straight.'
+    return baseInstruction + ' Slowly turn your head to the left until you can see your left profile. Keep your shoulders straight and face clearly visible.'
   } else {
-    return 'Slowly turn your head to the right until you can see your right profile. Keep your shoulders straight.'
+    return baseInstruction + ' Slowly turn your head to the right until you can see your right profile. Keep your shoulders straight and face clearly visible.'
   }
 })
 
@@ -284,17 +320,37 @@ const startVerification = () => {
 
 // Start live camera preview
 const startCamera = async () => {
+  // Prevent multiple simultaneous camera requests
+  if (isStartingCamera.value) {
+    console.log('[FaceVerification] Camera already starting, skipping...')
+    return
+  }
+
   if (isCameraActive.value || cameraStream.value) {
+    console.log('[FaceVerification] Camera already active, skipping...')
     return // Already active
   }
 
+  isStartingCamera.value = true
+  cameraError.value = null
+
   try {
     console.log('[FaceVerification] Starting camera preview...')
-    cameraError.value = null
 
     // Check if getUserMedia is available
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       throw new Error('Camera API not supported on this device')
+    }
+
+    // Ensure video element exists before requesting camera
+    await nextTick()
+    if (!videoElement.value) {
+      console.warn('[FaceVerification] ⚠️ Video element not found, waiting...')
+      // Wait a bit more for the element to be available
+      await new Promise(resolve => setTimeout(resolve, 100))
+      if (!videoElement.value) {
+        throw new Error('Video element not available')
+      }
     }
 
     // Request camera access with higher resolution for better face recognition
@@ -307,37 +363,80 @@ const startCamera = async () => {
       audio: false
     })
 
+    // Check if camera was stopped while requesting (race condition)
+    if (!videoElement.value) {
+      // Clean up the stream we just got
+      stream.getTracks().forEach(track => track.stop())
+      throw new Error('Video element no longer available')
+    }
+
     cameraStream.value = stream
     isCameraActive.value = true
 
-    // Wait for video element to be available
-    await nextTick()
-
-    if (videoElement.value) {
-      videoElement.value.srcObject = stream
+    // Set the stream on the video element
+    videoElement.value.srcObject = stream
+    
+    // Wait for video to be ready and playing
+    try {
       await videoElement.value.play()
-      console.log('[FaceVerification] ✅ Camera preview started')
-    } else {
-      console.warn('[FaceVerification] ⚠️ Video element not found')
+      // Small delay to ensure the stream is fully active
+      await new Promise(resolve => setTimeout(resolve, 200))
+      
+      // Start face detection after video is playing
+      if (videoElement.value && videoElement.value.readyState >= 2) {
+        startFaceDetection(videoElement.value, null, {
+          detectionInterval: 150, // Check every 150ms
+          minConfidence: 0.5,
+          inputSize: 320
+        })
+      }
+    } catch (playError) {
+      // If play fails, clean up and throw
+      stream.getTracks().forEach(track => track.stop())
+      cameraStream.value = null
+      isCameraActive.value = false
+      throw new Error('Failed to play video stream: ' + (playError.message || 'Unknown error'))
     }
+
+    console.log('[FaceVerification] ✅ Camera preview started')
   } catch (error) {
     console.error('[FaceVerification] ❌ Error starting camera:', error)
-    cameraError.value = error.message || 'Could not access camera. Please check permissions.'
+    
+    // Clean up on error
+    if (cameraStream.value) {
+      cameraStream.value.getTracks().forEach(track => track.stop())
+      cameraStream.value = null
+    }
     isCameraActive.value = false
 
-    // Provide helpful error messages
-    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+    // Handle specific error types
+    if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+      console.log('[FaceVerification] Camera request aborted, will retry on next attempt')
+      cameraError.value = 'Camera initialization was interrupted. Please try again.'
+    } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
       cameraError.value = 'Camera permission denied. Please enable camera access in settings.'
     } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
       cameraError.value = 'No camera found on this device.'
     } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
       cameraError.value = 'Camera is being used by another application.'
+    } else if (error.message?.includes('timeout')) {
+      cameraError.value = 'Camera initialization timed out. Please try again.'
+    } else {
+      cameraError.value = error.message || 'Could not access camera. Please check permissions.'
     }
+  } finally {
+    isStartingCamera.value = false
   }
 }
 
 // Stop camera preview
 const stopCamera = () => {
+  // Reset starting flag to allow new camera requests
+  isStartingCamera.value = false
+
+  // Stop face detection first
+  stopFaceDetection()
+
   if (cameraStream.value) {
     cameraStream.value.getTracks().forEach(track => {
       track.stop()
@@ -347,6 +446,10 @@ const stopCamera = () => {
 
   if (videoElement.value) {
     videoElement.value.srcObject = null
+    // Pause the video element
+    videoElement.value.pause().catch(() => {
+      // Ignore pause errors
+    })
   }
 
   isCameraActive.value = false
@@ -377,9 +480,9 @@ const capturePhoto = async () => {
         const videoHeight = videoElement.value.videoHeight || 1080
         
         const canvas = document.createElement('canvas')
-        // Maintain aspect ratio but ensure good quality
-        canvas.width = Math.min(videoWidth, 1920)
-        canvas.height = Math.min(videoHeight, 1080)
+        // Use full video resolution for maximum quality (don't limit to 1920x1080)
+        canvas.width = videoWidth
+        canvas.height = videoHeight
 
         const ctx = canvas.getContext('2d')
         // Use better image smoothing for quality
@@ -392,8 +495,8 @@ const capturePhoto = async () => {
         ctx.drawImage(videoElement.value, -canvas.width, 0, canvas.width, canvas.height)
         ctx.restore()
 
-        // Convert to data URL with high quality (0.95 for better face recognition)
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.95)
+        // Convert to data URL with maximum quality (1.0 = no compression)
+        const dataUrl = canvas.toDataURL('image/jpeg', 1.0)
 
         console.log('📷 Image captured from video:', { width: canvas.width, height: canvas.height })
 
@@ -597,11 +700,14 @@ const acceptPhoto = () => {
     currentPhoto.value = null
     angleFeedback.value = null
     // Always restart camera for next photo to ensure it's active
-    // Stop first to ensure clean restart
+    // Stop first to ensure clean restart, then wait a bit before starting again
     stopCamera()
-    nextTick(() => {
-      startCamera()
-    })
+    // Small delay to ensure camera is fully stopped before restarting
+    setTimeout(() => {
+      nextTick(() => {
+        startCamera()
+      })
+    }, 100)
   } else {
     // All photos captured, stop camera and move to review
     stopCamera()
@@ -623,10 +729,12 @@ const retakeSpecificPhoto = (index) => {
   currentPhoto.value = null
   capturedPhotos.value.splice(index, 1)
   currentStep.value = 'capture'
-  // Start camera when retaking
-  nextTick(() => {
-    startCamera()
-  })
+  // Small delay before starting camera when retaking
+  setTimeout(() => {
+    nextTick(() => {
+      startCamera()
+    })
+  }, 100)
 }
 
 const goBack = () => {
@@ -651,19 +759,23 @@ const goBackToCapture = () => {
   currentPhotoIndex.value = capturedPhotos.value.length
   if (currentPhotoIndex.value < photoTypes.length) {
     currentStep.value = 'capture'
-    // Restart camera when going back to capture
-    nextTick(() => {
-      startCamera()
-    })
+    // Small delay to ensure step change is processed, then start camera
+    setTimeout(() => {
+      nextTick(() => {
+        startCamera()
+      })
+    }, 100)
   } else {
     // All photos captured, go to last one
     currentPhotoIndex.value = photoTypes.length - 1
     currentPhoto.value = capturedPhotos.value[currentPhotoIndex.value]?.data || null
     currentStep.value = 'capture'
-    // Restart camera when going back to capture
-    nextTick(() => {
-      startCamera()
-    })
+    // Small delay to ensure step change is processed, then start camera
+    setTimeout(() => {
+      nextTick(() => {
+        startCamera()
+      })
+    }, 100)
   }
 }
 
@@ -829,6 +941,18 @@ onUnmounted(() => {
   margin-bottom: 15px;
 }
 
+.welcome-description-container {
+  margin-bottom: 20px;
+}
+
+.welcome-description-container .welcome-description {
+  margin-bottom: 12px;
+}
+
+.welcome-description-container .welcome-subdescription {
+  margin-bottom: 0;
+}
+
 .welcome-subdescription {
   font-size: 0.95rem;
   color: #999;
@@ -949,6 +1073,46 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: #666;
   line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.face-detection-feedback {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.detection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.detection-status.loading {
+  color: #666;
+  background-color: #f5f5f5;
+}
+
+.detection-status.success {
+  color: #4CAF50;
+  background-color: #e8f5e9;
+}
+
+.detection-status.warning {
+  color: #FF9800;
+  background-color: #fff3e0;
+}
+
+.detection-status.error {
+  color: #f44336;
+  background-color: #ffebee;
+}
+
+.status-icon {
+  font-size: 1.1rem;
 }
 
 .camera-preview {
@@ -1024,7 +1188,7 @@ onUnmounted(() => {
 .preview-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   /* Mirror the image for front view to match camera preview */
   transform: scaleX(-1);
 }

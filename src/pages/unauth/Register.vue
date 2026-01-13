@@ -512,7 +512,7 @@
                         :key="project.id || project.projectId || project._id || project.name" 
                         :value="project.id || project.projectId || project._id"
                       >
-                        {{ project.name || 'Unnamed Project' }} - {{ project.type || 'N/A' }} ({{ project.location || 'N/A' }}){{ project.unitsCount > 0 ? ` (${project.unitsCount} units)` : '' }}
+                        {{ project.name || 'Unnamed Project' }} {{ project.location || 'N/A' }}
                       </option>
                     </select>
                     <div class="select-arrow"></div>
@@ -1126,6 +1126,39 @@ const handlePropertySubmit = async () => {
         passwordResetCount: 0,
         passwordResetSent: false,
         passwordResetSentAt: null
+      }
+      
+      // Upload face verification photos if they exist in the registration store
+      const faceVerificationPhotos = registrationStore.faceVerificationPhotos
+      if (faceVerificationPhotos?.allPhotos && faceVerificationPhotos.allPhotos.length >= 3 && !faceVerificationPhotos.uploaded) {
+        console.log('[Register] Uploading face verification photos...')
+        try {
+          const fileUploadService = (await import('../../services/fileUploadService')).default
+          const uploadedPhotos = await fileUploadService.uploadFaceVerificationPhotos(
+            registrationStore.tempUserId,
+            faceVerificationPhotos.allPhotos
+          )
+          console.log('[Register] ✅ Face verification photos uploaded:', uploadedPhotos)
+          
+          // Merge face verification URLs with documents
+          const existingDocuments = completeUserData.documents || {}
+          completeUserData.documents = {
+            ...existingDocuments,
+            faceFrontUrl: uploadedPhotos.faceFrontUrl || uploadedPhotos.faceFront || null,
+            faceLeftUrl: uploadedPhotos.faceLeftUrl || uploadedPhotos.faceLeft || null,
+            faceRightUrl: uploadedPhotos.faceRightUrl || uploadedPhotos.faceRight || null
+          }
+          
+          // Remove null values
+          Object.keys(completeUserData.documents).forEach(key => {
+            if (completeUserData.documents[key] === null) {
+              delete completeUserData.documents[key]
+            }
+          })
+        } catch (uploadError) {
+          console.error('[Register] Error uploading face verification photos:', uploadError)
+          // Continue with registration even if face verification upload fails
+        }
       }
       
       // Update user in DynamoDB users table (user was already created in handlePersonalSubmit)
