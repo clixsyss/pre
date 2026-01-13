@@ -7270,9 +7270,10 @@ input:checked+.toggle-slider:before {
 }
 
 .settings-options {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
+  justify-content: space-between;
 }
 
 .option-item {
@@ -7923,7 +7924,6 @@ input:checked+.toggle-slider:before {
   gap: 8px;
   padding: 8px 16px;
   border-radius: 8px;
-  font-size: 0.9rem;
   font-weight: 600;
 }
 
