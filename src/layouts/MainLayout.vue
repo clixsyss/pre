@@ -160,7 +160,6 @@
             </div>
           </div>
         </div>
-        
         <div class="modal-footer">
           <button @click="goToProjectSelection" class="secondary-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -180,7 +179,7 @@
     </main>
 
     <!-- Bottom Navigation -->
-    <nav class="bottom-navigation" :class="{ 'hidden': shouldHideBottomNav, 'hide-for-modal': showProjectSwitcher }">
+    <nav class="bottom-navigation" :class="{ 'hidden': shouldHideBottomNav, 'hide-for-modal': showProjectSwitcher, 'android-safe-area': isAndroid }">
       <router-link to="/home" class="nav-item" :class="{ active: isActiveTab('home') }">
         <div class="nav-icon">
           <img src="../assets/ic_round-home.svg" alt="Home" width="24" height="24" />
@@ -398,6 +397,16 @@ const pageTransition = computed(() => {
 // Hide bottom navigation when keyboard is visible
 const shouldHideBottomNav = computed(() => {
   return isKeyboardVisible.value
+})
+
+// Detect Android platform for safe area handling
+const isAndroid = computed(() => {
+  try {
+    const platform = Capacitor.getPlatform()
+    return platform === 'android'
+  } catch {
+    return false
+  }
 })
 
 // Quick menu items
@@ -1615,6 +1624,13 @@ onUnmounted(() => {
   /* iOS Safari fix */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
+  /* Safe area support for Android system navigation buttons */
+  padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Android safe area - add extra padding for system navigation buttons */
+.bottom-navigation.android-safe-area {
+  padding-bottom: calc(32px + max(env(safe-area-inset-bottom, 0px), 16px));
 }
 
 /* RTL Support for Bottom Navigation */
