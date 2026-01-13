@@ -200,6 +200,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/profile/face-verification',
+    name: 'FaceVerificationSettings',
+    component: () => import('../pages/auth/FaceVerificationSettingsPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/news',
     name: 'News',
     component: () => import('../pages/auth/News.vue'),
@@ -345,19 +351,65 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
     }
   } else if (user && requiresAuth) {
     // User is authenticated and trying to access protected route
-    // Use Cognito sub (which is the DynamoDB user ID) instead of uid which might be email
-    const userId = user.attributes?.sub || user.cognitoAttributes?.sub || user.uid
+    // Get Cognito sub to look up user by authUid (more reliable than assuming ID = Cognito sub)
+    const cognitoSub = user.attributes?.sub || user.cognitoAttributes?.sub || user.uid
+    const userEmail = user.email || user.cognitoAttributes?.email || user.attributes?.email
     
     // Run profile and suspension checks in parallel for better performance
     try {
+      // First, get the actual DynamoDB user record using getUserByAuthUid or getUserByEmail
+      const { getUserByAuthUid, getUserByEmail, getUserById } = await import('../services/dynamoDBUsersService')
+      let dynamoUser = null
+      let actualUserId = cognitoSub // Fallback to Cognito sub if lookup fails
+      
+      // Try getUserByAuthUid first (searches by authUid field, more reliable)
+      if (cognitoSub) {
+        try {
+          dynamoUser = await getUserByAuthUid(cognitoSub)
+          if (dynamoUser && dynamoUser.id) {
+            actualUserId = dynamoUser.id
+          }
+        } catch (authUidError) {
+          logger.warn('[Router] Error getting user by authUid, trying email:', authUidError)
+        }
+      }
+      
+      // Fallback to getUserByEmail if authUid lookup failed
+      if (!dynamoUser && userEmail) {
+        try {
+          dynamoUser = await getUserByEmail(userEmail.trim().toLowerCase())
+          if (dynamoUser && dynamoUser.id) {
+            actualUserId = dynamoUser.id
+          }
+        } catch (emailError) {
+          logger.warn('[Router] Error getting user by email:', emailError)
+        }
+      }
+      
+      // If we still don't have user data, try getUserById as last resort
+      if (!dynamoUser && cognitoSub) {
+        try {
+          dynamoUser = await getUserById(cognitoSub)
+          if (dynamoUser && dynamoUser.id) {
+            actualUserId = dynamoUser.id
+          }
+        } catch (idError) {
+          logger.warn('[Router] Error getting user by ID:', idError)
+        }
+      }
+      
       const [userDocResult, suspensionResult] = await Promise.allSettled([
-        firestoreService.getDoc(`users/${userId}`),
-        canUserAccessRoute(userId, to.path),
+        firestoreService.getDoc(`users/${actualUserId}`),
+        canUserAccessRoute(actualUserId, to.path),
       ])
 
-      // Check profile completion
-      if (userDocResult.status === 'fulfilled' && userDocResult.value.exists()) {
-        const userData = userDocResult.value.data()
+      // Check profile completion - use dynamoUser if available, otherwise use userDocResult
+      let userData = dynamoUser
+      if (!userData && userDocResult.status === 'fulfilled' && userDocResult.value.exists()) {
+        userData = userDocResult.value.data()
+      }
+      
+      if (userData) {
         const isProfileComplete = userData.isProfileComplete
 
         if (!isProfileComplete) {
@@ -370,7 +422,7 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
             // Import and use markProfileComplete
             const { markProfileComplete } = await import('../utils/firestore')
             try {
-              await markProfileComplete(user.uid)
+              await markProfileComplete(actualUserId)
               logger.log('Profile marked as complete in navigation guard')
             } catch (error) {
               logger.error('Error marking profile complete:', error)
@@ -390,7 +442,7 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
 
         // Check suspension details to show proper message
         try {
-          const suspensionStatus = await checkUserSuspension(userId)
+          const suspensionStatus = await checkUserSuspension(actualUserId)
           if (suspensionStatus.isSuspended) {
             // Emit event to show suspension message
             window.dispatchEvent(

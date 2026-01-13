@@ -220,6 +220,7 @@ const authenticatedRoutes = [
   '/calendar',
   '/analytics',
   '/profile',
+  '/profile/face-verification',
   '/smart-devices',
   '/news',
   '/complaints',

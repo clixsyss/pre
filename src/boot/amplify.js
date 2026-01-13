@@ -12,7 +12,10 @@ const configureAmplify = () => {
         userPoolId: 'us-east-1_vuhaTK66l',
         userPoolWebClientId: 'abst7l599fa2fnp0aq6a87lud',
         authenticationFlowType: 'USER_PASSWORD_AUTH',
-        mandatorySignIn: false
+        mandatorySignIn: false,
+        // Ensure tokens are stored in localStorage for persistence
+        // Amplify automatically handles token refresh using refresh tokens
+        storage: window.localStorage
       }
     })
     

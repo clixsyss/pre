@@ -634,6 +634,7 @@ class OptimizedAuthService {
     try {
       await Auth.signOut()
       this.currentUser = null
+      this._saveCachedAuthState(null) // Clear our cache
       cacheService.clear()
       console.log('🚀 OptimizedAuthService: User signed out, cache cleared')
     } catch (error) {

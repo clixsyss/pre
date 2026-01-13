@@ -40,21 +40,90 @@ const handleVerificationComplete = async (data) => {
       
       notificationStore.showInfo('Face verification skipped. You can complete it later from your profile settings.')
     } else {
-      // User completed face verification
-      // Store face verification photos in registration store
-      registrationStore.setFaceVerificationPhotos({
-        frontPhoto: data.frontPhoto,
-        leftPhoto: data.leftPhoto,
-        rightPhoto: data.rightPhoto,
-        allPhotos: data.photos,
-        skipped: false
-      })
+      // User completed face verification - upload to AWS S3
+      console.log('[FaceVerificationPage] Uploading face verification photos to AWS S3...')
       
-      // TODO: Upload photos to backend/storage when backend integration is ready
-      // For now, we'll just store them in the registration store
-      // The photos are stored as base64 data URLs
-      
-      notificationStore.showSuccess('Face verification completed!')
+      try {
+        // Get user ID from registration store or tempUserId
+        const userId = registrationStore.firestoreUserId || registrationStore.tempUserId
+        
+        if (!userId) {
+          console.warn('[FaceVerificationPage] No user ID available yet, storing photos for later upload')
+          // Store photos in registration store for later upload
+          registrationStore.setFaceVerificationPhotos({
+            frontPhoto: data.frontPhoto,
+            leftPhoto: data.leftPhoto,
+            rightPhoto: data.rightPhoto,
+            allPhotos: data.photos,
+            skipped: false
+          })
+          notificationStore.showSuccess('Face verification completed! Photos will be saved after account creation.')
+        } else {
+          // Upload photos to AWS S3
+          const fileUploadService = (await import('../../services/fileUploadService')).default
+          
+          const uploadedPhotos = await fileUploadService.uploadFaceVerificationPhotos(userId, data.photos)
+          console.log('[FaceVerificationPage] ✅ Face photos uploaded to S3:', uploadedPhotos)
+          
+          // Save photo URLs to DynamoDB
+          try {
+            const { updateUser, getUserById } = await import('../../services/dynamoDBUsersService')
+            
+            // Get existing user to preserve existing documents
+            const existingUser = await getUserById(userId)
+            const existingDocuments = existingUser?.documents || {}
+            
+            // Merge face verification URLs with existing documents
+            const updatedDocuments = {
+              ...existingDocuments,
+              faceFrontUrl: uploadedPhotos.faceFrontUrl || uploadedPhotos.faceFront || null,
+              faceLeftUrl: uploadedPhotos.faceLeftUrl || uploadedPhotos.faceLeft || null,
+              faceRightUrl: uploadedPhotos.faceRightUrl || uploadedPhotos.faceRight || null
+            }
+            
+            // Remove null values to keep documents clean
+            Object.keys(updatedDocuments).forEach(key => {
+              if (updatedDocuments[key] === null) {
+                delete updatedDocuments[key]
+              }
+            })
+            
+            // Update user document with merged documents
+            await updateUser(userId, {
+              documents: updatedDocuments
+            })
+            
+            console.log('[FaceVerificationPage] ✅ Face verification photos saved to DynamoDB')
+          } catch (dbError) {
+            console.error('[FaceVerificationPage] Error saving to DynamoDB:', dbError)
+            // Photos are already uploaded to S3, so continue
+          }
+          
+          // Store in registration store for reference
+          registrationStore.setFaceVerificationPhotos({
+            frontPhoto: data.frontPhoto,
+            leftPhoto: data.leftPhoto,
+            rightPhoto: data.rightPhoto,
+            allPhotos: data.photos,
+            skipped: false,
+            uploaded: true,
+            urls: uploadedPhotos
+          })
+          
+          notificationStore.showSuccess('Face verification completed and saved!')
+        }
+      } catch (uploadError) {
+        console.error('[FaceVerificationPage] Error uploading photos:', uploadError)
+        // Store photos in registration store as fallback
+        registrationStore.setFaceVerificationPhotos({
+          frontPhoto: data.frontPhoto,
+          leftPhoto: data.leftPhoto,
+          rightPhoto: data.rightPhoto,
+          allPhotos: data.photos,
+          skipped: false
+        })
+        notificationStore.showWarning('Face verification completed, but photos will be saved after account creation.')
+      }
     }
     
     // Navigate to property selection
@@ -76,7 +145,6 @@ const handleCancel = () => {
 <style scoped>
 .face-verification-page {
   width: 100%;
-  height: 100vh;
-  overflow: hidden;
+  padding: 20px;
 }
 </style>

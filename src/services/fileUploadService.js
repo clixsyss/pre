@@ -404,6 +404,164 @@ class FileUploadService {
       throw error
     }
   }
+
+  /**
+   * Upload face verification photos (front, left, right) to S3
+   * @param {string} userId - User ID
+   * @param {Array} photos - Array of photo objects with {type: 'front'|'left'|'right', data: base64DataUrl}
+   * @returns {Promise<Object>} - Object with download URLs for each photo type
+   */
+  async uploadFaceVerificationPhotos(userId, photos) {
+    try {
+      console.log('[FileUpload] Starting face verification photos upload for user:', userId)
+      
+      if (!photos || photos.length === 0) {
+        console.warn('[FileUpload] No photos provided for face verification')
+        return {}
+      }
+
+      const uploads = []
+      
+      // Convert base64 data URLs to Files and prepare uploads
+      for (const photo of photos) {
+        if (!photo.data || !photo.type) {
+          console.warn('[FileUpload] Skipping invalid photo:', photo)
+          continue
+        }
+
+        try {
+          // Convert base64 data URL to File
+          const file = await this.dataURLtoFile(photo.data, `face-${photo.type}.jpg`)
+          
+          const fileName = `face-verification-${photo.type}.jpg`
+          console.log('[FileUpload] Adding face photo:', fileName, 'Type:', photo.type)
+          
+          uploads.push({
+            file: file,
+            path: `users/${userId}/images/face-verification/`,
+            fileName: fileName,
+            type: `face${photo.type.charAt(0).toUpperCase() + photo.type.slice(1)}` // faceFront, faceLeft, faceRight
+          })
+        } catch (convertError) {
+          console.error(`[FileUpload] Error converting photo ${photo.type}:`, convertError)
+          // Continue with other photos
+        }
+      }
+
+      if (uploads.length === 0) {
+        console.warn('[FileUpload] No valid photos to upload')
+        return {}
+      }
+
+      console.log('[FileUpload] Uploading', uploads.length, 'face verification photos to S3...')
+      
+      // Upload all files
+      const downloadURLs = await this.uploadMultipleFiles(uploads)
+      console.log('[FileUpload] All face photos uploaded to S3, URLs received')
+
+      // Map URLs to their types
+      const result = {}
+      uploads.forEach((upload, index) => {
+        // Map to both camelCase and URL format for compatibility
+        const url = downloadURLs[index]
+        result[upload.type] = url // faceFront, faceLeft, faceRight
+        // Also map to URL format for DynamoDB
+        if (upload.type === 'faceFront') result.faceFrontUrl = url
+        if (upload.type === 'faceLeft') result.faceLeftUrl = url
+        if (upload.type === 'faceRight') result.faceRightUrl = url
+        console.log('[FileUpload]', upload.type, '→', url)
+      })
+
+      console.log('[FileUpload] ✅ Face verification photos upload complete')
+      return result
+    } catch (error) {
+      console.error('[FileUpload] ❌ Face verification photos upload failed:', error)
+      console.error('[FileUpload] Error code:', error?.code)
+      console.error('[FileUpload] Error message:', error?.message)
+      throw error
+    }
+  }
+
+  /**
+   * Convert base64 data URL to File object with optional quality optimization
+   * @param {string} dataUrl - Base64 data URL (e.g., "data:image/jpeg;base64,...")
+   * @param {string} filename - Desired filename
+   * @param {number} maxSizeMB - Maximum file size in MB (default: 5MB, will compress if larger)
+   * @returns {Promise<File>} File object
+   */
+  async dataURLtoFile(dataUrl, filename, maxSizeMB = 5) {
+    try {
+      // Extract base64 data and mime type
+      const arr = dataUrl.split(',')
+      const mimeMatch = arr[0].match(/:(.*?);/)
+      if (!mimeMatch) {
+        throw new Error('Invalid data URL format')
+      }
+      const mime = mimeMatch[1]
+      const bstr = atob(arr[1])
+      let n = bstr.length
+      const u8arr = new Uint8Array(n)
+      
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n)
+      }
+      
+      // Create initial file
+      let file = new File([u8arr], filename, { type: mime })
+      
+      // Check file size and compress if needed (but maintain quality for face verification)
+      const maxSizeBytes = maxSizeMB * 1024 * 1024
+      if (file.size > maxSizeBytes && mime.startsWith('image/')) {
+        console.log(`[FileUpload] File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds max (${maxSizeMB}MB), compressing...`)
+        
+        // Use canvas to compress while maintaining quality
+        const img = new Image()
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        
+        await new Promise((resolve, reject) => {
+          img.onload = () => {
+            // Maintain aspect ratio
+            const maxDimension = 1920
+            let width = img.width
+            let height = img.height
+            
+            if (width > maxDimension || height > maxDimension) {
+              const ratio = Math.min(maxDimension / width, maxDimension / height)
+              width = width * ratio
+              height = height * ratio
+            }
+            
+            canvas.width = width
+            canvas.height = height
+            
+            // Use high quality settings
+            ctx.imageSmoothingEnabled = true
+            ctx.imageSmoothingQuality = 'high'
+            ctx.drawImage(img, 0, 0, width, height)
+            
+            // Convert to blob with high quality (0.92 for face verification)
+            canvas.toBlob((blob) => {
+              if (blob) {
+                file = new File([blob], filename, { type: mime })
+                console.log(`[FileUpload] Compressed to ${(file.size / 1024 / 1024).toFixed(2)}MB`)
+                resolve()
+              } else {
+                reject(new Error('Failed to compress image'))
+              }
+            }, mime, 0.92) // High quality for face verification
+          }
+          img.onerror = reject
+          img.src = dataUrl
+        })
+      }
+      
+      return file
+    } catch (error) {
+      console.error('[FileUpload] Error converting data URL to file:', error)
+      throw new Error('Failed to convert image data: ' + error.message)
+    }
+  }
 }
 
 export default new FileUploadService()

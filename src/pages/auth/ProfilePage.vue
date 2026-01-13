@@ -829,7 +829,7 @@
             </div> -->
 
             <!-- Shake Detection Settings -->
-            <div class="settings-group">
+            <!-- <div class="settings-group">
               <div class="settings-header">
                 <div class="settings-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -842,8 +842,7 @@
                   <p>{{ $t('shakeToOpenGateDesc') }}</p>
                 </div>
               </div>
-              
-              <!-- Shake Toggle -->
+
               <div class="settings-toggle">
                 <div class="toggle-info">
                   <span class="toggle-label">{{ $t('enableShakeGesture') }}</span>
@@ -858,7 +857,6 @@
                 </button>
               </div>
               
-              <!-- Sensitivity Slider (only show when enabled) -->
               <div v-if="appSettingsStore.shakeEnabled" class="settings-slider">
                 <div class="slider-header">
                   <span class="slider-label">{{ $t('sensitivity') }}</span>
@@ -883,6 +881,47 @@
                   <span>{{ $t('lessSlider') }}</span>
                   <span>{{ $t('least') }}</span>
                 </div>
+              </div>
+            </div> -->
+
+            <!-- Face ID / Face Verification Settings -->
+            <div class="settings-group">
+              <div class="settings-header">
+                <div class="settings-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="settings-title">
+                  <h4>Face Verification</h4>
+                  <p>Add or update your face verification photos for secure gate access</p>
+                </div>
+              </div>
+              
+              <div class="face-id-status" v-if="hasFaceVerification">
+                <div class="status-badge success">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Face Verification Complete
+                </div>
+                <button @click="viewFaceVerification" class="action-btn secondary">
+                  View Photos
+                </button>
+              </div>
+              
+              <div class="face-id-status" v-else>
+                <div class="status-badge warning">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 8V12M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  Not Set Up
+                </div>
+                <button @click="openFaceVerificationModal" class="action-btn primary">
+                  Set Up Face Verification
+                </button>
               </div>
             </div>
           </div>
@@ -1590,11 +1629,12 @@
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import optimizedAuthService from '../../services/optimizedAuthService'
@@ -1639,12 +1679,12 @@ const { openModal, closeModal } = useModalState()
 const { formatDate, formatDateTime } = useDateFormat()
 
 // Get sensitivity label with translation
-const getSensitivityLabel = (value) => {
-  if (value <= 10) return t('verySensitive')
-  if (value <= 15) return t('normal')
-  if (value <= 20) return t('lessSensitive')
-  return t('least')
-}
+// const getSensitivityLabel = (value) => {
+//   if (value <= 10) return t('verySensitive')
+//   if (value <= 15) return t('normal')
+//   if (value <= 20) return t('lessSensitive')
+//   return t('least')
+// }
 
 // Reactive state
 const loading = ref(false) // Start as false, will be set to true only if we need to fetch data
@@ -1696,6 +1736,7 @@ const loginForm = ref({
 
 // Device settings state
 const showDeviceManagementModal = ref(false)
+const hasFaceVerification = ref(false)
 const selectedDevices = ref({
   lights: [],
   climate: [],
@@ -1711,6 +1752,38 @@ const deviceKeyResetReason = ref('')
 const submittingDeviceKeyRequest = ref(false)
 const latestDeviceKeyRequest = ref(null)
 const hasPendingDeviceKeyRequest = ref(false)
+
+// Check if user has face verification photos
+const checkFaceVerificationStatus = () => {
+  const documents = userProfile.value?.documents || {}
+  const faceFrontUrl = documents.faceFrontUrl || documents.faceFront
+  const faceLeftUrl = documents.faceLeftUrl || documents.faceLeft
+  const faceRightUrl = documents.faceRightUrl || documents.faceRight
+  
+  const hasPhotos = !!(faceFrontUrl || faceLeftUrl || faceRightUrl)
+  
+  console.log('[ProfilePage] Checking face verification status:', {
+    hasDocuments: !!userProfile.value?.documents,
+    documents: documents,
+    faceFrontUrl: faceFrontUrl,
+    faceLeftUrl: faceLeftUrl,
+    faceRightUrl: faceRightUrl,
+    hasPhotos: hasPhotos,
+    hasFaceVerification: hasFaceVerification.value
+  })
+  
+  hasFaceVerification.value = hasPhotos
+}
+
+// Navigate to face verification settings page
+const openFaceVerificationModal = () => {
+  router.push('/profile/face-verification')
+}
+
+// View existing face verification photos (read-only)
+const viewFaceVerification = () => {
+  router.push('/profile/face-verification')
+}
 
 // Accordion state
 const activeAccordion = ref(null) // Default to all accordions closed
@@ -1771,12 +1844,70 @@ const filteredGroupedDevices = computed(() => {
 })
 
 // Cache for profile data to prevent unnecessary reloads
+// Use sessionStorage to persist across component remounts
+const PROFILE_CACHE_KEY = 'profilePage_cache'
+const CACHE_DURATION = 15 * 60 * 1000 // 15 minutes (increased from 5)
+
 const profileCache = {
   data: null,
   userId: null,
   timestamp: null,
-  CACHE_DURATION: 5 * 60 * 1000 // 5 minutes
+  CACHE_DURATION: CACHE_DURATION,
+  
+  // Load from sessionStorage
+  loadFromStorage() {
+    try {
+      const stored = sessionStorage.getItem(PROFILE_CACHE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        const now = Date.now()
+        if (parsed.data && parsed.userId && parsed.timestamp && 
+            (now - parsed.timestamp) < this.CACHE_DURATION) {
+          this.data = parsed.data
+          this.userId = parsed.userId
+          this.timestamp = parsed.timestamp
+          return true
+        } else {
+          // Cache expired, clear it
+          sessionStorage.removeItem(PROFILE_CACHE_KEY)
+        }
+      }
+    } catch (e) {
+      console.warn('ProfilePage: Error loading cache from sessionStorage:', e)
+    }
+    return false
+  },
+  
+  // Save to sessionStorage
+  saveToStorage() {
+    try {
+      if (this.data && this.userId && this.timestamp) {
+        sessionStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({
+          data: this.data,
+          userId: this.userId,
+          timestamp: this.timestamp
+        }))
+      }
+    } catch (e) {
+      console.warn('ProfilePage: Error saving cache to sessionStorage:', e)
+    }
+  },
+  
+  // Clear cache
+  clear() {
+    this.data = null
+    this.userId = null
+    this.timestamp = null
+    try {
+      sessionStorage.removeItem(PROFILE_CACHE_KEY)
+    } catch {
+      // Ignore
+    }
+  }
 }
+
+// Load cache from sessionStorage on initialization
+profileCache.loadFromStorage()
 
 // Load user profile from Firestore
 const loadProfile = async (forceReload = false) => {
@@ -1786,6 +1917,32 @@ const loadProfile = async (forceReload = false) => {
       error.value = 'No authenticated user found'
       loading.value = false
       return
+    }
+
+    // Fast path: Check if profile is already loaded and valid
+    if (!forceReload && userProfile.value?.id && userProfile.value.id === currentUser.uid) {
+      console.log('ProfilePage: Profile already loaded, skipping reload')
+      loading.value = false
+      return
+    }
+
+    // Check sessionStorage cache first (fastest)
+    if (!forceReload) {
+      profileCache.loadFromStorage()
+      const now = Date.now()
+      const isCacheValid = profileCache.data && 
+                          profileCache.userId === currentUser.uid &&
+                          profileCache.timestamp &&
+                          (now - profileCache.timestamp) < profileCache.CACHE_DURATION
+
+      if (isCacheValid) {
+        console.log('ProfilePage: Using cached profile data (cached', Math.round((now - profileCache.timestamp) / 1000), 'seconds ago)')
+        userProfile.value = profileCache.data
+        loading.value = false
+        error.value = null
+        checkFaceVerificationStatus()
+        return // Exit early - no need to fetch
+      }
     }
 
     // Check if we have preloaded profile data from boot file (window.__profileCache)
@@ -1801,7 +1958,7 @@ const loadProfile = async (forceReload = false) => {
         console.log('ProfilePage: Using preloaded profile data from boot file')
         // Convert DynamoDB user data to profile format
         const profileData = preloadedCache.data
-        userProfile.value = {
+        const profileObj = {
           id: profileData.id,
           email: profileData.email || currentUser.email || '',
           firstName: profileData.firstName || '',
@@ -1823,10 +1980,12 @@ const loadProfile = async (forceReload = false) => {
           updatedAt: profileData.updatedAt || null,
           authUid: currentUser.uid
         }
-        // Update local cache
-        profileCache.data = userProfile.value
+        // Update local cache (both in-memory and sessionStorage)
+        userProfile.value = profileObj
+        profileCache.data = profileObj
         profileCache.userId = currentUser.uid
         profileCache.timestamp = preloadedCache.timestamp
+        profileCache.saveToStorage() // Persist to sessionStorage
         loading.value = false
         error.value = null
         return
@@ -2189,15 +2348,19 @@ const loadProfile = async (forceReload = false) => {
         lastLoginAt: userProfile.value.lastLoginAt
       })
       
-      // Update cache
+      // Update cache (both in-memory and sessionStorage)
       profileCache.data = userProfile.value
       profileCache.userId = currentUser.uid
       profileCache.timestamp = now
+      profileCache.saveToStorage() // Persist to sessionStorage
       
       // Force reactivity update by creating a new object reference
       console.log('ProfilePage: 🔄 Forcing reactivity update for userProfile')
       const profileCopy = { ...userProfile.value }
       userProfile.value = profileCopy
+      
+      // Check if user has face verification photos
+      checkFaceVerificationStatus()
       
       console.log('✅ ProfilePage: Profile loaded and cached successfully')
       console.log('✅ ProfilePage: Complete userProfile.value object:', JSON.stringify(userProfile.value, null, 2))
@@ -2762,14 +2925,20 @@ const handleDeleteAccount = async () => {
 //   showEditProfileDialog.value = true
 // }
 
-const handleProfileSaved = (updatedData) => {
+const handleProfileSaved = async (updatedData) => {
   // Update the local userProfile with the new data
   if (userProfile.value) {
     Object.assign(userProfile.value, updatedData)
     
-    // Update cache with new data
+    // Get current user ID for cache update
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    const userId = currentUser?.userSub || currentUser?.uid || userProfile.value?.id
+    
+    // Update cache with new data (both in-memory and sessionStorage)
     profileCache.data = userProfile.value
+    profileCache.userId = userId
     profileCache.timestamp = Date.now()
+    profileCache.saveToStorage() // Persist to sessionStorage
   }
 
   // Show success message
@@ -3837,7 +4006,12 @@ const handleTextaraBlur = () => {
 // Initialize from cache immediately on mount (no loading state)
 const initializeFromCache = async () => {
   const currentUser = await optimizedAuthService.getCurrentUser()
-  if (!currentUser) return
+  if (!currentUser) return false
+
+  // First try sessionStorage (persists across component remounts)
+  if (!profileCache.data) {
+    profileCache.loadFromStorage()
+  }
 
   const now = Date.now()
   const isCacheValid = profileCache.data && 
@@ -3846,26 +4020,48 @@ const initializeFromCache = async () => {
                       (now - profileCache.timestamp) < profileCache.CACHE_DURATION
 
   if (isCacheValid) {
-    console.log('ProfilePage: Initializing from cache instantly (no loading)')
+    console.log('ProfilePage: Initializing from cache instantly (no loading, cached', Math.round((now - profileCache.timestamp) / 1000), 'seconds ago)')
     userProfile.value = profileCache.data
     loading.value = false
+    checkFaceVerificationStatus()
+    return true // Cache was loaded
   }
+  
+  return false // No valid cache
 }
 
 // Load profile on component mount
 onMounted(async () => {
-  // Initialize settings stores
+  // Initialize settings stores (lightweight, no async)
   settingsStore.initializeSettings()
   appSettingsStore.initSettings()
   
   // Try to initialize from cache first (synchronous, no loading)
-  await initializeFromCache()
+  const cacheLoaded = await initializeFromCache()
   
-  // Then load data (will use cache if valid, or fetch if needed)
-  loadProfile() // Uses cache if available
-  loadViolationStats() // Uses cache if available
-  loadComplaintStats() // Uses cache if available
-  loadDeviceKeyRequests()
+  // Only load profile if cache wasn't loaded
+  if (!cacheLoaded && !userProfile.value?.id) {
+    loadProfile() // Uses cache if available, will exit early if data exists
+  }
+  
+  // Load these in background (non-blocking, lazy)
+  // Only load stats when user actually opens those sections
+  // Removed automatic loading to improve page load performance
+  // loadViolationStats() 
+  // loadComplaintStats()
+  // loadDeviceKeyRequests() // Load on demand only
+})
+
+// Refresh profile status when component is activated (e.g., when returning from face verification page)
+onActivated(() => {
+  console.log('[ProfilePage] Component activated, checking face verification status...')
+  // Re-check face verification status in case it was updated
+  if (userProfile.value?.documents) {
+    checkFaceVerificationStatus()
+  } else if (userProfile.value?.id) {
+    // If profile is loaded but documents might be stale, force reload
+    loadProfile(true) // Force reload
+  }
 })
 
 // Watch for project changes to reload stats
@@ -3897,6 +4093,10 @@ watch(showAddProjectModal, (isOpen) => {
     document.body.classList.remove('hide-bottom-nav')
   }
 })
+
+watch(() => userProfile.value?.documents, () => {
+  checkFaceVerificationStatus()
+}, { deep: true })
 
 watch(showLoginModalFlag, (isOpen) => {
   if (isOpen) {
@@ -5083,6 +5283,11 @@ watch(showUploadDocumentsModal, (isOpen) => {
   color: #6b7280;
   font-size: 14px;
   line-height: 1.5;
+}
+
+.upload-documents-modal .modal-actions{
+  flex-direction: column;
+  margin-top: 0;
 }
 
 .upload-section {
@@ -7697,6 +7902,69 @@ input:checked+.toggle-slider:before {
     width: 10px;
     height: 10px;
   }
+}
+
+/* Face Verification Section */
+.face-id-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  margin-top: 12px;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.status-badge.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-badge.warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.action-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.action-btn.primary {
+  background-color: #AF1E23;
+  color: white;
+}
+
+.action-btn.primary:hover {
+  background-color: #8b181c;
+}
+
+.action-btn.secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.action-btn.secondary:hover {
+  background-color: #5a6268;
 }
 
 
