@@ -2,14 +2,30 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { Capacitor } from '@capacitor/core'
 
+// Keep native splash visible until app is fully loaded
+let nativeSplashHidden = false
+
+export const hideNativeSplash = async () => {
+  if (nativeSplashHidden) return
+  
+  try {
+    if (Capacitor.isNativePlatform()) {
+      await SplashScreen.hide()
+      nativeSplashHidden = true
+      console.log('✅ Native splash hidden - app is fully loaded')
+    }
+  } catch (error) {
+    console.error('Error hiding native splash:', error)
+  }
+}
+
 export default async () => {
   // Only run on native platforms
   if (Capacitor.isNativePlatform()) {
     try {
-      // Hide native splash IMMEDIATELY to show our custom video splash
-      // This prevents white screen flashes
-      await SplashScreen.hide()
-      console.log('✅ Native splash hidden immediately - custom video splash will take over')
+      // Keep native splash visible to prevent white screen flash
+      // It will be hidden when the app is fully loaded
+      console.log('✅ Keeping native splash visible until app is ready')
       
       // Show the status bar
       await StatusBar.show()

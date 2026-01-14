@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { SplashScreen } from '@capacitor/splash-screen'
+import { Capacitor } from '@capacitor/core'
 
 export const useSplashStore = defineStore('splash', () => {
   const show = ref(true)
@@ -36,11 +38,21 @@ export const useSplashStore = defineStore('splash', () => {
     checkAndHideSplash()
   }
 
-  const checkAndHideSplash = () => {
+  const checkAndHideSplash = async () => {
     if (videoCompleted.value && appInitialized.value) {
       console.log('🎬 Splash: Both video and app ready, hiding splash after delay...')
       // Add a small delay for smooth transition
-      setTimeout(() => {
+      setTimeout(async () => {
+        // Hide native splash screen before hiding custom splash (on iOS, this prevents white screen flash)
+        try {
+          if (Capacitor.isNativePlatform()) {
+            await SplashScreen.hide()
+            console.log('✅ Native splash hidden - app is fully loaded')
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not hide native splash:', error)
+        }
+        
         hideSplash()
         // Add app-loaded class to body to allow background color transition
         setTimeout(() => {

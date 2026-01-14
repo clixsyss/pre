@@ -1,7 +1,7 @@
 <template>
   <div class="main-layout">
     <!-- Header (Black)  padding top-->
-    <header class="app-header" :class="{ 'hide-for-modal': showProjectSwitcher }">
+    <header class="app-header" :class="{ 'hide-for-modal': showProjectSwitcher, 'android-safe-area': isAndroid }">
       <div class="header-content">
         <!-- Project Selection Section -->
         <div class="header-left">
@@ -1073,6 +1073,13 @@ onUnmounted(() => {
   direction: ltr !important;
 }
 
+/* Android safe area - add extra padding for status bar (Android only) */
+.app-header.android-safe-area {
+  padding-top: calc(16px + max(env(safe-area-inset-top, 0px), 24px));
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
 /* Hide header when modal is open - iOS fix */
 .app-header.hide-for-modal {
   opacity: 0;
@@ -1624,11 +1631,9 @@ onUnmounted(() => {
   /* iOS Safari fix */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
-  /* Safe area support for Android system navigation buttons */
-  padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
 }
 
-/* Android safe area - add extra padding for system navigation buttons */
+/* Android safe area - add extra padding for system navigation buttons (Android only) */
 .bottom-navigation.android-safe-area {
   padding-bottom: calc(32px + max(env(safe-area-inset-bottom, 0px), 16px));
 }
