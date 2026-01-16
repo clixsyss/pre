@@ -1,5 +1,5 @@
 <template>
-  <div class="main-layout">
+  <div class="main-layout" :class="{ 'android-safe-area': isAndroid }">
     <!-- Header (Black)  padding top-->
     <header class="app-header" :class="{ 'hide-for-modal': showProjectSwitcher, 'android-safe-area': isAndroid }">
       <div class="header-content">
@@ -288,6 +288,7 @@ import optimizedAuthService from '../services/optimizedAuthService'
 import { useDataPreloader } from '../services/dataPreloader'
 import permissionsService from '../services/permissionsService'
 import { Capacitor } from '@capacitor/core'
+import { useAndroidSafeArea } from '../composables/useAndroidSafeArea'
 
 // Component name for ESLint
 defineOptions({
@@ -311,6 +312,9 @@ const { isKeyboardVisible } = useGlobalKeyboard()
 const {
   addDeadZone
 } = useSwipeNavigation()
+
+// Initialize Android safe area handling
+const { initialize: initializeAndroidSafeArea, cleanup: cleanupAndroidSafeArea } = useAndroidSafeArea()
 
 // Shake feedback component ref
 const shakeFeedbackRef = ref(null)
@@ -900,6 +904,9 @@ watch(() => route.path, (newPath, oldPath) => {
 
 // Load user projects when component mounts
 onMounted(async () => {
+  // Initialize Android safe area handling (must be early)
+  await initializeAndroidSafeArea()
+  
   // Initialize app settings
   appSettingsStore.initSettings()
   
@@ -1036,6 +1043,9 @@ onUnmounted(() => {
   window.removeEventListener('showSuspensionMessage', handleSuspensionMessage)
   window.removeEventListener('projectStoreReady', handleProjectStoreReady)
   
+  // Clean up Android safe area listeners
+  cleanupAndroidSafeArea()
+  
   // Clean up notification center
   notificationCenterStore.clearNotifications()
 })
@@ -1049,7 +1059,12 @@ onUnmounted(() => {
   background-color: #F6F6F6;
   width: 100%;
   overflow-x: hidden; /* Prevent horizontal overflow */
-  padding-top: 40px;
+  padding-top: 40px; /* Base padding for fixed header */
+}
+
+/* Android safe area - account for status bar in main layout padding */
+.main-layout.android-safe-area {
+  padding-top: calc(40px + var(--android-safe-area-top, 24px));
 }
 
 /* Header Styles */
@@ -1074,8 +1089,9 @@ onUnmounted(() => {
 }
 
 /* Android safe area - add extra padding for status bar (Android only) */
+/* Uses CSS custom properties set by JavaScript since env() doesn't work reliably in Android WebView */
 .app-header.android-safe-area {
-  padding-top: calc(16px + max(env(safe-area-inset-top, 0px), 24px));
+  padding-top: calc(16px + max(var(--android-safe-area-top, 24px), 24px));
   padding-left: 20px;
   padding-right: 20px;
 }
@@ -1634,8 +1650,9 @@ onUnmounted(() => {
 }
 
 /* Android safe area - add extra padding for system navigation buttons (Android only) */
+/* Uses CSS custom properties set by JavaScript since env() doesn't work reliably in Android WebView */
 .bottom-navigation.android-safe-area {
-  padding-bottom: calc(32px + max(env(safe-area-inset-bottom, 0px), 16px));
+  padding-bottom: calc(32px + max(var(--android-safe-area-bottom, 16px), 16px));
 }
 
 /* RTL Support for Bottom Navigation */
