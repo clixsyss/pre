@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { Capacitor } from '@capacitor/core'
+import { StatusBar } from '@capacitor/status-bar'
 
 /**
  * Composable to handle Android safe area insets
@@ -13,7 +14,7 @@ export function useAndroidSafeArea() {
 
   /**
    * Calculate safe area insets for Android
-   * Uses proven calculation method that works reliably across Android devices
+   * Uses multiple methods to get accurate safe area values
    */
   const calculateSafeAreas = async () => {
     if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
@@ -22,11 +23,11 @@ export function useAndroidSafeArea() {
 
     try {
       // Wait a brief moment for layout to stabilize (important after orientation changes)
-      await new Promise(resolve => setTimeout(resolve, 150))
+      await new Promise(resolve => setTimeout(resolve, 100))
       
       const devicePixelRatio = window.devicePixelRatio || 1
       
-      // Get dimensions in CSS pixels (what we care about for layout)
+      // Get dimensions in CSS pixels
       const viewportHeight = window.innerHeight
       const viewportWidth = window.innerWidth
       
@@ -34,71 +35,90 @@ export function useAndroidSafeArea() {
       const screenHeight = window.screen.height
       const screenWidth = window.screen.width
       
-      // Calculate system UI space
-      // Screen height (in CSS px) = screenHeight / devicePixelRatio
-      // The difference tells us how much space system UI takes
+      // Method 1: Try to get status bar height from Capacitor StatusBar plugin
+      let statusBarHeight = 0
+      try {
+        const statusBarInfo = await StatusBar.getInfo()
+        if (statusBarInfo && statusBarInfo.visible) {
+          // StatusBar height is in device pixels, convert to CSS pixels
+          statusBarHeight = (statusBarInfo.height || 0) / devicePixelRatio
+          console.log('📱 StatusBar.getInfo() result:', { 
+            height: statusBarInfo.height, 
+            cssHeight: statusBarHeight,
+            visible: statusBarInfo.visible 
+          })
+        }
+      } catch (statusBarError) {
+        console.log('📱 StatusBar.getInfo() not available, using fallback calculation')
+      }
+      
+      // Method 2: Calculate from screen/viewport differences
       const screenHeightCSS = screenHeight / devicePixelRatio
       const systemUISpace = screenHeightCSS - viewportHeight
       
-      // Android status bar standard heights:
-      // - Normal devices: 24dp (converts to ~24px at 1x, ~48px at 2x, but we want CSS px)
-      // - Notch devices: 48dp (converts to ~48px at 1x)
-      // In CSS pixels, typically: 24px (most) or 48px (notch/cutout)
+      // Calculate top inset (status bar)
       let topInset = 24 // Safe default
       
-      // Estimate top inset from system UI space
-      // If system UI space is small (< 60px), likely just status bar
-      // If larger, might include notch - use higher value
-      if (systemUISpace > 0) {
+      if (statusBarHeight > 0) {
+        // Use actual status bar height from plugin
+        topInset = Math.max(statusBarHeight, 24)
+      } else if (systemUISpace > 0) {
+        // Estimate from system UI space
         if (systemUISpace < 60) {
+          // Small space, likely just status bar
           topInset = Math.min(Math.max(systemUISpace, 24), 48)
         } else {
-          // Likely includes navigation bar, so status bar is probably ~24-48px
+          // Larger space, might include navigation bar
+          // Status bar is typically 24-48px
           topInset = 48 // Safe for notch devices
         }
-      } else {
-        // If system UI space is 0 or negative, use minimum
-        topInset = 24
       }
       
-      // Bottom navigation bar estimation
-      // Gesture navigation: 0-16px (minimal)
-      // Button navigation: ~48px in CSS pixels
-      // Calculate: if system UI space is large, navigation bar is likely present
-      let bottomInset = 16 // Safe minimum for gesture nav
+      // Calculate bottom inset (navigation bar)
+      let bottomInset = 16 // Safe minimum for gesture navigation
       
       if (systemUISpace > topInset) {
         // Navigation bar likely present
-        const estimatedNavBar = systemUISpace - topInset
+        const estimatedNavBar = (systemUISpace - topInset)
+        // Navigation bar is typically 48px for button nav, 16px for gesture nav
         bottomInset = Math.max(16, Math.min(estimatedNavBar, 48))
-      } else if (systemUISpace > 0) {
-        // Small system UI, might be gesture nav with minimal inset
-        bottomInset = Math.max(16, systemUISpace - topInset)
+      } else {
+        // Use a safe default based on common Android navigation patterns
+        // Modern Android devices use gesture navigation (16px) or button nav (48px)
+        bottomInset = 24 // Balanced default
       }
       
-      // Apply minimum safe values
+      // Apply minimum safe values (ensures UI is never hidden)
       topInset = Math.max(topInset, 24)
       bottomInset = Math.max(bottomInset, 16)
       
       safeAreaTop.value = topInset
       safeAreaBottom.value = bottomInset
       
-      // Apply as CSS custom properties (these will be used in our CSS)
+      // Apply as CSS custom properties
       document.documentElement.style.setProperty('--android-safe-area-top', `${topInset}px`)
       document.documentElement.style.setProperty('--android-safe-area-bottom', `${bottomInset}px`)
       
-      console.log('📱 Android Safe Areas:', {
+      console.log('📱 Android Safe Areas Calculated:', {
         devicePixelRatio,
         viewport: `${viewportWidth}x${viewportHeight}`,
         screen: `${screenWidth}x${screenHeight} (${screenHeightCSS.toFixed(1)} CSS px)`,
         systemUISpace: `${systemUISpace.toFixed(1)}px`,
-        calculated: { top: topInset, bottom: bottomInset }
+        statusBarHeight: statusBarHeight > 0 ? `${statusBarHeight.toFixed(1)}px` : 'not available',
+        calculated: { 
+          top: `${topInset}px`, 
+          bottom: `${bottomInset}px` 
+        },
+        cssVars: {
+          top: `var(--android-safe-area-top) = ${topInset}px`,
+          bottom: `var(--android-safe-area-bottom) = ${bottomInset}px`
+        }
       })
     } catch (error) {
       console.error('⚠️ Error calculating Android safe areas:', error)
       // Fallback to safe defaults that work on most devices
       const topFallback = 24
-      const bottomFallback = 16
+      const bottomFallback = 24 // Increased from 16 to 24 for better compatibility
       safeAreaTop.value = topFallback
       safeAreaBottom.value = bottomFallback
       document.documentElement.style.setProperty('--android-safe-area-top', `${topFallback}px`)
@@ -127,8 +147,17 @@ export function useAndroidSafeArea() {
       return
     }
 
+    // Set initial safe values immediately (before calculation)
+    document.documentElement.style.setProperty('--android-safe-area-top', '24px')
+    document.documentElement.style.setProperty('--android-safe-area-bottom', '24px')
+
     // Calculate immediately
     await calculateSafeAreas()
+
+    // Recalculate after a short delay to catch any layout changes
+    setTimeout(() => {
+      calculateSafeAreas()
+    }, 300)
 
     // Recalculate on resize/orientation change
     window.addEventListener('resize', handleResize)
