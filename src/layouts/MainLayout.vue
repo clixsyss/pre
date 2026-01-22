@@ -1,7 +1,7 @@
 <template>
-  <div class="main-layout" :class="{ 'android-safe-area': isAndroid }">
+  <div class="main-layout">
     <!-- Header (Black)  padding top-->
-    <header class="app-header" :class="{ 'hide-for-modal': showProjectSwitcher, 'android-safe-area': isAndroid }">
+    <header class="app-header" :class="{ 'hide-for-modal': showProjectSwitcher }">
       <div class="header-content">
         <!-- Project Selection Section -->
         <div class="header-left">
@@ -173,13 +173,12 @@
 
     <!-- Main Content with Page Transitions -->
     <main class="main-content" :class="{ 'keyboard-visible': isKeyboardVisible }">
-      <transition :name="pageTransition" mode="out-in">
-        <slot />
-      </transition>
+      <!-- Disable transitions for instant navigation -->
+      <slot />
     </main>
 
     <!-- Bottom Navigation -->
-    <nav class="bottom-navigation" :class="{ 'hidden': shouldHideBottomNav, 'hide-for-modal': showProjectSwitcher, 'android-safe-area': isAndroid }">
+    <nav class="bottom-navigation" :class="{ 'hidden': shouldHideBottomNav, 'hide-for-modal': showProjectSwitcher }">
       <router-link to="/home" class="nav-item" :class="{ active: isActiveTab('home') }">
         <div class="nav-icon">
           <img src="../assets/ic_round-home.svg" alt="Home" width="24" height="24" />
@@ -380,12 +379,8 @@ const isUserSuspended = ref(false)
 // Chat page state
 const isChatPage = ref(false)
 
-// Page transition state
-const transitionDirection = ref('slide-left')
+// Previous route tracking (for navigation history)
 const previousRoute = ref(null)
-
-// Tab order for determining transition direction
-const tabOrder = ['/home', '/services', '/requests', '/profile']
 
 // Computed properties
 const currentProject = computed(() => projectStore.selectedProject)
@@ -393,25 +388,12 @@ const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => currentProject.value?.id)
 const notificationUnreadCount = computed(() => notificationCenterStore.unreadCount)
 
-// Page transition name based on navigation direction
-const pageTransition = computed(() => {
-  return transitionDirection.value
-})
-
 // Hide bottom navigation when keyboard is visible
 const shouldHideBottomNav = computed(() => {
   return isKeyboardVisible.value
 })
 
-// Detect Android platform for safe area handling
-const isAndroid = computed(() => {
-  try {
-    const platform = Capacitor.getPlatform()
-    return platform === 'android'
-  } catch {
-    return false
-  }
-})
+// Android platform detection is now handled via body.platform-android class in App.vue
 
 // Quick menu items
 const quickMenuItems = computed(() => [
@@ -867,38 +849,14 @@ const handleProjectStoreReady = async () => {
   }, 500) // Small delay to ensure UI loads first
 }
 
-// Watch for route changes to set transition direction and close quick menu
+// Watch for route changes - simplified for instant navigation
 watch(() => route.path, (newPath, oldPath) => {
   if (!oldPath || !newPath) return
   
-  // Close quick menu on route change
+  // Close quick menu on route change (instant, no delay)
   showQuickMenu.value = false
   
-  // Determine transition direction based on tab order
-  const getBaseRoute = (path) => {
-    return tabOrder.find(tab => path.startsWith(tab)) || path
-  }
-  
-  const oldBaseRoute = getBaseRoute(oldPath)
-  const newBaseRoute = getBaseRoute(newPath)
-  
-  const oldIndex = tabOrder.indexOf(oldBaseRoute)
-  const newIndex = tabOrder.indexOf(newBaseRoute)
-  
-  if (oldIndex !== -1 && newIndex !== -1) {
-    // Navigation within main tabs
-    if (newIndex > oldIndex) {
-      transitionDirection.value = 'slide-left'
-    } else if (newIndex < oldIndex) {
-      transitionDirection.value = 'slide-right'
-    } else {
-      transitionDirection.value = 'fade'
-    }
-  } else {
-    // Default fade for non-tab navigation
-    transitionDirection.value = 'fade'
-  }
-  
+  // Store previous route (no transition logic needed since transitions are disabled)
   previousRoute.value = oldPath
 })
 
@@ -1062,9 +1020,19 @@ onUnmounted(() => {
   padding-top: 40px; /* Base padding for fixed header */
 }
 
-/* Android safe area - account for status bar in main layout padding */
-.main-layout.android-safe-area {
-  padding-top: calc(40px + var(--android-safe-area-top, 24px));
+/* Android safe area - simple padding approach */
+body.platform-android .main-layout {
+  /* Account for header height + status bar */
+  padding-top: calc(40px + 24px); /* 40px header + 24px status bar */
+}
+
+/* Android performance optimizations */
+/* NOTE: We don't apply transform to .main-layout as it breaks fixed positioning of children */
+/* Transform is applied directly to fixed elements (header, bottom-nav) instead */
+body.platform-android .main-layout {
+  /* Only apply non-transform optimizations */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 /* Header Styles */
@@ -1073,10 +1041,10 @@ onUnmounted(() => {
   color: #F6F6F6;
   padding: 16px 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
   z-index: 1000;
   /* padding-top: 60px !important; */
   /* iOS Safari fix */
@@ -1088,12 +1056,31 @@ onUnmounted(() => {
   direction: ltr !important;
 }
 
-/* Android safe area - add extra padding for status bar (Android only) */
-/* Uses CSS custom properties set by JavaScript since env() doesn't work reliably in Android WebView */
-.app-header.android-safe-area {
-  padding-top: calc(16px + max(var(--android-safe-area-top, 24px), 24px));
+/* Android safe area - simple padding approach */
+body.platform-android .app-header {
+  /* Simple padding for Android status bar */
+  padding-top: calc(16px + 24px); /* 16px base + 24px for status bar */
   padding-left: 20px;
   padding-right: 20px;
+  /* Ensure fixed positioning works - Android WebView fix */
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  /* Optimize fixed positioning */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  /* Reduce paint operations */
+  will-change: transform, opacity;
+  /* Use GPU for better performance */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  /* Android WebView: Force hardware layer */
+  -webkit-perspective: 1000;
+  perspective: 1000;
+  /* Prevent Android from repositioning on scroll */
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
 }
 
 /* Hide header when modal is open - iOS fix */
@@ -1637,10 +1624,10 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-around;
   align-items: flex-end;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
   z-index: 1000;
   width: 100%;
   transition: transform 0.3s ease-in-out, opacity 0.2s ease, visibility 0.2s ease;
@@ -1649,10 +1636,31 @@ onUnmounted(() => {
   transform: translateZ(0);
 }
 
-/* Android safe area - add extra padding for system navigation buttons (Android only) */
-/* Uses CSS custom properties set by JavaScript since env() doesn't work reliably in Android WebView */
-.bottom-navigation.android-safe-area {
-  padding-bottom: calc(32px + max(var(--android-safe-area-bottom, 16px), 16px));
+/* Android safe area - simple padding approach */
+body.platform-android .bottom-navigation {
+  /* Simple padding for Android navigation bar */
+  padding-bottom: calc(32px + 24px); /* 32px base + 24px for navigation bar */
+  /* Ensure fixed positioning works - Android WebView fix */
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  /* Optimize fixed positioning */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  /* Reduce paint operations */
+  will-change: transform, opacity;
+  /* Use GPU for better performance */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  /* Android WebView: Force hardware layer */
+  -webkit-perspective: 1000;
+  perspective: 1000;
+  /* Prevent Android from repositioning on scroll */
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  /* Optimize transitions */
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, visibility 0.2s ease;
 }
 
 /* RTL Support for Bottom Navigation */
@@ -2919,52 +2927,27 @@ body.hide-bottom-nav .bottom-navigation {
    Page Transition Animations
    ================================ */
 
-/* Slide Left Transition (going forward) */
+/* Page transitions DISABLED for instant navigation */
 .slide-left-enter-active,
-.slide-left-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.slide-left-enter-from {
-  opacity: 0;
-  transform: translateX(100%);
-}
-
-.slide-left-leave-to {
-  opacity: 0;
-  transform: translateX(-100%);
-}
-
-/* Slide Right Transition (going backward) */
+.slide-left-leave-active,
 .slide-right-enter-active,
-.slide-right-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.slide-right-enter-from {
-  opacity: 0;
-  transform: translateX(-100%);
-}
-
-.slide-right-leave-to {
-  opacity: 0;
-  transform: translateX(100%);
-}
-
-/* Fade Transition (for non-tab navigation) */
+.slide-right-leave-active,
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.25s ease;
+  transition: none !important;
+  /* Instant navigation - no transitions */
 }
 
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
+/* Transitions disabled - instant navigation */
 
-/* Ensure smooth transitions */
+/* Ensure smooth transitions - Optimized for performance */
 .main-content {
   position: relative;
+  /* Hardware acceleration for page transitions */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  /* Optimize rendering during transitions */
+  will-change: contents;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;

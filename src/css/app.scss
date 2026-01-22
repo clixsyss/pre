@@ -1,14 +1,23 @@
 // app global css in SCSS form
 
 /* Prevent white screen flash on app startup - keep black during splash */
-html, body, #q-app {
+html, body, #q-app, #app-root {
   background-color: #000 !important;
   transition: background-color 0.5s ease;
+}
+
+/* Keep black during splash screen */
+body:not(.app-loaded) #app-root {
+  background-color: #000 !important;
 }
 
 /* After app loads, allow background color changes */
 body.app-loaded {
   background-color: var(--background-color) !important;
+}
+
+body.app-loaded #app-root {
+  background-color: transparent !important;
 }
 
 /* Disable text selection and double-tap zoom */
@@ -299,4 +308,200 @@ body.keyboard-open select {
 /* Safe area spacing for notifications (avoid notch area on iOS) */
 .notif-with-safe-area {
   top: 40px !important;
+}
+
+/* ============================================
+   ANDROID-SPECIFIC PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+
+/* Android hardware acceleration for better performance */
+@media screen {
+  /* Enable hardware acceleration for fixed elements only */
+  /* NOTE: Don't apply transform to .main-layout as it breaks fixed positioning */
+  .app-header,
+  .bottom-navigation {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform;
+  }
+  
+  /* For main-content, use translate3d which doesn't create containing block */
+  .main-content {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  
+  /* Optimize scrolling performance on Android */
+  .main-content,
+  .q-page,
+  .q-scrollarea {
+    -webkit-overflow-scrolling: touch;
+    /* Use GPU for scrolling */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+  
+  /* Optimize animations on Android */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Reduce repaints on Android */
+  button,
+  a,
+  .clickable {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    touch-action: manipulation;
+    /* Prevent layout shifts */
+    will-change: transform;
+  }
+}
+
+/* Android-specific safe area support - simple padding approach */
+body.platform-android {
+  /* Simple padding for Android safe areas */
+  --android-safe-area-top: 24px;
+  --android-safe-area-bottom: 24px;
+}
+
+/* Android viewport optimization */
+@supports (-webkit-touch-callout: none) {
+  /* iOS only - exclude from Android */
+}
+
+/* Android-specific: Optimize fixed elements */
+body.platform-android {
+  /* Ensure html and body don't interfere with fixed positioning */
+  html,
+  body {
+    /* Prevent Android WebView from creating new stacking contexts */
+    position: relative;
+    overflow-x: hidden;
+  }
+  
+  /* Ensure app-root doesn't break fixed positioning */
+  #app-root {
+    position: relative;
+    /* Don't apply transform to root - it breaks fixed children */
+  }
+  
+  .app-header,
+  .bottom-navigation {
+    /* Android WebView fix: Ensure fixed positioning works */
+    position: fixed !important;
+    /* Force hardware acceleration on Android */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    /* Prevent Android WebView from repositioning fixed elements */
+    -webkit-perspective: 1000;
+    perspective: 1000;
+    /* Reduce paint operations */
+    will-change: transform, opacity;
+    /* Ensure z-index works on Android */
+    z-index: 1000 !important;
+  }
+  
+  /* Android-specific: Ensure header stays at top */
+  .app-header {
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+  }
+  
+  /* Android-specific: Ensure bottom nav stays at bottom */
+  .bottom-navigation {
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+  }
+  
+  /* Optimize modal rendering on Android */
+  .modal-overlay,
+  .dialog-overlay {
+    /* Use GPU for modals */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  
+  /* Reduce animation complexity on Android for better performance */
+  .q-transition--slide,
+  .q-transition--fade {
+    /* Simplify transitions */
+    transition-duration: 0.2s;
+  }
+}
+
+/* Android-specific: Optimize list rendering */
+body.platform-android {
+  .q-list,
+  .q-item {
+    /* Reduce repaints during scrolling */
+    contain: layout style paint;
+  }
+  
+  /* Optimize image loading on Android */
+  img {
+    /* Use GPU for images */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    /* Prevent layout shifts */
+    will-change: transform;
+  }
+}
+
+/* Android keyboard handling optimization */
+body.platform-android.keyboard-open {
+  /* Prevent layout shifts when keyboard appears */
+  .main-content {
+    /* Use transform to adjust position instead of margin/padding */
+    -webkit-transform: translateY(0);
+    transform: translateY(0);
+  }
+  
+  /* Optimize input rendering */
+  input,
+  textarea {
+    /* Ensure inputs are on GPU layer */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}
+
+/* Android-specific: Reduce memory usage */
+body.platform-android {
+  /* Limit background gradients on Android */
+  .gradient-background {
+    /* Use solid colors where possible */
+    background-image: none;
+    background-color: var(--background-color);
+  }
+  
+  /* Optimize shadows (expensive on Android) */
+  .q-card,
+  .q-btn {
+    /* Reduce shadow complexity */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Android-specific: Optimize font rendering */
+body.platform-android {
+  * {
+    /* Improve text rendering on Android */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  /* Optimize small text */
+  small,
+  .text-caption {
+    text-rendering: optimizeSpeed;
+  }
 }

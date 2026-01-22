@@ -97,6 +97,8 @@ function convertUserFromDynamoDB(item) {
       ? (typeof item.createdByAdmin === 'boolean' ? item.createdByAdmin : item.createdByAdmin === true || item.createdByAdmin === 'true')
       : false,
     dateOfBirth: item.dateOfBirth || null,
+    deviceKey: item.deviceKey || null, // Device key for device-based authentication
+    deviceKeyUpdatedAt: item.deviceKeyUpdatedAt || null, // Timestamp when device key was last updated
     documents: item.documents ? unmarshallDocuments(item.documents) : {},
     email: item.email || '',
     emailVerified: item.emailVerified !== undefined 

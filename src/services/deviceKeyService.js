@@ -85,36 +85,253 @@ class DeviceKeyService {
 
   /**
    * Get device key stored in Firestore for a user
-   * @param {string} userId - User's ID
-   * @returns {Promise<string|null>} Stored device key or null
+   * Uses the same lookup method as SignIn.vue for consistency
+   * @param {string} userId - User's ID (Cognito sub, authUid, or email)
+   * @returns {Promise<{deviceKey: string|null, userExists: boolean}>} Device key and existence status
    */
   async getUserDeviceKey(userId) {
     try {
-      const userDoc = await firestoreService.getDoc(`users/${userId}`)
-      if (userDoc.exists()) {
-        return userDoc.data().deviceKey || null
+      console.log(`🔍 getUserDeviceKey: Looking up user with ID: ${userId}`)
+      
+      // Import DynamoDB user service for reliable user lookup
+      const { getUserByAuthUid, getUserByEmail, getUserById } = await import('./dynamoDBUsersService')
+      
+      let user = null
+      
+      // Strategy 1: Try authUid lookup first (most reliable for Cognito sub)
+      // Cognito sub typically looks like a UUID, not an email
+      if (userId && !userId.includes('@')) {
+        try {
+          console.log(`🔍 getUserDeviceKey: Trying authUid lookup for: ${userId}`)
+          user = await getUserByAuthUid(userId)
+          if (user) {
+            console.log(`✅ getUserDeviceKey: Found user via authUid: ${user.id}`)
+            const deviceKey = user.deviceKey
+            console.log(`📱 Device key from DB: ${deviceKey ? `Found (${deviceKey.substring(0, 20)}...)` : 'Empty/Null'}`)
+            return {
+              deviceKey: deviceKey && deviceKey !== '' ? deviceKey : null,
+              userExists: true
+            }
+          }
+        } catch (authUidError) {
+          console.warn(`⚠️ getUserDeviceKey: authUid lookup failed:`, authUidError.message || authUidError)
+        }
+        
+        // Strategy 2: Try getUserById as fallback (handles both id and userId keys)
+        try {
+          console.log(`🔍 getUserDeviceKey: Trying getUserById for: ${userId}`)
+          user = await getUserById(userId)
+          if (user) {
+            console.log(`✅ getUserDeviceKey: Found user via getUserById: ${user.id}`)
+            const deviceKey = user.deviceKey
+            console.log(`📱 Device key from DB (via getUserById): ${deviceKey ? `Found (${deviceKey.substring(0, 20)}...)` : 'Empty/Null'}`)
+            console.log(`📱 Full user object keys:`, Object.keys(user))
+            console.log(`📱 deviceKey value:`, deviceKey)
+            console.log(`📱 deviceKey type:`, typeof deviceKey)
+            console.log(`📱 deviceKey length:`, deviceKey ? deviceKey.length : 0)
+            
+            // Also try direct firestoreService.getDoc to check raw data
+            try {
+              const { default: firestoreService } = await import('./firestoreService')
+              const rawDoc = await firestoreService.getDoc(`users/${userId}`, { useCache: false })
+              if (rawDoc.exists()) {
+                const rawData = rawDoc.data()
+                const rawDeviceKey = rawData?.deviceKey
+                console.log(`📱 Raw device key from firestoreService.getDoc: ${rawDeviceKey ? `Found (${rawDeviceKey.substring(0, 20)}...)` : 'Empty/Null'}`)
+                console.log(`📱 Raw data has deviceKey field:`, 'deviceKey' in (rawData || {}))
+                
+                // Use raw data if converted data is missing deviceKey
+                if (!deviceKey && rawDeviceKey) {
+                  console.log(`⚠️ deviceKey missing from converted user, using raw data`)
+                  return {
+                    deviceKey: rawDeviceKey && rawDeviceKey !== '' ? rawDeviceKey : null,
+                    userExists: true
+                  }
+                }
+              }
+            } catch (rawError) {
+              console.warn(`⚠️ Could not get raw data for verification:`, rawError.message || rawError)
+            }
+            
+            return {
+              deviceKey: deviceKey && deviceKey !== '' ? deviceKey : null,
+              userExists: true
+            }
+          }
+        } catch (idError) {
+          console.warn(`⚠️ getUserDeviceKey: getUserById failed:`, idError.message || idError)
+        }
       }
-      return null
+      
+      // Strategy 3: If userId looks like an email, try email lookup
+      if (userId && userId.includes('@')) {
+        try {
+          console.log(`🔍 getUserDeviceKey: Trying email lookup for: ${userId}`)
+          user = await getUserByEmail(userId)
+          if (user) {
+            console.log(`✅ getUserDeviceKey: Found user via email: ${user.id}`)
+            const deviceKey = user.deviceKey
+            console.log(`📱 Device key from DB: ${deviceKey ? `Found (${deviceKey.substring(0, 20)}...)` : 'Empty/Null'}`)
+            return {
+              deviceKey: deviceKey && deviceKey !== '' ? deviceKey : null,
+              userExists: true
+            }
+          }
+        } catch (emailError) {
+          console.warn(`⚠️ getUserDeviceKey: Email lookup failed:`, emailError.message || emailError)
+        }
+      }
+      
+      // Strategy 4: Fallback to firestoreService.getDoc (legacy support)
+      try {
+        console.log(`🔍 getUserDeviceKey: Trying firestoreService.getDoc fallback for: ${userId}`)
+        const userDoc = await firestoreService.getDoc(`users/${userId}`)
+        if (userDoc.exists()) {
+          const deviceKey = userDoc.data().deviceKey
+          console.log(`✅ getUserDeviceKey: Found user via firestoreService: ${userId}`)
+          console.log(`📱 Device key from DB: ${deviceKey ? `Found (${deviceKey.substring(0, 20)}...)` : 'Empty/Null'}`)
+          return {
+            deviceKey: deviceKey && deviceKey !== '' ? deviceKey : null,
+            userExists: true
+          }
+        }
+      } catch (firestoreError) {
+        console.warn(`⚠️ getUserDeviceKey: firestoreService.getDoc failed:`, firestoreError.message || firestoreError)
+      }
+      
+      // User not found by any method
+      console.log(`❌ getUserDeviceKey: User document not found for: ${userId}`)
+      return { deviceKey: null, userExists: false }
     } catch (error) {
-      console.error('Error getting user device key:', error)
-      return null
+      console.error('❌ getUserDeviceKey: Error getting user device key:', error)
+      // On error, return null deviceKey but userExists: false to prevent auto-registration
+      return { deviceKey: null, userExists: false }
     }
   }
 
   /**
    * Save device key to user's Firestore document
-   * @param {string} userId - User's ID
+   * Uses the same lookup strategy as getUserDeviceKey to ensure consistency
+   * @param {string} userId - User's ID (Cognito sub, authUid, or email)
    * @param {string} deviceKey - Device key to save
    */
   async saveUserDeviceKey(userId, deviceKey) {
     try {
-      await firestoreService.updateDoc(`users/${userId}`, {
+      console.log(`💾 saveUserDeviceKey: Looking up user with ID: ${userId} before saving`)
+      
+      // Import DynamoDB user service for reliable user lookup (same as getUserDeviceKey)
+      const { getUserByAuthUid, getUserByEmail, getUserById } = await import('./dynamoDBUsersService')
+      
+      let user = null
+      let actualUserId = userId
+      
+      // Use the same lookup strategy as getUserDeviceKey to find the actual user
+      // Strategy 1: Try authUid lookup first (most reliable for Cognito sub)
+      if (userId && !userId.includes('@')) {
+        try {
+          console.log(`🔍 saveUserDeviceKey: Trying authUid lookup for: ${userId}`)
+          user = await getUserByAuthUid(userId)
+          if (user) {
+            actualUserId = user.id // Use the actual user.id from DynamoDB
+            console.log(`✅ saveUserDeviceKey: Found user via authUid, using id: ${actualUserId}`)
+          }
+        } catch (authUidError) {
+          console.warn(`⚠️ saveUserDeviceKey: authUid lookup failed:`, authUidError.message || authUidError)
+        }
+        
+        // Strategy 2: Try getUserById as fallback
+        if (!user) {
+          try {
+            console.log(`🔍 saveUserDeviceKey: Trying getUserById for: ${userId}`)
+            user = await getUserById(userId)
+            if (user) {
+              actualUserId = user.id
+              console.log(`✅ saveUserDeviceKey: Found user via getUserById, using id: ${actualUserId}`)
+            }
+          } catch (idError) {
+            console.warn(`⚠️ saveUserDeviceKey: getUserById failed:`, idError.message || idError)
+          }
+        }
+      }
+      
+      // Strategy 3: If userId looks like an email, try email lookup
+      if (!user && userId && userId.includes('@')) {
+        try {
+          console.log(`🔍 saveUserDeviceKey: Trying email lookup for: ${userId}`)
+          user = await getUserByEmail(userId)
+          if (user) {
+            actualUserId = user.id
+            console.log(`✅ saveUserDeviceKey: Found user via email, using id: ${actualUserId}`)
+          }
+        } catch (emailError) {
+          console.warn(`⚠️ saveUserDeviceKey: Email lookup failed:`, emailError.message || emailError)
+        }
+      }
+      
+      if (!user) {
+        console.warn(`⚠️ saveUserDeviceKey: User not found via any lookup method, using provided userId: ${userId}`)
+        actualUserId = userId
+      }
+      
+      console.log(`💾 Saving device key to users/${actualUserId}`)
+      await firestoreService.updateDoc(`users/${actualUserId}`, {
         deviceKey: deviceKey,
-        deviceKeyUpdatedAt: new Date()
+        deviceKeyUpdatedAt: new Date().toISOString()
       })
-      console.log('✅ Device key saved to Firestore for user:', userId)
+      console.log(`✅ Device key saved to DynamoDB for user: ${actualUserId}`)
+      
+      // Verify the save worked by directly querying DynamoDB via firestoreService
+      // This respects cache clearing and ensures we get fresh data
+      // Wait longer for DynamoDB eventual consistency
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      console.log(`🔍 Verifying device key was saved correctly using actualUserId: ${actualUserId}...`)
+      
+      // Use firestoreService.getDoc directly to bypass any caching issues
+      try {
+        const userDoc = await firestoreService.getDoc(`users/${actualUserId}`)
+        if (userDoc.exists()) {
+          const savedDeviceKey = userDoc.data().deviceKey
+          if (savedDeviceKey === deviceKey) {
+            console.log('✅ Device key saved and verified successfully!', {
+              userId: actualUserId,
+              deviceKeyPrefix: deviceKey.substring(0, 20) + '...'
+            })
+          } else {
+            console.error('❌ Device key verification failed - mismatch!', {
+              expected: deviceKey ? deviceKey.substring(0, 30) + '...' : 'null',
+              actual: savedDeviceKey ? savedDeviceKey.substring(0, 30) + '...' : 'null',
+              userId: userId,
+              actualUserId: actualUserId
+            })
+            // Wait a bit longer and try once more
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            const userDocRetry = await firestoreService.getDoc(`users/${actualUserId}`)
+            if (userDocRetry.exists()) {
+              const retryDeviceKey = userDocRetry.data().deviceKey
+              if (retryDeviceKey === deviceKey) {
+                console.log('✅ Device key verified on retry!')
+              } else {
+                console.error('❌ Device key still not found after retry!')
+                // Don't throw - DynamoDB eventual consistency can take time
+              }
+            }
+          }
+        } else {
+          console.error('❌ Device key verification failed - user document not found!')
+        }
+      } catch (verifyError) {
+        console.error('❌ Error during device key verification:', verifyError)
+        // Don't throw - the save might have succeeded despite verification failure
+      }
     } catch (error) {
-      console.error('Error saving user device key:', error)
+      console.error('❌ Error saving user device key:', error)
+      console.error('Error details:', {
+        userId,
+        errorMessage: error.message,
+        errorCode: error.code,
+        stack: error.stack
+      })
       throw error
     }
   }
@@ -132,44 +349,48 @@ class DeviceKeyService {
       const localKey = this.getLocalDeviceKey()
       console.log('📱 Local device key:', localKey ? 'Found' : 'Not found')
 
-      // Get stored device key from Firestore
-      const storedKey = await this.getUserDeviceKey(userId)
-      console.log('☁️  Stored device key:', storedKey ? 'Found' : 'Not found')
+      // Get stored device key from Firestore (now returns object with deviceKey and userExists)
+      const { deviceKey: storedKey, userExists } = await this.getUserDeviceKey(userId)
+      console.log('☁️  Stored device key:', storedKey ? `Found: ${storedKey.substring(0, 20)}...` : 'Not found or empty')
+      console.log('👤 User exists in DB:', userExists)
 
-      // If no stored key, this is first login - allow and register device
-      if (!storedKey) {
-        console.log('✅ First login - no device key registered yet')
+      // SECURITY CHECK: If user document doesn't exist, this is an error condition - deny login
+      if (!userExists) {
+        console.error('❌ User document does not exist - cannot validate device key')
+        return {
+          valid: false,
+          isFirstLogin: false,
+          requiresRegistration: false,
+          message: 'User account not found. Please contact support.',
+          error: 'User document not found'
+        }
+      }
+
+      // If user exists but no stored key or empty string, this is first login or admin reset - allow and register device
+      if (!storedKey || storedKey === '') {
+        console.log('✅ User exists but no device key or empty - treating as first login/admin reset')
         return {
           valid: true,
           isFirstLogin: true,
           requiresRegistration: true,
-          message: 'First login detected'
+          message: 'No device key set - will register new device'
         }
       }
 
-      // If no local key but there is a stored key, auto-heal by storing the server key locally
+      // SECURITY: If no local key but there IS a stored key, this is a DIFFERENT device
+      // DO NOT auto-heal - this would allow unauthorized access from new devices
+      // The stored key belongs to another device, and only admin reset or approved request should allow new registration
       if (!localKey) {
-        console.log('🛠️ No local key but user has registered device - auto-recovering local key')
-        try {
-          this.saveLocalDeviceKey(storedKey)
-          return {
-            valid: true,
-            isFirstLogin: false,
-            requiresRegistration: false,
-            message: 'Recovered device key from server and validated'
-          }
-        } catch (e) {
-          console.error('❌ Failed to save recovered device key locally:', e)
-          return {
-            valid: false,
-            isFirstLogin: false,
-            requiresRegistration: false,
-            message: 'Unable to store device key locally. Please try again.'
-          }
+        console.log('❌ No local key but user has registered device - this is a different device')
+        return {
+          valid: false,
+          isFirstLogin: false,
+          requiresRegistration: false,
+          message: 'This device is not registered. Your account is registered to another device. Please request a device key reset if you want to use this device.'
         }
       }
 
-      // Compare keys
+      // Compare keys - both must exist and match
       if (localKey === storedKey) {
         console.log('✅ Device key matches - login allowed')
         return {
@@ -179,12 +400,12 @@ class DeviceKeyService {
           message: 'Device validated successfully'
         }
       } else {
-        console.log('❌ Device key mismatch')
+        console.log('❌ Device key mismatch - local key does not match stored key')
         return {
           valid: false,
           isFirstLogin: false,
           requiresRegistration: false,
-          message: 'Device key mismatch. This account is registered to another device. Please request a device key reset if you want to use this device.'
+          message: 'This device is not registered. Your account is registered to another device. Please request a device key reset if you want to use this device.'
         }
       }
     } catch (error) {
@@ -235,11 +456,14 @@ class DeviceKeyService {
       if (projectId) {
         // Check specific project subcollection
         const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
-        const requests = await firestoreService.getDocs(collectionPath, [
-          { field: 'userId', operator: '==', value: userId },
-          { field: 'status', operator: '==', value: 'approved' }
-        ])
-        return !requests.empty
+        const requests = await firestoreService.getDocs(collectionPath, {
+          filters: [
+            { field: 'userId', operator: '==', value: userId },
+            { field: 'status', operator: '==', value: 'approved' }
+          ]
+        })
+        console.log(`🔍 Checked project ${projectId}: Found ${requests.size || 0} approved requests`)
+        return !requests.empty && (requests.size || requests.docs?.length || 0) > 0
       }
       
       // Get user's projects first to avoid checking all projects (causes permission errors)
@@ -254,33 +478,75 @@ class DeviceKeyService {
       const userData = userDoc.data()
       const userProjects = userData?.projects || []
       
-      if (userProjects.length === 0) {
-        console.log('ℹ️ User has no projects, skipping reset request check')
+      // If user has projects, check only those projects
+      if (userProjects.length > 0) {
+        console.log(`🔍 Checking ${userProjects.length} user projects for approved reset requests`)
+        
+        for (const project of userProjects) {
+          const projectId = project.projectId || project.id
+          if (!projectId) continue
+          
+          const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
+          try {
+            const requests = await firestoreService.getDocs(collectionPath, {
+              filters: [
+                { field: 'userId', operator: '==', value: userId },
+                { field: 'status', operator: '==', value: 'approved' }
+              ]
+            })
+            
+            const hasApproved = !requests.empty && (requests.size || requests.docs?.length || 0) > 0
+            if (hasApproved) {
+              console.log(`✅ Found approved reset request in project: ${projectId}`)
+              return true
+            }
+          } catch (err) {
+            console.warn(`⚠️ Error checking requests in project ${projectId}:`, err.message || err)
+          }
+        }
+        
+        console.log('ℹ️ No approved reset requests found in user projects')
         return false
       }
       
-      console.log(`🔍 Checking ${userProjects.length} user projects for approved reset requests`)
-      
-      // Only check the user's actual projects
-      for (const project of userProjects) {
-        const projectId = project.projectId
-        const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
-        try {
-          const requests = await firestoreService.getDocs(collectionPath, [
-            { field: 'userId', operator: '==', value: userId },
-            { field: 'status', operator: '==', value: 'approved' }
-          ])
-          if (!requests.empty) {
-            console.log(`✅ Found approved reset request in project: ${projectId}`)
-            return true
+      // If user has no projects, check ALL projects for approved reset requests
+      // This handles cases where user was deleted from projects but reset was approved
+      console.log('⚠️ User has no projects - checking ALL projects for approved reset requests')
+      try {
+        const allProjects = await firestoreService.getDocs('projects', {
+          constraints: [{ _type: 'limit', limitCount: 100 }] // Limit to prevent excessive reads
+        })
+        
+        console.log(`🔍 Checking ${allProjects.docs.length} projects for approved reset requests`)
+        
+        for (const projectDoc of allProjects.docs) {
+          const projectId = projectDoc.id
+          const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
+          
+          try {
+            const requests = await firestoreService.getDocs(collectionPath, {
+              filters: [
+                { field: 'userId', operator: '==', value: userId },
+                { field: 'status', operator: '==', value: 'approved' }
+              ]
+            })
+            
+            const hasApproved = !requests.empty && (requests.size || requests.docs?.length || 0) > 0
+            if (hasApproved) {
+              console.log(`✅ Found approved reset request in project: ${projectId}`)
+              return true
+            }
+          } catch (err) {
+            console.warn(`⚠️ Error checking requests in project ${projectId}:`, err.message || err)
           }
-        } catch (err) {
-          console.warn(`⚠️ Error checking requests in project ${projectId}:`, err.message || err)
         }
+        
+        console.log('ℹ️ No approved reset requests found in any projects')
+        return false
+      } catch (error) {
+        console.error('❌ Error checking all projects for reset requests:', error)
+        return false
       }
-      
-      console.log('ℹ️ No approved reset requests found in user projects')
-      return false
     } catch (error) {
       console.error('Error checking reset requests:', error)
       return false
@@ -296,10 +562,12 @@ class DeviceKeyService {
       if (projectId) {
         // Clear from specific project subcollection
         const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
-        const requests = await firestoreService.getDocs(collectionPath, [
-          { field: 'userId', operator: '==', value: userId },
-          { field: 'status', operator: '==', value: 'approved' }
-        ])
+        const requests = await firestoreService.getDocs(collectionPath, {
+          filters: [
+            { field: 'userId', operator: '==', value: userId },
+            { field: 'status', operator: '==', value: 'approved' }
+          ]
+        })
 
         for (const doc of requests.docs) {
           await firestoreService.deleteDoc(`${collectionPath}/${doc.id}`)
@@ -325,13 +593,17 @@ class DeviceKeyService {
         
         // Only clear from the user's actual projects
         for (const project of userProjects) {
-          const projectId = project.projectId
+          const projectId = project.projectId || project.id
+          if (!projectId) continue
+          
           const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
           try {
-            const requests = await firestoreService.getDocs(collectionPath, [
-              { field: 'userId', operator: '==', value: userId },
-              { field: 'status', operator: '==', value: 'approved' }
-            ])
+            const requests = await firestoreService.getDocs(collectionPath, {
+              filters: [
+                { field: 'userId', operator: '==', value: userId },
+                { field: 'status', operator: '==', value: 'approved' }
+              ]
+            })
 
             for (const doc of requests.docs) {
               await firestoreService.deleteDoc(`${collectionPath}/${doc.id}`)
@@ -355,16 +627,6 @@ class DeviceKeyService {
    */
   async handleLoginDeviceCheck(userId) {
     try {
-      // TEMPORARY BYPASS: Allow all devices for testing
-      // TODO: Remove this bypass and restore device key validation
-      console.log('⚠️ DEVICE KEY CHECK BYPASSED - Testing mode enabled')
-      return {
-        allowed: true,
-        message: 'Device check bypassed (testing mode)',
-        action: 'bypassed'
-      }
-      
-      /* eslint-disable no-unreachable */
       // First check if device is valid
       const validation = await this.validateDeviceKey(userId)
 

@@ -123,7 +123,8 @@ watch(() => splashStore.show, (newVal) => {
 })
 
 onMounted(() => {
-  console.log('🎬 SplashScreen mounted', { platform: Capacitor.getPlatform(), isIOS })
+  const platform = Capacitor.getPlatform()
+  console.log('🎬 SplashScreen mounted', { platform, isIOS })
   
   // On iOS, show overlay after a short delay since video autoplay can be unreliable
   if (isIOS) {
@@ -140,29 +141,44 @@ onMounted(() => {
       }
     }, 300)
   } else {
-    // On other platforms, check video playback after a delay
+    // On Android and other platforms, be more aggressive with fallbacks
+    // Check video playback after a shorter delay
     setTimeout(() => {
       if (splashVideo.value) {
         const video = splashVideo.value
         if (video.paused && video.currentTime === 0) {
-          console.warn('⚠️ Video not playing, showing overlay')
+          console.warn('⚠️ Video not playing, showing overlay and marking complete')
           showOverlay.value = true
           splashStore.setVideoCompleted()
         }
+      } else {
+        // Video element not available, mark as complete immediately
+        console.warn('⚠️ Video element not available, marking as complete')
+        showOverlay.value = true
+        splashStore.setVideoCompleted()
       }
-    }, 800)
+    }, 500) // Shorter delay for Android
+    
+    // Additional Android-specific fallback - force complete after 2 seconds
+    setTimeout(() => {
+      if (!splashStore.videoCompleted) {
+        console.warn('⏱️ Android: Forcing video completion after 2s timeout')
+        showOverlay.value = true
+        splashStore.setVideoCompleted()
+      }
+    }, 2000)
   }
   
-  // Fallback to force hide after 25 seconds
+  // Fallback to force hide after 5 seconds (reduced from 25s)
   setTimeout(() => {
     if (splashStore.show) {
-      console.warn('⏱️ Splash timeout - forcing hide after 25s')
+      console.warn('⏱️ Splash timeout - forcing hide after 5s')
       showOverlay.value = true
       splashStore.setVideoCompleted()
       splashStore.setAppInitialized()
       splashStore.hideSplash()
     }
-  }, 25000)
+  }, 5000)
 })
 </script>
 

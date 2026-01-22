@@ -40,10 +40,18 @@ export const useSplashStore = defineStore('splash', () => {
 
   const checkAndHideSplash = async () => {
     if (videoCompleted.value && appInitialized.value) {
-      console.log('🎬 Splash: Both video and app ready, hiding splash after delay...')
-      // Add a small delay for smooth transition
+      console.log('🎬 Splash: Both video and app ready, hiding splash...')
+      
+      // Wait a moment to ensure custom splash is fully visible
+      await new Promise(resolve => setTimeout(resolve, 200))
+      
+      // Start fading out custom splash
+      hideSplash()
+      
+      // Wait for custom splash fade-out to complete (0.8s from CSS)
       setTimeout(async () => {
-        // Hide native splash screen before hiding custom splash (on iOS, this prevents white screen flash)
+        // Only hide native splash AFTER custom splash has faded out
+        // This prevents white screen flash
         try {
           if (Capacitor.isNativePlatform()) {
             await SplashScreen.hide()
@@ -53,13 +61,12 @@ export const useSplashStore = defineStore('splash', () => {
           console.warn('⚠️ Could not hide native splash:', error)
         }
         
-        hideSplash()
         // Add app-loaded class to body to allow background color transition
         setTimeout(() => {
           document.body.classList.add('app-loaded')
           console.log('✅ Splash: App loaded class added to body')
-        }, 300)
-      }, 800)
+        }, 100)
+      }, 800) // Match the splash-fade-leave-active transition duration
     } else {
       console.log('⏳ Splash: Waiting...', {
         videoCompleted: videoCompleted.value,
@@ -67,6 +74,23 @@ export const useSplashStore = defineStore('splash', () => {
       })
     }
   }
+
+  // Safety timeout: Force hide splash after 6 seconds if still showing
+  // This prevents black screen on Android if video/app initialization fails
+  setTimeout(() => {
+    if (show.value) {
+      console.warn('⏱️ Splash Store: Safety timeout reached, forcing hide')
+      videoCompleted.value = true
+      appInitialized.value = true
+      hideSplash()
+      // Also hide native splash
+      if (Capacitor.isNativePlatform()) {
+        SplashScreen.hide().catch(err => {
+          console.warn('⚠️ Could not hide native splash on timeout:', err)
+        })
+      }
+    }
+  }, 6000)
 
   const showLoadingWithMessage = (message, duration = 3000) => {
     setLoadingMessage(message)

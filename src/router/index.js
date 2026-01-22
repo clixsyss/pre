@@ -300,9 +300,14 @@ const routes = [
 const router = createRouter({
   history: createWebHashHistory(),
   routes,
-  scrollBehavior() {
+  scrollBehavior(to, from, savedPosition) {
     // Always scroll to top when navigating between pages
-    return { top: 0 }
+    // Use instant scroll for better performance
+    if (savedPosition) {
+      return savedPosition
+    } else {
+      return { top: 0, behavior: 'instant' }
+    }
   },
 })
 
@@ -566,11 +571,24 @@ router.beforeEach(async (to, from, next) => {
           logger.log('Navigation guard: iOS notification navigation detected, waiting longer for auth state (max 10000ms)...')
           currentUser = await optimizedAuthService.waitForAuthState(10000) // 10 seconds for iOS notification navigation
         } else if (isIOS) {
-          logger.log('Navigation guard: iOS detected, waiting for auth state (max 1500ms, cache-optimized)...')
-          currentUser = await optimizedAuthService.waitForAuthState(1500) // iOS-optimized: 1500ms (was 3000ms)
+          // Try cached user first for instant navigation
+          const cachedUser = await optimizedAuthService.getCurrentUser()
+          if (cachedUser) {
+            logger.log('Navigation guard: iOS - using cached user for instant navigation')
+            currentUser = cachedUser
+          } else {
+            logger.log('Navigation guard: iOS detected, waiting for auth state (max 800ms, cache-optimized)...')
+            currentUser = await optimizedAuthService.waitForAuthState(800) // Reduced: 800ms for faster navigation
+          }
         } else {
-          // For non-iOS, use shorter wait
-          currentUser = await optimizedAuthService.waitForAuthState(1000) // Optimized: 1000ms (was 2000ms)
+          // For non-iOS, use very short wait for instant navigation
+          // Only wait if we don't already have cached user
+          const cachedUser = await optimizedAuthService.getCurrentUser()
+          if (cachedUser) {
+            currentUser = cachedUser // Use cached user instantly
+          } else {
+            currentUser = await optimizedAuthService.waitForAuthState(300) // Very short wait: 300ms
+          }
         }
         logger.log(
           'Navigation guard: Current user check result:',
@@ -777,6 +795,25 @@ router.beforeEach(async (to, from, next) => {
     if (guardTimeout) clearTimeout(guardTimeout)
     next()
     return
+  }
+
+  // OPTIMIZATION: For authenticated routes, if user is already authenticated and we're navigating
+  // between authenticated routes (not from root), skip heavy checks for instant navigation
+  if (requiresAuth && from.path !== '/' && from.name !== null) {
+    // Quick check: if we have a cached user, allow navigation instantly
+    // Only do full checks on initial load or when coming from unauthenticated routes
+    try {
+      const cachedUser = await optimizedAuthService.getCurrentUser()
+      if (cachedUser) {
+        logger.log('Navigation guard: Cached user found, allowing instant navigation between authenticated routes')
+        if (guardTimeout) clearTimeout(guardTimeout)
+        next()
+        return
+      }
+    } catch {
+      // If cache check fails, continue with full check below
+      logger.log('Navigation guard: Cache check failed, continuing with full auth check')
+    }
   }
 
   // Check authentication status with optimized timeout

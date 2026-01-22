@@ -351,20 +351,17 @@ const loadAvailableProjects = async () => {
   
   try {
     loadingProjects.value = true
-    console.log('🔄 Loading available projects for device key reset...')
+    console.log('🔄 Loading available projects for device key reset from DynamoDB...')
     
-    // Use Firebase Web SDK (works on all platforms including iOS)
-    console.log('[SignIn] Using Firebase Web SDK...')
-    const { collection, getDocs } = await import('firebase/firestore')
-    const { smartMirrorDb: db } = await import('../../boot/smartMirrorFirebase')
+    // Use firestoreService which uses DynamoDB
+    const result = await firestoreService.getDocs('projects')
     
-    const projectsRef = collection(db, 'projects')
-    const snapshot = await getDocs(projectsRef)
-    const fetchedProjects = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    const fetchedProjects = result.docs.map(doc => ({
+      id: doc.id || doc.documentId || doc._id,
+      ...(typeof doc.data === 'function' ? doc.data() : doc)
     }))
-    console.log('[SignIn] ✅ Fetched', fetchedProjects.length, 'projects via Web SDK')
+    
+    console.log('[SignIn] ✅ Fetched', fetchedProjects.length, 'projects from DynamoDB')
     
     // Sort projects by name (don't filter by status - show all projects like Register page)
     availableProjects.value = fetchedProjects
@@ -374,7 +371,11 @@ const loadAvailableProjects = async () => {
   } catch (error) {
     console.error('❌ Error loading projects:', error)
     console.error('[SignIn] Error details:', error?.message, error?.code)
-    notificationStore.showError('Failed to load projects. Please try again.')
+    // Only show error notification if we're actually trying to open the modal
+    // Don't show error on initial page load
+    if (showDeviceKeyResetModal.value) {
+      notificationStore.showError('Failed to load projects. Please try again.')
+    }
     availableProjects.value = []
   } finally {
     loadingProjects.value = false
@@ -395,8 +396,8 @@ onMounted(() => {
   // Check if we should show the device key error modal
   checkAndShowDeviceKeyError()
   
-  // Load projects for device key reset modal
-  loadAvailableProjects()
+  // Don't load projects on mount - only load when device key reset modal is opened
+  // This prevents unnecessary API calls and error notifications on page load
 })
 
 // Also check when component is activated (for keep-alive scenarios)
@@ -578,7 +579,7 @@ const handleSignIn = async () => {
 
     const user = signInResult.user
     const userId = user?.username || user?.attributes?.sub
-    const cognitoSub = user?.attributes?.sub || user?.cognitoAttributes?.sub
+    const cognitoSub = user?.attributes?.sub || user?.cognitoAttributes?.sub || user?.username
     
     // Verify user is from the correct user pool "rvfwv6"
     // The configured Amplify user pool is already set in boot/amplify.js
@@ -622,9 +623,10 @@ const handleSignIn = async () => {
       // Continue - pool verification failure is not critical, Amplify config ensures correct pool
     }
     
-    console.log('[SignIn] ✅ Authentication successful:', userId)
+    console.log('[SignIn] ✅ Authentication successful')
     console.log('[SignIn] 🔍 Cognito username:', user?.username)
     console.log('[SignIn] 🔍 Cognito sub (unique ID):', cognitoSub)
+    console.log('[SignIn] 🔍 User ID (username):', userId)
     console.log('[SignIn] 🔍 SIGN-IN RESULT USER OBJECT:', JSON.stringify(user, null, 2))
     console.log('[SignIn] 🔍 User attributes:', user?.attributes)
     console.log('[SignIn] 🔍 User cognitoAttributes:', user?.cognitoAttributes)
@@ -634,13 +636,17 @@ const handleSignIn = async () => {
     registrationStore.clearMigrationChallenge()
 
     // Check device key BEFORE proceeding
+    // IMPORTANT: Use cognitoSub (actual user ID) for device key operations, not email/username
     console.log('[SignIn] 🔐 Checking device key...')
     let deviceCheck
     try {
       const deviceKeyService = (await import('../../services/deviceKeyService')).default
+      // Use cognitoSub (actual user ID) instead of userId (which might be email)
+      const userIdentifier = cognitoSub || userId
+      console.log('[SignIn] 🔐 Using user identifier for device check:', userIdentifier)
       // Add timeout to device key check
       deviceCheck = await Promise.race([
-        deviceKeyService.handleLoginDeviceCheck(userId),
+        deviceKeyService.handleLoginDeviceCheck(userIdentifier),
         new Promise((_resolve, reject) => 
           setTimeout(() => reject(new Error('Device key check timed out')), 10000)
         )

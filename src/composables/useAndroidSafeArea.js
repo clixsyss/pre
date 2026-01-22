@@ -10,11 +10,11 @@ import { StatusBar } from '@capacitor/status-bar'
 export function useAndroidSafeArea() {
   const safeAreaTop = ref(0)
   const safeAreaBottom = ref(0)
-  let resizeTimeout = null
 
   /**
    * Calculate safe area insets for Android
    * Uses multiple methods to get accurate safe area values
+   * NOTE: This is kept for potential future use, but currently we use simple CSS padding
    */
   const calculateSafeAreas = async () => {
     if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
@@ -48,7 +48,7 @@ export function useAndroidSafeArea() {
             visible: statusBarInfo.visible 
           })
         }
-      } catch (statusBarError) {
+      } catch {
         console.log('📱 StatusBar.getInfo() not available, using fallback calculation')
       }
       
@@ -127,60 +127,32 @@ export function useAndroidSafeArea() {
     }
   }
 
-  /**
-   * Handle window resize (orientation change, keyboard, etc.)
-   */
-  const handleResize = () => {
-    if (resizeTimeout) {
-      clearTimeout(resizeTimeout)
-    }
-    resizeTimeout = setTimeout(() => {
-      calculateSafeAreas()
-    }, 100)
-  }
 
   /**
-   * Initialize safe area calculation
+   * Initialize safe area - simplified approach using CSS padding
+   * The platform-android class is set in App.vue, this is just a fallback
    */
   const initialize = async () => {
     if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
       return
     }
 
-    // Set initial safe values immediately (before calculation)
+    // Ensure Android class is set (fallback if App.vue hasn't set it yet)
+    if (!document.body.classList.contains('platform-android')) {
+      document.body.classList.add('platform-android')
+      console.log('📱 Android platform class added by useAndroidSafeArea (fallback)')
+    }
+
+    // Set CSS variables for consistency (though we're using direct padding in CSS now)
     document.documentElement.style.setProperty('--android-safe-area-top', '24px')
     document.documentElement.style.setProperty('--android-safe-area-bottom', '24px')
-
-    // Calculate immediately
-    await calculateSafeAreas()
-
-    // Recalculate after a short delay to catch any layout changes
-    setTimeout(() => {
-      calculateSafeAreas()
-    }, 300)
-
-    // Recalculate on resize/orientation change
-    window.addEventListener('resize', handleResize)
-    window.addEventListener('orientationchange', handleResize)
-    
-    // Also listen for visual viewport changes (keyboard, etc.)
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleResize)
-    }
   }
 
   /**
-   * Cleanup listeners
+   * Cleanup - simplified, no listeners to clean up
    */
   const cleanup = () => {
-    if (resizeTimeout) {
-      clearTimeout(resizeTimeout)
-    }
-    window.removeEventListener('resize', handleResize)
-    window.removeEventListener('orientationchange', handleResize)
-    if (window.visualViewport) {
-      window.visualViewport.removeEventListener('resize', handleResize)
-    }
+    // No cleanup needed with simplified approach
   }
 
   return {

@@ -59,13 +59,16 @@ const route = useRoute()
 const isRouterLoading = ref(true)
 const splashStore = useSplashStore()
 
-// Safety timeout: Always show content after 3 seconds, even if initialization fails
+// Safety timeout: Always show content after 2 seconds, even if initialization fails
+// This prevents black screen on Android if initialization is slow
 setTimeout(() => {
   if (isRouterLoading.value) {
     logger.warn('⚠️ App.vue: Safety timeout reached, forcing isRouterLoading to false')
     isRouterLoading.value = false
+    // Also ensure splash knows app is initialized
+    splashStore.setAppInitialized()
   }
-}, 3000)
+}, 2000)
 
 // Initialize network monitoring
 const { initNetworkMonitoring, stopNetworkMonitoring } = useNetworkStatus()
@@ -110,6 +113,22 @@ onMounted(async () => {
   try {
     logger.log('🚀 App.vue: Starting app initialization...')
     
+    // Platform detection - do this early for CSS classes
+    const protocol = window.location.protocol
+    const hasIOSBridge = window.webkit?.messageHandlers !== undefined
+    const platform = window.Capacitor?.getPlatform() || 'unknown'
+    const isIOS = protocol === 'capacitor:' || hasIOSBridge || platform === 'ios'
+    const isAndroid = platform === 'android'
+    
+    // Add platform class to body for CSS optimizations
+    if (isAndroid) {
+      document.body.classList.add('platform-android')
+      logger.log('📱 Android platform detected - added platform-android class')
+    } else if (isIOS) {
+      document.body.classList.add('platform-ios')
+      logger.log('🍎 iOS platform detected - added platform-ios class')
+    }
+    
     // Show splash screen and set loading state
     splashStore.showSplash()
     splashStore.setLoading(true)
@@ -137,15 +156,11 @@ onMounted(async () => {
     
     logger.log('🚀 App.vue: Services verification completed')
     
-    // iOS-optimized: Detect platform for optimized delays
-    const protocol = window.location.protocol
-    const hasIOSBridge = window.webkit?.messageHandlers !== undefined
-    const isIOS = protocol === 'capacitor:' || hasIOSBridge || 
-                  (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
+    // Platform-optimized delays: Android needs faster initialization to prevent black screen
+    const initDelay = isIOS ? 200 : (isAndroid ? 300 : 500)
+    const paintDelay = isIOS ? 300 : (isAndroid ? 400 : 800)
     
-    // iOS-optimized: Shorter delays since cache is fast
-    const initDelay = isIOS ? 200 : 500
-    const paintDelay = isIOS ? 300 : 800
+    logger.log('🔍 App.vue: Platform detected', { platform, isIOS, isAndroid, initDelay, paintDelay })
     
     // Wait for smooth initialization (iOS-optimized)
     await new Promise(resolve => setTimeout(resolve, initDelay))
@@ -320,8 +335,13 @@ const isAuthenticatedPage = computed(() => {
 /* App root - prevent white background flash */
 #app-root {
   min-height: 100vh;
-  background-color: #000;
-  transition: background-color 0.3s ease;
+  background-color: #000 !important;
+  transition: background-color 0.5s ease;
+}
+
+/* Keep app root black until app loads */
+#app-root:not(:has(.main-layout)):not(:has(.auth-layout)) {
+  background-color: #000 !important;
 }
 
 /* Clean layout for authentication pages */

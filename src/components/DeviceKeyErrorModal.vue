@@ -198,9 +198,9 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { collection, getDocs, addDoc, query, where, serverTimestamp } from 'firebase/firestore'
-import { smartMirrorDb as db } from '../boot/smartMirrorFirebase'
 import { Notify } from 'quasar'
+import firestoreService from '../services/firestoreService'
+import { getUserByEmail } from '../services/dynamoDBUsersService'
 
 defineProps({
   message: {
@@ -225,19 +225,24 @@ const loadingProjects = ref(false)
 const availableProjects = ref([])
 const submittingDeviceKeyReset = ref(false)
 
-// Fetch available projects
+// Fetch available projects from DynamoDB
 const fetchProjects = async () => {
   try {
     loadingProjects.value = true
-    const projectsRef = collection(db, 'projects')
-    const snapshot = await getDocs(projectsRef)
-    availableProjects.value = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    console.log('🔄 Loading available projects from DynamoDB...')
+    
+    const result = await firestoreService.getDocs('projects')
+    
+    availableProjects.value = result.docs.map(doc => ({
+      id: doc.id || doc.documentId || doc._id,
+      ...(typeof doc.data === 'function' ? doc.data() : doc)
     }))
-    console.log('Fetched projects:', availableProjects.value.length)
+    
+    console.log('✅ Fetched projects from DynamoDB:', availableProjects.value.length)
   } catch (error) {
     console.error('Error fetching projects:', error)
+    // Only show notification if modal is actually visible
+    // Don't show error on initial mount if modal isn't displayed
     Notify.create({
       type: 'negative',
       message: 'Failed to load projects',
@@ -258,15 +263,11 @@ const handleDeviceKeyResetSubmit = async () => {
     console.log('Submitting device key reset request...')
     console.log('Form data:', deviceKeyResetForm)
 
-    // Verify user exists and matches provided details
-    const usersRef = collection(db, 'users')
-    const q = query(
-      usersRef,
-      where('email', '==', deviceKeyResetForm.email.toLowerCase().trim())
-    )
-    const userSnapshot = await getDocs(q)
+    // Verify user exists and matches provided details using DynamoDB
+    const normalizedEmail = deviceKeyResetForm.email.toLowerCase().trim()
+    const userData = await getUserByEmail(normalizedEmail)
 
-    if (userSnapshot.empty) {
+    if (!userData) {
       Notify.create({
         type: 'negative',
         message: 'No account found with this email address.',
@@ -275,9 +276,6 @@ const handleDeviceKeyResetSubmit = async () => {
       })
       return
     }
-
-    const userDoc = userSnapshot.docs[0]
-    const userData = userDoc.data()
 
     // Verify National ID matches
     if (userData.nationalId !== deviceKeyResetForm.nationalId.trim()) {
@@ -322,25 +320,25 @@ const handleDeviceKeyResetSubmit = async () => {
     // Unauthenticated users don't have permission to query the collection
     console.log('ℹ️ Skipping duplicate check (user not authenticated)')
 
-    // Create device key reset request
-    const resetRequestsRef = collection(db, `projects/${deviceKeyResetForm.projectId}/deviceKeyResetRequests`)
+    // Create device key reset request using DynamoDB
     const resetRequest = {
-      userId: userDoc.id,
+      userId: userData.id || userData.userId || userData._id,
       userEmail: userData.email,
-      userName: `${userData.firstName} ${userData.lastName}`,
+      userName: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
       nationalId: userData.nationalId,
       mobile: userData.mobile,
       projectId: deviceKeyResetForm.projectId,
       projectName: availableProjects.value.find(p => p.id === deviceKeyResetForm.projectId)?.name || 'Unknown Project',
       reason: deviceKeyResetForm.reason.trim(),
       status: 'pending',
-      requestedAt: serverTimestamp(),
+      requestedAt: new Date().toISOString(),
       resolvedAt: null,
       resolvedBy: null,
       adminNotes: null
     }
 
-    await addDoc(resetRequestsRef, resetRequest)
+    const collectionPath = `projects/${deviceKeyResetForm.projectId}/deviceKeyResetRequests`
+    await firestoreService.addDoc(collectionPath, resetRequest)
 
     console.log('Device key reset request submitted successfully')
 
