@@ -6,27 +6,27 @@
         ref="splashVideo"
         class="splash-video"
         :class="{ 'video-paused': videoPaused }"
+        :src="splashVideoSrc"
+        :poster="logoImg"
         autoplay
         muted
         playsinline
         preload="auto"
-        webkit-playsinline
-        x5-playsinline
         @ended="onVideoEnded"
         @loadeddata="onVideoLoaded"
+        @canplay="onVideoCanPlay"
         @error="onVideoError"
       >
-        <source src="../assets/splash.mp4" type="video/mp4" />
         Your browser does not support the video tag.
       </video>
       
-      <!-- Always show overlay on iOS or if video has issues -->
+      <!-- Overlay: show when video has issues, ended, or loading fallback -->
       <div class="video-overlay" :class="{ 'overlay-visible': showOverlay }">
         <div class="loading-content">
           <!-- Logo - only show if video hasn't completed -->
           <div class="logo-container" v-if="!videoCompleted">
             <img 
-              src="../assets/logo.png" 
+              :src="logoImg" 
               alt="PRE GROUP Logo" 
               class="logo" 
               @error="handleLogoError"
@@ -46,9 +46,14 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import { useSplashStore } from '../stores/splash'
 import { Capacitor } from '@capacitor/core'
+import { SplashScreen as CapSplash } from '@capacitor/splash-screen'
+import logoImg from '../assets/logo.png'
+
+// Use /splash.mp4 from public/ so it loads reliably in Capacitor (native) and web
+const splashVideoSrc = '/splash.mp4'
 
 const splashStore = useSplashStore()
 const splashVideo = ref(null)
@@ -57,7 +62,13 @@ const videoPaused = ref(false)
 const videoLoaded = ref(false)
 const videoCompleted = ref(false)
 
-const isIOS = Capacitor.getPlatform() === 'ios'
+// Capacitor.getPlatform() returns 'web' inside iOS WebView; use protocol + webkit bridge
+const isIOS = (() => {
+  const p = Capacitor.getPlatform()
+  if (p === 'ios') return true
+  if (typeof window !== 'undefined' && (window.location?.protocol === 'capacitor:' || !!window.webkit?.messageHandlers)) return true
+  return false
+})()
 
 let logoErrorHandled = false
 
@@ -80,16 +91,39 @@ const handleLogoLoad = () => {
   console.log('Logo loaded successfully')
 }
 
+const attemptPlay = () => {
+  const video = splashVideo.value
+  if (!video) return
+  const p = video.play()
+  if (p && typeof p.then === 'function') {
+    p.catch((e) => {
+      console.warn('📹 Video play() rejected:', e?.message || e)
+    })
+  }
+}
+
 const onVideoLoaded = () => {
   console.log('📹 Video loaded and ready to play')
   videoLoaded.value = true
+  attemptPlay()
 }
 
-const onVideoError = (error) => {
-  console.error('📹 Video error:', error)
-  // Show overlay immediately on error (with logo since video didn't complete)
+const onVideoCanPlay = () => {
+  console.log('📹 Video canplay')
+  if (splashVideo.value?.paused) attemptPlay()
+}
+
+const onVideoError = () => {
+  const v = splashVideo.value
+  const err = v?.error
+  console.error('📹 Video error:', {
+    message: err?.message,
+    code: err?.code,
+    networkState: v?.networkState,
+    src: splashVideoSrc
+  })
   showOverlay.value = true
-  videoCompleted.value = false // Keep logo visible on error
+  videoCompleted.value = false
   splashStore.setVideoCompleted()
 }
 
@@ -122,63 +156,62 @@ watch(() => splashStore.show, (newVal) => {
   console.log('👁️ Splash visibility changed:', newVal)
 })
 
-onMounted(() => {
+onMounted(async () => {
   const platform = Capacitor.getPlatform()
-  console.log('🎬 SplashScreen mounted', { platform, isIOS })
+  console.log('🎬 SplashScreen mounted', { platform, isIOS, videoSrc: splashVideoSrc })
   
-  // On iOS, show overlay after a short delay since video autoplay can be unreliable
-  if (isIOS) {
-    setTimeout(() => {
-      if (!showOverlay.value) {
-        console.log('📱 iOS: Showing overlay with video background')
-        showOverlay.value = true
-        
-        // If video hasn't played, mark it as completed
-        if (splashVideo.value && splashVideo.value.currentTime < 0.5) {
-          console.log('📱 iOS: Video not playing, marking as complete')
-          splashStore.setVideoCompleted()
-        }
+  // Hide native Capacitor splash so our video splash is visible. The native splash
+  // sits on top of the WebView; we hide it as soon as we're showing our custom splash.
+  if (Capacitor.isNativePlatform()) {
+    setTimeout(async () => {
+      try {
+        await CapSplash.hide()
+        console.log('📹 Native splash hidden – video splash now visible')
+      } catch (err) {
+        console.warn('⚠️ Could not hide native splash early:', err)
       }
-    }, 300)
-  } else {
-    // On Android and other platforms, be more aggressive with fallbacks
-    // Check video playback after a shorter delay
-    setTimeout(() => {
-      if (splashVideo.value) {
-        const video = splashVideo.value
-        if (video.paused && video.currentTime === 0) {
-          console.warn('⚠️ Video not playing, showing overlay and marking complete')
-          showOverlay.value = true
-          splashStore.setVideoCompleted()
-        }
-      } else {
-        // Video element not available, mark as complete immediately
-        console.warn('⚠️ Video element not available, marking as complete')
-        showOverlay.value = true
-        splashStore.setVideoCompleted()
-      }
-    }, 500) // Shorter delay for Android
-    
-    // Additional Android-specific fallback - force complete after 2 seconds
-    setTimeout(() => {
-      if (!splashStore.videoCompleted) {
-        console.warn('⏱️ Android: Forcing video completion after 2s timeout')
-        showOverlay.value = true
-        splashStore.setVideoCompleted()
-      }
-    }, 2000)
+    }, 80)
   }
   
-  // Fallback to force hide after 5 seconds (reduced from 25s)
+  await nextTick()
+  attemptPlay()
+  
+  const videoNotPlayingMs = 1400
+  setTimeout(() => {
+    if (showOverlay.value) return // already showing (error or ended)
+    const video = splashVideo.value
+    if (!video) {
+      console.warn('⚠️ Video element not available, showing overlay')
+      showOverlay.value = true
+      splashStore.setVideoCompleted()
+      return
+    }
+    if (video.paused && video.currentTime === 0) {
+      console.warn('⚠️ Video not playing after', videoNotPlayingMs, 'ms, showing overlay')
+      showOverlay.value = true
+      splashStore.setVideoCompleted()
+    }
+  }, videoNotPlayingMs)
+  
+  // Safety: force complete after 2.5s if video still "in progress"
+  setTimeout(() => {
+    if (!splashStore.videoCompleted) {
+      console.warn('⏱️ Splash: Forcing video completion after 2.5s timeout')
+      showOverlay.value = true
+      splashStore.setVideoCompleted()
+    }
+  }, 2500)
+  
+  // Fallback to force hide after 4 seconds
   setTimeout(() => {
     if (splashStore.show) {
-      console.warn('⏱️ Splash timeout - forcing hide after 5s')
+      console.warn('⏱️ Splash timeout - forcing hide after 4s')
       showOverlay.value = true
       splashStore.setVideoCompleted()
       splashStore.setAppInitialized()
       splashStore.hideSplash()
     }
-  }, 5000)
+  }, 4000)
 })
 </script>
 
@@ -406,7 +439,7 @@ onMounted(() => {
 }
 
 .splash-fade-leave-active {
-  transition: opacity 0.8s ease-in;
+  transition: opacity 0.25s ease-in;
 }
 
 .splash-fade-enter-from {

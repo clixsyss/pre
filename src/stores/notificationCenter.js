@@ -5,11 +5,7 @@ import {
   query, 
   where, 
   orderBy, 
-  // onSnapshot removed - using polling instead for cost optimization
-  doc,
-  setDoc,
   getDocs,
-  writeBatch,
   Timestamp,
   limit
 } from 'firebase/firestore'
@@ -166,23 +162,19 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         // Limit to 50 most recent
         const recentNotifications = notificationsList.slice(0, 50)
         
-        // FETCH 2: Get user's read status from subcollection (LIMITED to 100 most recent)
-        // CRITICAL FIX: Add limit to prevent reading thousands of read status documents
-        const readStatusRef = collection(db, `users/${userId}/notificationReadStatus`)
-        const readStatusQuery = query(readStatusRef, limit(100)) // LIMIT to 100 most recent read statuses
-        const readStatusSnapshot = await getDocs(readStatusQuery).catch(err => {
-          console.log('NotificationCenter: Error fetching read status, assuming all unread:', err)
-          return { docs: [] }
-        })
+        // FETCH 2: Get user's read status from DynamoDB (PRE app uses AWS)
+        let readStatusMapFromDb = new Map()
+        try {
+          const { usersNotificationReadStatusService } = await import('../services/dynamoDBTableServices')
+          readStatusMapFromDb = await usersNotificationReadStatusService.getAllReadStatuses(userId)
+          readStatusMap.value = readStatusMapFromDb
+          console.log(`NotificationCenter: Fetched read status from DynamoDB for ${readStatusMapFromDb.size} notifications`)
+        } catch (readErr) {
+          console.log('NotificationCenter: Error fetching read status from DynamoDB, assuming all unread:', readErr)
+          readStatusMap.value = new Map()
+        }
         
-        // Update read status map
-        readStatusMap.value = new Map()
-        readStatusSnapshot.docs.forEach(doc => {
-          readStatusMap.value.set(doc.id, doc.data())
-        })
-        console.log(`NotificationCenter: Fetched read status for ${readStatusMap.value.size} notifications [Reads: ${readStatusSnapshot.size}]`)
-        
-        // Apply read status from Firestore
+        // Apply read status from DynamoDB
         recentNotifications.forEach(notif => {
           const readStatus = readStatusMap.value.get(notif.id)
           if (readStatus) {
@@ -198,7 +190,7 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         lastFetchTime.value = Date.now()
         isLoading.value = false
         
-        console.log(`NotificationCenter: ✅ Loaded ${recentNotifications.length} notifications from DynamoDB, ${unreadCounter} unread [Total Reads: ${readStatusSnapshot.size}]`)
+        console.log(`NotificationCenter: ✅ Loaded ${recentNotifications.length} notifications from DynamoDB, ${unreadCounter} unread [Read status from DynamoDB]`)
         return
       } catch (dynamoError) {
         console.warn('⚠️ DynamoDB fetch failed, falling back to Firestore:', dynamoError)
@@ -226,21 +218,16 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         const notificationsSnapshot = await getDocs(q)
         console.log(`NotificationCenter: Fetched ${notificationsSnapshot.size} notifications from Firestore (fallback) [Reads: ${notificationsSnapshot.size}]`)
         
-        // FETCH 2: Get user's read status from subcollection (LIMITED to 100 most recent)
-        // CRITICAL FIX: Add limit to prevent reading thousands of read status documents
-        const readStatusRef = collection(db, `users/${userId}/notificationReadStatus`)
-        const readStatusQuery = query(readStatusRef, limit(100)) // LIMIT to 100 most recent read statuses
-        const readStatusSnapshot = await getDocs(readStatusQuery).catch(err => {
-          console.log('NotificationCenter: Error fetching read status, assuming all unread:', err)
-          return { docs: [] }
-        })
-        
-        // Update read status map
-        readStatusMap.value = new Map()
-        readStatusSnapshot.docs.forEach(doc => {
-          readStatusMap.value.set(doc.id, doc.data())
-        })
-        console.log(`NotificationCenter: Fetched read status for ${readStatusMap.value.size} notifications [Reads: ${readStatusSnapshot.size}]`)
+        // FETCH 2: Get user's read status from DynamoDB (PRE app uses AWS; keeps read state consistent)
+        try {
+          const { usersNotificationReadStatusService } = await import('../services/dynamoDBTableServices')
+          const mapFromDb = await usersNotificationReadStatusService.getAllReadStatuses(userId)
+          readStatusMap.value = mapFromDb
+          console.log(`NotificationCenter: Fetched read status from DynamoDB for ${mapFromDb.size} notifications`)
+        } catch (readErr) {
+          console.log('NotificationCenter: Error fetching read status from DynamoDB, assuming all unread:', readErr)
+          readStatusMap.value = new Map()
+        }
         
         // Process notifications
         if (notificationsSnapshot.empty) {
@@ -298,7 +285,7 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         lastFetchTime.value = Date.now()
         isLoading.value = false
 
-        console.log(`NotificationCenter: ✅ Loaded ${notificationsList.length} notifications (${notificationsSnapshot.size} total), ${unreadCounter} unread [Total Reads: ${notificationsSnapshot.size + readStatusSnapshot.size}]`)
+        console.log(`NotificationCenter: ✅ Loaded ${notificationsList.length} notifications (${notificationsSnapshot.size} total), ${unreadCounter} unread [Read status from DynamoDB]`)
       } // End of catch (dynamoError) - Firestore fallback
     } catch (error) {
       console.error('NotificationCenter: ❌ Error fetching notifications:', error)
@@ -339,7 +326,9 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   }
 
   /**
-   * Mark a notification as read
+   * Mark a notification as read.
+   * READ STATUS IS STORED IN AWS DYNAMODB ONLY — never Firestore.
+   * Uses users__notificationReadStatus table via usersNotificationReadStatusService.
    * @param {string} notificationId - The notification ID
    * @param {string} userId - The current user ID
    */
@@ -349,73 +338,38 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         console.error('NotificationCenter: userId required to mark as read')
         return
       }
-      
+
       console.log(`NotificationCenter: Marking notification ${notificationId} as read for user ${userId}`)
-      
-      // Check if iOS to use Capacitor Firebase
-      const { Capacitor } = await import('@capacitor/core')
-      const isIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
-      
-      if (isIOS) {
-        // Use Capacitor Firebase for iOS - store read status in user subcollection
-        const { FirebaseFirestore } = await import('@capacitor-firebase/firestore')
-        
-        try {
-          await FirebaseFirestore.setDocument({
-            reference: `users/${userId}/notificationReadStatus/${notificationId}`,
-            data: {
-              read: true,
-              readAt: Date.now()
-            },
-            merge: true // Changed to true to properly merge/create document
-          })
-          
-          console.log(`NotificationCenter: ✅ iOS - Notification ${notificationId} marked as read (verified)`)
-        } catch (iosError) {
-          console.error('NotificationCenter: ❌ iOS - Failed to mark as read:', iosError)
-          throw iosError
-        }
-      } else {
-        // Use Web SDK for web - store read status in user subcollection
-        const readStatusRef = doc(db, `users/${userId}/notificationReadStatus`, notificationId)
-        
-        try {
-          await setDoc(readStatusRef, {
-            read: true,
-            readAt: Timestamp.now()
-          }, { merge: true }) // Explicitly set merge option
-          
-          console.log(`NotificationCenter: ✅ Web - Notification ${notificationId} marked as read (verified)`)
-        } catch (webError) {
-          console.error('NotificationCenter: ❌ Web - Failed to mark as read:', webError)
-          throw webError
-        }
-      }
-      
-      // Update read status map so listener uses correct status
+
+      const { usersNotificationReadStatusService } = await import('../services/dynamoDBTableServices')
+      await usersNotificationReadStatusService.markAsRead(userId, notificationId)
+      console.log(`NotificationCenter: ✅ Notification ${notificationId} marked as read in DynamoDB (AWS)`)
+
       readStatusMap.value.set(notificationId, { read: true, readAt: Date.now() })
-      
-      // Update local state only after successful database write
-      const notif = notifications.value.find(n => n.id === notificationId)
-      if (notif) {
-        notif.read = true
+
+      const idx = notifications.value.findIndex(n => n.id === notificationId)
+      if (idx !== -1) {
+        const next = [...notifications.value]
+        next[idx] = { ...next[idx], read: true }
+        notifications.value = next
         unreadCount.value = Math.max(0, unreadCount.value - 1)
         console.log(`NotificationCenter: Local state updated - ${unreadCount.value} unread remaining`)
       }
     } catch (error) {
-      console.error('NotificationCenter: ❌ Error marking notification as read:', { 
+      console.error('NotificationCenter: ❌ Error marking notification as read (AWS):', {
         notificationId,
-        code: error?.code, 
+        code: error?.code,
         message: error?.message,
         stack: error?.stack
       })
-      // Re-throw to let caller know it failed
       throw error
     }
   }
 
   /**
-   * Mark all notifications as read
+   * Mark all notifications as read.
+   * READ STATUS IS STORED IN AWS DYNAMODB ONLY — never Firestore.
+   * Uses users__notificationReadStatus table via usersNotificationReadStatusService.
    * @param {string} userId - The current user ID
    */
   const markAllAsRead = async (userId) => {
@@ -439,56 +393,33 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
       // Store original unread count for potential rollback
       const originalUnreadCount = unreadCount.value
       
-      // Update read status map FIRST (before Firestore write)
+      const unreadIds = new Set(unreadNotifs.map(n => n.id))
       unreadNotifs.forEach(notification => {
         readStatusMap.value.set(notification.id, { read: true, readAt: Date.now() })
       })
-      
-      // Update local state FIRST (before Firestore write)
-      unreadNotifs.forEach(notif => {
-        notif.read = true
-      })
-      unreadCount.value = 0
-      
-      console.log(`NotificationCenter: Local state updated - ${unreadCount.value} unread`)
-      
-      try {
-        // Use DynamoDB for read status (more reliable than Firestore)
-        const { usersNotificationReadStatusService } = await import('../services/dynamoDBTableServices')
-        
-        console.log(`NotificationCenter: Using DynamoDB to mark ${unreadNotifs.length} notifications as read...`)
-        const notificationIds = unreadNotifs.map(n => n.id)
-        
-        await usersNotificationReadStatusService.markMultipleAsRead(userId, notificationIds)
-        
-        console.log(`NotificationCenter: ✅ Successfully marked ${unreadNotifs.length} notifications as read in DynamoDB`)
-      } catch (dynamoError) {
-        // Fallback to Firestore if DynamoDB fails
-        console.warn(`NotificationCenter: DynamoDB failed, falling back to Firestore:`, dynamoError)
-        
-        try {
-          const batch = writeBatch(db)
-          
-          unreadNotifs.forEach((notification) => {
-            const readStatusRef = doc(db, `users/${userId}/notificationReadStatus`, notification.id)
-            batch.set(readStatusRef, {
-              read: true,
-              readAt: Timestamp.now()
-            })
-          })
 
-          await batch.commit()
-          console.log(`NotificationCenter: ✅ Firestore fallback - Successfully marked ${unreadNotifs.length} notifications as read`)
-        } catch (firestoreError) {
-          console.error('NotificationCenter: Both DynamoDB and Firestore failed:', firestoreError)
-          // Rollback local state changes if all writes fail
-          unreadNotifs.forEach(notification => {
-            readStatusMap.value.delete(notification.id)
-            notification.read = false
-          })
-          unreadCount.value = originalUnreadCount
-          throw firestoreError
-        }
+      // Replace array to trigger Vue reactivity (avoid in-place mutation)
+      notifications.value = notifications.value.map(n =>
+        unreadIds.has(n.id) ? { ...n, read: true } : n
+      )
+      unreadCount.value = 0
+
+      console.log(`NotificationCenter: Local state updated - ${unreadCount.value} unread`)
+
+      const { usersNotificationReadStatusService } = await import('../services/dynamoDBTableServices')
+      const notificationIds = unreadNotifs.map(n => n.id)
+
+      try {
+        await usersNotificationReadStatusService.markMultipleAsRead(userId, notificationIds)
+        console.log(`NotificationCenter: ✅ Successfully marked ${unreadNotifs.length} notifications as read in DynamoDB (AWS)`)
+      } catch (dynamoError) {
+        console.error('NotificationCenter: DynamoDB (AWS) mark-all-as-read failed:', dynamoError)
+        unreadNotifs.forEach(({ id }) => readStatusMap.value.delete(id))
+        notifications.value = notifications.value.map(n =>
+          unreadIds.has(n.id) ? { ...n, read: false } : n
+        )
+        unreadCount.value = originalUnreadCount
+        throw dynamoError
       }
     } catch (error) {
       console.error('NotificationCenter: Error marking all notifications as read:', { code: error?.code, errorMessage: error?.message })

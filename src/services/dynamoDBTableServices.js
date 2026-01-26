@@ -49,14 +49,16 @@ export const usersTokensService = {
 // ============================================================================
 // USERS NOTIFICATION READ STATUS SERVICE
 // ============================================================================
+// READ STATUS: AWS DynamoDB ONLY (users__notificationReadStatus). Never Firestore.
+// Table schema: PK = parentId (userId), SK = id (notificationId).
 const USERS_NOTIFICATION_READ_STATUS_TABLE = 'users__notificationReadStatus'
 
 export const usersNotificationReadStatusService = {
   async getReadStatus(userId, notificationId) {
     try {
       return await getItem(USERS_NOTIFICATION_READ_STATUS_TABLE, {
-        userId,
-        notificationId
+        parentId: userId,
+        id: notificationId
       })
     } catch (error) {
       console.error('[UsersNotificationReadStatusService] Error:', error)
@@ -66,20 +68,19 @@ export const usersNotificationReadStatusService = {
   
   async getAllReadStatuses(userId) {
     try {
-      const { scan } = await import('../aws/dynamodbClient')
-      const results = await scan(USERS_NOTIFICATION_READ_STATUS_TABLE, {
-        FilterExpression: 'userId = :userId',
+      const results = await query(USERS_NOTIFICATION_READ_STATUS_TABLE, {
+        KeyConditionExpression: 'parentId = :userId',
         ExpressionAttributeValues: {
           ':userId': userId
         }
       })
       
-      // Convert to Map for compatibility with existing code
       const readStatusMap = new Map()
       if (results && results.length > 0) {
         results.forEach(item => {
-          if (item.notificationId && item.read) {
-            readStatusMap.set(item.notificationId, {
+          const nid = item.id || item.notificationId
+          if (nid && item.read) {
+            readStatusMap.set(nid, {
               read: item.read,
               readAt: item.readAt
             })
@@ -89,14 +90,16 @@ export const usersNotificationReadStatusService = {
       return readStatusMap
     } catch (error) {
       console.error('[UsersNotificationReadStatusService] Error getting all read statuses:', error)
-      // Return empty map on error (assume all unread)
       return new Map()
     }
   },
   
+  /** Persist to AWS DynamoDB only (users__notificationReadStatus). Never Firestore. */
   async markAsRead(userId, notificationId) {
     try {
       const item = {
+        parentId: userId,
+        id: notificationId,
         userId,
         notificationId,
         read: true,

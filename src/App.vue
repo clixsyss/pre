@@ -156,11 +156,14 @@ onMounted(async () => {
     
     logger.log('🚀 App.vue: Services verification completed')
     
-    // Platform-optimized delays: Android needs faster initialization to prevent black screen
-    const initDelay = isIOS ? 200 : (isAndroid ? 300 : 500)
-    const paintDelay = isIOS ? 300 : (isAndroid ? 400 : 800)
+    // Shorter delays to reduce white-screen duration (was 200+300 iOS, now 80+120)
+    const initDelay = isIOS ? 80 : (isAndroid ? 120 : 200)
+    const paintDelay = isIOS ? 120 : (isAndroid ? 150 : 300)
     
     logger.log('🔍 App.vue: Platform detected', { platform, isIOS, isAndroid, initDelay, paintDelay })
+    
+    // Skip extra "layout not found" wait on native to speed up splash handoff
+    const layoutWaitMs = (isIOS || isAndroid) ? 150 : 500
     
     // Wait for smooth initialization (iOS-optimized)
     await new Promise(resolve => setTimeout(resolve, initDelay))
@@ -182,7 +185,7 @@ onMounted(async () => {
       logger.log('✅ App.vue: Main content found in DOM')
     } else {
       logger.warn('⚠️ App.vue: Main content not yet rendered, waiting...')
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise(resolve => setTimeout(resolve, layoutWaitMs))
     }
     
     // Notify splash store that app is initialized

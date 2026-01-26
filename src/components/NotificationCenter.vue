@@ -275,30 +275,20 @@ const handleMarkAllAsRead = async () => {
 }
 
 const handleNotificationClick = async (notification) => {
-  // Get userId from optimizedAuthService
   const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
   const currentUser = await optimizedAuthService.getCurrentUser()
   const userId = currentUser?.uid
-  
-  console.log('NotificationCenter: Notification clicked:', { 
-    id: notification.id, 
-    read: notification.read, 
-    userId 
-  })
-  
-  // Mark as read
-  if (!notification.read && userId) {
+
+  // Always mark as read when user opens a notification (if we have userId)
+  if (userId) {
     try {
-      console.log('NotificationCenter: Marking notification as read:', notification.id)
       await notificationStore.markAsRead(notification.id, userId)
-      console.log('NotificationCenter: Successfully marked as read')
     } catch (error) {
       console.error('NotificationCenter: Failed to mark notification as read:', error)
-      // Still show the notification even if marking as read fails
     }
   }
 
-  // Show details modal instead of navigating
+  // Show details modal
   selectedNotification.value = notification
 }
 

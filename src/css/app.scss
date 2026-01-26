@@ -1,8 +1,18 @@
 // app global css in SCSS form
 
 /* Prevent white screen flash on app startup - keep black during splash */
-html, body, #q-app, #app-root {
-  background-color: #000 !important;
+body {
+  background-color: #000000;
+  margin: 0;
+  padding: 0;
+}
+
+#q-app {
+  background-color: #000000;
+}
+
+html, #app-root {
+  background-color: #000000 !important;
   transition: background-color 0.5s ease;
 }
 

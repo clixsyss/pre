@@ -230,8 +230,9 @@ export default defineConfig((ctx) => {
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-capacitor-apps/configuring-capacitor
+    // CRITICAL: false prevents Quasar from auto-hiding splash when Vue mounts (avoids white screen gap)
     capacitor: {
-      hideSplashscreen: true,
+      hideSplashscreen: false,
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-electron-apps/configuring-electron
