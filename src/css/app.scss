@@ -420,6 +420,13 @@ body.platform-android {
     right: 0 !important;
   }
   
+  /* Android-specific: Add safe area padding for auth layout (login, registration, onboarding) */
+  .auth-layout {
+    padding-top: 24px; /* Status bar */
+    padding-bottom: 24px; /* Navigation bar */
+    min-height: 100vh;
+  }
+  
   /* Optimize modal rendering on Android */
   .modal-overlay,
   .dialog-overlay {
