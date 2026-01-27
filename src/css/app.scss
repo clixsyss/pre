@@ -437,6 +437,17 @@ body.platform-android {
     min-height: 100vh;
   }
   
+  /* Android-specific: Fix white bar on top of dark onboarding screen
+     We keep the global safe-area padding on .auth-layout for login/register,
+     but for onboarding (which has a full-screen dark background) we pull the
+     container up while adding its own internal safe-area padding. */
+  .auth-layout > .onboarding-container {
+    /* Cover the 24px auth-layout padding with the onboarding background */
+    margin-top: -24px;
+    /* Still keep content safely below the Android status bar */
+    padding-top: 24px;
+  }
+  
   /* Optimize modal rendering on Android */
   .modal-overlay,
   .dialog-overlay {
