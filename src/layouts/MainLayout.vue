@@ -695,8 +695,15 @@ const isActiveTab = (tabName) => {
              currentPath === '/violations' ||
              currentPath.startsWith('/violation-chat/') ||
              currentPath === '/support' ||
-             currentPath.startsWith('/support-chat/')
-    
+             currentPath.startsWith('/support-chat/') ||
+             currentPath === '/face-verification' ||  
+             currentPath.startsWith('/face-verification/') ||
+             currentPath.startsWith('/face-verification-chat/') ||
+             currentPath.startsWith('/face-verification-category/') ||
+             currentPath.startsWith('/face-verification-request/') ||
+             currentPath.startsWith('/face-verification-request-chat/') ||
+             currentPath.startsWith('/face-verification-request-category/') ||
+             currentPath.startsWith('/face-verification-request-chat/')
     case 'services':
       // Services tab is active for smart devices and other service pages
       return currentPath === '/services' || 

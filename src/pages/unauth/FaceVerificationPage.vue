@@ -1,7 +1,8 @@
 <template>
   <div class="face-verification-page">
-    <FaceVerification 
+    <FaceVerification
       :required="true"
+      :submission-error="submissionError"
       @complete="handleVerificationComplete"
       @cancel="handleCancel"
     />
@@ -9,133 +10,152 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 import FaceVerification from '../../components/FaceVerification.vue'
+import {
+  prepareEnrollment,
+  allocateEnrollId,
+  getEnrollmentTargets,
+  enrollViaMqtt,
+  enrollmentErrorMessage,
+  enrollmentQueuedMessage,
+  isQueueableError,
+  enqueueEnrollmentItem,
+  notifyFaceEnrollmentRejected,
+} from '../../services/faceEnrollmentService'
 
-// Component name
-defineOptions({
-  name: 'FaceVerificationPage'
-})
+defineOptions({ name: 'FaceVerificationPage' })
 
 const router = useRouter()
 const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
+const submissionError = ref(false)
 
-const handleVerificationComplete = async (data) => {
+async function handleVerificationComplete(data) {
   try {
-    console.log('[FaceVerificationPage] Face verification completed:', data)
-    
-    // Face verification is required in registration, so skip is not allowed
     if (data.skipped) {
-      console.warn('[FaceVerificationPage] Face verification was skipped, but it is required')
-      notificationStore.showError('Face verification is required to complete registration. Please complete it to continue.')
-      return // Don't proceed if skipped
-    }
-    
-    if (!data.photos || data.photos.length < 3) {
-      notificationStore.showError('Please complete all three face verification photos to continue.')
+      notificationStore.showError(
+        'Face verification is required to complete registration. Please complete it to continue.'
+      )
       return
     }
-    
-    // User completed face verification - upload to AWS S3
-      console.log('[FaceVerificationPage] Uploading face verification photos to AWS S3...')
-      
-      try {
-        // Get user ID from registration store or tempUserId
-        const userId = registrationStore.firestoreUserId || registrationStore.tempUserId
-        
-        if (!userId) {
-          console.warn('[FaceVerificationPage] No user ID available yet, storing photos for later upload')
-          // Store photos in registration store for later upload
-          registrationStore.setFaceVerificationPhotos({
-            frontPhoto: data.frontPhoto,
-            leftPhoto: data.leftPhoto,
-            rightPhoto: data.rightPhoto,
-            allPhotos: data.photos,
-            skipped: false
-          })
-          notificationStore.showSuccess('Face verification completed! Photos will be saved after account creation.')
-        } else {
-          // Upload photos to AWS S3
-          const fileUploadService = (await import('../../services/fileUploadService')).default
-          
-          const uploadedPhotos = await fileUploadService.uploadFaceVerificationPhotos(userId, data.photos)
-          console.log('[FaceVerificationPage] ✅ Face photos uploaded to S3:', uploadedPhotos)
-          
-          // Save photo URLs to DynamoDB
-          try {
-            const { updateUser, getUserById } = await import('../../services/dynamoDBUsersService')
-            
-            // Get existing user to preserve existing documents
-            const existingUser = await getUserById(userId)
-            const existingDocuments = existingUser?.documents || {}
-            
-            // Merge face verification URLs with existing documents
-            const updatedDocuments = {
-              ...existingDocuments,
-              faceFrontUrl: uploadedPhotos.faceFrontUrl || uploadedPhotos.faceFront || null,
-              faceLeftUrl: uploadedPhotos.faceLeftUrl || uploadedPhotos.faceLeft || null,
-              faceRightUrl: uploadedPhotos.faceRightUrl || uploadedPhotos.faceRight || null
-            }
-            
-            // Remove null values to keep documents clean
-            Object.keys(updatedDocuments).forEach(key => {
-              if (updatedDocuments[key] === null) {
-                delete updatedDocuments[key]
-              }
-            })
-            
-            // Update user document with merged documents
-            await updateUser(userId, {
-              documents: updatedDocuments
-            })
-            
-            console.log('[FaceVerificationPage] ✅ Face verification photos saved to DynamoDB')
-          } catch (dbError) {
-            console.error('[FaceVerificationPage] Error saving to DynamoDB:', dbError)
-            // Photos are already uploaded to S3, so continue
-          }
-          
-          // Store in registration store for reference
-          registrationStore.setFaceVerificationPhotos({
-            frontPhoto: data.frontPhoto,
-            leftPhoto: data.leftPhoto,
-            rightPhoto: data.rightPhoto,
-            allPhotos: data.photos,
-            skipped: false,
-            uploaded: true,
-            urls: uploadedPhotos
-          })
-          
-          notificationStore.showSuccess('Face verification completed and saved!')
-        }
-      } catch (uploadError) {
-        console.error('[FaceVerificationPage] Error uploading photos:', uploadError)
-        // Store photos in registration store as fallback
-        registrationStore.setFaceVerificationPhotos({
-          frontPhoto: data.frontPhoto,
-          leftPhoto: data.leftPhoto,
-          rightPhoto: data.rightPhoto,
-          allPhotos: data.photos,
-          skipped: false
+
+    const img_b64 = data.img_b64
+    if (!img_b64) {
+      notificationStore.showError('Face image is required. Please capture or upload a photo.')
+      return
+    }
+
+    const userId =
+      registrationStore.firestoreUserId ||
+      registrationStore.tempUserId ||
+      registrationStore.personalData?.email ||
+      ''
+    const enrollId = allocateEnrollId()
+    if (!enrollId) {
+      notificationStore.showError("We couldn't register your photo right now. Please try again.")
+      submissionError.value = true
+      return
+    }
+    const userName = [
+      registrationStore.userDetails?.firstName,
+      registrationStore.userDetails?.lastName,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim() || 'User'
+
+    const { payload, error } = prepareEnrollment({ enrollId, userName, img_b64 })
+    if (error) {
+      notificationStore.showError(error)
+      submissionError.value = true
+      return
+    }
+
+    submissionError.value = false
+
+    const targets = getEnrollmentTargets([])
+    const enrollmentResults = []
+    let lastErrorReason = null
+    let queuedCount = 0
+    let hadReplyFailed = false
+
+    for (const target of targets) {
+      const { success, error: errReason } = await enrollViaMqtt({
+        brokerWsUrl: target.brokerWsUrl,
+        deviceSn: target.deviceSn,
+        payload,
+        enrollId,
+      })
+      if (success) {
+        const mqttClusterId = target.brokerWsUrl ? new URL(target.brokerWsUrl).host : ''
+        enrollmentResults.push({
+          projectId: target.projectId,
+          enrollId,
+          deviceSn: target.deviceSn,
+          mqttClusterId,
+          enrolledAt: new Date().toISOString(),
         })
-        notificationStore.showWarning('Face verification completed, but photos will be saved after account creation.')
+      } else {
+        if (isQueueableError(errReason)) {
+          enqueueEnrollmentItem({
+            enrollId,
+            userName,
+            record: img_b64,
+            projectId: target.projectId,
+            deviceSn: target.deviceSn,
+            brokerWsUrl: target.brokerWsUrl,
+            userId,
+            flow: 'registration',
+          })
+          queuedCount += 1
+        } else {
+          lastErrorReason = errReason || lastErrorReason
+          if (errReason === 'reply_failed') hadReplyFailed = true
+        }
       }
-    
-    // Navigate to property selection
-    setTimeout(() => {
-      router.push('/register')
-    }, 1000)
-  } catch (error) {
-    console.error('[FaceVerificationPage] Error handling verification:', error)
-    notificationStore.showError('Failed to save verification photos. Please try again.')
+    }
+
+    if (hadReplyFailed) {
+      notifyFaceEnrollmentRejected({
+        userId,
+        projectId: targets[0]?.projectId || 'default',
+        url: '/register/face-verification',
+      })
+    }
+
+    if (enrollmentResults.length === 0) {
+      if (queuedCount > 0) {
+        registrationStore.setFaceEnrollmentCompleted(true)
+        registrationStore.setFaceEnrollmentResults([])
+        notificationStore.showSuccess(enrollmentQueuedMessage())
+        setTimeout(() => router.push('/register'), 800)
+      } else {
+        notificationStore.showError(enrollmentErrorMessage(lastErrorReason))
+        submissionError.value = true
+      }
+      return
+    }
+
+    registrationStore.setFaceEnrollmentCompleted(true)
+    registrationStore.setFaceEnrollmentResults(enrollmentResults)
+    const successMsg =
+      queuedCount > 0
+        ? "Face verification completed! We'll send the rest when those devices are available."
+        : 'Face verification completed and saved!'
+    notificationStore.showSuccess(successMsg)
+    setTimeout(() => router.push('/register'), 800)
+  } catch (e) {
+    console.error('[FaceVerificationPage] Enrollment failed:', e)
+    notificationStore.showError('Something went wrong. Please try again.')
+    submissionError.value = true
   }
 }
 
-const handleCancel = () => {
-  // User canceled, go back to personal details
+function handleCancel() {
   router.push('/register/personal-details')
 }
 </script>

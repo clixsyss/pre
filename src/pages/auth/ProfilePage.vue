@@ -895,7 +895,7 @@
                 </div>
                 <div class="settings-title">
                   <h4>Face Verification</h4>
-                  <p>Add or update your face verification photos for secure gate access</p>
+                  <p>Add or update your face for secure gate access</p>
                 </div>
               </div>
               
@@ -904,10 +904,10 @@
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
-                  Face Verification Complete
+                  Face ID Enrolled
                 </div>
-                <button @click="viewFaceVerification" class="action-btn secondary">
-                  View Photos
+                <button @click="openFaceVerificationModal" class="action-btn secondary">
+                  Update Face ID
                 </button>
               </div>
               
@@ -1753,35 +1753,16 @@ const submittingDeviceKeyRequest = ref(false)
 const latestDeviceKeyRequest = ref(null)
 const hasPendingDeviceKeyRequest = ref(false)
 
-// Check if user has face verification photos
+// Check if user has Face ID enrolled (MQTT setuserinfo; we store faceEnrolledAt and/or faceEnrollments per project)
 const checkFaceVerificationStatus = () => {
   const documents = userProfile.value?.documents || {}
-  const faceFrontUrl = documents.faceFrontUrl || documents.faceFront
-  const faceLeftUrl = documents.faceLeftUrl || documents.faceLeft
-  const faceRightUrl = documents.faceRightUrl || documents.faceRight
-  
-  const hasPhotos = !!(faceFrontUrl || faceLeftUrl || faceRightUrl)
-  
-  console.log('[ProfilePage] Checking face verification status:', {
-    hasDocuments: !!userProfile.value?.documents,
-    documents: documents,
-    faceFrontUrl: faceFrontUrl,
-    faceLeftUrl: faceLeftUrl,
-    faceRightUrl: faceRightUrl,
-    hasPhotos: hasPhotos,
-    hasFaceVerification: hasFaceVerification.value
-  })
-  
-  hasFaceVerification.value = hasPhotos
+  const hasEnrollments =
+    documents.faceEnrollments && typeof documents.faceEnrollments === 'object' && Object.keys(documents.faceEnrollments).length > 0
+  hasFaceVerification.value = !!(documents.faceEnrolledAt || hasEnrollments)
 }
 
-// Navigate to face verification settings page
+// Navigate to Face ID enrollment/update page
 const openFaceVerificationModal = () => {
-  router.push('/profile/face-verification')
-}
-
-// View existing face verification photos (read-only)
-const viewFaceVerification = () => {
   router.push('/profile/face-verification')
 }
 
@@ -2359,7 +2340,7 @@ const loadProfile = async (forceReload = false) => {
       const profileCopy = { ...userProfile.value }
       userProfile.value = profileCopy
       
-      // Check if user has face verification photos
+      // Check if user has Face ID enrolled
       checkFaceVerificationStatus()
       
       console.log('✅ ProfilePage: Profile loaded and cached successfully')

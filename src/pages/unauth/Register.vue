@@ -602,6 +602,10 @@ import { fetchProjects } from '../../services/dynamoDBProjectsService'
 import { getUnitsByProject } from '../../services/dynamoDBUnitsService'
 import { projectsUnitsService } from '../../services/dynamoDBTableServices'
 import optimizedAuthService from '../../services/optimizedAuthService'
+import {
+  getPendingRegistrationEnrollments,
+  clearPendingRegistrationEnrollments,
+} from '../../services/faceEnrollmentService'
 import PendingApprovalModal from '../../components/PendingApprovalModal.vue'
 import SearchableUnitDropdown from '../../components/SearchableUnitDropdown.vue'
 
@@ -1077,8 +1081,43 @@ const handlePropertySubmit = async () => {
         gender: userDetails.gender || null,
         nationalId: userDetails.nationalId || '',
         
-        // Documents
-        documents: userDetails.documents || {},
+        // Documents: faceEnrollments from immediate results + offline-queue pending (merged)
+        documents: (() => {
+          const base = { ...(userDetails.documents || {}) }
+          if (!registrationStore.faceEnrollmentCompleted) return base
+          const fromResults = (registrationStore.faceEnrollmentResults || []).reduce(
+            (acc, e) => {
+              acc[e.projectId] = {
+                enrollId: e.enrollId,
+                deviceSn: e.deviceSn,
+                mqttClusterId: e.mqttClusterId,
+                enrolledAt: e.enrolledAt,
+              }
+              return acc
+            },
+            {}
+          )
+          const pending = getPendingRegistrationEnrollments(registrationStore.tempUserId)
+          const fromPending = pending.reduce(
+            (acc, e) => {
+              acc[e.projectId] = {
+                enrollId: e.enrollId,
+                deviceSn: e.deviceSn,
+                mqttClusterId: e.mqttClusterId,
+                enrolledAt: e.enrolledAt,
+              }
+              return acc
+            },
+            {}
+          )
+          const faceEnrollments = { ...fromResults, ...fromPending }
+          if (Object.keys(faceEnrollments).length === 0) return base
+          return {
+            ...base,
+            faceEnrolledAt: new Date().toISOString(),
+            faceEnrollments,
+          }
+        })(),
         
         // Projects (with proper structure)
         projects: selectedProjects.value || [],
@@ -1128,45 +1167,16 @@ const handlePropertySubmit = async () => {
         passwordResetSentAt: null
       }
       
-      // Upload face verification photos if they exist in the registration store
-      const faceVerificationPhotos = registrationStore.faceVerificationPhotos
-      if (faceVerificationPhotos?.allPhotos && faceVerificationPhotos.allPhotos.length >= 3 && !faceVerificationPhotos.uploaded) {
-        console.log('[Register] Uploading face verification photos...')
-        try {
-          const fileUploadService = (await import('../../services/fileUploadService')).default
-          const uploadedPhotos = await fileUploadService.uploadFaceVerificationPhotos(
-            registrationStore.tempUserId,
-            faceVerificationPhotos.allPhotos
-          )
-          console.log('[Register] ✅ Face verification photos uploaded:', uploadedPhotos)
-          
-          // Merge face verification URLs with documents
-          const existingDocuments = completeUserData.documents || {}
-          completeUserData.documents = {
-            ...existingDocuments,
-            faceFrontUrl: uploadedPhotos.faceFrontUrl || uploadedPhotos.faceFront || null,
-            faceLeftUrl: uploadedPhotos.faceLeftUrl || uploadedPhotos.faceLeft || null,
-            faceRightUrl: uploadedPhotos.faceRightUrl || uploadedPhotos.faceRight || null
-          }
-          
-          // Remove null values
-          Object.keys(completeUserData.documents).forEach(key => {
-            if (completeUserData.documents[key] === null) {
-              delete completeUserData.documents[key]
-            }
-          })
-        } catch (uploadError) {
-          console.error('[Register] Error uploading face verification photos:', uploadError)
-          // Continue with registration even if face verification upload fails
-        }
-      }
+      // Face ID enrollment is handled in FaceVerificationPage via enrollment API (single image, Base64).
+      // No face verification photos are stored here.
       
       // Update user in DynamoDB users table (user was already created in handlePersonalSubmit)
       console.log('[Register] Updating user in DynamoDB users table...')
       const { updateUser } = await import('src/services/dynamoDBUsersService')
       await updateUser(registrationStore.tempUserId, completeUserData)
       console.log('[Register] ✅ Complete registration data saved to DynamoDB users table')
-      
+      clearPendingRegistrationEnrollments(registrationStore.tempUserId)
+
       // Clear password for security after successful save
       console.log('[Register] Clearing stored password for security')
       registrationStore.setUserDetails({ password: '', authToken: '', refreshToken: '' })
@@ -1180,7 +1190,7 @@ const handlePropertySubmit = async () => {
     showPendingModal.value = true
   } catch (error) {
     console.error('Property save error:', error)
-    notificationStore.showError('Failed to save properties: ' + error.message)
+    notificationStore.showError('Something went wrong saving your registration. Please try again.')
   } finally {
     loading.value = false
   }

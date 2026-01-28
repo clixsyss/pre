@@ -3,6 +3,7 @@
 
 import { defineConfig } from '#q-app/wrappers'
 import { fileURLToPath } from 'node:url'
+import path from 'node:path'
 
 export default defineConfig((ctx) => {
   return {
@@ -20,6 +21,7 @@ export default defineConfig((ctx) => {
       'projectStore',
       'fcm',
       'permissions',
+      'faceEnrollQueue', // Offline queue for Face ID enrollment; retry on interval + online + visibility
     ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
@@ -120,8 +122,14 @@ export default defineConfig((ctx) => {
 
             ssr: ctx.modeName === 'ssr',
 
-            // you need to set i18n resource including paths !
-            include: [fileURLToPath(new URL('./src/i18n', import.meta.url))],
+            // Include Vue files only (for SFC <i18n> blocks). Do NOT include src/i18n/** — our
+            // locale files there are .js (export default {...}). The plugin transforms matching
+            // .js as "locale resources" and breaks the boot-file import. Messages are loaded via
+            // import from 'src/i18n' and must stay untransformed.
+            include: [
+              path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'src/**/*.vue'),
+            ],
+            exclude: [/node_modules/],
           },
         ],
 
