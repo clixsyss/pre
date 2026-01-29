@@ -25,6 +25,7 @@ import {
   isQueueableError,
   enqueueEnrollmentItem,
   notifyFaceEnrollmentRejected,
+  persistRegistrationFaceEnrollment,
 } from '../../services/faceEnrollmentService'
 
 defineOptions({ name: 'FaceVerificationPage' })
@@ -142,6 +143,10 @@ async function handleVerificationComplete(data) {
 
     registrationStore.setFaceEnrollmentCompleted(true)
     registrationStore.setFaceEnrollmentResults(enrollmentResults)
+    const dbUserId = registrationStore.tempUserId || registrationStore.firestoreUserId
+    if (dbUserId) {
+      await persistRegistrationFaceEnrollment(dbUserId, enrollmentResults)
+    }
     const successMsg =
       queuedCount > 0
         ? "Face verification completed! We'll send the rest when those devices are available."

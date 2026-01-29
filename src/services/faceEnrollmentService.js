@@ -18,7 +18,7 @@ const BACKUP_NUM = 50
 const ADMIN = 0
 const TIMEOUT_SEC = 12
 
-const ENROLL_ID_MIN = 0
+const ENROLL_ID_MIN = 99
 const ENROLL_ID_MAX = 49999
 
 const BROKER_WS_URL =
@@ -31,14 +31,15 @@ const DEBUG = /^(1|true|yes)$/i.test(
 )
 
 // --- Unique ID allocation & offline queue (persistent localStorage) ---
-// IDs are sequential 1,2,3,...; we track used IDs + queue enrollIds. Never drop data when device offline.
+// IDs are sequential 99,100,...,49999 (0–98 reserved for testing). We track used IDs + queue enrollIds.
+// Never drop data when device offline.
 // localStorage size: Base64 face data can be large (~100KB–500KB per image). Typical limit ~5MB.
 // Low enrollment volume (few queued items) is fine. If you expect high volume or large images,
 // consider switching the queue to IndexedDB to avoid QuotaExceededError.
 const STORAGE_KEY_USED_IDS = 'faceEnroll_usedIds'
 const STORAGE_KEY_QUEUE = 'faceEnroll_queue'
 const STORAGE_KEY_PENDING_REG = 'faceEnroll_pendingRegistration'
-const ENROLL_ID_SEQ_START = 1
+const ENROLL_ID_SEQ_START = 99
 const QUEUE_RETRY_INTERVAL_MS = 30 * 60 * 1000
 
 const hasStorage = () =>
@@ -78,8 +79,8 @@ function getUsedEnrollIds() {
 }
 
 /**
- * Allocate next unique sequential enroll ID (1, 2, 3, ...). Skip already used; persist immediately.
- * Safe across retries and refresh; no duplicates.
+ * Allocate next unique sequential enroll ID (99, 100, ..., 49999). Skip already used; persist immediately.
+ * 0–98 reserved for testing. Safe across retries and refresh; no duplicates.
  * @returns {number} allocated ID, or 0 if none available (all used)
  */
 export function allocateEnrollId() {
@@ -280,6 +281,43 @@ export function clearPendingRegistrationEnrollments(userId) {
 }
 
 /**
+ * Persist face enrollment to the user document in DynamoDB during registration.
+ * Call this as soon as face verification succeeds so profile shows "set up" even if
+ * the user completes property step later (or from another session).
+ * @param {string} userId - DynamoDB user id (e.g. tempUserId / Cognito sub)
+ * @param {Array<{ projectId, enrollId, deviceSn, mqttClusterId, enrolledAt }>} entries
+ * @returns {Promise<void>}
+ */
+export async function persistRegistrationFaceEnrollment(userId, entries) {
+  if (!userId || !Array.isArray(entries) || entries.length === 0) return
+  try {
+    const { getUserById, updateUser } = await import('./dynamoDBUsersService')
+    const user = await getUserById(userId)
+    if (!user) return
+    const docs = user.documents || {}
+    const faceEnrollments = entries.reduce(
+      (acc, e) => {
+        acc[e.projectId] = {
+          enrollId: e.enrollId,
+          deviceSn: e.deviceSn,
+          mqttClusterId: e.mqttClusterId,
+          enrolledAt: e.enrolledAt,
+        }
+        return acc
+      },
+      {}
+    )
+    const now = new Date().toISOString()
+    await updateUser(userId, {
+      documents: { ...docs, faceEnrolledAt: now, faceEnrollments },
+    })
+    if (DEBUG) console.log('[FaceEnroll] Persisted registration face enrollment to DB for', userId)
+  } catch (e) {
+    if (DEBUG) console.warn('[FaceEnroll] persistRegistrationFaceEnrollment failed:', e)
+  }
+}
+
+/**
  * Send push notification when device rejects face (e.g. no face detected). Fire-and-forget.
  * Uses createNotification → DynamoDB → Lambda → FCM. User sees "upload a clearer image" on phone.
  * @param {Object} opts
@@ -396,7 +434,8 @@ export function deriveEnrollId(userId) {
   for (let i = 0; i < userId.length; i++) {
     h = ((h << 5) - h + userId.charCodeAt(i)) | 0
   }
-  return Math.abs(h) % (ENROLL_ID_MAX + 1)
+  const range = ENROLL_ID_MAX - ENROLL_ID_MIN + 1
+  return ENROLL_ID_MIN + (Math.abs(h) % range)
 }
 
 /**

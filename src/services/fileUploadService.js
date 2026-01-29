@@ -331,6 +331,22 @@ class FileUploadService {
   }
 
   /**
+   * Upload a face image for the face-sync system.
+   * Path: projects/{projectId}/users/{userId}/faces/{faceId}.jpg
+   * @param {string} projectId - Project ID
+   * @param {string} userId - User ID
+   * @param {string} faceId - Unique face ID (e.g. UUID)
+   * @param {File} file - Image file
+   * @returns {Promise<string>} - Public imageUrl
+   */
+  async uploadFaceImage(projectId, userId, faceId, file) {
+    const path = `projects/${projectId}/users/${userId}/faces/`
+    const ext = (file.name && file.name.split('.').pop()) || 'jpg'
+    const fileName = `${faceId}.${ext}`
+    return this.uploadFile(file, path, fileName)
+  }
+
+  /**
    * Upload user documents (National ID and Profile Picture) to S3
    * @param {string} userId - User ID
    * @param {File} frontIdFile - Front National ID file

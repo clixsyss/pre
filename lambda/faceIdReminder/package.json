@@ -1,0 +1,16 @@
+{
+  "name": "face-id-reminder",
+  "version": "1.0.0",
+  "description": "AWS Lambda: remind users without Face ID every 2 days to set it up (compound entry)",
+  "main": "handler.js",
+  "scripts": {
+    "zip": "zip -r ../faceIdReminder.zip . -x '*.git*' -x 'node_modules/*'"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0"
+  }
+}

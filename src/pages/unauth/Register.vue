@@ -366,7 +366,7 @@
                     :key="project.id || project.projectId || project._id || project.name" 
                     :value="project.id || project.projectId || project._id"
                   >
-                    {{ project.name || 'Unnamed Project' }} - {{ project.type || 'N/A' }} ({{ project.location || 'N/A' }}){{ project.unitsCount > 0 ? ` (${project.unitsCount} units)` : '' }}
+                    {{ project.name || 'Unnamed Project' }} - {{ project.type || 'N/A' }} ({{ project.location || 'N/A' }})
                   </option>
                 </select>
                 <!-- Debug: Show project count -->
@@ -1081,10 +1081,9 @@ const handlePropertySubmit = async () => {
         gender: userDetails.gender || null,
         nationalId: userDetails.nationalId || '',
         
-        // Documents: faceEnrollments from immediate results + offline-queue pending (merged)
-        documents: (() => {
+        // Documents: faceEnrollments from store (results + pending) or existing user doc (never overwrite persisted face)
+        documents: await (async () => {
           const base = { ...(userDetails.documents || {}) }
-          if (!registrationStore.faceEnrollmentCompleted) return base
           const fromResults = (registrationStore.faceEnrollmentResults || []).reduce(
             (acc, e) => {
               acc[e.projectId] = {
@@ -1111,11 +1110,22 @@ const handlePropertySubmit = async () => {
             {}
           )
           const faceEnrollments = { ...fromResults, ...fromPending }
-          if (Object.keys(faceEnrollments).length === 0) return base
+          if (registrationStore.faceEnrollmentCompleted && Object.keys(faceEnrollments).length > 0) {
+            return {
+              ...base,
+              faceEnrolledAt: new Date().toISOString(),
+              faceEnrollments,
+            }
+          }
+          const { getUserById } = await import('src/services/dynamoDBUsersService')
+          const user = await getUserById(registrationStore.tempUserId)
+          const existing = user?.documents || {}
+          const hasExisting = existing.faceEnrollments && Object.keys(existing.faceEnrollments).length > 0
+          if (!hasExisting) return base
           return {
             ...base,
-            faceEnrolledAt: new Date().toISOString(),
-            faceEnrollments,
+            ...(existing.faceEnrolledAt && { faceEnrolledAt: existing.faceEnrolledAt }),
+            ...(existing.faceEnrollments && { faceEnrollments: existing.faceEnrollments }),
           }
         })(),
         
