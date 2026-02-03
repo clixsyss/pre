@@ -231,8 +231,8 @@
       <!-- Notification Center -->
       <NotificationCenter />
       
-      <!-- Shake Feedback -->
-      <ShakeFeedback ref="shakeFeedbackRef" />
+      <!-- Shake Feedback (commented out for now) -->
+      <!-- <ShakeFeedback ref="shakeFeedbackRef" /> -->
 
       <!-- Quick Menu Backdrop (must be before dropdown to ensure proper stacking) -->
       <transition name="quick-menu-backdrop">
@@ -276,11 +276,11 @@ import { useAppSettingsStore } from '../stores/appSettings'
 import { useSwipeNavigation } from '../composables/useSwipeNavigation'
 import { useModalState } from '../composables/useModalState'
 import { useGlobalKeyboard } from '../composables/useGlobalKeyboard'
-import { useShakeDetection } from '../composables/useShakeDetection'
+// import { useShakeDetection } from '../composables/useShakeDetection'
 import ViolationNotificationPopup from '../components/ViolationNotificationPopup.vue'
 import SuspensionMessage from '../components/SuspensionMessage.vue'
 import NotificationCenter from '../components/NotificationCenter.vue'
-import ShakeFeedback from '../components/ShakeFeedback.vue'
+// import ShakeFeedback from '../components/ShakeFeedback.vue'
 import { markViolationsAsShown, hasActiveViolations, clearOldNotificationHistory } from '../services/violationNotificationService'
 import { checkUserSuspension, getSuspensionMessage } from '../services/suspensionService'
 import optimizedAuthService from '../services/optimizedAuthService'
@@ -315,49 +315,25 @@ const {
 // Initialize Android safe area handling
 const { initialize: initializeAndroidSafeArea, cleanup: cleanupAndroidSafeArea } = useAndroidSafeArea()
 
-// Shake feedback component ref
-const shakeFeedbackRef = ref(null)
-
-// Handle shake to open gate access
-const handleShake = () => {
-  // Check if shake is enabled in settings
-  if (!appSettingsStore.shakeEnabled) {
-    return
-  }
-  
-  // Only navigate if not already on gate access page
-  if (route.path !== '/access') {
-    console.log('🚪 Shake detected! Opening gate access...')
-    
-    // Show visual feedback
-    if (shakeFeedbackRef.value) {
-      shakeFeedbackRef.value.show()
-    }
-    
-    // Navigate to gate access with a slight delay for feedback
-    setTimeout(() => {
-      router.push('/access')
-    }, 300)
-  }
-}
-
-// Initialize shake detection with settings from store
-const shakeDetection = ref(null)
-
-// Watch for settings changes and update shake detection
-watch(() => [appSettingsStore.shakeEnabled, appSettingsStore.shakeSensitivity], () => {
-  // Recreate shake detection when settings change
-  if (shakeDetection.value) {
-    shakeDetection.value.stopShakeDetection()
-  }
-  
-  if (appSettingsStore.shakeEnabled) {
-    shakeDetection.value = useShakeDetection(handleShake, {
-      threshold: appSettingsStore.shakeSensitivity,
-      timeout: 1000
-    })
-  }
-}, { immediate: true })
+// Shake detection commented out for now
+// const shakeFeedbackRef = ref(null)
+// const handleShake = () => {
+//   if (!appSettingsStore.shakeEnabled) return
+//   if (route.path !== '/access') {
+//     if (shakeFeedbackRef.value) shakeFeedbackRef.value.show()
+//     setTimeout(() => router.push('/access'), 300)
+//   }
+// }
+// const shakeDetection = ref(null)
+// watch(() => [appSettingsStore.shakeEnabled, appSettingsStore.shakeSensitivity], () => {
+//   if (shakeDetection.value) shakeDetection.value.stopShakeDetection()
+//   if (appSettingsStore.shakeEnabled) {
+//     shakeDetection.value = useShakeDetection(handleShake, {
+//       threshold: appSettingsStore.shakeSensitivity,
+//       timeout: 1000
+//     })
+//   }
+// }, { immediate: true })
 
 // Reactive state
 const showProjectSwitcher = ref(false)

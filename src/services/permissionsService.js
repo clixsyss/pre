@@ -5,6 +5,7 @@
  */
 
 import { Geolocation } from '@capacitor/geolocation'
+import { Camera } from '@capacitor/camera'
 import { Capacitor } from '@capacitor/core'
 
 class PermissionsService {
@@ -63,19 +64,21 @@ class PermissionsService {
       } else {
       console.log('📋 Web platform detected - skipping native permission requests')
       this.permissionsRequested = true
-        return { location: false, bluetooth: false, notifications: false }
+        return { location: false, bluetooth: false, notifications: false, camera: false, photos: false }
       }
     }
     
     const results = {
       location: false,
       bluetooth: false,
-      notifications: false
+      notifications: false,
+      camera: false,
+      photos: false
     }
     
-    // Request Notification Permission (needed for push notifications)
+    // Request Notification Permission (needed for push notifications - matches iOS NSUserNotificationsUsageDescription)
     try {
-      console.log('🔔 [1/3] Requesting Notification Permission...')
+      console.log('🔔 [1/5] Requesting Notification Permission...')
       results.notifications = await this.requestNotificationPermission()
       console.log(`🔔 Notification permission result: ${results.notifications ? 'SUCCESS ✅' : 'FAILED ❌'}`)
     } catch (error) {
@@ -83,9 +86,9 @@ class PermissionsService {
       results.notifications = false
     }
     
-    // Request Location Permission (needed for guest passes)
+    // Request Location Permission (needed for guest passes - matches iOS NSLocationWhenInUseUsageDescription)
     try {
-      console.log('📍 [2/3] Requesting Location Permission...')
+      console.log('📍 [2/5] Requesting Location Permission...')
       results.location = await this.requestLocationPermission()
       console.log(`📍 Location permission result: ${results.location ? 'SUCCESS ✅' : 'FAILED ❌'}`)
     } catch (error) {
@@ -93,14 +96,34 @@ class PermissionsService {
       results.location = false
     }
     
-    // Request Bluetooth Permission (needed for gate control)
+    // Request Bluetooth Permission (needed for gate control - matches iOS NSBluetoothAlwaysUsageDescription)
     try {
-      console.log('📶 [3/3] Requesting Bluetooth Permission...')
+      console.log('📶 [3/5] Requesting Bluetooth Permission...')
       results.bluetooth = await this.requestBluetoothPermission()
       console.log(`📶 Bluetooth permission result: ${results.bluetooth ? 'SUCCESS ✅' : 'FAILED ❌'}`)
     } catch (error) {
       console.error('❌ Error requesting Bluetooth permission:', error)
       results.bluetooth = false
+    }
+    
+    // Request Camera Permission (needed for face verification / enrollment - matches iOS NSCameraUsageDescription)
+    try {
+      console.log('📷 [4/5] Requesting Camera Permission...')
+      results.camera = await this.requestCameraPermission()
+      console.log(`📷 Camera permission result: ${results.camera ? 'SUCCESS ✅' : 'FAILED ❌'}`)
+    } catch (error) {
+      console.error('❌ Error requesting camera permission:', error)
+      results.camera = false
+    }
+    
+    // Request Photo Library Permission (needed for choosing images - matches iOS NSPhotoLibraryUsageDescription)
+    try {
+      console.log('🖼️ [5/5] Requesting Photo Library Permission...')
+      results.photos = await this.requestPhotosPermission()
+      console.log(`🖼️ Photo library permission result: ${results.photos ? 'SUCCESS ✅' : 'FAILED ❌'}`)
+    } catch (error) {
+      console.error('❌ Error requesting photo library permission:', error)
+      results.photos = false
     }
     
     this.permissionsRequested = true
@@ -285,6 +308,80 @@ class PermissionsService {
         type: typeof error
       })
       // Don't fail - gate control features will handle missing permissions
+      return false
+    }
+  }
+
+  /**
+   * Request Camera Permission
+   * Required for face verification and enrollment
+   */
+  async requestCameraPermission() {
+    try {
+      console.log('📷 Checking camera permissions...')
+      const permission = await Camera.checkPermissions()
+      console.log('📷 Current camera permission:', permission.camera)
+
+      if (permission.camera === 'granted') {
+        console.log('✅ Camera permission already granted')
+        return true
+      }
+
+      if (permission.camera === 'denied') {
+        console.log('⚠️ Camera permission previously denied')
+        return false
+      }
+
+      console.log('📷 Requesting camera permission...')
+      const result = await Camera.requestPermissions({ permissions: ['camera'] })
+      console.log('📷 Camera permission result:', result.camera)
+
+      if (result.camera === 'granted') {
+        console.log('✅ Camera permission granted')
+        return true
+      }
+      console.log('⚠️ Camera permission denied')
+      return false
+    } catch (error) {
+      console.error('❌ Error requesting camera permission:', error)
+      return false
+    }
+  }
+
+  /**
+   * Request Photo Library Permission
+   * Required for choosing images (matches iOS NSPhotoLibraryUsageDescription)
+   */
+  async requestPhotosPermission() {
+    try {
+      console.log('🖼️ Checking photo library permissions...')
+      const permission = await Camera.checkPermissions()
+      const photosStatus = permission.photos ?? permission.camera
+      console.log('🖼️ Current photo library permission:', photosStatus)
+
+      if (photosStatus === 'granted') {
+        console.log('✅ Photo library permission already granted')
+        return true
+      }
+
+      if (photosStatus === 'denied') {
+        console.log('⚠️ Photo library permission previously denied')
+        return false
+      }
+
+      console.log('🖼️ Requesting photo library permission...')
+      const result = await Camera.requestPermissions({ permissions: ['photos'] })
+      const photosResult = result.photos ?? result.camera
+      console.log('🖼️ Photo library permission result:', photosResult)
+
+      if (photosResult === 'granted') {
+        console.log('✅ Photo library permission granted')
+        return true
+      }
+      console.log('⚠️ Photo library permission denied')
+      return false
+    } catch (error) {
+      console.error('❌ Error requesting photo library permission:', error)
       return false
     }
   }
