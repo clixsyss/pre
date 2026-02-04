@@ -424,7 +424,7 @@ export const useComplaintStore = defineStore('complaint', () => {
     error.value = null
   }
 
-  // Fetch complaint categories from Firestore
+  // Fetch complaint categories from DynamoDB (same source as dashboard - firestoreService)
   const fetchComplaintCategories = async (force = false) => {
     try {
       // Ensure project is loaded
@@ -446,41 +446,27 @@ export const useComplaintStore = defineStore('complaint', () => {
 
       try {
         categoriesLoading.value = true
-        console.log('📡 Fetching complaint categories from Firestore...')
+        console.log('📡 Fetching complaint categories from DynamoDB...')
         console.log('📡 Project ID:', projectId)
 
-        const { collection, getDocs, query, where, orderBy } = await import('firebase/firestore')
-        const { smartMirrorDb: db } = await import('../boot/smartMirrorFirebase')
+        const firestoreService = (await import('../services/firestoreService')).default
+        const collectionPath = `projects/${projectId}/complaintCategories`
 
-        const categoriesRef = collection(db, `projects/${projectId}/complaintCategories`)
+        const snapshot = await firestoreService.getDocs(collectionPath, {
+          constraints: [
+            { _type: 'orderBy', field: 'displayOrder', direction: 'asc' },
+          ],
+          skipCache: force,
+        })
 
-        // Try with full query first (requires composite index)
-        let snapshot
-        try {
-          const q = query(
-            categoriesRef,
-            where('isActive', '==', true),
-            orderBy('displayOrder', 'asc'),
-          )
-          snapshot = await getDocs(q)
-          console.log('✅ Fetched with composite query')
-        } catch (indexError) {
-          console.warn(
-            '⚠️ Composite index not available, falling back to simple query:',
-            indexError.message,
-          )
-          // Fallback: fetch all and filter/sort in memory
-          snapshot = await getDocs(categoriesRef)
-        }
-
-        let categories = snapshot.docs.map((doc) => ({
+        let categories = (snapshot.docs || []).map((doc) => ({
           id: doc.id,
-          ...doc.data(),
+          ...(typeof doc.data === 'function' ? doc.data() : doc),
         }))
 
-        // Filter and sort in memory if we had to use fallback
+        // Filter to active only and sort by displayOrder (in case adapter didn't apply)
         categories = categories
-          .filter((cat) => cat.isActive !== false) // Include if isActive is true or undefined
+          .filter((cat) => cat.isActive !== false)
           .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
 
         complaintCategories.value = categories
@@ -495,12 +481,11 @@ export const useComplaintStore = defineStore('complaint', () => {
         error.value = err.message
 
         // If project not available, return empty array
-        if (err.message.includes('No project available')) {
+        if (err.message && err.message.includes('No project available')) {
           console.warn('⚠️ No project available, returning empty categories')
           return []
         }
 
-        // Don't use fallback - keep empty array to show proper empty state
         complaintCategories.value = []
         return []
       } finally {
@@ -513,7 +498,7 @@ export const useComplaintStore = defineStore('complaint', () => {
       categoriesLoading.value = false
 
       // If project not available, return empty array
-      if (outerErr.message.includes('No project available')) {
+      if (outerErr.message && outerErr.message.includes('No project available')) {
         console.warn('⚠️ No project available, returning empty categories')
         return []
       }

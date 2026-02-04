@@ -138,8 +138,8 @@
     </div>
 
     <!-- New Complaint Modal -->
-    <div v-if="showNewComplaintModal" class="modal-overlay" @click="closeModal">
-      <div class="modal-content" @click.stop>
+    <div v-if="showNewComplaintModal" class="modal-overlay" :class="{ 'modal-overlay-keyboard-open': isKeyboardVisible }" @click="closeModal">
+      <div class="modal-content" :class="{ 'modal-keyboard-open': isKeyboardVisible }" @click.stop>
         <ModalHeader :title="$t('newComplaint')" :subtitle="$t('tellUsWhatWentWrong')" @close="closeModal">
           <template #icon>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -264,8 +264,8 @@ defineOptions({
   name: 'ComplaintsPage'
 });
 
-// Setup keyboard handling for better mobile UX
-useFormKeyboard({
+// Setup keyboard handling for better mobile UX (expose keyboard state for modal height)
+const { isKeyboardVisible } = useFormKeyboard({
   scrollToInput: true,
   hideOnBackdropClick: true,
   scrollOffset: 150
@@ -1000,6 +1000,12 @@ watch(showNewComplaintModal, (isOpen) => {
   padding: 1rem;
 }
 
+/* When keyboard is open, align modal to top of visible area so it stays in view */
+.modal-overlay.modal-overlay-keyboard-open {
+  align-items: flex-start;
+  padding-top: 1.5rem;
+}
+
 .modal-content {
   background: white;
   border-radius: 12px;
@@ -1007,6 +1013,12 @@ watch(showNewComplaintModal, (isOpen) => {
   max-width: 500px;
   max-height: 80vh;
   overflow-y: auto;
+  transition: max-height 0.2s ease-out;
+}
+
+/* When keyboard is open, constrain modal height so it stays visible above the keyboard */
+.modal-content.modal-keyboard-open {
+  max-height: 52vh;
 }
 
 .modal-header {
