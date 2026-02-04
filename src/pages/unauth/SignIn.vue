@@ -286,6 +286,99 @@
         </div>
       </div>
     </div>
+
+    <!-- Forgot Password Modal -->
+    <div v-if="showForgotPasswordModal" class="modal-overlay" @click="closeForgotPasswordModal">
+      <div class="modal-content device-key-reset-modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ $t('forgotPasswordTitle') }}</h3>
+          <button @click="closeForgotPasswordModal" class="close-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <p v-if="forgotPasswordStep === 'email'" class="modal-description">
+            {{ $t('forgotPasswordDesc') }}
+          </p>
+          <p v-else class="modal-description">
+            {{ $t('resetCodeSent') }}
+          </p>
+
+          <form @submit.prevent="forgotPasswordStep === 'email' ? sendForgotPasswordCode() : submitForgotPasswordReset()">
+            <template v-if="forgotPasswordStep === 'email'">
+              <div class="form-group">
+                <label class="form-label">{{ $t('email') }} *</label>
+                <input
+                  v-model="forgotPasswordEmail"
+                  type="email"
+                  class="form-input"
+                  :placeholder="$t('enterYourEmail')"
+                  required
+                />
+              </div>
+              <div class="modal-actions">
+                <button type="button" @click="closeForgotPasswordModal" class="cancel-btn" :disabled="forgotPasswordLoading">
+                  {{ $t('cancel') }}
+                </button>
+                <button type="submit" class="submit-btn" :disabled="forgotPasswordLoading">
+                  <span v-if="forgotPasswordLoading">{{ $t('signingIn') }}</span>
+                  <span v-else>{{ $t('sendResetCode') }}</span>
+                </button>
+              </div>
+            </template>
+
+            <template v-else>
+              <div class="form-group">
+                <label class="form-label">{{ $t('enterResetCode') }} *</label>
+                <input
+                  v-model="forgotPasswordCode"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="6"
+                  class="form-input"
+                  placeholder="000000"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">{{ $t('newPassword') }} *</label>
+                <input
+                  v-model="forgotPasswordNewPassword"
+                  type="password"
+                  class="form-input"
+                  :placeholder="$t('enterYourPassword')"
+                  required
+                  minlength="8"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">{{ $t('confirmPassword') }} *</label>
+                <input
+                  v-model="forgotPasswordConfirmPassword"
+                  type="password"
+                  class="form-input"
+                  :placeholder="$t('confirmPasswordPlaceholder')"
+                  required
+                  minlength="8"
+                />
+              </div>
+              <div class="modal-actions">
+                <button type="button" @click="closeForgotPasswordModal" class="cancel-btn" :disabled="forgotPasswordLoading">
+                  {{ $t('cancel') }}
+                </button>
+                <button type="submit" class="submit-btn" :disabled="forgotPasswordLoading">
+                  <span v-if="forgotPasswordLoading">{{ $t('signingIn') }}</span>
+                  <span v-else>{{ $t('setNewPassword') }}</span>
+                </button>
+              </div>
+            </template>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -300,6 +393,7 @@ import { useRegistrationStore } from '../../stores/registration'
 // import { validateProfileCompletion, getNextProfileStep } from '../../utils/profileValidation'
 // import { attemptGoogleSignIn } from '../../utils/googleAuthHelper'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
+import { useI18n } from 'vue-i18n'
 import DeviceKeyErrorModal from '../../components/DeviceKeyErrorModal.vue'
 
 // Component name for ESLint
@@ -316,6 +410,7 @@ useFormKeyboard({
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
+const { t } = useI18n()
 const loading = ref(false)
 const showPassword = ref(false)
 const showDeviceKeyErrorModal = ref(false)
@@ -333,6 +428,15 @@ const deviceKeyResetForm = reactive({
   projectId: '',
   reason: ''
 })
+
+// Forgot password modal state
+const showForgotPasswordModal = ref(false)
+const forgotPasswordStep = ref('email') // 'email' | 'code'
+const forgotPasswordEmail = ref('')
+const forgotPasswordCode = ref('')
+const forgotPasswordNewPassword = ref('')
+const forgotPasswordConfirmPassword = ref('')
+const forgotPasswordLoading = ref(false)
 
 // Global keyboard handling is now managed by MainLayout
 
@@ -1236,8 +1340,90 @@ const handleSignIn = async () => {
 // }
 
 const forgotPassword = () => {
-  // TODO: Implement forgot password
-  console.log('Forgot password clicked')
+  forgotPasswordEmail.value = formData.email.trim()
+  forgotPasswordStep.value = 'email'
+  forgotPasswordCode.value = ''
+  forgotPasswordNewPassword.value = ''
+  forgotPasswordConfirmPassword.value = ''
+  showForgotPasswordModal.value = true
+}
+
+const closeForgotPasswordModal = () => {
+  showForgotPasswordModal.value = false
+  forgotPasswordStep.value = 'email'
+  forgotPasswordEmail.value = ''
+  forgotPasswordCode.value = ''
+  forgotPasswordNewPassword.value = ''
+  forgotPasswordConfirmPassword.value = ''
+}
+
+const sendForgotPasswordCode = async () => {
+  const email = forgotPasswordEmail.value.trim().toLowerCase()
+  if (!email) {
+    notificationStore.showError('Please enter your email address.')
+    return
+  }
+  forgotPasswordLoading.value = true
+  try {
+    await optimizedAuthService.sendPasswordResetEmail(email)
+    notificationStore.showSuccess('Check your email for the reset code.')
+    forgotPasswordStep.value = 'code'
+  } catch (error) {
+    console.error('[SignIn] Forgot password send error:', error)
+    const code = error?.code || error?.name
+    const errMsg = (error?.message || '').toLowerCase()
+    const isNoVerifiedEmail = (code === 'InvalidParameterException' || code === 'auth/invalid-email') &&
+      (errMsg.includes('no verified email') || errMsg.includes('no verified phone') || errMsg.includes("there's no verified"))
+    let message = 'Failed to send reset code. Please try again.'
+    if (isNoVerifiedEmail) {
+      message = t('forgotPasswordNoVerifiedEmail')
+    } else if (code === 'auth/user-not-found' || code === 'UserNotFoundException') {
+      message = 'No account found with this email.'
+    } else if (code === 'auth/too-many-requests' || code === 'LimitExceededException') {
+      message = 'Too many attempts. Please try again later.'
+    } else if (error?.message) {
+      message = error.message
+    }
+    notificationStore.showError(message)
+  } finally {
+    forgotPasswordLoading.value = false
+  }
+}
+
+const submitForgotPasswordReset = async () => {
+  const code = forgotPasswordCode.value.trim()
+  const newPwd = forgotPasswordNewPassword.value
+  const confirmPwd = forgotPasswordConfirmPassword.value
+  if (!code || code.length !== 6) {
+    notificationStore.showError('Please enter the 6-digit code from your email.')
+    return
+  }
+  if (!newPwd || newPwd.length < 8) {
+    notificationStore.showError('Password must be at least 8 characters.')
+    return
+  }
+  if (newPwd !== confirmPwd) {
+    notificationStore.showError('Passwords do not match.')
+    return
+  }
+  forgotPasswordLoading.value = true
+  try {
+    await optimizedAuthService.confirmPasswordReset(forgotPasswordEmail.value.trim().toLowerCase(), code, newPwd)
+    notificationStore.showSuccess('Your password has been reset. You can sign in with your new password.')
+    closeForgotPasswordModal()
+  } catch (error) {
+    console.error('[SignIn] Confirm password reset error:', error)
+    const code = error?.code || error?.name
+    let message = 'Failed to set new password. Please check the code and try again.'
+    if (code === 'CodeMismatchException' || error?.message?.includes('code')) {
+      message = 'Invalid or expired code. Please request a new code.'
+    } else if (error?.message) {
+      message = error.message
+    }
+    notificationStore.showError(message)
+  } finally {
+    forgotPasswordLoading.value = false
+  }
 }
 
 const goToSignUp = () => {
@@ -1854,6 +2040,7 @@ const handleDeviceKeyResetSubmit = async () => {
   display: flex;
   gap: 12px;
   margin-top: 24px;
+  flex-direction: column-reverse;
 }
 
 .cancel-btn {

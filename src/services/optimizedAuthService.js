@@ -702,6 +702,53 @@ class OptimizedAuthService {
   }
 
   /**
+   * Send password reset email via AWS Cognito.
+   * Cognito sends a verification code to the user's email (username is email in this app).
+   * @param {string} username - User's email (used as username in Cognito)
+   * @returns {Promise<void>}
+   */
+  async sendPasswordResetEmail(username) {
+    try {
+      const email = (username || '').trim().toLowerCase()
+      if (!email) {
+        const err = new Error('Email is required')
+        err.code = 'auth/invalid-email'
+        throw err
+      }
+      console.log('🔐 Sending password reset code to:', email)
+      await Auth.forgotPassword(email)
+      console.log('✅ Password reset code sent successfully')
+    } catch (error) {
+      console.error('❌ Error sending password reset:', error)
+      throw this._normalizeError(error)
+    }
+  }
+
+  /**
+   * Confirm password reset with the code sent by Cognito and set new password.
+   * @param {string} username - User's email (used as username in Cognito)
+   * @param {string} code - Verification code from email
+   * @param {string} newPassword - New password
+   * @returns {Promise<void>}
+   */
+  async confirmPasswordReset(username, code, newPassword) {
+    try {
+      const email = (username || '').trim().toLowerCase()
+      if (!email || !code || !newPassword) {
+        const err = new Error('Email, code, and new password are required')
+        err.code = 'auth/invalid-credential'
+        throw err
+      }
+      console.log('🔐 Confirming password reset for:', email)
+      await Auth.forgotPasswordSubmit(email, code.trim(), newPassword)
+      console.log('✅ Password reset confirmed successfully')
+    } catch (error) {
+      console.error('❌ Error confirming password reset:', error)
+      throw this._normalizeError(error)
+    }
+  }
+
+  /**
    * Update profile
    */
   async updateProfile(user, profile) {
