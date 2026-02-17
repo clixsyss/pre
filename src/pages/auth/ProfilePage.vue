@@ -2596,10 +2596,10 @@ const loadComplaintStats = async (forceReload = false) => {
     }
 
     console.log('🔍 ProfilePage: Loading complaint stats')
-    const userComplaints = await complaintService.getComplaints(projectStore.selectedProject.id)
-
-    // Filter complaints for current user
-    const myComplaints = userComplaints.filter(complaint => complaint.userId === currentUser.uid)
+    // Fetch only current user's complaints for the selected project
+    const myComplaints = await complaintService.getComplaints(projectStore.selectedProject.id, {
+      userId: currentUser.uid
+    })
 
     const stats = myComplaints.reduce((acc, complaint) => {
       acc.total++
@@ -2928,7 +2928,17 @@ const handleProfileSaved = async (updatedData) => {
 
 // Accordion toggle function
 const toggleAccordion = (section) => {
-  activeAccordion.value = activeAccordion.value === section ? null : section
+  const isCurrentlyActive = activeAccordion.value === section
+  const newSection = isCurrentlyActive ? null : section
+  activeAccordion.value = newSection
+
+  // Lazily load stats when sections are opened
+  if (!isCurrentlyActive && newSection === 'violations') {
+    loadViolationStats()
+  }
+  if (!isCurrentlyActive && newSection === 'complaints') {
+    loadComplaintStats()
+  }
 }
 
 // Project management methods

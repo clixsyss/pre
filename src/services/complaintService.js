@@ -204,7 +204,7 @@ class ComplaintService {
 
         // Get current complaint to add message to array
         const complaintResult = await firestoreService.getDoc(docPath);
-        if (!complaintResult.exists) {
+        if (!complaintResult.exists()) {
           throw new Error('Complaint not found');
         }
 

@@ -994,7 +994,6 @@ watch(showNewComplaintModal, (isOpen) => {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
   justify-content: center;
   z-index: 999999;
   padding: 1rem;

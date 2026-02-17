@@ -358,6 +358,12 @@ const isAuthenticatedPage = computed(() => {
   min-height: 100vh;
 }
 
+/* Remove top padding for main layout when UnifiedChat is active */
+body.chat-page-active .main-layout,
+body.platform-android.chat-page-active .main-layout {
+  padding-top: 0 !important;
+}
+
 /* Override dark background for auth pages only after app loads */
 body:has(.auth-layout) {
   background-color: #F6F6F6 !important;

@@ -673,6 +673,7 @@ onUnmounted(() => {
 </script>
 
 <style>
+
 /* GLOBAL STYLES - Hide navigation when chat is active */
 body.chat-page-active .app-header,
 body.chat-page-active .bottom-navigation {

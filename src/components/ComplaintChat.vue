@@ -2,9 +2,7 @@
   <UnifiedChat
     :chat-id="complaintId"
     chat-type="complaint"
-    :title="complaint?.title"
-    :status="complaint?.status"
-    :category="getCategoryName(complaint?.category)"
+    :chat-data="chatData"
     :messages="complaint?.messages || []"
     :loading="complaintStore.loading"
     :is-closed="isComplaintClosed"
@@ -33,7 +31,15 @@ const complaintId = computed(() => route.params.id);
 
 // Computed properties
 const complaint = computed(() => complaintStore.currentComplaint);
-const isComplaintClosed = computed(() => 
+const chatData = computed(() => {
+  const c = complaint.value;
+  if (!c) return null;
+  return {
+    ...c,
+    categoryName: getCategoryName(c.category)
+  };
+});
+const isComplaintClosed = computed(() =>
   complaint.value?.status === 'Resolved' || complaint.value?.status === 'Closed'
 );
 
