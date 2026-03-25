@@ -1325,6 +1325,7 @@ const loadPassesFromFirebase = async () => {
         code: docId,
         firebaseRef: docId,
         qrCodeUrl: docData.qrCodeUrl || null,
+        cardId: docData.cardId || null,
         used: docData.used || false,
         usedAt: convertTimestamp(docData.usedAt),
       }
@@ -1420,8 +1421,9 @@ const loadPassesFromAWS = async () => {
       status: 'active',
       createdAt: pass.createdAt,
       code: pass.id,
-      firebaseRef: pass.id, // Keep for compatibility
+      firebaseRef: pass.id,
       qrCodeUrl: pass.qrCodeUrl,
+      cardId: pass.cardId || null,
       used: pass.used || false,
       usedAt: pass.usedAt,
     }))
@@ -1733,8 +1735,8 @@ const generatePass = async () => {
 
     const pass = {
       id: result.passId,
-      projectId: projectId, // Add project ID to the pass
-      userName: userName, // Add user name for QR code
+      projectId: projectId,
+      userName: userName,
       guestName: sanitizedGuestName,
       purpose: sanitizedPurpose,
       validUntil: result.data.validUntil,
@@ -1743,6 +1745,7 @@ const generatePass = async () => {
       code: result.passId,
       firebaseRef: result.passRef,
       qrCodeUrl: result.qrCodeUrl,
+      cardId: result.data.cardId || null,
       used: false,
       usedAt: null,
     }
@@ -1831,12 +1834,14 @@ const generateQRCode = async (pass) => {
     ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, canvasWidth, canvasHeight)
 
-    // Generate QR code data
-    const qrData = JSON.stringify({
-      code: pass.code,
-      guestName: pass.guestName,
-      validUntil: pass.validUntil,
-    })
+    // QR code data: use the user's registered card ID if available (matches face device)
+    const qrData = pass.cardId
+      ? String(pass.cardId)
+      : JSON.stringify({
+          code: pass.code,
+          guestName: pass.guestName,
+          validUntil: pass.validUntil,
+        })
 
     console.log('🎯 Generating QR code for pass:', pass.id)
 

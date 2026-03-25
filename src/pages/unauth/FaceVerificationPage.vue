@@ -18,6 +18,8 @@ import FaceVerification from '../../components/FaceVerification.vue'
 import {
   prepareEnrollment,
   allocateEnrollId,
+  allocateCardId,
+  buildCardIdPayload,
   getEnrollmentTargets,
   enrollViaMqtt,
   enrollmentErrorMessage,
@@ -61,6 +63,7 @@ async function handleVerificationComplete(data) {
       submissionError.value = true
       return
     }
+    const cardId = allocateCardId()
     const userName = [
       registrationStore.userDetails?.firstName,
       registrationStore.userDetails?.lastName,
@@ -93,19 +96,38 @@ async function handleVerificationComplete(data) {
       })
       if (success) {
         const mqttClusterId = target.brokerWsUrl ? new URL(target.brokerWsUrl).host : ''
-        enrollmentResults.push({
+        const result = {
           projectId: target.projectId,
           enrollId,
           deviceSn: target.deviceSn,
           mqttClusterId,
           enrolledAt: new Date().toISOString(),
-        })
+        }
+
+        // Register card ID (backupnum=11) after face photo succeeds
+        if (cardId) {
+          const cardPayload = buildCardIdPayload({ enrollId, name: userName, cardId })
+          const cardResult = await enrollViaMqtt({
+            brokerWsUrl: target.brokerWsUrl,
+            deviceSn: target.deviceSn,
+            payload: cardPayload,
+            enrollId,
+          })
+          if (cardResult.success) {
+            result.cardId = cardId
+          } else {
+            console.warn('[FaceVerificationPage] Card ID registration failed:', cardResult.error)
+          }
+        }
+
+        enrollmentResults.push(result)
       } else {
         if (isQueueableError(errReason)) {
           enqueueEnrollmentItem({
             enrollId,
             userName,
             record: img_b64,
+            cardId: cardId || undefined,
             projectId: target.projectId,
             deviceSn: target.deviceSn,
             brokerWsUrl: target.brokerWsUrl,
@@ -144,8 +166,9 @@ async function handleVerificationComplete(data) {
     registrationStore.setFaceEnrollmentCompleted(true)
     registrationStore.setFaceEnrollmentResults(enrollmentResults)
     const dbUserId = registrationStore.tempUserId || registrationStore.firestoreUserId
+    const registeredCardId = enrollmentResults.find(r => r.cardId)?.cardId || cardId
     if (dbUserId) {
-      await persistRegistrationFaceEnrollment(dbUserId, enrollmentResults)
+      await persistRegistrationFaceEnrollment(dbUserId, enrollmentResults, registeredCardId)
     }
     const successMsg =
       queuedCount > 0

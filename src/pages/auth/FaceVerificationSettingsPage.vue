@@ -20,6 +20,8 @@ import FaceVerification from '../../components/FaceVerification.vue'
 import {
   prepareEnrollment,
   allocateEnrollId,
+  allocateCardId,
+  buildCardIdPayload,
   getEnrollmentTargets,
   enrollViaMqtt,
   enrollmentErrorMessage,
@@ -88,6 +90,7 @@ async function handleVerificationComplete(data) {
       submissionError.value = true
       return
     }
+    const cardId = allocateCardId()
     const userName =
       userData.fullName ||
       [userData.firstName, userData.lastName].filter(Boolean).join(' ').trim() ||
@@ -106,6 +109,7 @@ async function handleVerificationComplete(data) {
     const existingDocs = userData?.documents || {}
     let faceEnrollments = { ...(existingDocs.faceEnrollments || {}) }
     let atLeastOneSuccess = false
+    let cardIdRegistered = false
     let lastErrorReason = null
     let queuedCount = 0
     let hadReplyFailed = false
@@ -126,12 +130,29 @@ async function handleVerificationComplete(data) {
           mqttClusterId,
           enrolledAt: new Date().toISOString(),
         }
+
+        // Register card ID (backupnum=11) after face photo succeeds
+        if (cardId) {
+          const cardPayload = buildCardIdPayload({ enrollId, name: userName, cardId })
+          const cardResult = await enrollViaMqtt({
+            brokerWsUrl: target.brokerWsUrl,
+            deviceSn: target.deviceSn,
+            payload: cardPayload,
+            enrollId,
+          })
+          if (cardResult.success) {
+            cardIdRegistered = true
+          } else {
+            console.warn('[FaceVerificationSettingsPage] Card ID registration failed:', cardResult.error)
+          }
+        }
       } else {
         if (isQueueableError(errReason)) {
           enqueueEnrollmentItem({
             enrollId,
             userName,
             record: img_b64,
+            cardId: cardId || undefined,
             projectId: target.projectId,
             deviceSn: target.deviceSn,
             brokerWsUrl: target.brokerWsUrl,
@@ -169,6 +190,9 @@ async function handleVerificationComplete(data) {
       ...existingDocs,
       faceEnrollments,
       faceEnrolledAt: new Date().toISOString(),
+    }
+    if (cardId && cardIdRegistered) {
+      updatedDocuments.cardId = cardId
     }
     await updateUser(userId, { documents: updatedDocuments })
 

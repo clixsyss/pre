@@ -275,15 +275,22 @@ export const createGuestPass = async (
     // Generate verification token for one-time use
     const verificationToken = `${passId}-${Math.random().toString(36).substr(2, 16)}`.toUpperCase()
 
-    // Generate QR code data with verification token
-    const qrData = JSON.stringify({
-      passId: passId,
-      projectId: projectId,
-      guestName: guestName,
-      validUntil: validUntil.toISOString(),
-      createdAt: createdAt.toISOString(),
-      verificationToken: verificationToken
-    })
+    // Look up the user's registered card ID for QR code content
+    const user = await getItem(USERS_TABLE, { id: userId })
+    const userCardId = user?.documents?.cardId || null
+
+    // QR code data: use the user's card ID (like the Python reference script)
+    // Falls back to pass metadata if the user has not completed face enrollment yet
+    const qrData = userCardId
+      ? String(userCardId)
+      : JSON.stringify({
+          passId: passId,
+          projectId: projectId,
+          guestName: guestName,
+          validUntil: validUntil.toISOString(),
+          createdAt: createdAt.toISOString(),
+          verificationToken: verificationToken
+        })
 
     // Generate QR code as data URL
     console.log('🎨 Generating QR code...')
@@ -321,8 +328,7 @@ export const createGuestPass = async (
       throw new Error('QR code upload failed - URL is pointing to Firebase instead of S3')
     }
 
-    // Get user's unit info
-    const user = await getItem(USERS_TABLE, { id: userId })
+    // Get user's unit info (user already fetched above for cardId lookup)
     const userProjects = user?.projects || []
     const projectInfo = userProjects.find(p => p.projectId === projectId)
     const userUnit = projectInfo?.unit || user?.unit || ''
@@ -348,6 +354,7 @@ export const createGuestPass = async (
       used: false,
       usedAt: null,
       verificationToken: verificationToken,
+      cardId: userCardId || null,
       updatedAt: createdAt.getTime(),
       deleted: false
     }
@@ -390,6 +397,7 @@ export const createGuestPass = async (
         validUntil: validUntil,
         phoneNumber: phoneNumber,
         createdAt: createdAt,
+        cardId: userCardId || null,
       },
     }
   } catch (error) {
@@ -582,6 +590,7 @@ export const getGuestPass = async (projectId, passId) => {
       used: pass.used || false,
       usedAt: convertTimestamp(pass.usedAt),
       verificationToken: pass.verificationToken,
+      cardId: pass.cardId || null,
     }
   } catch (error) {
     console.error('❌ Error getting guest pass:', error)
@@ -792,6 +801,7 @@ export const getGuestPassesForUnit = async (projectId, userId, unit = null) => {
       used: pass.used || false,
       usedAt: convertTimestamp(pass.usedAt),
       verificationToken: pass.verificationToken,
+      cardId: pass.cardId || null,
     }))
   } catch (error) {
     console.error('❌ Error loading guest passes:', error)

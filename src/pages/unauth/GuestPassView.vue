@@ -258,7 +258,8 @@ const loadGuestPass = async () => {
       createdAt: passData.createdAt,
       used: passData.used || false,
       usedAt: passData.usedAt || null,
-      qrCodeUrl: passData.qrCodeUrl || null, // This should be an S3 URL
+      qrCodeUrl: passData.qrCodeUrl || null,
+      cardId: passData.cardId || null,
     }
 
     console.log('✅ Guest pass loaded from DynamoDB:', pass.value)
@@ -287,15 +288,17 @@ const loadGuestPass = async () => {
   }
 }
 
-// Generate QR code on canvas
+// Generate QR code on canvas — uses card ID if available (matches face device)
 const generateQRCode = async () => {
   try {
-    const qrData = JSON.stringify({
-      passId: pass.value.id,
-      projectId: pass.value.projectId,
-      guestName: pass.value.guestName,
-      validUntil: pass.value.validUntil,
-    })
+    const qrData = pass.value.cardId
+      ? String(pass.value.cardId)
+      : JSON.stringify({
+          passId: pass.value.id,
+          projectId: pass.value.projectId,
+          guestName: pass.value.guestName,
+          validUntil: pass.value.validUntil,
+        })
 
     await QRCode.toCanvas(qrCanvas.value, qrData, {
       width: 300,

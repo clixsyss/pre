@@ -15,11 +15,15 @@ import mqtt from 'mqtt'
 const MAX_SIDE = 480
 const JPEG_QUALITY = 85
 const BACKUP_NUM = 50
+const BACKUP_NUM_CARD = 11
 const ADMIN = 0
 const TIMEOUT_SEC = 12
 
 const ENROLL_ID_MIN = 99
 const ENROLL_ID_MAX = 49999
+
+const CARD_ID_MIN = 10000000
+const CARD_ID_MAX = 99999999
 
 const BROKER_WS_URL =
   import.meta.env.VITE_MQTT_BROKER_WS_URL || 'ws://broker.hivemq.com:8000/mqtt'
@@ -37,6 +41,7 @@ const DEBUG = /^(1|true|yes)$/i.test(
 // Low enrollment volume (few queued items) is fine. If you expect high volume or large images,
 // consider switching the queue to IndexedDB to avoid QuotaExceededError.
 const STORAGE_KEY_USED_IDS = 'faceEnroll_usedIds'
+const STORAGE_KEY_USED_CARD_IDS = 'faceEnroll_usedCardIds'
 const STORAGE_KEY_QUEUE = 'faceEnroll_queue'
 const STORAGE_KEY_PENDING_REG = 'faceEnroll_pendingRegistration'
 const ENROLL_ID_SEQ_START = 99
@@ -101,10 +106,33 @@ export function allocateEnrollId() {
 }
 
 /**
+ * Allocate a unique card ID (RFID card number) for face device registration.
+ * Range: 10000000–99999999 (8-digit). Persisted in localStorage to avoid duplicates.
+ * @returns {number} allocated card ID, or 0 if none available
+ */
+export function allocateCardId() {
+  if (!hasStorage()) return 0
+  const used = new Set(loadJson(STORAGE_KEY_USED_CARD_IDS, []))
+  let id = CARD_ID_MIN
+  while (id <= CARD_ID_MAX) {
+    if (!used.has(id)) break
+    id += 1
+  }
+  if (id > CARD_ID_MAX) return 0
+  const arr = loadJson(STORAGE_KEY_USED_CARD_IDS, [])
+  if (!arr.includes(id)) {
+    arr.push(id)
+    saveJson(STORAGE_KEY_USED_CARD_IDS, arr)
+  }
+  return id
+}
+
+/**
  * @typedef {Object} QueueItem
  * @property {number} enrollId
  * @property {string} userName
  * @property {string} record - base64 JPEG
+ * @property {number} [cardId] - RFID card number to register alongside the photo
  * @property {string} projectId
  * @property {string} deviceSn
  * @property {string} brokerWsUrl
@@ -193,21 +221,44 @@ async function processQueue() {
     }
     return
   }
+
+  // After photo succeeds, also register card ID if present on the queue item
+  let cardIdRegistered = false
+  if (it.cardId) {
+    const cardPayload = buildCardIdPayload({
+      enrollId: it.enrollId,
+      name: it.userName,
+      cardId: it.cardId,
+    })
+    const cardResult = await enrollViaMqtt({
+      brokerWsUrl: it.brokerWsUrl,
+      deviceSn: it.deviceSn,
+      payload: cardPayload,
+      enrollId: it.enrollId,
+    })
+    cardIdRegistered = cardResult.success
+    if (!cardResult.success && DEBUG) {
+      console.warn('[FaceEnroll] Card ID registration failed during queue processing:', cardResult.error)
+    }
+  }
+
+  const mqttClusterId = it.brokerWsUrl ? new URL(it.brokerWsUrl).host : ''
   if (it.flow === 'profile' && it.userId) {
     try {
       const user = await getUserById(it.userId)
       const docs = user?.documents || {}
       const faceEnrollments = { ...(docs.faceEnrollments || {}) }
-      const mqttClusterId = it.brokerWsUrl ? new URL(it.brokerWsUrl).host : ''
       faceEnrollments[it.projectId] = {
         enrollId: it.enrollId,
         deviceSn: it.deviceSn,
         mqttClusterId,
         enrolledAt: new Date().toISOString(),
       }
-      await updateUser(it.userId, {
-        documents: { ...docs, faceEnrollments, faceEnrolledAt: new Date().toISOString() },
-      })
+      const updatedDocs = { ...docs, faceEnrollments, faceEnrolledAt: new Date().toISOString() }
+      if (it.cardId && cardIdRegistered) {
+        updatedDocs.cardId = it.cardId
+      }
+      await updateUser(it.userId, { documents: updatedDocs })
     } catch (e) {
       if (DEBUG) console.warn('[FaceEnroll] processQueue updateUser failed:', e)
       return
@@ -215,13 +266,13 @@ async function processQueue() {
   } else if (it.flow === 'registration' && it.userId) {
     const pending = loadJson(STORAGE_KEY_PENDING_REG, {})
     const list = pending[it.userId] || []
-    const mqttClusterId = it.brokerWsUrl ? new URL(it.brokerWsUrl).host : ''
     list.push({
       projectId: it.projectId,
       enrollId: it.enrollId,
       deviceSn: it.deviceSn,
       mqttClusterId,
       enrolledAt: new Date().toISOString(),
+      ...(it.cardId && cardIdRegistered ? { cardId: it.cardId } : {}),
     })
     pending[it.userId] = list
     saveJson(STORAGE_KEY_PENDING_REG, pending)
@@ -285,10 +336,11 @@ export function clearPendingRegistrationEnrollments(userId) {
  * Call this as soon as face verification succeeds so profile shows "set up" even if
  * the user completes property step later (or from another session).
  * @param {string} userId - DynamoDB user id (e.g. tempUserId / Cognito sub)
- * @param {Array<{ projectId, enrollId, deviceSn, mqttClusterId, enrolledAt }>} entries
+ * @param {Array<{ projectId, enrollId, deviceSn, mqttClusterId, enrolledAt, cardId? }>} entries
+ * @param {number} [cardId] - RFID card number to persist alongside face enrollment
  * @returns {Promise<void>}
  */
-export async function persistRegistrationFaceEnrollment(userId, entries) {
+export async function persistRegistrationFaceEnrollment(userId, entries, cardId = null) {
   if (!userId || !Array.isArray(entries) || entries.length === 0) return
   try {
     const { getUserById, updateUser } = await import('./dynamoDBUsersService')
@@ -308,8 +360,13 @@ export async function persistRegistrationFaceEnrollment(userId, entries) {
       {}
     )
     const now = new Date().toISOString()
+    const updatedDocs = { ...docs, faceEnrolledAt: now, faceEnrollments }
+    const entryCardId = entries.find(e => e.cardId)?.cardId
+    if (cardId || entryCardId) {
+      updatedDocs.cardId = cardId || entryCardId
+    }
     await updateUser(userId, {
-      documents: { ...docs, faceEnrolledAt: now, faceEnrollments },
+      documents: updatedDocs,
     })
     if (DEBUG) console.log('[FaceEnroll] Persisted registration face enrollment to DB for', userId)
   } catch (e) {
@@ -454,6 +511,25 @@ export function buildEnrollmentPayload({ enrollId, name, record }) {
     backupnum: BACKUP_NUM,
     admin: ADMIN,
     record: String(record),
+  }
+}
+
+/**
+ * Python: rfid_payload = { "cmd":"setuserinfo", "enrollid", "name", "backupnum": 11, "admin", "record": RFID_CARD_NUMBER }
+ * Registers an RFID card number on the face device for the same enrollId.
+ * @param {Object} opts
+ * @param {number} enrollId - same enrollId used for the face photo
+ * @param {string} name
+ * @param {number} cardId - RFID card number (integer)
+ */
+export function buildCardIdPayload({ enrollId, name, cardId }) {
+  return {
+    cmd: 'setuserinfo',
+    enrollid: Number(enrollId),
+    name: String(name || ''),
+    backupnum: BACKUP_NUM_CARD,
+    admin: ADMIN,
+    record: Number(cardId),
   }
 }
 
