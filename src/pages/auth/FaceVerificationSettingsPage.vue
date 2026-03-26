@@ -23,7 +23,7 @@ import {
   allocateCardId,
   buildCardIdPayload,
   getEnrollmentTargets,
-  enrollViaMqtt,
+  enrollFaceAndCardViaMqtt,
   enrollmentErrorMessage,
   enrollmentQueuedMessage,
   isQueueableError,
@@ -114,55 +114,86 @@ async function handleVerificationComplete(data) {
     let queuedCount = 0
     let hadReplyFailed = false
 
-    for (const target of targets) {
-      const { success, error: errReason } = await enrollViaMqtt({
-        brokerWsUrl: target.brokerWsUrl,
-        deviceSn: target.deviceSn,
-        payload,
-        enrollId,
-      })
-      if (success) {
-        atLeastOneSuccess = true
-        const mqttClusterId = target.brokerWsUrl ? new URL(target.brokerWsUrl).host : ''
-        faceEnrollments[target.projectId] = {
-          enrollId,
-          deviceSn: target.deviceSn,
-          mqttClusterId,
-          enrolledAt: new Date().toISOString(),
-        }
+    const cardPayloadObj = cardId
+      ? buildCardIdPayload({ enrollId, name: userName, cardId })
+      : null
 
-        // Register card ID (backupnum=11) after face photo succeeds
-        if (cardId) {
-          const cardPayload = buildCardIdPayload({ enrollId, name: userName, cardId })
-          const cardResult = await enrollViaMqtt({
-            brokerWsUrl: target.brokerWsUrl,
-            deviceSn: target.deviceSn,
-            payload: cardPayload,
+    for (const target of targets) {
+      if (cardPayloadObj) {
+        // Single connection for both face + card (mirrors Python main())
+        const combined = await enrollFaceAndCardViaMqtt({
+          brokerWsUrl: target.brokerWsUrl,
+          deviceSn: target.deviceSn,
+          facePayload: payload,
+          cardPayload: cardPayloadObj,
+          enrollId,
+        })
+        if (combined.faceSuccess) {
+          atLeastOneSuccess = true
+          const mqttClusterId = target.brokerWsUrl ? new URL(target.brokerWsUrl).host : ''
+          faceEnrollments[target.projectId] = {
             enrollId,
-          })
-          if (cardResult.success) {
+            deviceSn: target.deviceSn,
+            mqttClusterId,
+            enrolledAt: new Date().toISOString(),
+          }
+          if (combined.cardSuccess) {
             cardIdRegistered = true
           } else {
-            console.warn('[FaceVerificationSettingsPage] Card ID registration failed:', cardResult.error)
+            console.warn('[FaceVerificationSettingsPage] Card ID registration failed:', combined.cardError)
+          }
+        } else {
+          const errReason = combined.faceError
+          if (isQueueableError(errReason)) {
+            enqueueEnrollmentItem({
+              enrollId,
+              userName,
+              record: img_b64,
+              cardId: cardId || undefined,
+              projectId: target.projectId,
+              deviceSn: target.deviceSn,
+              brokerWsUrl: target.brokerWsUrl,
+              userId,
+              flow: 'profile',
+            })
+            queuedCount += 1
+          } else {
+            lastErrorReason = errReason || lastErrorReason
+            if (errReason === 'reply_failed') hadReplyFailed = true
           }
         }
       } else {
-        if (isQueueableError(errReason)) {
-          enqueueEnrollmentItem({
+        // No card ID — face-only (legacy path)
+        const { enrollViaMqtt } = await import('../../services/faceEnrollmentService')
+        const { success, error: errReason } = await enrollViaMqtt({
+          brokerWsUrl: target.brokerWsUrl,
+          deviceSn: target.deviceSn,
+          payload,
+          enrollId,
+        })
+        if (success) {
+          atLeastOneSuccess = true
+          const mqttClusterId = target.brokerWsUrl ? new URL(target.brokerWsUrl).host : ''
+          faceEnrollments[target.projectId] = {
             enrollId,
-            userName,
-            record: img_b64,
-            cardId: cardId || undefined,
-            projectId: target.projectId,
             deviceSn: target.deviceSn,
-            brokerWsUrl: target.brokerWsUrl,
-            userId,
-            flow: 'profile',
-          })
-          queuedCount += 1
+            mqttClusterId,
+            enrolledAt: new Date().toISOString(),
+          }
         } else {
-          lastErrorReason = errReason || lastErrorReason
-          if (errReason === 'reply_failed') hadReplyFailed = true
+          if (isQueueableError(errReason)) {
+            enqueueEnrollmentItem({
+              enrollId, userName, record: img_b64,
+              projectId: target.projectId,
+              deviceSn: target.deviceSn,
+              brokerWsUrl: target.brokerWsUrl,
+              userId, flow: 'profile',
+            })
+            queuedCount += 1
+          } else {
+            lastErrorReason = errReason || lastErrorReason
+            if (errReason === 'reply_failed') hadReplyFailed = true
+          }
         }
       }
     }

@@ -26,7 +26,7 @@ const CARD_ID_MIN = 10000000
 const CARD_ID_MAX = 99999999
 
 const BROKER_WS_URL =
-  import.meta.env.VITE_MQTT_BROKER_WS_URL || 'ws://broker.hivemq.com:8000/mqtt'
+  import.meta.env.VITE_MQTT_BROKER_WS_URL || 'wss://broker.hivemq.com:8884/mqtt'
 const DEFAULT_DEVICE_SN =
   import.meta.env.VITE_FACE_DEVICE_SN || 'AYTL03156426'
 
@@ -198,20 +198,50 @@ async function processQueue() {
   const q = getQueue()
   if (q.length === 0) return
   const it = q[0]
-  const payload = buildEnrollmentPayload({
+  const facePayload = buildEnrollmentPayload({
     enrollId: it.enrollId,
     name: it.userName,
     record: it.record,
   })
-  const { success, error: errReason } = await enrollViaMqtt({
-    brokerWsUrl: it.brokerWsUrl,
-    deviceSn: it.deviceSn,
-    payload,
-    enrollId: it.enrollId,
-  })
-  if (!success) {
-    if (DEBUG) console.warn('[FaceEnroll] Queue item failed, will retry later:', errReason)
-    if (errReason === 'reply_failed') {
+
+  let faceSuccess = false
+  let faceError = null
+  let cardIdRegistered = false
+
+  if (it.cardId) {
+    // Single connection for both face + card
+    const cardPayload = buildCardIdPayload({
+      enrollId: it.enrollId,
+      name: it.userName,
+      cardId: it.cardId,
+    })
+    const combined = await enrollFaceAndCardViaMqtt({
+      brokerWsUrl: it.brokerWsUrl,
+      deviceSn: it.deviceSn,
+      facePayload,
+      cardPayload,
+      enrollId: it.enrollId,
+    })
+    faceSuccess = combined.faceSuccess
+    faceError = combined.faceError
+    cardIdRegistered = combined.cardSuccess
+    if (!combined.cardSuccess && DEBUG) {
+      console.warn('[FaceEnroll] Card ID registration failed during queue processing:', combined.cardError)
+    }
+  } else {
+    const result = await enrollViaMqtt({
+      brokerWsUrl: it.brokerWsUrl,
+      deviceSn: it.deviceSn,
+      payload: facePayload,
+      enrollId: it.enrollId,
+    })
+    faceSuccess = result.success
+    faceError = result.error
+  }
+
+  if (!faceSuccess) {
+    if (DEBUG) console.warn('[FaceEnroll] Queue item failed, will retry later:', faceError)
+    if (faceError === 'reply_failed') {
       notifyFaceEnrollmentRejected({
         userId: it.userId,
         projectId: it.projectId,
@@ -220,26 +250,6 @@ async function processQueue() {
       removeQueueItemAtIndex(0)
     }
     return
-  }
-
-  // After photo succeeds, also register card ID if present on the queue item
-  let cardIdRegistered = false
-  if (it.cardId) {
-    const cardPayload = buildCardIdPayload({
-      enrollId: it.enrollId,
-      name: it.userName,
-      cardId: it.cardId,
-    })
-    const cardResult = await enrollViaMqtt({
-      brokerWsUrl: it.brokerWsUrl,
-      deviceSn: it.deviceSn,
-      payload: cardPayload,
-      enrollId: it.enrollId,
-    })
-    cardIdRegistered = cardResult.success
-    if (!cardResult.success && DEBUG) {
-      console.warn('[FaceEnroll] Card ID registration failed during queue processing:', cardResult.error)
-    }
   }
 
   const mqttClusterId = it.brokerWsUrl ? new URL(it.brokerWsUrl).host : ''
@@ -693,6 +703,166 @@ export function enrollViaMqtt({ brokerWsUrl, deviceSn, payload, enrollId, timeou
         }
       }
     }, timeoutSec * 1000)
+  })
+}
+
+/**
+ * Mirrors Python main() exactly: single MQTT connection, subscribe once, 1s delay,
+ * then send face photo (backupnum=50), wait for reply, then send card ID (backupnum=11),
+ * wait for reply. Eliminates the double-connection overhead of two enrollViaMqtt calls.
+ *
+ * @param {Object} opts
+ * @param {string} opts.brokerWsUrl
+ * @param {string} opts.deviceSn
+ * @param {Object} opts.facePayload - setuserinfo payload for photo (backupnum=50)
+ * @param {Object} opts.cardPayload - setuserinfo payload for card  (backupnum=11)
+ * @param {number} opts.enrollId    - expected enrollid in replies
+ * @param {number} [opts.timeoutSec=12] - per-step timeout
+ * @returns {Promise<{ faceSuccess: boolean, cardSuccess: boolean, faceError?: string, cardError?: string }>}
+ */
+export function enrollFaceAndCardViaMqtt({
+  brokerWsUrl,
+  deviceSn,
+  facePayload,
+  cardPayload,
+  enrollId,
+  timeoutSec = TIMEOUT_SEC,
+}) {
+  const pubTopic = `aiface/${deviceSn}/pub`
+  const subTopic = `aiface/${deviceSn}/sub`
+
+  return new Promise((resolve) => {
+    let finished = false
+    let sawChecklive = false
+    const result = { faceSuccess: false, cardSuccess: false, faceError: null, cardError: null }
+
+    console.log('[FaceEnroll] Connecting to', brokerWsUrl, '| device:', deviceSn)
+    console.log('[FaceEnroll] Topics — pub:', pubTopic, '| sub:', subTopic)
+
+    const client = mqtt.connect(brokerWsUrl, {
+      keepalive: 60,
+      reconnectPeriod: 0,
+      connectTimeout: 10000,
+    })
+
+    const finish = () => {
+      if (finished) return
+      finished = true
+      try { client.end(true) } catch { /* ignore */ }
+      console.log('[FaceEnroll] enrollFaceAndCardViaMqtt done:', JSON.stringify(result))
+      resolve(result)
+    }
+
+    /** Publish one payload and wait for a matching setuserinfo reply. */
+    const publishAndWait = (payload, label) =>
+      new Promise((res) => {
+        let stepDone = false
+        let stepReply = null
+
+        const onMsg = (_topic, message) => {
+          if (stepDone) return
+          try {
+            const s = typeof message === 'string'
+              ? message
+              : message?.toString?.('utf-8') || ''
+            if (!s) return
+            if (DEBUG) console.log('[FaceEnroll] Message:', s.slice(0, 200))
+            const j = JSON.parse(s)
+            if (j.cmd === 'checklive') sawChecklive = true
+            if (j.ret === 'setuserinfo' && Number(j.enrollid) === Number(enrollId)) {
+              stepReply = j
+              if (j.result === true) {
+                stepDone = true
+                client.removeListener('message', onMsg)
+                console.log(`[FaceEnroll] ${label} — device confirmed OK`)
+                res({ success: true, error: null })
+              }
+            }
+          } catch { /* ignore */ }
+        }
+
+        client.on('message', onMsg)
+
+        const redacted = { ...payload, record: typeof payload.record === 'string' && payload.record.length > 60
+          ? `<base64 len=${payload.record.length}>` : payload.record }
+        console.log(`[FaceEnroll] Publishing ${label} to`, pubTopic, JSON.stringify(redacted))
+
+        client.publish(pubTopic, JSON.stringify(payload), { qos: 1 }, (pubErr) => {
+          if (pubErr && !stepDone) {
+            console.error(`[FaceEnroll] ${label} publish error:`, pubErr)
+            stepDone = true
+            client.removeListener('message', onMsg)
+            res({ success: false, error: 'publish' })
+          }
+        })
+
+        setTimeout(() => {
+          if (stepDone) return
+          stepDone = true
+          client.removeListener('message', onMsg)
+          if (stepReply && stepReply.result !== true) {
+            console.warn(`[FaceEnroll] ${label} — device replied but result !== true:`, stepReply)
+            res({ success: false, error: 'reply_failed' })
+          } else {
+            console.warn(`[FaceEnroll] ${label} — timeout (${timeoutSec}s), checklive=${sawChecklive}`)
+            res({ success: false, error: sawChecklive ? 'timeout_checklive' : 'timeout' })
+          }
+        }, timeoutSec * 1000)
+      })
+
+    client.on('error', (e) => {
+      console.error('[FaceEnroll] MQTT connection error:', e?.message || e)
+      if (!finished) {
+        result.faceError = result.faceError || 'connect'
+        result.cardError = result.cardError || 'connect'
+        finish()
+      }
+    })
+
+    client.on('close', () => {
+      if (!finished) {
+        console.warn('[FaceEnroll] MQTT connection closed before completion')
+        result.faceError = result.faceError || 'connect'
+        result.cardError = result.cardError || 'connect'
+        finish()
+      }
+    })
+
+    client.on('connect', () => {
+      console.log('[FaceEnroll] MQTT connected, subscribing to:', subTopic)
+      client.subscribe(subTopic, { qos: 1 }, (err) => {
+        if (err) {
+          console.error('[FaceEnroll] Subscribe error:', err)
+          result.faceError = 'subscribe'
+          result.cardError = 'subscribe'
+          finish()
+          return
+        }
+        console.log('[FaceEnroll] Subscribed OK. Waiting 1s before publish...')
+
+        setTimeout(async () => {
+          if (finished) return
+
+          // Step 1: face photo
+          const faceResult = await publishAndWait(facePayload, 'PHOTO backupnum=50')
+          result.faceSuccess = faceResult.success
+          result.faceError = faceResult.error
+
+          if (!faceResult.success) {
+            result.cardError = 'skipped'
+            finish()
+            return
+          }
+
+          // Step 2: card ID (reuse same connection — no extra delay)
+          const cardResult = await publishAndWait(cardPayload, 'CARD backupnum=11')
+          result.cardSuccess = cardResult.success
+          result.cardError = cardResult.error
+
+          finish()
+        }, 1000)
+      })
+    })
   })
 }
 
