@@ -45,7 +45,14 @@ const STORAGE_KEY_USED_CARD_IDS = 'faceEnroll_usedCardIds'
 const STORAGE_KEY_QUEUE = 'faceEnroll_queue'
 const STORAGE_KEY_PENDING_REG = 'faceEnroll_pendingRegistration'
 const ENROLL_ID_SEQ_START = 99
-const QUEUE_RETRY_INTERVAL_MS = 30 * 60 * 1000
+
+// Retry windows: only attempt queued enrollments during these hours (device likely online)
+const QUEUE_RETRY_WINDOWS = [
+  { startHour: 0, endHour: 1 },   // 12:00 AM – 1:00 AM
+  { startHour: 12, endHour: 13 }, // 12:00 PM – 1:00 PM
+]
+const QUEUE_CHECK_INTERVAL_MS = 60 * 1000        // check every 1 minute if in window
+const QUEUE_MIN_RETRY_GAP_MS = 5 * 60 * 1000     // within a window, wait 5 min between attempts
 
 const hasStorage = () =>
   typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
@@ -291,25 +298,47 @@ async function processQueue() {
 }
 
 let _queueProcessorInterval = null
+let _lastQueueAttemptTs = 0
+
+function isInRetryWindow() {
+  const h = new Date().getHours()
+  return QUEUE_RETRY_WINDOWS.some((w) => h >= w.startHour && h < w.endHour)
+}
 
 /**
- * Start background processor: every 30 min and on online/visibility. Safe to call multiple times.
+ * Start background processor that retries queued enrollments only during
+ * configured time windows (12 PM–1 PM and 12 AM–1 AM) and on network-online events.
+ * Safe to call multiple times.
  */
 export function startQueueProcessor() {
   if (typeof window === 'undefined') return
   if (_queueProcessorInterval != null) return
-  const run = () => {
+
+  const run = (force = false) => {
+    const now = Date.now()
+    if (!force && !isInRetryWindow()) return
+    if (!force && now - _lastQueueAttemptTs < QUEUE_MIN_RETRY_GAP_MS) return
+    _lastQueueAttemptTs = now
     processQueue().catch((e) => {
       if (DEBUG) console.warn('[FaceEnroll] processQueue error:', e)
     })
   }
-  run()
-  _queueProcessorInterval = setInterval(run, QUEUE_RETRY_INTERVAL_MS)
-  window.addEventListener('online', run)
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') run()
-  })
-  if (DEBUG) console.log('[FaceEnroll] Queue processor started (interval + online + visibility)')
+
+  // Immediate attempt on startup if there's queued work
+  run(true)
+
+  // Check every minute; only processes if inside a retry window with gap respected
+  _queueProcessorInterval = setInterval(() => run(false), QUEUE_CHECK_INTERVAL_MS)
+
+  // Phone coming back online — always try regardless of window
+  window.addEventListener('online', () => run(true))
+
+  if (DEBUG)
+    console.log(
+      '[FaceEnroll] Queue processor started (windows:',
+      QUEUE_RETRY_WINDOWS.map((w) => `${w.startHour}:00–${w.endHour}:00`).join(', '),
+      '+ online)',
+    )
 }
 
 /**
@@ -317,7 +346,7 @@ export function startQueueProcessor() {
  * Shown instead of error; no technical terms.
  */
 export function enrollmentQueuedMessage() {
-  return "We've saved your photo. We'll send it to the device when it's available. You can keep using the app."
+  return "We've saved your photo. We'll send it to the device at the next scheduled window (12 PM or 12 AM). You can keep using the app."
 }
 
 /**
