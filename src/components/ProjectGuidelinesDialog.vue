@@ -1,18 +1,19 @@
 <template>
-  <div v-if="isOpen" class="guidelines-overlay" @click="closeDialog">
-    <div class="guidelines-dialog" @click.stop>
-      <!-- Header -->
-      <div class="guidelines-header">
-        <div class="header-content">
-          <h2 class="guidelines-title">{{ t('projectGuidelines') }}</h2>
-          <p class="guidelines-subtitle">{{ t('projectGuidelinesDesc') }}</p>
+  <teleport to="body">
+    <div v-if="isOpen" class="guidelines-overlay" @click="closeDialog">
+      <div class="guidelines-dialog" @click.stop>
+        <!-- Header -->
+        <div class="guidelines-header">
+          <div class="header-content">
+            <h2 class="guidelines-title">{{ t('projectGuidelines') }}</h2>
+            <p class="guidelines-subtitle">{{ t('projectGuidelinesDesc') }}</p>
+          </div>
+          <!-- <button @click="closeDialog" class="close-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button> -->
         </div>
-        <!-- <button @click="closeDialog" class="close-btn">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button> -->
-      </div>
 
       <!-- Loading State -->
       <div v-if="loading" class="loading-container">
@@ -119,6 +120,7 @@
         </div>
       </div>
     </div>
+    </div>
 
     <!-- PDF Viewer Modal -->
     <PDFViewer
@@ -129,7 +131,7 @@
       :fileSize="selectedPDF?.fileSize"
       @close="closePDFViewer"
     />
-  </div>
+  </teleport>
 </template>
 
 <script setup>
@@ -243,6 +245,12 @@ watch(() => props.isOpen, (isOpen) => {
   if (isOpen) {
     fetchGuidelines();
   }
+
+  // Prevent background page scroll while modal is open
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+    document.body.style.touchAction = isOpen ? 'none' : '';
+  }
 });
 
 // Watch for project changes
@@ -256,10 +264,10 @@ watch(() => projectStore.selectedProject?.id, (newProjectId) => {
 <style scoped>
 .guidelines-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   display: flex;
@@ -267,6 +275,9 @@ watch(() => projectStore.selectedProject?.id, (newProjectId) => {
   justify-content: center;
   z-index: 999999;
   animation: fadeIn 0.3s ease-out;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 @keyframes fadeIn {

@@ -126,109 +126,111 @@
     </div>
 
     <!-- News Modal - Matching MyBookings Design -->
-    <div v-if="showNewsModal && selectedNewsItem" class="modal-overlay" @click="closeNewsModal">
-      <div class="modal-content" @click.stop>
-        <!-- Modal Header -->
-        <div class="modal-header">
-          <h2>{{ selectedNewsItem.title }}</h2>
-          <button class="close-btn" @click="closeNewsModal">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
-        </div>
-
-        <!-- Modal Body -->
-        <div class="modal-body">
-          <!-- Meta Information -->
-          <div class="detail-section">
-            <div class="news-meta-info">
-              <span class="news-category-badge" :style="getCategoryStyle(selectedNewsItem.category)">
-                {{ getCategoryLabel(selectedNewsItem.category) }}
-              </span>
-              <span class="news-time-badge">{{ formatTime(selectedNewsItem.createdAt) }}</span>
-            </div>
-          </div>
-
-          <!-- Media Section -->
-          <div v-if="selectedNewsItem.mediaUrl || selectedNewsItem.mediaType" class="detail-section media-section">
-            <div v-if="selectedNewsItem.mediaType === 'video'" class="media-container">
-              <video 
-                :src="selectedNewsItem.mediaUrl" 
-                :poster="selectedNewsItem.thumbnailUrl" 
-                controls 
-                class="news-video"
-                preload="metadata"
-                playsinline
-                webkit-playsinline
-                @loadstart="handleVideoLoadStart(selectedNewsItem.id)"
-                @loadeddata="handleVideoLoaded(selectedNewsItem.id)"
-                @error="handleVideoError(selectedNewsItem.id)">
-                Your browser does not support the video tag.
-              </video>
-              <div v-if="videoLoadingStates[selectedNewsItem.id]" class="video-loading">
-                <div class="loading-spinner"></div>
-              </div>
-            </div>
-            <div v-else class="media-container">
-              <img :src="selectedNewsItem.mediaUrl || defaultLogoUrl" :alt="selectedNewsItem.title" class="news-image" 
-                @error="handleMediaError" loading="lazy" />
-            </div>
-          </div>
-
-          <!-- Content Section -->
-          <div class="detail-section">
-            <h3>News Content</h3>
-            <div class="news-content-text" v-html="selectedNewsItem.message || selectedNewsItem.content"></div>
-          </div>
-
-          <!-- External Link Section -->
-          <div v-if="selectedNewsItem.linkUrl && selectedNewsItem.linkUrl.trim() !== ''" class="detail-section">
-            <h3>Related Link</h3>
-            <a :href="selectedNewsItem.linkUrl" target="_blank" rel="noopener noreferrer" class="external-link-card">
-              <div class="link-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 13C10.4295 13.5741 10.9774 14.0491 11.6066 14.3929C12.2357 14.7367 12.9315 14.9411 13.6467 14.9923C14.3618 15.0435 15.0796 14.9403 15.7513 14.6897C16.4231 14.4392 17.0331 14.047 17.54 13.54L20.54 10.54C21.4508 9.59695 21.9548 8.33394 21.9434 7.02296C21.932 5.71198 21.4061 4.45791 20.4791 3.53087C19.5521 2.60383 18.298 2.07799 16.987 2.0666C15.676 2.0552 14.413 2.55918 13.47 3.47L11.75 5.18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M14 11C13.5705 10.4259 13.0226 9.95085 12.3934 9.60705C11.7643 9.26325 11.0685 9.05886 10.3533 9.00766C9.63816 8.95645 8.92037 9.05972 8.24861 9.31028C7.57685 9.56084 6.96684 9.95302 6.46 10.46L3.46 13.46C2.54918 14.403 2.04518 15.666 2.05659 16.977C2.068 18.288 2.59394 19.5421 3.52098 20.4691C4.44802 21.3962 5.70209 21.922 7.01307 21.9334C8.32405 21.9448 9.58706 21.4408 10.53 20.53L12.24 18.82" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <div class="link-text">
-                <div class="link-title">{{ selectedNewsItem.linkTitle || 'Read More' }}</div>
-                <div class="link-url">{{ selectedNewsItem.linkUrl }}</div>
-              </div>
-              <div class="link-arrow">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M7 17L17 7M17 7H7M17 7V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-            </a>
-          </div>
-
-          <!-- Comments Section -->
-          <div v-if="selectedNewsItem.interactionsEnabled" class="detail-section">
-            <h3>Comments & Reactions</h3>
-            <NewsComments :news-id="selectedNewsItem.id" :interactions-enabled="selectedNewsItem.interactionsEnabled" />
-          </div>
-          <div v-else class="detail-section">
-            <div class="interactions-disabled">
+    <teleport to="body">
+      <div v-if="showNewsModal && selectedNewsItem" class="modal-overlay" @click="closeNewsModal">
+        <div class="modal-content" @click.stop>
+          <!-- Modal Header -->
+          <div class="modal-header">
+            <h2>{{ selectedNewsItem.title }}</h2>
+            <button class="close-btn" @click="closeNewsModal">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
-              <p>Interactions are disabled for this news item</p>
+            </button>
+          </div>
+
+          <!-- Modal Body -->
+          <div class="modal-body">
+            <!-- Meta Information -->
+            <div class="detail-section">
+              <div class="news-meta-info">
+                <span class="news-category-badge" :style="getCategoryStyle(selectedNewsItem.category)">
+                  {{ getCategoryLabel(selectedNewsItem.category) }}
+                </span>
+                <span class="news-time-badge">{{ formatTime(selectedNewsItem.createdAt) }}</span>
+              </div>
+            </div>
+
+            <!-- Media Section -->
+            <div v-if="selectedNewsItem.mediaUrl || selectedNewsItem.mediaType" class="detail-section media-section">
+              <div v-if="selectedNewsItem.mediaType === 'video'" class="media-container">
+                <video 
+                  :src="selectedNewsItem.mediaUrl" 
+                  :poster="selectedNewsItem.thumbnailUrl" 
+                  controls 
+                  class="news-video"
+                  preload="metadata"
+                  playsinline
+                  webkit-playsinline
+                  @loadstart="handleVideoLoadStart(selectedNewsItem.id)"
+                  @loadeddata="handleVideoLoaded(selectedNewsItem.id)"
+                  @error="handleVideoError(selectedNewsItem.id)">
+                  Your browser does not support the video tag.
+                </video>
+                <div v-if="videoLoadingStates[selectedNewsItem.id]" class="video-loading">
+                  <div class="loading-spinner"></div>
+                </div>
+              </div>
+              <div v-else class="media-container">
+                <img :src="selectedNewsItem.mediaUrl || defaultLogoUrl" :alt="selectedNewsItem.title" class="news-image" 
+                  @error="handleMediaError" loading="lazy" />
+              </div>
+            </div>
+
+            <!-- Content Section -->
+            <div class="detail-section">
+              <h3>News Content</h3>
+              <div class="news-content-text" v-html="selectedNewsItem.message || selectedNewsItem.content"></div>
+            </div>
+
+            <!-- External Link Section -->
+            <div v-if="selectedNewsItem.linkUrl && selectedNewsItem.linkUrl.trim() !== ''" class="detail-section">
+              <h3>Related Link</h3>
+              <a :href="selectedNewsItem.linkUrl" target="_blank" rel="noopener noreferrer" class="external-link-card">
+                <div class="link-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 13C10.4295 13.5741 10.9774 14.0491 11.6066 14.3929C12.2357 14.7367 12.9315 14.9411 13.6467 14.9923C14.3618 15.0435 15.0796 14.9403 15.7513 14.6897C16.4231 14.4392 17.0331 14.047 17.54 13.54L20.54 10.54C21.4508 9.59695 21.9548 8.33394 21.9434 7.02296C21.932 5.71198 21.4061 4.45791 20.4791 3.53087C19.5521 2.60383 18.298 2.07799 16.987 2.0666C15.676 2.0552 14.413 2.55918 13.47 3.47L11.75 5.18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M14 11C13.5705 10.4259 13.0226 9.95085 12.3934 9.60705C11.7643 9.26325 11.0685 9.05886 10.3533 9.00766C9.63816 8.95645 8.92037 9.05972 8.24861 9.31028C7.57685 9.56084 6.96684 9.95302 6.46 10.46L3.46 13.46C2.54918 14.403 2.04518 15.666 2.05659 16.977C2.068 18.288 2.59394 19.5421 3.52098 20.4691C4.44802 21.3962 5.70209 21.922 7.01307 21.9334C8.32405 21.9448 9.58706 21.4408 10.53 20.53L12.24 18.82" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="link-text">
+                  <div class="link-title">{{ selectedNewsItem.linkTitle || 'Read More' }}</div>
+                  <div class="link-url">{{ selectedNewsItem.linkUrl }}</div>
+                </div>
+                <div class="link-arrow">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 17L17 7M17 7H7M17 7V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </a>
+            </div>
+
+            <!-- Comments Section -->
+            <div v-if="selectedNewsItem.interactionsEnabled" class="detail-section">
+              <h3>Comments & Reactions</h3>
+              <NewsComments :news-id="selectedNewsItem.id" :interactions-enabled="selectedNewsItem.interactionsEnabled" />
+            </div>
+            <div v-else class="detail-section">
+              <div class="interactions-disabled">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <p>Interactions are disabled for this news item</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Modal Footer -->
-        <div class="modal-footer">
-          <button class="close-modal-btn" @click="closeNewsModal">
-            Close
-          </button>
+          <!-- Modal Footer -->
+          <div class="modal-footer">
+            <button class="close-modal-btn" @click="closeNewsModal">
+              Close
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </teleport>
   </div>
 </template>
 
@@ -575,6 +577,13 @@ const closeNewsModal = () => {
     if (qDrawer) qDrawer.style.display = ''
   })
 }
+
+// Prevent background page scroll while news modal is open
+watch(showNewsModal, (isOpen) => {
+  if (typeof document === 'undefined') return
+  document.body.style.overflow = isOpen ? 'hidden' : ''
+  document.body.style.touchAction = isOpen ? 'none' : ''
+})
 
 const navigateToAllNews = () => {
   router.push('/news')
@@ -1173,10 +1182,10 @@ onUnmounted(() => {
 /* ===== NEWS MODAL - Matching MyBookings Design ===== */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   display: flex;
@@ -1184,6 +1193,9 @@ onUnmounted(() => {
   justify-content: center;
   z-index: 9999999;
   padding: 20px;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
   /* iOS Safari fixes */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
