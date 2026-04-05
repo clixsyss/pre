@@ -632,13 +632,16 @@ class OptimizedAuthService {
    */
   async signOut() {
     try {
+      // Drop in-memory + localStorage session first so guards/UI cannot read a stale user
+      this.clearCachedUser()
       await Auth.signOut()
-      this.currentUser = null
-      this._saveCachedAuthState(null) // Clear our cache
       cacheService.clear()
       console.log('🚀 OptimizedAuthService: User signed out, cache cleared')
     } catch (error) {
       console.error('Sign out error:', error)
+      // Still clear local session so the app treats the user as logged out
+      this.clearCachedUser()
+      cacheService.clear()
       throw error
     }
   }

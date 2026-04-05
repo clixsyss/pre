@@ -163,6 +163,8 @@ import { Capacitor } from '@capacitor/core'
 import { useNotificationStore } from '../../stores/notifications'
 import { useRegistrationStore } from '../../stores/registration'
 import optimizedAuthService from '../../services/optimizedAuthService'
+import deviceKeyService from '../../services/deviceKeyService'
+import cacheService from '../../services/cacheService'
 
 defineOptions({ name: 'MigrateAccountPage' })
 
@@ -276,7 +278,32 @@ const handleMigration = async () => {
 
     if (migrationType === 'NEW_PASSWORD_REQUIRED') {
       // Existing flow: User exists in Cognito but needs to set password
-    await optimizedAuthService.completeNewPassword(challenge.cognitoUser, formData.password)
+      const { user: signedInAfterPw } = await optimizedAuthService.completeNewPassword(
+        challenge.cognitoUser,
+        formData.password,
+      )
+      let cognitoSub =
+        signedInAfterPw?.attributes?.sub ||
+        signedInAfterPw?.signInUserSession?.idToken?.payload?.sub
+      if (!cognitoSub) {
+        try {
+          const { Auth } = await import('aws-amplify')
+          const cur = await Auth.currentAuthenticatedUser()
+          cognitoSub = cur?.attributes?.sub
+        } catch {
+          /* ignore */
+        }
+      }
+      await deviceKeyService.resetDeviceBindingAfterMigration({
+        cognitoSub,
+        email: formData.email.trim(),
+        dynamoUserId: registrationStore.firestoreUserId,
+      })
+      try {
+        await optimizedAuthService.signOut()
+      } catch (signOutErr) {
+        console.warn('[MigrateAccount] signOut after password migration:', signOutErr)
+      }
     } else if (migrationType === 'MIGRATION_REQUIRED') {
       // Migration flow: Instantly confirm user without email verification
       console.log('[MigrateAccount] Starting instant confirmation for migrated user...')
@@ -288,16 +315,26 @@ const handleMigration = async () => {
         formData.password
       )
       
-      // Always update DynamoDB with cognitoUserId if we have it
+      // Always update DynamoDB with Cognito sub — never store email as authUid (breaks device-key lookup)
       const cognitoUserId = migrationResult.cognitoUserId
-      if (registrationStore.firestoreUserId && cognitoUserId) {
+      const authUidIsCognitoSub = cognitoUserId && !String(cognitoUserId).includes('@')
+      if (registrationStore.firestoreUserId && authUidIsCognitoSub) {
         console.log('[MigrateAccount] Updating DynamoDB user with authUid...')
         const { updateUser } = await import('src/services/dynamoDBUsersService')
         await updateUser(registrationStore.firestoreUserId, {
           authUid: cognitoUserId,
-          emailVerified: migrationResult.confirmed || false
+          emailVerified: migrationResult.confirmed || false,
+          deviceKey: '',
+          deviceKeyUpdatedAt: new Date().toISOString(),
         })
+        cacheService.delete(`users/${registrationStore.firestoreUserId}`)
+        deviceKeyService.removeLocalDeviceKey()
         console.log('[MigrateAccount] ✅ DynamoDB user updated with authUid:', cognitoUserId)
+      } else if (registrationStore.firestoreUserId && cognitoUserId && !authUidIsCognitoSub) {
+        console.warn(
+          '[MigrateAccount] Skipping authUid update — value looks like email, not Cognito sub:',
+          cognitoUserId,
+        )
       }
 
       // Check if migration was successful
@@ -323,8 +360,14 @@ const handleMigration = async () => {
       // Success! User is confirmed (but not signed in - they'll sign in manually)
       console.log('[MigrateAccount] ✅ User migrated and confirmed successfully')
       console.log('[MigrateAccount] User will sign in manually with their new password')
-      
-      // Update DynamoDB was already done above
+
+      if (!(registrationStore.firestoreUserId && authUidIsCognitoSub)) {
+        await deviceKeyService.resetDeviceBindingAfterMigration({
+          cognitoSub: authUidIsCognitoSub ? cognitoUserId : undefined,
+          email: formData.email.trim(),
+          dynamoUserId: registrationStore.firestoreUserId,
+        })
+      }
     } else {
       throw new Error('Unknown migration type')
     }

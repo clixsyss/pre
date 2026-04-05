@@ -750,7 +750,9 @@ const handleSignIn = async () => {
       console.log('[SignIn] 🔐 Using user identifier for device check:', userIdentifier)
       // Add timeout to device key check
       deviceCheck = await Promise.race([
-        deviceKeyService.handleLoginDeviceCheck(userIdentifier),
+        deviceKeyService.handleLoginDeviceCheck(userIdentifier, {
+          lookupEmail: formData.email.trim(),
+        }),
         new Promise((_resolve, reject) => 
           setTimeout(() => reject(new Error('Device key check timed out')), 10000)
         )

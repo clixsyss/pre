@@ -124,7 +124,9 @@ onAuthStateChanged(auth, (user) => {
     smartMirrorService.setPreUserId(user.uid)
   } else {
     console.log('Firebase Boot: PRE user logged out, clearing Smart Mirror service')
-    smartMirrorService.clearPreUserId()
+    void smartMirrorService.clearPreUserId().catch((err) => {
+      console.warn('Firebase Boot: clearPreUserId failed (non-fatal):', err?.message || err)
+    })
   }
 })
 

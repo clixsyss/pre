@@ -155,23 +155,42 @@ export async function getUserByAuthUid(authUid) {
     
     console.log(`[DynamoDBUsersService] Searching for user by authUid: ${authUid}`)
     
-    // Search by authUid field
-    const items = await scan(TABLE_NAME, {
-      FilterExpression: 'authUid = :authUid',
-      ExpressionAttributeValues: {
-        ':authUid': authUid
-      },
-      Limit: 1
-    })
-    
-    if (items.length === 0) {
-      console.log(`[DynamoDBUsersService] No user found with authUid: ${authUid}`)
-      return null
-    }
-    
-    const convertedUser = convertUserFromDynamoDB(items[0])
-    console.log(`[DynamoDBUsersService] ✅ Found user by authUid: ${convertedUser.id}`)
-    return convertedUser
+    // With FilterExpression, Limit is items *scanned*, not matches — paginate like getUserByEmail
+    let lastEvaluatedKey = null
+    let scannedCount = 0
+    const maxScanItems = 5000
+
+    do {
+      const scanOptions = {
+        FilterExpression: 'authUid = :authUid',
+        ExpressionAttributeValues: {
+          ':authUid': authUid
+        },
+        Limit: 500
+      }
+      if (lastEvaluatedKey) {
+        scanOptions.ExclusiveStartKey = lastEvaluatedKey
+      }
+
+      const scanResult = await scan(TABLE_NAME, scanOptions)
+      const batchItems = Array.isArray(scanResult) ? scanResult : []
+
+      if (batchItems.length > 0) {
+        const convertedUser = convertUserFromDynamoDB(batchItems[0])
+        console.log(`[DynamoDBUsersService] ✅ Found user by authUid: ${convertedUser.id}`)
+        return convertedUser
+      }
+
+      lastEvaluatedKey = scanResult.LastEvaluatedKey || null
+      scannedCount += 500
+      if (scannedCount >= maxScanItems) {
+        console.warn(`[DynamoDBUsersService] Reached max scan limit (${maxScanItems}) without authUid match`)
+        break
+      }
+    } while (lastEvaluatedKey)
+
+    console.log(`[DynamoDBUsersService] No user found with authUid: ${authUid}`)
+    return null
   } catch (error) {
     console.error(`[DynamoDBUsersService] Error fetching user by authUid:`, error)
     throw error
@@ -225,6 +244,23 @@ export async function getUserById(userId) {
         }
       } catch (emailError) {
         console.warn(`[DynamoDBUsersService] Email lookup also failed:`, emailError)
+      }
+    }
+
+    // Cognito sub is often stored in authUid while partition key is an internal id
+    const looksLikeCognitoSub =
+      userId &&
+      !userId.includes('@') &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)
+    if (looksLikeCognitoSub) {
+      try {
+        const byAuth = await getUserByAuthUid(userId)
+        if (byAuth) {
+          console.log(`[DynamoDBUsersService] ✅ Found user by authUid (Cognito sub): ${byAuth.id}`)
+          return byAuth
+        }
+      } catch (authErr) {
+        console.warn(`[DynamoDBUsersService] authUid lookup failed:`, authErr?.message || authErr)
       }
     }
     

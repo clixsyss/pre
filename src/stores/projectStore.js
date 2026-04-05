@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getUserById } from '../services/dynamoDBUsersService'
+import { getUserById, getUserByEmail } from '../services/dynamoDBUsersService'
 import { getProjectById } from '../services/dynamoDBProjectsService'
 // NO FIREBASE/FIRESTORE IMPORTS - DynamoDB only
 
@@ -86,6 +86,22 @@ export const useProjectStore = defineStore('project', () => {
           } else if (currentUser && currentUser.userSub) {
             console.log('ProjectStore: Found Cognito userSub, trying again:', currentUser.userSub)
             userData = await getUserById(currentUser.userSub)
+          }
+        }
+
+        // Sub-based GetItem can fail (wrong table key); authUid scan may miss if authUid is stale — try session email
+        if (!userData && userId && !String(userId).includes('@')) {
+          const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
+          const currentUser = await optimizedAuthService.getCurrentUser()
+          const sessionEmail =
+            currentUser?.attributes?.email ||
+            currentUser?.cognitoAttributes?.email ||
+            (typeof currentUser?.username === 'string' && currentUser.username.includes('@')
+              ? currentUser.username
+              : null)
+          if (sessionEmail) {
+            console.log('ProjectStore: Retrying user load by Cognito session email')
+            userData = await getUserByEmail(sessionEmail)
           }
         }
       } catch (userError) {

@@ -87,9 +87,11 @@ class DeviceKeyService {
    * Get device key stored in Firestore for a user
    * Uses the same lookup method as SignIn.vue for consistency
    * @param {string} userId - User's ID (Cognito sub, authUid, or email)
+   * @param {Object} [options]
+   * @param {string} [options.lookupEmail] - When userId is Cognito sub but authUid in DB is wrong, find user by email
    * @returns {Promise<{deviceKey: string|null, userExists: boolean}>} Device key and existence status
    */
-  async getUserDeviceKey(userId) {
+  async getUserDeviceKey(userId, { lookupEmail } = {}) {
     try {
       console.log(`🔍 getUserDeviceKey: Looking up user with ID: ${userId}`)
       
@@ -162,7 +164,40 @@ class DeviceKeyService {
           console.warn(`⚠️ getUserDeviceKey: getUserById failed:`, idError.message || idError)
         }
       }
-      
+
+      // Strategy 2b: Cognito sub did not match authUid (e.g. buggy migration stored email as authUid)
+      if (!user && userId && !userId.includes('@') && lookupEmail) {
+        try {
+          const normalized = lookupEmail.trim().toLowerCase()
+          console.log(`🔍 getUserDeviceKey: lookupEmail fallback for Cognito sub: ${normalized}`)
+          const u = await getUserByEmail(normalized)
+          if (u) {
+            const au = u.authUid || ''
+            if (au !== userId && (au.includes('@') || !au)) {
+              try {
+                const { updateUser } = await import('./dynamoDBUsersService')
+                const { default: cacheService } = await import('./cacheService')
+                await updateUser(u.id, { authUid: userId })
+                cacheService.delete(`users/${u.id}`)
+                console.log(`✅ getUserDeviceKey: Repaired authUid → Cognito sub for ${u.id}`)
+              } catch (healErr) {
+                console.warn('⚠️ getUserDeviceKey: authUid repair failed:', healErr.message || healErr)
+              }
+            }
+            const deviceKey = u.deviceKey
+            console.log(
+              `📱 Device key from DB (lookupEmail): ${deviceKey ? `Found (${deviceKey.substring(0, 20)}...)` : 'Empty/Null'}`,
+            )
+            return {
+              deviceKey: deviceKey && deviceKey !== '' ? deviceKey : null,
+              userExists: true,
+            }
+          }
+        } catch (fallbackErr) {
+          console.warn(`⚠️ getUserDeviceKey: lookupEmail fallback failed:`, fallbackErr.message || fallbackErr)
+        }
+      }
+
       // Strategy 3: If userId looks like an email, try email lookup
       if (userId && userId.includes('@')) {
         try {
@@ -214,8 +249,10 @@ class DeviceKeyService {
    * Uses the same lookup strategy as getUserDeviceKey to ensure consistency
    * @param {string} userId - User's ID (Cognito sub, authUid, or email)
    * @param {string} deviceKey - Device key to save
+   * @param {Object} [options]
+   * @param {string} [options.lookupEmail] - Match getUserDeviceKey when authUid in DB is wrong
    */
-  async saveUserDeviceKey(userId, deviceKey) {
+  async saveUserDeviceKey(userId, deviceKey, { lookupEmail } = {}) {
     try {
       console.log(`💾 saveUserDeviceKey: Looking up user with ID: ${userId} before saving`)
       
@@ -253,7 +290,33 @@ class DeviceKeyService {
           }
         }
       }
-      
+
+      if (!user && userId && !userId.includes('@') && lookupEmail) {
+        try {
+          const normalized = lookupEmail.trim().toLowerCase()
+          console.log(`🔍 saveUserDeviceKey: lookupEmail fallback: ${normalized}`)
+          user = await getUserByEmail(normalized)
+          if (user) {
+            actualUserId = user.id
+            const au = user.authUid || ''
+            if (au !== userId && (au.includes('@') || !au)) {
+              try {
+                const { updateUser } = await import('./dynamoDBUsersService')
+                const { default: cacheService } = await import('./cacheService')
+                await updateUser(user.id, { authUid: userId })
+                cacheService.delete(`users/${user.id}`)
+                console.log(`✅ saveUserDeviceKey: Repaired authUid → Cognito sub for ${user.id}`)
+              } catch (healErr) {
+                console.warn('⚠️ saveUserDeviceKey: authUid repair failed:', healErr.message || healErr)
+              }
+            }
+            console.log(`✅ saveUserDeviceKey: Found user via lookupEmail, using id: ${actualUserId}`)
+          }
+        } catch (fallbackErr) {
+          console.warn(`⚠️ saveUserDeviceKey: lookupEmail fallback failed:`, fallbackErr.message || fallbackErr)
+        }
+      }
+
       // Strategy 3: If userId looks like an email, try email lookup
       if (!user && userId && userId.includes('@')) {
         try {
@@ -339,9 +402,10 @@ class DeviceKeyService {
   /**
    * Validate if current device matches the registered device for a user
    * @param {string} userId - User's ID
+   * @param {Object} [options] - Passed to getUserDeviceKey (e.g. lookupEmail)
    * @returns {Promise<Object>} Validation result
    */
-  async validateDeviceKey(userId) {
+  async validateDeviceKey(userId, options = {}) {
     try {
       console.log('🔐 Validating device key for user:', userId)
 
@@ -350,7 +414,7 @@ class DeviceKeyService {
       console.log('📱 Local device key:', localKey ? 'Found' : 'Not found')
 
       // Get stored device key from Firestore (now returns object with deviceKey and userExists)
-      const { deviceKey: storedKey, userExists } = await this.getUserDeviceKey(userId)
+      const { deviceKey: storedKey, userExists } = await this.getUserDeviceKey(userId, options)
       console.log('☁️  Stored device key:', storedKey ? `Found: ${storedKey.substring(0, 20)}...` : 'Not found or empty')
       console.log('👤 User exists in DB:', userExists)
 
@@ -423,9 +487,10 @@ class DeviceKeyService {
   /**
    * Register device for a user (first login or after approved reset)
    * @param {string} userId - User's ID
+   * @param {Object} [options] - Passed to saveUserDeviceKey (e.g. lookupEmail)
    * @returns {Promise<string>} Generated device key
    */
-  async registerDevice(userId) {
+  async registerDevice(userId, options = {}) {
     try {
       console.log('📝 Registering device for user:', userId)
 
@@ -436,7 +501,7 @@ class DeviceKeyService {
       this.saveLocalDeviceKey(deviceKey)
 
       // Save to Firestore (still async)
-      await this.saveUserDeviceKey(userId, deviceKey)
+      await this.saveUserDeviceKey(userId, deviceKey, options)
 
       console.log('✅ Device registered successfully')
       return deviceKey
@@ -621,18 +686,65 @@ class DeviceKeyService {
   }
 
   /**
+   * After account migration, clear any legacy device binding so the next sign-in
+   * is treated as first login on this device (registerDevice) instead of
+   * "wrong device" when localStorage has no key but DynamoDB still has an old deviceKey.
+   *
+   * @param {Object} opts
+   * @param {string} [opts.cognitoSub] - Cognito user sub after NEW_PASSWORD_REQUIRED
+   * @param {string} [opts.email] - User email (fallback lookup)
+   * @param {string} [opts.dynamoUserId] - Known users table document id (e.g. from migration flow)
+   * @returns {Promise<boolean>} True if a user record was updated
+   */
+  async resetDeviceBindingAfterMigration({ cognitoSub, email, dynamoUserId } = {}) {
+    try {
+      this.removeLocalDeviceKey()
+
+      const { getUserByAuthUid, getUserByEmail, getUserById } = await import('./dynamoDBUsersService')
+
+      let user = null
+      if (dynamoUserId) {
+        user = await getUserById(dynamoUserId)
+      }
+      if (!user && cognitoSub) {
+        user = await getUserByAuthUid(cognitoSub)
+      }
+      if (!user && email) {
+        user = await getUserByEmail(email)
+      }
+
+      if (!user?.id) {
+        console.warn('[deviceKeyService] resetDeviceBindingAfterMigration: user not found; local device key still cleared')
+        return false
+      }
+
+      const clearedAt = new Date().toISOString()
+      await firestoreService.updateDoc(`users/${user.id}`, {
+        deviceKey: '',
+        deviceKeyUpdatedAt: clearedAt,
+      })
+      console.log('[deviceKeyService] ✅ Cleared stored device key after account migration for user:', user.id)
+      return true
+    } catch (error) {
+      console.error('[deviceKeyService] resetDeviceBindingAfterMigration failed:', error)
+      throw error
+    }
+  }
+
+  /**
    * Handle device key validation and registration during login
    * @param {string} userId - User's ID
+   * @param {Object} [options] - e.g. { lookupEmail } when Cognito sub may not match Dynamo authUid
    * @returns {Promise<Object>} Result with action to take
    */
-  async handleLoginDeviceCheck(userId) {
+  async handleLoginDeviceCheck(userId, options = {}) {
     try {
       // First check if device is valid
-      const validation = await this.validateDeviceKey(userId)
+      const validation = await this.validateDeviceKey(userId, options)
 
       // If first login, register device
       if (validation.isFirstLogin && validation.requiresRegistration) {
-        await this.registerDevice(userId)
+        await this.registerDevice(userId, options)
         return {
           allowed: true,
           message: 'Device registered successfully',
@@ -655,7 +767,7 @@ class DeviceKeyService {
       if (hasApprovedReset) {
         console.log('✅ User has approved reset request - allowing device registration')
         // Register this new device
-        await this.registerDevice(userId)
+        await this.registerDevice(userId, options)
         // Clear the approved reset request
         await this.clearApprovedResetRequests(userId)
         return {

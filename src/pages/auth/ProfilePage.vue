@@ -1187,70 +1187,85 @@
       @close="showViolationsModal = false" @start-chat="handleViolationChat" />
 
 
-    <!-- Logout Confirmation Modal -->
-    <div v-if="showLogoutConfirm" class="modal-overlay" @click="showLogoutConfirm = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>{{ $t('confirmLogout') }}</h3>
-        </div>
-        <div class="modal-body">
-          <p>{{ $t('confirmLogoutMessage') }}</p>
-          <p class="modal-subtitle">{{ $t('logoutSubtitle') }}</p>
-        </div>
-        <div class="modal-actions">
-          <button @click="showLogoutConfirm = false" class="cancel-btn">{{ $t('cancel') }}</button>
-          <button @click="handleLogout" class="confirm-btn" :disabled="logoutLoading">
-            <span v-if="logoutLoading">{{ $t('loggingOut') }}</span>
-            <span v-else>{{ $t('logout') }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete Account Confirmation Modal (Apple App Store Requirement) -->
-    <div v-if="showDeleteAccountConfirm" class="modal-overlay" :class="{ 'keyboard-open': isKeyboardOpen }" @click.self="showDeleteAccountConfirm = false; deleteConfirmText = ''">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>{{ $t('deleteAccountTitle') }}</h3>
-        </div>
-        <div class="modal-body">
-          <p class="modal-subtitle">{{ $t('deleteAccountWarningMessage') }}</p>
-          
-          <div class="delete-warning-text">
-            <p><strong>{{ $t('deleteAccountFinal') }}</strong></p>
+    <!-- Logout Confirmation Modal (Teleport: correct centering / safe-area on iOS WKWebView) -->
+    <Teleport to="body">
+      <div v-if="showLogoutConfirm" class="modal-overlay" @click.self="showLogoutConfirm = false">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>{{ $t('confirmLogout') }}</h3>
           </div>
-          
-          <div class="confirmation-input">
-            <label>{{ $t('deleteAccountConfirmPrompt') }}</label>
-            <input 
-              v-model="deleteConfirmText" 
-              type="text" 
-              :placeholder="$t('typeDELETE')"
-              class="confirm-input"
-              @input="deleteConfirmText = deleteConfirmText.toUpperCase()"
-              @focus="isKeyboardOpen = true"
-              @blur="isKeyboardOpen = false"
-            />
+          <div class="modal-body">
+            <p>{{ $t('confirmLogoutMessage') }}</p>
+            <p class="modal-subtitle">{{ $t('logoutSubtitle') }}</p>
+          </div>
+          <div class="modal-actions">
+            <button type="button" @click="showLogoutConfirm = false" class="cancel-btn">{{ $t('cancel') }}</button>
+            <button type="button" @click="handleLogout" class="confirm-btn" :disabled="logoutLoading">
+              <span v-if="logoutLoading">{{ $t('loggingOut') }}</span>
+              <span v-else>{{ $t('logout') }}</span>
+            </button>
           </div>
         </div>
-        <div class="modal-actions">
-          <button @click="showDeleteAccountConfirm = false; deleteConfirmText = ''; isKeyboardOpen = false" class="cancel-btn">
-            {{ $t('cancel') }}
-          </button>
-          <button 
-            @click="handleDeleteAccount" 
-            class="confirm-btn delete-confirm-btn" 
-            :disabled="deleteAccountLoading || deleteConfirmText !== 'DELETE'"
-          >
-            <span v-if="deleteAccountLoading">{{ $t('deleting') }}...</span>
-            <span v-else>{{ $t('deleteMyAccount') }}</span>
-          </button>
+      </div>
+    </Teleport>
+
+    <!-- Delete Account Confirmation Modal — Teleport to body (same iOS centering/safe-area as logout / add unit) -->
+    <Teleport to="body">
+      <div
+        v-if="showDeleteAccountConfirm"
+        class="modal-overlay delete-account-modal-overlay"
+        :class="{ 'keyboard-open': isKeyboardOpen }"
+        @click.self="showDeleteAccountConfirm = false; deleteConfirmText = ''"
+      >
+        <div class="modal-content delete-account-modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>{{ $t('deleteAccountTitle') }}</h3>
+          </div>
+          <div class="modal-body">
+            <p class="modal-subtitle">{{ $t('deleteAccountWarningMessage') }}</p>
+
+            <div class="delete-warning-text">
+              <p><strong>{{ $t('deleteAccountFinal') }}</strong></p>
+            </div>
+
+            <div class="confirmation-input">
+              <label>{{ $t('deleteAccountConfirmPrompt') }}</label>
+              <input
+                v-model="deleteConfirmText"
+                type="text"
+                :placeholder="$t('typeDELETE')"
+                class="confirm-input"
+                @input="deleteConfirmText = deleteConfirmText.toUpperCase()"
+                @focus="isKeyboardOpen = true"
+                @blur="isKeyboardOpen = false"
+              />
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button
+              type="button"
+              @click="showDeleteAccountConfirm = false; deleteConfirmText = ''; isKeyboardOpen = false"
+              class="cancel-btn"
+            >
+              {{ $t('cancel') }}
+            </button>
+            <button
+              type="button"
+              @click="handleDeleteAccount"
+              class="confirm-btn delete-confirm-btn"
+              :disabled="deleteAccountLoading || deleteConfirmText !== 'DELETE'"
+            >
+              <span v-if="deleteAccountLoading">{{ $t('deleting') }}...</span>
+              <span v-else>{{ $t('deleteMyAccount') }}</span>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
 
-    <!-- Add Project Modal -->
-    <div v-if="showAddProjectModal" class="modal-overlay" @click="showAddProjectModal = false">
+    <!-- Add Project Modal (Teleport avoids iOS/WKWebView fixed + flex quirks inside page scroll) -->
+    <Teleport to="body">
+      <div v-if="showAddProjectModal" class="modal-overlay" @click="showAddProjectModal = false">
       <div class="modal-content add-project-modal" @click.stop>
         <div class="modal-header">
           <h3>{{ $t('joinExistingProject') }}</h3>
@@ -1315,7 +1330,8 @@
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </Teleport>
 
     <!-- Smart Mirror Login Modal -->
     <Teleport to="body">
@@ -2815,19 +2831,27 @@ const handleLogout = async () => {
   try {
     logoutLoading.value = true
 
-    // Clear Smart Mirror user context before signing out
     console.log('[Logout] 🚪 Clearing Smart Mirror context before sign out')
-    smartMirrorService.clearPreUserId()
+    try {
+      await smartMirrorService.clearPreUserId()
+    } catch (mirrorErr) {
+      console.warn('[Logout] Smart Mirror cleanup non-fatal:', mirrorErr?.message || mirrorErr)
+    }
 
     await optimizedAuthService.signOut()
 
     notificationStore.showSuccess('Logged out successfully')
 
-    // Redirect to login/register page
-    router.push('/onboarding')
+    // Match ProjectSelection / router guards — sign-in screen, not onboarding carousel
+    await router.replace('/signin')
   } catch (err) {
     console.error('Logout error:', err)
     notificationStore.showError('Failed to logout. Please try again.')
+    try {
+      await router.replace('/signin')
+    } catch {
+      /* ignore */
+    }
   } finally {
     logoutLoading.value = false
     showLogoutConfirm.value = false
@@ -5131,12 +5155,14 @@ watch(showUploadDocumentsModal, (isOpen) => {
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: flex-start; /* Changed from center to flex-start */
+  align-items: center; /* Center card; .keyboard-open overrides for delete-account + keyboard */
   justify-content: center;
   z-index: 9999999 !important; /* Increased to be above bottom nav and top nav - use !important to override any conflicting styles */
   overflow-y: auto; /* Allow scrolling */
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-  padding: 20px 0; /* Add padding for better spacing */
+  box-sizing: border-box;
+  min-height: 100dvh;
+  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px)) 16px;
   /* Ensure modal stays above bottom navigation and top navigation */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
@@ -6067,14 +6093,15 @@ watch(showUploadDocumentsModal, (isOpen) => {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   display: flex;
-  align-items: flex-start; /* Changed from center to flex-start for keyboard support */
+  align-items: center;
   justify-content: center;
   z-index: 9999999; /* Increased to be above bottom nav */
   animation: fadeIn 0.3s ease-out;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  min-height: 100dvh;
   margin: 0;
-  padding: 20px 0; /* Add padding for scrolling */
+  box-sizing: border-box;
+  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px)) 16px;
   overflow-y: auto; /* Allow scrolling */
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   /* Ensure modal stays above bottom navigation */
@@ -7779,11 +7806,18 @@ input:checked+.toggle-slider:before {
   flex-shrink: 0;
 }
 
-/* Delete Account Modal - Matches existing modal style */
+/* Delete Account Modal - keyboard open: keep sheet in view without clipping under notch / home indicator */
 .modal-overlay.keyboard-open {
-  padding-bottom: 0;
   align-items: flex-start;
-  padding-top: 20px;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: max(12px, env(safe-area-inset-top, 0px)) 16px max(12px, env(safe-area-inset-bottom, 0px)) 16px;
+}
+
+.delete-account-modal-content {
+  max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .delete-warning-text {

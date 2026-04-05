@@ -66,15 +66,18 @@ class SmartMirrorService {
   }
 
   // Clear PRE user context (call this when PRE user logs out)
-  clearPreUserId() {
+  // Keep preUserId until after logout() so getStorageKey() removes the correct namespaced key
+  async clearPreUserId() {
     console.log('🚪 Smart Mirror Service: Clearing PRE user context')
     const oldUserId = this.preUserId
-    this.preUserId = null
-    
-    // Logout from Smart Mirror when PRE user logs out
-    this.logout()
-    
-    console.log(`✅ Smart Mirror Service: Cleared context for PRE user: ${oldUserId}`)
+    try {
+      await this.logout()
+    } catch (error) {
+      console.warn('[SmartMirror] logout during clearPreUserId (non-fatal):', error?.message || error)
+    } finally {
+      this.preUserId = null
+      console.log(`✅ Smart Mirror Service: Cleared context for PRE user: ${oldUserId}`)
+    }
   }
 
   // Get localStorage key namespaced by PRE user
@@ -186,8 +189,15 @@ class SmartMirrorService {
           this.cleanup()
         }
       } else {
-        // Logout from all projects
-        await signOut(smartMirrorAuth)
+        // Logout from all projects — must not throw; Capacitor/Firebase can error if never signed in
+        try {
+          await signOut(smartMirrorAuth)
+        } catch (mirrorSignOutErr) {
+          console.warn(
+            '[SmartMirror] signOut skipped or failed (non-fatal for PRE logout):',
+            mirrorSignOutErr?.message || mirrorSignOutErr,
+          )
+        }
         this.currentUser = null
         this.userProfile = null
         this.rooms = []
@@ -196,9 +206,13 @@ class SmartMirrorService {
         this.currentProjectId = null
         this.projectConnections.clear()
         this.cleanup()
-        
+
         // Clear localStorage (use namespaced key)
-        localStorage.removeItem(this.getStorageKey())
+        try {
+          localStorage.removeItem(this.getStorageKey())
+        } catch {
+          /* ignore */
+        }
       }
       
       return { success: true }

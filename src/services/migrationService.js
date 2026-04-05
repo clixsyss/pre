@@ -35,12 +35,11 @@ export async function instantlyConfirmMigratedUser(email, password) {
       // If user already exists, that's okay - Lambda will set password and confirm
       if (createError.code === 'UsernameExistsException' || createError.code === 'auth/email-already-in-use') {
         console.log('[MigrationService] ℹ️ User already exists in Cognito - Lambda will set password and confirm')
-        cognitoUserId = email.trim().toLowerCase()
         userAlreadyExists = true
-        // Extract user ID if available from error
         if (createError.userSub) {
           cognitoUserId = createError.userSub
         }
+        // Do NOT set cognitoUserId to email — DynamoDB authUid must be Cognito `sub` for device-key lookup
       } else {
         console.error('[MigrationService] ❌ Error creating Cognito user:', createError)
         throw createError
@@ -78,18 +77,48 @@ export async function instantlyConfirmMigratedUser(email, password) {
       console.warn('[MigrationService] ⚠️ Lambda returned non-success, but will still attempt sign-in')
     }
     
-    // Step 4: Lambda confirmation complete - account should be ready
-    // We don't try to sign in automatically - user will sign in manually
-    // This avoids timing issues and gives Cognito more time to propagate changes
-    console.log('[MigrationService] ✅ Lambda confirmation called successfully')
+    // Step 4: Resolve Cognito `sub` for DynamoDB authUid (required for device-key / getUserByAuthUid)
+    // Brief sign-in + immediate sign-out — user still completes login on the sign-in screen.
+    try {
+      const signInResult = await optimizedAuthService.signInWithEmailAndPassword(
+        email.trim(),
+        password,
+      )
+      if (signInResult.challenge === 'NEW_PASSWORD_REQUIRED') {
+        console.warn(
+          '[MigrationService] NEW_PASSWORD_REQUIRED after migration — user must complete password on migrate flow; sub not resolved here',
+        )
+      } else if (signInResult.user) {
+        const sub =
+          signInResult.user?.attributes?.sub ||
+          signInResult.user?.cognitoAttributes?.sub
+        if (sub) {
+          cognitoUserId = sub
+          console.log('[MigrationService] ✅ Resolved Cognito sub for DynamoDB authUid:', sub)
+        }
+      }
+    } catch (signInErr) {
+      console.warn(
+        '[MigrationService] Post-migration sign-in for sub resolution failed:',
+        signInErr.message || signInErr,
+      )
+    } finally {
+      try {
+        await optimizedAuthService.signOut()
+      } catch {
+        /* ignore */
+      }
+    }
+
+    console.log('[MigrationService] ✅ Lambda confirmation flow finished')
     console.log('[MigrationService] User can now sign in manually with their new password')
-    
+
     return {
       success: true,
-      cognitoUserId: cognitoUserId,
+      cognitoUserId,
       confirmed: isConfirmed,
-      signedIn: false, // User will sign in manually
-      message: 'Account created and confirmed. Please sign in with your new password.'
+      signedIn: false,
+      message: 'Account created and confirmed. Please sign in with your new password.',
     }
     
   } catch (error) {
