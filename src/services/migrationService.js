@@ -103,11 +103,7 @@ export async function instantlyConfirmMigratedUser(email, password) {
         signInErr.message || signInErr,
       )
     } finally {
-      try {
-        await optimizedAuthService.signOut()
-      } catch {
-        /* ignore */
-      }
+      await optimizedAuthService.signOutAfterMigration()
     }
 
     console.log('[MigrationService] ✅ Lambda confirmation flow finished')

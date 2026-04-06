@@ -647,6 +647,51 @@ class OptimizedAuthService {
   }
 
   /**
+   * End session after migration password completion (completeNewPassword leaves a Cognito session).
+   * Clears app cache first, then revokes Cognito (global sign-out when possible, then local).
+   * Does not throw — callers must still redirect to sign-in even if Cognito network fails.
+   */
+  async signOutAfterMigration() {
+    this.clearCachedUser()
+    try {
+      cacheService.clear()
+    } catch {
+      /* ignore */
+    }
+    const attempts = [
+      () => Auth.signOut({ global: true }),
+      () => Auth.signOut(),
+    ]
+    for (let i = 0; i < attempts.length; i++) {
+      try {
+        await attempts[i]()
+        this.clearCachedUser()
+        try {
+          cacheService.clear()
+        } catch {
+          /* ignore */
+        }
+        console.log('🚀 OptimizedAuthService: Migration sign-out succeeded')
+        return
+      } catch (err) {
+        console.warn(
+          `OptimizedAuthService: Migration sign-out attempt ${i + 1} failed:`,
+          err?.message || err,
+        )
+      }
+    }
+    this.clearCachedUser()
+    try {
+      cacheService.clear()
+    } catch {
+      /* ignore */
+    }
+    console.warn(
+      'OptimizedAuthService: Migration sign-out: local cache cleared; Cognito session may need a fresh sign-in to fully clear.',
+    )
+  }
+
+  /**
    * Initialize notifications for the user (no-op placeholder)
    */
   async initializeNotifications() {

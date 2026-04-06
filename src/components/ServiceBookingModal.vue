@@ -1,6 +1,7 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="closeModal">
-    <div class="modal-content" @click.stop>
+  <teleport to="body">
+    <div v-if="isOpen" class="modal-overlay" @click.self="closeModal">
+      <div class="modal-content" @click.stop>
       <!-- Modal Header -->
       <ModalHeader :title="booking?.serviceName || 'Service Booking'" subtitle="Booking details" @close="closeModal">
         <template #icon>
@@ -143,8 +144,9 @@
           </button> -->
         </div>
       </div>
+      </div>
     </div>
-  </div>
+  </teleport>
 </template>
 
 <script setup>
@@ -411,7 +413,12 @@ onUnmounted(() => {
   justify-content: center;
   z-index: 999999;
   backdrop-filter: blur(4px);
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
+  min-height: 100dvh;
+  overflow-y: auto;
   /* iOS Safari fixes */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
@@ -425,7 +432,7 @@ onUnmounted(() => {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   max-width: 500px;
   width: 100%;
-  max-height: 90vh;
+  max-height: min(90dvh, 900px);
   overflow: hidden;
   animation: modalSlideUp 0.3s ease-out;
 }
@@ -757,7 +764,10 @@ onUnmounted(() => {
 /* Responsive Design */
 @media (max-width: 768px) {
   .modal-overlay {
-    padding: 16px;
+    padding: max(16px, env(safe-area-inset-top))
+      max(16px, env(safe-area-inset-right))
+      max(16px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
   }
   
   .modal-content {
@@ -803,7 +813,10 @@ onUnmounted(() => {
 
 @media (max-width: 480px) {
   .modal-overlay {
-    padding: 12px;
+    padding: max(12px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
   }
   
   .modal-header {

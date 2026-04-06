@@ -299,11 +299,7 @@ const handleMigration = async () => {
         email: formData.email.trim(),
         dynamoUserId: registrationStore.firestoreUserId,
       })
-      try {
-        await optimizedAuthService.signOut()
-      } catch (signOutErr) {
-        console.warn('[MigrateAccount] signOut after password migration:', signOutErr)
-      }
+      await optimizedAuthService.signOutAfterMigration()
     } else if (migrationType === 'MIGRATION_REQUIRED') {
       // Migration flow: Instantly confirm user without email verification
       console.log('[MigrateAccount] Starting instant confirmation for migrated user...')
