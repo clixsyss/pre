@@ -706,7 +706,7 @@ body.keyboard-open.chat-page-active .bottom-navigation {
 .unified-chat {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
   /* Full height minus header and bottom nav */
   background: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -725,7 +725,7 @@ body.keyboard-open.chat-page-active .bottom-navigation {
 body.chat-page-active .unified-chat {
   top: 0 !important;
   bottom: 0 !important;
-  height: 100vh !important;
+  height: 100dvh !important;
 }
 
 /* Adjust for keyboard visibility */
@@ -737,7 +737,7 @@ body.chat-page-active .unified-chat {
 /* When keyboard is visible, ensure proper positioning above keyboard */
 body.keyboard-open .unified-chat {
   bottom: var(--keyboard-height, 0px);
-  height: calc(100vh - 68px - var(--keyboard-height, 0px));
+  height: calc(100dvh - 68px - var(--keyboard-height, 0px));
 }
 
 /* Header Styles */
@@ -867,6 +867,8 @@ body.keyboard-open .unified-chat {
   flex: 1;
   overflow-y: auto;
   padding: 1.5rem;
+  /* Keep a small breathing space above composer */
+  padding-bottom: 16px;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
@@ -1118,8 +1120,8 @@ body.keyboard-open .unified-chat {
   background: white;
   border-top: 1px solid #e5e7eb;
   padding: 1rem 1.5rem;
-  padding-bottom: 30px;
-  position: fixed;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  position: sticky;
   bottom: 0;
   z-index: 9999999 !important;
   width: 100%;
@@ -1432,8 +1434,8 @@ body.keyboard-open .unified-chat {
   height: 48px;
 }
 
-.media-actions /* Mobile app - hover effects disabled */
-/* .action-btn:hover {
+/* Mobile app - hover effects disabled */
+/* .media-actions .action-btn:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: scale(1.05);
 } */
@@ -1471,12 +1473,12 @@ body.keyboard-open .unified-chat {
 
   .messages-container {
     padding: 1rem;
-    padding-bottom: 20px;
+    padding-bottom: 12px;
   }
 
   .message-input-container {
     padding: 0.75rem 1rem;
-    padding-bottom: 30px;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   }
 
   .header-title h2 {
@@ -1532,13 +1534,13 @@ body.keyboard-open .unified-chat {
 
   .messages-container {
     padding: 0.75rem;
-    padding-bottom: 20px;
+    padding-bottom: 10px;
 
   }
 
   .message-input-container {
     padding: 0.5rem 0.75rem;
-    padding-bottom: 30px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
   .message-bubble {

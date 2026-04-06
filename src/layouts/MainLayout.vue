@@ -172,7 +172,10 @@
     </div>
 
     <!-- Main Content with Page Transitions -->
-    <main class="main-content" :class="{ 'keyboard-visible': isKeyboardVisible }">
+    <main
+      class="main-content"
+      :class="{ 'keyboard-visible': isKeyboardVisible, 'chat-route': isChatPage }"
+    >
       <!-- Disable transitions for instant navigation -->
       <slot />
     </main>
@@ -1595,6 +1598,12 @@ body.platform-android .app-header {
 
 /* Adjust main content margin when keyboard is visible on chat pages */
 .main-content.keyboard-visible {
+  margin-bottom: 0;
+}
+
+/* Chat pages manage their own full-screen layout (UnifiedChat) */
+.main-content.chat-route {
+  padding: 0;
   margin-bottom: 0;
 }
 

@@ -27,14 +27,15 @@ onMounted(() => {
 
 <style scoped>
 .support-chat-page {
-  height: 100vh;
+  height: 100dvh;
   background: #f8f9fa;
-  padding: 20px;
+  padding: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {
   .support-chat-page {
-    padding: 10px;
+    padding: 0;
   }
 }
 </style>
