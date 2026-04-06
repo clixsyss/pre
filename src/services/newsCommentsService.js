@@ -383,12 +383,19 @@ class NewsCommentsService {
       };
       
       console.log('💾 Writing reaction data:', reactionData);
-      
-      const result = await firestoreService.addDoc(`projects/${projectId}/news/${newsId}/reactions`, reactionData);
-      
-      console.log('✅ Reaction added successfully:', result);
-      
-      return result;
+
+      // Prefer DynamoDB (source of truth), fallback to Firestore for legacy environments.
+      try {
+        const { addReaction } = await import('./dynamoDBNewsReactionsService');
+        const result = await addReaction(projectId, newsId, reactionData);
+        console.log('✅ Reaction added successfully in DynamoDB:', result);
+        return result;
+      } catch (dynamoError) {
+        console.warn('⚠️ DynamoDB add reaction failed, falling back to Firestore:', dynamoError?.message || dynamoError);
+        const result = await firestoreService.addDoc(`projects/${projectId}/news/${newsId}/reactions`, reactionData);
+        console.log('✅ Reaction added successfully in Firestore fallback:', result);
+        return result;
+      }
     } catch (error) {
       console.error('❌ Error adding news reaction:', error);
       throw error;
@@ -412,6 +419,16 @@ class NewsCommentsService {
       if (!user) throw new Error('User not authenticated');
       
       console.log('👤 Current user:', user.uid);
+
+      // Prefer DynamoDB (source of truth), fallback to Firestore for legacy environments.
+      try {
+        const { removeReaction } = await import('./dynamoDBNewsReactionsService');
+        const deletedCount = await removeReaction(projectId, newsId, user.uid, emoji);
+        console.log('✅ Reaction removed from DynamoDB:', { deletedCount });
+        return;
+      } catch (dynamoError) {
+        console.warn('⚠️ DynamoDB remove reaction failed, falling back to Firestore:', dynamoError?.message || dynamoError);
+      }
       
       // Find and delete the user's reaction with this emoji - SKIP CACHE for real-time accuracy
       const result = await firestoreService.getDocs(`projects/${projectId}/news/${newsId}/reactions`, {
@@ -611,26 +628,32 @@ class NewsCommentsService {
       if (!user) throw new Error('User not authenticated');
       
       console.log('👤 User:', user.uid);
-      
-      // Check if user already has this reaction - SKIP CACHE to avoid stale data
-      const result = await firestoreService.getDocs(`projects/${projectId}/news/${newsId}/reactions`, {
-        filters: [
-          { field: 'userId', operator: '==', value: user.uid },
-          { field: 'emoji', operator: '==', value: emoji }
-        ],
-        skipCache: true // CRITICAL: Must skip cache to get real-time state
-      });
-      
-      const reactions = result.docs || [];
-      
-      console.log('📊 Existing reactions found:', reactions.length);
-      
-      if (reactions.length === 0) {
-        // Add reaction
+
+      // Check current state from DynamoDB first, then fallback to Firestore if needed.
+      let hasReaction = false;
+      try {
+        const { getReactionsByNews } = await import('./dynamoDBNewsReactionsService');
+        const existing = await getReactionsByNews(projectId, newsId, { userId: user.uid, emoji });
+        hasReaction = existing.length > 0;
+        console.log('📊 Existing reactions found in DynamoDB:', existing.length);
+      } catch (dynamoReadError) {
+        console.warn('⚠️ DynamoDB check failed, falling back to Firestore:', dynamoReadError?.message || dynamoReadError);
+        const result = await firestoreService.getDocs(`projects/${projectId}/news/${newsId}/reactions`, {
+          filters: [
+            { field: 'userId', operator: '==', value: user.uid },
+            { field: 'emoji', operator: '==', value: emoji }
+          ],
+          skipCache: true
+        });
+        const reactions = result.docs || [];
+        hasReaction = reactions.length > 0;
+        console.log('📊 Existing reactions found in Firestore fallback:', reactions.length);
+      }
+
+      if (!hasReaction) {
         console.log('➕ No existing reaction, adding new one');
         await this.addNewsReaction(projectId, newsId, emoji);
       } else {
-        // Remove reaction
         console.log('🗑️ Reaction exists, removing it');
         await this.removeNewsReaction(projectId, newsId, emoji);
       }

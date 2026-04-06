@@ -2969,17 +2969,18 @@ const toggleAccordion = (section) => {
 const fetchAvailableProjects = async () => {
   try {
     loadingAvailableProjects.value = true
-    console.log('📊 ProfilePage: Fetching projects with limit...')
-    const { limit } = await import('firebase/firestore')
-    const snapshot = await firestoreService.getDocs('projects', {
-      constraints: [limit(50)]
-    })
-    console.log(`✅ ProfilePage: Fetched ${snapshot.docs.length} projects (limited)`)
+    console.log('📊 ProfilePage: Fetching projects...')
+    const result = await firestoreService.getDocs('projects', { skipCache: true })
+    const docs = result.docs || []
+    console.log(`✅ ProfilePage: Fetched ${docs.length} projects`)
 
-    availableProjects.value = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }))
+    availableProjects.value = docs
+      .map(doc => ({
+        id: doc.id || doc.documentId || doc._id,
+        ...(typeof doc.data === 'function' ? doc.data() : doc)
+      }))
+      .filter(project => !!project.id)
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   } catch (err) {
     console.error('Error fetching available projects:', err)
     notificationStore.showError('Failed to load available projects')
@@ -3420,17 +3421,15 @@ const fetchProfileProjectUsers = async (projectId) => {
       
       console.log('[ProfilePage] ✅ Fetched', profileProjectUsers.value.length, 'users for project via Capacitor')
     } else {
-      // Use Web SDK for web/Android
-      console.log('📊 ProfilePage: Fetching users with limit (Web SDK)...')
-      const { limit } = await import('firebase/firestore')
-      const usersSnapshot = await firestoreService.getDocs('users', {
-        constraints: [limit(1000)]
-      })
-      console.log(`✅ ProfilePage: Fetched ${usersSnapshot.docs.length} users (limited)`)
-      profileProjectUsers.value = usersSnapshot.docs
+      // Use FirestoreService (DynamoDB-backed) for web/Android
+      console.log('📊 ProfilePage: Fetching users for selected project...')
+      const usersResult = await firestoreService.getDocs('users', { skipCache: true })
+      const userDocs = usersResult.docs || []
+      console.log(`✅ ProfilePage: Fetched ${userDocs.length} users`)
+      profileProjectUsers.value = userDocs
         .map(doc => ({
-          id: doc.id,
-          ...doc.data()
+          id: doc.id || doc.documentId || doc._id,
+          ...(typeof doc.data === 'function' ? doc.data() : doc)
         }))
         .filter(user => {
           if (user.projects && Array.isArray(user.projects)) {
@@ -4103,6 +4102,8 @@ watch(showAddProjectModal, (isOpen) => {
   if (isOpen) {
     openModal()
     document.body.classList.add('hide-bottom-nav')
+    // Keep project list fresh and ensure modal dropdown is populated.
+    fetchAvailableProjects()
   } else {
     closeModal()
     document.body.classList.remove('hide-bottom-nav')

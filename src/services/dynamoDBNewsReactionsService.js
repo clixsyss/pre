@@ -12,7 +12,7 @@
  * Note: parentId format is "projectId#newsId" (e.g., "BiHENuiMdDrivwbPccNE#FhLH8hOe0d5Ihjfr4gno")
  */
 
-import { getItem, query } from '../aws/dynamodbClient'
+import { getItem, query, putItem, deleteItem } from '../aws/dynamodbClient'
 
 const TABLE_NAME = 'projects__news__reactions'
 
@@ -252,6 +252,83 @@ export async function getUserReaction(projectId, newsId, userId, emoji = null) {
   }
 }
 
+/**
+ * Add a reaction for a user on a news item
+ * Uses deterministic id to keep one reaction per user+emoji per news.
+ * @param {string} projectId - Project ID
+ * @param {string} newsId - News ID
+ * @param {Object} reaction - Reaction payload
+ * @param {string} reaction.userId - User ID
+ * @param {string} reaction.userName - User display name
+ * @param {string} reaction.emoji - Emoji type
+ * @returns {Promise<Object>} Created reaction item
+ */
+export async function addReaction(projectId, newsId, reaction) {
+  try {
+    if (!projectId || !newsId || !reaction?.userId || !reaction?.emoji) {
+      throw new Error('Missing required fields for addReaction')
+    }
+
+    const parentId = buildParentId(projectId, newsId)
+    const nowIso = new Date().toISOString()
+    const item = {
+      parentId,
+      id: `${reaction.userId}_${reaction.emoji}`,
+      userId: reaction.userId,
+      userName: reaction.userName || 'Anonymous',
+      emoji: reaction.emoji,
+      timestamp: nowIso,
+      createdAt: nowIso
+    }
+
+    await putItem(TABLE_NAME, item)
+    return item
+  } catch (error) {
+    console.error('[DynamoDBNewsReactionsService] ❌ Error adding reaction:', error)
+    throw error
+  }
+}
+
+/**
+ * Remove a user's reaction from a news item.
+ * @param {string} projectId - Project ID
+ * @param {string} newsId - News ID
+ * @param {string} userId - User ID
+ * @param {string} emoji - Emoji type
+ * @returns {Promise<number>} Number of deleted reaction records
+ */
+export async function removeReaction(projectId, newsId, userId, emoji) {
+  try {
+    if (!projectId || !newsId || !userId || !emoji) {
+      throw new Error('Missing required fields for removeReaction')
+    }
+
+    const parentId = buildParentId(projectId, newsId)
+
+    // Delete deterministic key first (new format)
+    try {
+      await deleteItem(TABLE_NAME, { parentId, id: `${userId}_${emoji}` })
+      return 1
+    } catch (deterministicDeleteError) {
+      console.warn('[DynamoDBNewsReactionsService] Deterministic delete failed, trying scan-delete fallback:', deterministicDeleteError?.message || deterministicDeleteError)
+    }
+
+    // Fallback for legacy ids: find and delete all user+emoji reactions
+    const matches = await getReactionsByNews(projectId, newsId, { userId, emoji })
+    if (!matches.length) {
+      return 0
+    }
+
+    await Promise.all(
+      matches.map((reaction) => deleteItem(TABLE_NAME, { parentId, id: reaction.id }))
+    )
+    return matches.length
+  } catch (error) {
+    console.error('[DynamoDBNewsReactionsService] ❌ Error removing reaction:', error)
+    throw error
+  }
+}
+
 // Export default for convenience
 export default {
   getReactionsByNews,
@@ -260,6 +337,8 @@ export default {
   getReactionById,
   getReactionCountByEmoji,
   getUserReaction,
+  addReaction,
+  removeReaction,
   buildParentId,
   parseParentId
 }
