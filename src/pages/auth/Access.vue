@@ -155,7 +155,7 @@
                 </div>
                 <div v-else-if="gatePhase === 'scanning'" class="status-badge connecting">
                   <div class="spinner"></div>
-                  <span>Connecting to the nearest gate...</span>
+                  <span>Connecting to the gate...</span>
                 </div>
                 <div v-else-if="gatePhase === 'error'" class="status-badge disconnected status-badge--error">
                   <svg class="status-badge__icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -164,7 +164,9 @@
                     <circle cx="12" cy="16" r="1.4" fill="currentColor" />
                   </svg>
                   <div class="status-badge__text">
-                    <span class="status-badge__title">Connection issue</span>
+                    <span class="status-badge__title">
+                      {{ statusMessage === 'No suitable gate detected nearby' ? 'No suitable gate detected' : 'Connection issue' }}
+                    </span>
                     <span class="status-badge__subtitle" v-if="bleErrorDetail === 'off'">
                       Bluetooth is off - enable it in Settings to open the gate.
                     </span>
@@ -182,90 +184,9 @@
                   </svg>
                   <span>Ready</span>
                 </div>
-
-                <div v-if="deviceName" class="device-info">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <rect
-                      x="5"
-                      y="2"
-                      width="14"
-                      height="20"
-                      rx="2"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <line
-                      x1="12"
-                      y1="18"
-                      x2="12"
-                      y2="18"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                  </svg>
-                  <span>{{ deviceName }}</span>
-                </div>
-
-                <div v-if="lastConnectedDevice && !isConnected" class="last-device">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-                    <polyline
-                      points="12 6 12 12 16 14"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                  </svg>
-                  <span
-                    >{{ $t('lastDevice') || 'Last device' }}: {{ lastConnectedDevice.name }}</span
-                  >
-                </div>
-              </div>
-
-              <!-- BLE Not Supported Warning -->
-              <div v-if="!isBLESupported && bleChecked" class="warning-banner">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <line
-                    x1="12"
-                    y1="9"
-                    x2="12"
-                    y2="13"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                  <line
-                    x1="12"
-                    y1="17"
-                    x2="12"
-                    y2="17"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                </svg>
-                <div class="warning-content">
-                  <strong>{{ $t('bleNotSupported') || 'Bluetooth Not Supported' }}</strong>
-                  <p>
-                    {{
-                      bleSupportError ||
-                      $t('bleNotSupportedDesc') ||
-                      'Your device or browser does not support Bluetooth Low Energy.'
-                    }}
-                  </p>
-                </div>
               </div>
             </div>
 
-            <!-- One-tap BLE flow: actions are handled by tapping the status card -->
           </div>
         </div>
 
@@ -706,6 +627,10 @@ import firestoreService from '../../services/firestoreService'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import { useNotificationStore } from '../../stores/notifications'
 import { useProjectStore } from '../../stores/projectStore'
+import {
+  getGateByKey,
+  getGateSystemForProject,
+} from '../../constants/gateConfig'
 
 defineOptions({
   name: 'AccessPage',
@@ -725,19 +650,13 @@ const { openModal, closeModal } = useModalState()
 // Tab state
 const activeTab = ref('ble')
 
-// BLE Configuration
-const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0'
-const CHARACTERISTIC_UUID = 'abcdefab-cdef-1234-5678-abcdefabcdef'
-const GATE_PASSWORD = 'OPEN123'
-
 // Use bluetooth composable
 const {
   isConnected,
-  isBLESupported,
-  deviceName,
-  lastError: bleSupportError,
   checkBLESupport,
   connect,
+  scanAndConnectNearest,
+  read,
   write,
   disconnect,
 } = useBluetooth()
@@ -751,9 +670,13 @@ const autoConnecting = ref(false)
 const lastConnectedDevice = ref(null)
 const gatePhase = ref('ready')
 const bleErrorDetail = ref('')
+const activeGateKey = ref('main')
 
 let phaseTimer = null
 let resetTimer = null
+
+const ACCESS_GRANTED = 'ACCESS_GRANTED'
+const ACCESS_DENIED = 'ACCESS_DENIED'
 
 const clearGateTimers = () => {
   if (phaseTimer) {
@@ -769,6 +692,17 @@ const clearGateTimers = () => {
 const isSessionActive = computed(() => {
   return gatePhase.value === 'broadcasting' || gatePhase.value === 'scanning'
 })
+
+const currentProjectId = computed(() => projectStore.selectedProject?.id || null)
+const currentGateSystem = computed(() => getGateSystemForProject(currentProjectId.value))
+const activeGate = computed(() => getGateByKey(currentProjectId.value, activeGateKey.value))
+const currentServiceUUID = computed(() => currentGateSystem.value.serviceUUID)
+const currentCharacteristicUUID = computed(() => currentGateSystem.value.characteristicUUID)
+const currentGatePassword = computed(() => currentGateSystem.value.password)
+const currentGateBleName = computed(() => activeGate.value?.bleName || null)
+const currentGateDeviceNames = computed(() => currentGateSystem.value.deviceNames || [])
+const currentGateScanDurationMs = computed(() => currentGateSystem.value.scanDurationMs || 3000)
+const currentGateVeryCloseRssiMin = computed(() => currentGateSystem.value.veryCloseRssiMin ?? -55)
 
 // Passes state
 const passes = ref([])
@@ -882,39 +816,62 @@ const loadImage = (src) =>
 /**
  * BLE Functions
  */
-const handleConnect = async () => {
+const handleConnect = async (gateKey = activeGateKey.value) => {
   try {
     console.log('🔵 Starting BLE connection...')
     statusMessage.value = ''
     bleErrorDetail.value = ''
-    gatePhase.value = 'broadcasting'
+    activeGateKey.value = gateKey
+    if (gatePhase.value !== 'broadcasting') {
+      gatePhase.value = currentGateSystem.value.fastMode ? 'scanning' : 'broadcasting'
+    }
 
-    const success = await connect(SERVICE_UUID)
+    const success = currentGateSystem.value.fastMode
+      ? (await scanAndConnectNearest(currentServiceUUID.value, {
+          deviceNames: currentGateDeviceNames.value,
+          timeoutMs: currentGateScanDurationMs.value,
+          minRssi: currentGateVeryCloseRssiMin.value,
+          scanMode: 2,
+        })).success
+      : await connect(currentServiceUUID.value, {
+          name: currentGateBleName.value,
+          scanMode: undefined,
+        })
 
     if (success) {
       lastConnectedDevice.value = {
-        name: deviceName.value,
-        serviceUUID: SERVICE_UUID,
+        name: 'gate',
+        serviceUUID: currentServiceUUID.value,
+        gateKey: activeGateKey.value,
         timestamp: Date.now(),
       }
       localStorage.setItem('lastGateDevice', JSON.stringify(lastConnectedDevice.value))
 
-      statusMessage.value = t('successfullyConnected') || 'Successfully connected to gate device'
+      statusMessage.value = currentGateSystem.value.fastMode
+        ? 'Gate opened'
+        : t('successfullyConnected') || 'Successfully connected to gate device'
       statusMessageType.value = 'success'
       gatePhase.value = 'confirmed'
 
       setTimeout(() => {
-        if (statusMessage.value === (t('successfullyConnected') || 'Successfully connected to gate device')) {
+        if (
+          statusMessage.value === (t('successfullyConnected') || 'Successfully connected to gate device') ||
+          statusMessage.value === 'Gate opened'
+        ) {
           statusMessage.value = ''
         }
         if (gatePhase.value === 'confirmed') {
           gatePhase.value = 'ready'
         }
-      }, 3000)
+      }, 1800)
+      return true
     } else {
-      statusMessage.value = t('failedToConnect') || 'Failed to connect. Please try again.'
+      statusMessage.value = currentGateSystem.value.fastMode
+        ? 'No suitable gate detected nearby'
+        : t('failedToConnect') || 'Failed to connect. Please try again.'
       statusMessageType.value = 'error'
       gatePhase.value = 'error'
+      return false
     }
   } catch (error) {
     console.error('❌ Connection error:', error)
@@ -924,47 +881,96 @@ const handleConnect = async () => {
     if (msg.includes('off') || msg.includes('disabled')) bleErrorDetail.value = 'off'
     if (msg.includes('permission') || msg.includes('unauthorized') || msg.includes('denied')) bleErrorDetail.value = 'unauthorized'
     gatePhase.value = 'error'
+    return false
   }
 }
 
-const startGateSession = async () => {
+const sendOpenCommand = async () => {
+  const writeSuccess = await write(
+    currentServiceUUID.value,
+    currentCharacteristicUUID.value,
+    currentGatePassword.value
+  )
+
+  if (!writeSuccess) {
+    return { ok: false, response: '' }
+  }
+
+  await new Promise((resolve) => {
+    window.setTimeout(resolve, 250)
+  })
+
+  const response = (await read(
+    currentServiceUUID.value,
+    currentCharacteristicUUID.value
+  )).trim()
+
+  return {
+    ok: response === ACCESS_GRANTED || response === 'OK',
+    response,
+  }
+}
+
+const startGateSession = async (gateKey = activeGateKey.value) => {
   if (isSessionActive.value) return
   clearGateTimers()
   bleErrorDetail.value = ''
   statusMessage.value = ''
   statusMessageType.value = ''
+  activeGateKey.value = gateKey
   gatePhase.value = 'broadcasting'
-
-  // Match JDAR UX: searching phase first, then connecting phase.
   phaseTimer = setTimeout(() => {
     if (gatePhase.value === 'broadcasting') {
       gatePhase.value = 'scanning'
     }
-  }, 2000)
+  }, 900)
 
   if (isConnected.value) {
     await handleOpenGate()
     return
   }
-  if (lastConnectedDevice.value) {
-    await quickOpenGate()
+  if (lastConnectedDevice.value && lastConnectedDevice.value.gateKey === activeGateKey.value) {
+    await quickOpenGate(activeGateKey.value)
     return
   }
-  await handleConnect()
+  const connected = await handleConnect(activeGateKey.value)
+  if (connected && currentGateSystem.value.fastMode) {
+    await handleOpenGate()
+  }
 }
 
-const quickOpenGate = async () => {
+const quickOpenGate = async (gateKey = activeGateKey.value) => {
   try {
     autoConnecting.value = true
-    statusMessage.value = t('connectingToGate') || 'Connecting to gate...'
+    activeGateKey.value = gateKey
+    statusMessage.value = currentGateSystem.value.fastMode
+      ? 'Searching for nearby gates...'
+      : t('connectingToGate') || 'Connecting to gate...'
     statusMessageType.value = 'info'
-    gatePhase.value = 'scanning'
+    gatePhase.value = 'broadcasting'
 
-    const connected = await connect(SERVICE_UUID)
+    phaseTimer = setTimeout(() => {
+      if (gatePhase.value === 'broadcasting') {
+        gatePhase.value = 'scanning'
+      }
+    }, 900)
+
+    const connected = currentGateSystem.value.fastMode
+      ? (await scanAndConnectNearest(currentServiceUUID.value, {
+          deviceNames: currentGateDeviceNames.value,
+          timeoutMs: currentGateScanDurationMs.value,
+          minRssi: currentGateVeryCloseRssiMin.value,
+          scanMode: 2,
+        })).success
+      : await connect(currentServiceUUID.value, {
+          name: currentGateBleName.value,
+        })
 
     if (!connected) {
       autoConnecting.value = false
-      statusMessage.value = t('failedToConnect') || 'Failed to connect. Please try again.'
+      statusMessage.value = currentGateSystem.value.fastMode
+        ? 'No suitable gate detected nearby'
+        : t('failedToConnect') || 'Failed to connect. Please try again.'
       statusMessageType.value = 'error'
       gatePhase.value = 'no_confirmation'
       resetTimer = setTimeout(() => {
@@ -975,11 +981,11 @@ const quickOpenGate = async () => {
     }
 
     isOpening.value = true
-    statusMessage.value = t('openingGate') || 'Opening gate...'
+    statusMessage.value = 'Opening gate...'
 
-    const success = await write(SERVICE_UUID, CHARACTERISTIC_UUID, GATE_PASSWORD)
+    const { ok, response } = await sendOpenCommand()
 
-    if (success) {
+    if (ok) {
       statusMessage.value = t('gateOpenedSuccessfully') || 'Gate opened successfully! 🎉'
       statusMessageType.value = 'success'
       gatePhase.value = 'confirmed'
@@ -990,7 +996,9 @@ const quickOpenGate = async () => {
         gatePhase.value = 'ready'
       }, 3000)
     } else {
-      statusMessage.value = t('failedToOpenGate') || 'Failed to open gate. Please try again.'
+      statusMessage.value = response === ACCESS_DENIED
+        ? 'Access denied'
+        : t('failedToOpenGate') || 'Failed to open gate. Please try again.'
       statusMessageType.value = 'error'
       gatePhase.value = 'error'
     }
@@ -1014,9 +1022,9 @@ const handleOpenGate = async () => {
     statusMessage.value = ''
     gatePhase.value = 'scanning'
 
-    const success = await write(SERVICE_UUID, CHARACTERISTIC_UUID, GATE_PASSWORD)
+    const { ok, response } = await sendOpenCommand()
 
-    if (success) {
+    if (ok) {
       statusMessage.value = t('gateOpenedSuccessfully') || 'Gate opened successfully! 🎉'
       statusMessageType.value = 'success'
       gatePhase.value = 'confirmed'
@@ -1028,7 +1036,9 @@ const handleOpenGate = async () => {
         gatePhase.value = 'ready'
       }, 5000)
     } else {
-      statusMessage.value = t('failedToOpenGate') || 'Failed to open gate. Please try again.'
+      statusMessage.value = response === ACCESS_DENIED
+        ? 'Access denied'
+        : t('failedToOpenGate') || 'Failed to open gate. Please try again.'
       statusMessageType.value = 'error'
       gatePhase.value = 'error'
     }
@@ -2283,6 +2293,8 @@ watch(
   () => projectStore.selectedProject?.id,
   () => {
     displayedPassesCount.value = 5 // Reset to 5 when switching projects
+    activeGateKey.value = getGateSystemForProject(currentProjectId.value).gates[0]?.key || 'main'
+    lastConnectedDevice.value = null
   }
 )
 

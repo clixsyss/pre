@@ -147,8 +147,8 @@
                 <p><strong>{{ $t('bleSupported') }}:</strong> {{ isBLESupported }}</p>
                 <p><strong>{{ $t('connected') }}:</strong> {{ isConnected }}</p>
                 <p><strong>{{ $t('device') }}:</strong> {{ deviceName || $t('none') }}</p>
-                <p><strong>{{ $t('serviceUuid') }}:</strong> {{ SERVICE_UUID }}</p>
-                <p><strong>{{ $t('characteristicUuid') }}:</strong> {{ CHARACTERISTIC_UUID }}</p>
+                <p><strong>{{ $t('serviceUuid') }}:</strong> {{ serviceUUID }}</p>
+                <p><strong>{{ $t('characteristicUuid') }}:</strong> {{ characteristicUUID }}</p>
                 <p><strong>{{ $t('lastError') }}:</strong> {{ lastError || $t('none') }}</p>
               </div>
             </q-card-section>
@@ -163,17 +163,18 @@
 import { ref, onMounted, computed } from 'vue'
 import { Capacitor } from '@capacitor/core'
 import { useBluetooth } from '../../composables/useBluetooth'
+import { useProjectStore } from '../../stores/projectStore'
+import {
+  getGateByKey,
+  getGateSystemForProject,
+} from '../../constants/gateConfig'
 
 // Component name for ESLint
 defineOptions({
   name: 'GateControlPage',
 })
 
-// BLE Configuration
-// These UUIDs should match your ESP32 BLE server configuration
-const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0'
-const CHARACTERISTIC_UUID = 'abcdefab-cdef-1234-5678-abcdefabcdef'
-const GATE_PASSWORD = 'OPEN123' // The password/command to send to the gate
+const projectStore = useProjectStore()
 
 // Use the bluetooth composable
 const {
@@ -194,23 +195,35 @@ const statusMessage = ref('')
 const statusMessageType = ref('') // 'success' or 'error'
 const bleChecked = ref(false)
 const showDebug = ref(false) // Set to true to show debug info
+const activeGateKey = ref('main')
 
 // Platform info
 const platform = computed(() => {
   return Capacitor.isNativePlatform() ? Capacitor.getPlatform() : 'web'
 })
 
+const currentProjectId = computed(() => projectStore.selectedProject?.id || null)
+const gateSystem = computed(() => getGateSystemForProject(currentProjectId.value))
+const activeGate = computed(() => getGateByKey(currentProjectId.value, activeGateKey.value))
+const serviceUUID = computed(() => gateSystem.value.serviceUUID)
+const characteristicUUID = computed(() => gateSystem.value.characteristicUUID)
+const gatePassword = computed(() => gateSystem.value.password)
+
 /**
  * Step 1: Connect to the BLE gate device
  * Scans for nearby BLE devices and connects to the one selected by the user
  */
-const handleConnect = async () => {
+const handleConnect = async (gateKey = activeGateKey.value) => {
   try {
     console.log('🔵 Starting BLE connection process...')
     statusMessage.value = ''
+    activeGateKey.value = gateKey
 
     // Connect to device with the specified service UUID
-    const success = await connect(SERVICE_UUID)
+    const success = await connect(serviceUUID.value, {
+      name: activeGate.value?.bleName || undefined,
+      scanMode: gateSystem.value.fastMode ? 2 : undefined,
+    })
 
     if (success) {
       console.log('✅ Successfully connected to gate device')
@@ -223,15 +236,21 @@ const handleConnect = async () => {
           statusMessage.value = ''
         }
       }, 3000)
+      if (gateSystem.value.fastMode) {
+        await handleOpenGate()
+      }
+      return true
     } else {
       console.log('❌ Failed to connect to gate device')
       statusMessage.value = 'Failed to connect. Please try again.'
       statusMessageType.value = 'error'
+      return false
     }
   } catch (error) {
     console.error('❌ Connection error:', error)
     statusMessage.value = error.message || 'Connection failed'
     statusMessageType.value = 'error'
+    return false
   }
 }
 
@@ -255,10 +274,10 @@ const handleOpenGate = async () => {
     statusMessage.value = ''
 
     console.log('🚪 Sending open gate command...')
-    console.log('📝 Command:', GATE_PASSWORD)
+    console.log('📝 Command:', gatePassword.value)
 
     // Write the password to the characteristic
-    const success = await write(SERVICE_UUID, CHARACTERISTIC_UUID, GATE_PASSWORD)
+    const success = await write(serviceUUID.value, characteristicUUID.value, gatePassword.value)
 
     if (success) {
       console.log('✅ Gate command sent successfully')
