@@ -365,6 +365,7 @@ export default {
   // Gate Passes
   generateNewPass: 'إنشاء تصريح جديد',
   generateQRCodeForGate: 'إنشاء رمز QR للدخول إلى البوابة',
+  shareQrImage: 'مشاركة صورة QR',
   guestName: 'اسم الضيف',
   enterGuestFullName: 'أدخل الاسم الكامل للضيف',
   purpose: 'الغرض من الزيارة',

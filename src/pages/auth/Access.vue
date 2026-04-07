@@ -471,7 +471,7 @@
             <!-- Generate Pass Button -->
             <button
               class="generate-pass-button"
-              :disabled="currentMonthPassCount >= passLimits.monthlyLimit || userBlockingStatus.isBlocked"
+              :disabled="isGeneratePassDisabled || userBlockingStatus.isBlocked"
               @click="showGenerateDialog = true"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -496,9 +496,7 @@
                 />
               </svg>
               <span
-                >{{ $t('generatePass') || 'Generate Pass' }} ({{ currentMonthPassCount }}/{{
-                  passLimits.monthlyLimit
-                }})</span
+                >{{ $t('generatePass') || 'Generate Pass' }}{{ passLimits.dailyLimit !== null && passLimits.dailyLimit !== undefined ? ` (${passLimits.usedToday || 0}/${passLimits.dailyLimit} • Left ${passLimits.dailyRemainingQuota !== null && passLimits.dailyRemainingQuota !== undefined ? passLimits.dailyRemainingQuota : Math.max(0, passLimits.dailyLimit - (passLimits.usedToday || 0))})` : '' }}</span
               >
             </button>
 
@@ -606,7 +604,7 @@
                       <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
                       <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
                     </svg>
-                    Share
+                    {{ $t('shareQrImage') || 'Share QR Image' }}
                     </template>
                   </button>
 
@@ -673,90 +671,146 @@
     </div>
 
     <!-- Generate Pass Modal - Professional Design -->
-    <transition name="modal">
-      <div v-if="showGenerateDialog" class="modal-overlay" @click="showGenerateDialog = false">
-        <div class="modal-container-pro" @click.stop>
-          <!-- Modal Header -->
-          <div class="modal-header-pro">
-            <div class="modal-header-content">
-              <div class="modal-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="2" rx="2"/>
-                  <rect x="5" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
-                  <rect x="13" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
-                  <rect x="5" y="13" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
-                </svg>
+    <Teleport to="body">
+      <transition name="modal">
+        <div v-if="showGenerateDialog" class="modal-overlay" @click.self="showGenerateDialog = false">
+          <div class="modal-container-pro" @click.stop>
+            <!-- Modal Header -->
+            <div class="modal-header-pro">
+              <div class="modal-header-content">
+                <div class="modal-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="2" rx="2"/>
+                    <rect x="5" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
+                    <rect x="13" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
+                    <rect x="5" y="13" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="modal-title-pro">{{ $t('generateNewPass') || 'New Guest Pass' }}</h2>
+                  <p class="modal-subtitle-pro">{{ $t('generateQRCodeForGate') || 'Generate QR code for gate access' }}</p>
+                </div>
               </div>
-              <div>
-                <h2 class="modal-title-pro">{{ $t('generateNewPass') || 'New Guest Pass' }}</h2>
-                <p class="modal-subtitle-pro">{{ $t('generateQRCodeForGate') || 'Generate QR code for gate access' }}</p>
+              <button class="modal-close-pro" @click="showGenerateDialog = false">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body-pro">
+              <div class="form-group-pro">
+                <label class="form-label-pro">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  <span>{{ $t('guestName') || 'Guest Name' }}</span>
+                  <span class="required-star">*</span>
+                </label>
+                <input
+                  v-model="newPass.guestName"
+                  type="text"
+                  class="form-input-pro"
+                  :placeholder="$t('enterGuestFullName') || 'Enter guest\'s full name'"
+                  required
+                />
+              </div>
+
+              <!-- Location Permission Info -->
+              <div v-if="locationRestriction.active" class="info-box-pro" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-color: #fecaca;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <p style="color: #7f1d1d;">
+                  <strong>{{ $t('locationVerificationRequired') || 'Location verification required.' }}</strong><br/>
+                  {{ $t('mustBeWithinProjectPremises') || 'You must be within the project premises. The app will request location access when you generate the pass.' }}
+                </p>
               </div>
             </div>
-            <button class="modal-close-pro" @click="showGenerateDialog = false">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </button>
-          </div>
 
-          <!-- Modal Body -->
-          <div class="modal-body-pro">
-            <div class="form-group-pro">
-              <label class="form-label-pro">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+            <!-- Modal Footer -->
+            <div class="modal-footer-pro">
+              <button class="modal-btn-cancel" @click="showGenerateDialog = false" :disabled="isValidatingLocation">
+                {{ $t('cancel') || 'Cancel' }}
+              </button>
+              <button
+                class="modal-btn-generate"
+                :disabled="!newPass.guestName || isValidatingLocation || isGeneratingPass"
+                @click="generatePass"
+              >
+                <div v-if="isValidatingLocation || isGeneratingPass" class="button-spinner"></div>
+                <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
                 </svg>
-                <span>{{ $t('guestName') || 'Guest Name' }}</span>
-                <span class="required-star">*</span>
-              </label>
-              <input
-                v-model="newPass.guestName"
-                type="text"
-                class="form-input-pro"
-                :placeholder="$t('enterGuestFullName') || 'Enter guest\'s full name'"
-                required
-              />
+                <span>{{ isValidatingLocation ? ($t('checkingLocation') || 'Checking Location...') : ($t('generateAndShare') || 'Generate & Share') }}</span>
+              </button>
             </div>
-
-            <!-- Location Permission Info -->
-            <div v-if="locationRestriction.active" class="info-box-pro" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-color: #fecaca;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2"/>
-                <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
-              </svg>
-              <p style="color: #7f1d1d;">
-                <strong>{{ $t('locationVerificationRequired') || 'Location verification required.' }}</strong><br/>
-                {{ $t('mustBeWithinProjectPremises') || 'You must be within the project premises. The app will request location access when you generate the pass.' }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Modal Footer -->
-          <div class="modal-footer-pro">
-            <button class="modal-btn-cancel" @click="showGenerateDialog = false" :disabled="isValidatingLocation">
-              {{ $t('cancel') || 'Cancel' }}
-            </button>
-            <button
-              class="modal-btn-generate"
-              :disabled="!newPass.guestName || isValidatingLocation || isGeneratingPass"
-              @click="generatePass"
-            >
-              <div v-if="isValidatingLocation || isGeneratingPass" class="button-spinner"></div>
-              <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
-                <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
-              </svg>
-              <span>{{ isValidatingLocation ? ($t('checkingLocation') || 'Checking Location...') : ($t('generateAndShare') || 'Generate & Share') }}</span>
-            </button>
           </div>
         </div>
-      </div>
-    </transition>
+      </transition>
+    </Teleport>
+
+    <!-- Generated Pass Preview Modal -->
+    <Teleport to="body">
+      <transition name="modal">
+        <div v-if="showGeneratedPassPreview && generatedPassPreview" class="modal-overlay" @click.self="closeGeneratedPassPreview">
+          <div class="modal-container-pro preview-modal-container" @click.stop>
+            <div class="modal-header-pro">
+              <div class="modal-header-content">
+                <div class="modal-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="2" rx="2"/>
+                    <rect x="5" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
+                    <rect x="13" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
+                    <rect x="5" y="13" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="modal-title-pro">Pass Created</h2>
+                  <p class="modal-subtitle-pro">Preview and share guest QR image</p>
+                </div>
+              </div>
+              <button class="modal-close-pro" @click="closeGeneratedPassPreview">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+            <div class="modal-body-pro preview-modal-body">
+              <img
+                v-if="generatedPassPreviewImage"
+                :src="generatedPassPreviewImage"
+                alt="Guest pass QR preview"
+                class="generated-pass-preview-image"
+              />
+              <div v-else class="preview-image-fallback">Preview unavailable</div>
+            </div>
+            <div class="modal-footer-pro">
+              <button class="modal-btn-cancel" @click="closeGeneratedPassPreview">Close</button>
+              <button class="modal-btn-generate" @click="shareGeneratedPass">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <span>{{ $t('shareQrImage') || 'Share QR Image' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </Teleport>
 
     <!-- Floating Quick Action -->
     <transition name="fab">
@@ -795,6 +849,7 @@ import { useBluetooth } from '../../composables/useBluetooth'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useModalState } from '../../composables/useModalState'
 import QRCode from 'qrcode'
+import appLogo from '../../assets/logo.png'
 import PageHeader from '../../components/PageHeader.vue'
 import sharingService from '../../services/whatsappService'
 import { createGuestPass, markPassAsSent, checkUserEligibility, getGuestPassesForUnit, getUserStatus } from '../../api/guestPassAPI'
@@ -850,12 +905,23 @@ const lastConnectedDevice = ref(null)
 // Passes state
 const passes = ref([])
 const showGenerateDialog = ref(false)
+const showGeneratedPassPreview = ref(false)
+const generatedPassPreview = ref(null)
+const generatedPassPreviewImage = ref('')
 const isValidatingLocation = ref(false)
 const isGeneratingPass = ref(false)
 const displayedPassesCount = ref(5) // Show 5 passes initially
 
 // Watch for modal state to hide bottom navigation
 watch(showGenerateDialog, (isOpen) => {
+  if (isOpen) {
+    openModal()
+  } else {
+    closeModal()
+  }
+})
+
+watch(showGeneratedPassPreview, (isOpen) => {
   if (isOpen) {
     openModal()
   } else {
@@ -885,9 +951,12 @@ const locationRestriction = ref({
 
 // Pass limits (per-unit, shared by all family members)
 const passLimits = ref({
-  monthlyLimit: 30,
+  monthlyLimit: null,
   usedThisMonth: 0,
-  remainingQuota: 30,
+  remainingQuota: null,
+  dailyLimit: null,
+  usedToday: 0,
+  dailyRemainingQuota: null,
 })
 
 // Computed: Filter passes by current project
@@ -919,11 +988,28 @@ const currentMonthPassCount = computed(() => {
   return passLimits.value.usedThisMonth || 0
 })
 
+const isGeneratePassDisabled = computed(() => {
+  const hasMonthlyLimit = passLimits.value.monthlyLimit !== null && passLimits.value.monthlyLimit !== undefined
+  const monthlyReached = hasMonthlyLimit && (passLimits.value.usedThisMonth || 0) >= passLimits.value.monthlyLimit
+  const hasDailyLimit = passLimits.value.dailyLimit !== null && passLimits.value.dailyLimit !== undefined
+  const dailyReached = hasDailyLimit && (passLimits.value.usedToday || 0) >= passLimits.value.dailyLimit
+  return monthlyReached || dailyReached
+})
+
 // User unit information
 const userUnitInfo = ref('')
 
 // QR refs
 const qrRefs = new Map()
+let logoImagePromise = null
+
+const loadImage = (src) =>
+  new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = src
+  })
 
 /**
  * BLE Functions
@@ -1112,9 +1198,12 @@ const loadPassesFromFirebase = async () => {
       console.log('👤 No user or project, skipping pass load')
       passes.value = []
       passLimits.value = {
-        monthlyLimit: 30,
+        monthlyLimit: null,
         usedThisMonth: 0,
-        remainingQuota: 30,
+        remainingQuota: null,
+        dailyLimit: null,
+        usedToday: 0,
+        dailyRemainingQuota: null,
       }
       return
     }
@@ -1285,6 +1374,9 @@ const loadPassesFromFirebase = async () => {
       monthlyLimit: monthlyLimit,
       usedThisMonth: usedThisMonth,
       remainingQuota: Math.max(0, monthlyLimit - usedThisMonth),
+      dailyLimit: null,
+      usedToday: 0,
+      dailyRemainingQuota: null,
     }
     
     console.log('✅ Pass limits set:', passLimits.value)
@@ -1317,6 +1409,7 @@ const loadPassesFromFirebase = async () => {
         id: docId,
         projectId: projectId,
         userName: docData.userName || 'Unknown User',
+        unit: docData.unit || '',
         guestName: docData.guestName || 'Unknown Guest',
         purpose: docData.purpose || 'Guest Visit',
         validUntil: convertTimestamp(docData.validUntil),
@@ -1326,6 +1419,7 @@ const loadPassesFromFirebase = async () => {
         firebaseRef: docId,
         qrCodeUrl: docData.qrCodeUrl || null,
         cardId: docData.cardId || null,
+        verificationToken: docData.verificationToken || null,
         used: docData.used || false,
         usedAt: convertTimestamp(docData.usedAt),
       }
@@ -1370,6 +1464,9 @@ const loadPassesFromAWS = async () => {
         monthlyLimit: 30,
         usedThisMonth: 0,
         remainingQuota: 30,
+        dailyLimit: null,
+        usedToday: 0,
+        dailyRemainingQuota: null,
       }
       return
     }
@@ -1397,9 +1494,12 @@ const loadPassesFromAWS = async () => {
 
     // Update limits
     passLimits.value = {
-      monthlyLimit: userStatus.data?.monthlyLimit || 30,
+      monthlyLimit: userStatus.data?.monthlyLimit ?? null,
       usedThisMonth: userStatus.data?.usedThisMonth || 0,
-      remainingQuota: userStatus.data?.remainingQuota || 30,
+      remainingQuota: userStatus.data?.remainingQuota ?? null,
+      dailyLimit: userStatus.data?.dailyLimit ?? null,
+      usedToday: userStatus.data?.usedToday || 0,
+      dailyRemainingQuota: userStatus.data?.dailyRemainingQuota ?? null,
     }
 
     console.log('✅ Pass limits set:', passLimits.value)
@@ -1415,6 +1515,7 @@ const loadPassesFromAWS = async () => {
       id: pass.id,
       projectId: pass.projectId,
       userName: pass.userName,
+      unit: pass.unit || '',
       guestName: pass.guestName,
       purpose: pass.purpose,
       validUntil: pass.validUntil,
@@ -1424,6 +1525,7 @@ const loadPassesFromAWS = async () => {
       firebaseRef: pass.id,
       qrCodeUrl: pass.qrCodeUrl,
       cardId: pass.cardId || null,
+      verificationToken: pass.verificationToken || null,
       used: pass.used || false,
       usedAt: pass.usedAt,
     }))
@@ -1445,9 +1547,12 @@ const loadPassesFromAWS = async () => {
     console.error('❌ Error loading passes from AWS:', error)
     passes.value = []
     passLimits.value = {
-      monthlyLimit: 30,
+      monthlyLimit: null,
       usedThisMonth: 0,
-      remainingQuota: 30,
+      remainingQuota: null,
+      dailyLimit: null,
+      usedToday: 0,
+      dailyRemainingQuota: null,
     }
   }
 }
@@ -1607,10 +1712,26 @@ const generatePass = async () => {
       return
     }
 
-    // Check if user has reached their limit
-    if (currentMonthPassCount.value >= passLimits.value.monthlyLimit) {
+    // Check if user has reached their monthly limit
+    if (
+      passLimits.value.monthlyLimit !== null &&
+      passLimits.value.monthlyLimit !== undefined &&
+      currentMonthPassCount.value >= passLimits.value.monthlyLimit
+    ) {
       notificationStore.showWarning(
         `You have reached your monthly limit of ${passLimits.value.monthlyLimit} passes.`,
+      )
+      isGeneratingPass.value = false
+      return
+    }
+    // Check daily limit when configured
+    if (
+      passLimits.value.dailyLimit !== null &&
+      passLimits.value.dailyLimit !== undefined &&
+      (passLimits.value.usedToday || 0) >= passLimits.value.dailyLimit
+    ) {
+      notificationStore.showWarning(
+        `You have reached your daily limit of ${passLimits.value.dailyLimit} passes.`,
       )
       isGeneratingPass.value = false
       return
@@ -1737,6 +1858,7 @@ const generatePass = async () => {
       id: result.passId,
       projectId: projectId,
       userName: userName,
+      unit: result.data.unit || getUserUnitInfo() || '',
       guestName: sanitizedGuestName,
       purpose: sanitizedPurpose,
       validUntil: result.data.validUntil,
@@ -1746,6 +1868,7 @@ const generatePass = async () => {
       firebaseRef: result.passRef,
       qrCodeUrl: result.qrCodeUrl,
       cardId: result.data.cardId || null,
+      verificationToken: result.data.verificationToken || null,
       used: false,
       usedAt: null,
     }
@@ -1761,6 +1884,10 @@ const generatePass = async () => {
     // Update limits locally for immediate feedback
     passLimits.value.usedThisMonth = (passLimits.value.usedThisMonth || 0) + 1
     passLimits.value.remainingQuota = Math.max(0, passLimits.value.monthlyLimit - passLimits.value.usedThisMonth)
+    if (passLimits.value.dailyLimit !== null && passLimits.value.dailyLimit !== undefined) {
+      passLimits.value.usedToday = (passLimits.value.usedToday || 0) + 1
+      passLimits.value.dailyRemainingQuota = Math.max(0, passLimits.value.dailyLimit - passLimits.value.usedToday)
+    }
 
     console.log('✅ Pass added, new count:', passLimits.value)
 
@@ -1771,40 +1898,16 @@ const generatePass = async () => {
 
     showGenerateDialog.value = false
 
-    // Generate QR code for in-app display (async, non-blocking)
+    // Generate composed pass image (layout + QR) for preview/share
     await nextTick()
-    setTimeout(async () => {
-      await generateQRCode(pass)
-    }, 100)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    const composedPassImage = await generateQRCode(pass)
 
-    // Share pass link immediately via native share dialog
-    try {
-      console.log('🔗 Sharing guest pass link...')
-      const result = await sharingService.sharePassWithLink(pass)
-
-        if (result.success) {
-          notificationStore.showSuccess(result.message || 'Pass shared successfully!')
-        
-        // Mark pass as sent
-      if (pass.firebaseRef) {
-        const projectId = projectStore.selectedProject?.id
-        if (projectId) {
-          await markPassAsSent(pass.firebaseRef, projectId)
-        }
-        }
-      } else if (result.message !== 'Share cancelled') {
-        throw new Error(result.message || 'Sharing failed')
-      }
-    } catch (shareError) {
-      console.warn('⚠️ Sharing failed:', shareError?.message || JSON.stringify(shareError) || shareError)
-      
-      // Don't show error if user cancelled
-      if (shareError.message && !shareError.message.includes('cancelled')) {
-      notificationStore.showWarning(
-          `Pass generated successfully. You can share it manually from the list below.`,
-      )
-    }
-    }
+    // Show generated pass preview modal (share is explicit action)
+    generatedPassPreview.value = pass
+    generatedPassPreviewImage.value = composedPassImage || pass.qrCodeUrl || ''
+    showGeneratedPassPreview.value = true
+    notificationStore.showSuccess('Pass generated successfully!')
     
     isGeneratingPass.value = false
   } catch (error) {
@@ -1819,12 +1922,12 @@ const generateQRCode = async (pass) => {
     const canvas = qrRefs.get(pass.id)
     if (!canvas) {
       console.warn('⚠️ Canvas not found for pass:', pass.id)
-      return
+      return null
     }
 
     // Set canvas size to match the gate pass design
-    const canvasWidth = 400
-    const canvasHeight = 450
+    const canvasWidth = 420
+    const canvasHeight = 700
     canvas.width = canvasWidth
     canvas.height = canvasHeight
 
@@ -1834,18 +1937,27 @@ const generateQRCode = async (pass) => {
     ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, canvasWidth, canvasHeight)
 
-    // QR code data: use the user's registered card ID if available (matches face device)
-    const qrData = pass.cardId
-      ? String(pass.cardId)
-      : JSON.stringify({
-          code: pass.code,
-          guestName: pass.guestName,
-          validUntil: pass.validUntil,
-        })
+    // QR code data MUST be unique per pass (avoid repeating the same QR).
+    const qrData = JSON.stringify({
+      type: 'guest_pass',
+      version: 1,
+      passId: pass.id || pass.code,
+      projectId: pass.projectId || projectStore.selectedProject?.id || null,
+      verificationToken: pass.verificationToken || null,
+      cardId: pass.cardId || null,
+      guestName: pass.guestName,
+      validUntil: pass.validUntil,
+      createdAt: pass.createdAt,
+    })
 
     console.log('🎯 Generating QR code for pass:', pass.id)
 
     try {
+      if (!logoImagePromise) {
+        logoImagePromise = loadImage(appLogo).catch(() => null)
+      }
+      const logoImg = await logoImagePromise
+
       // Method 1: Try using QRCode.toCanvas directly (more reliable)
       const qrCanvas = document.createElement('canvas')
       await QRCode.toCanvas(qrCanvas, qrData, {
@@ -1860,8 +1972,9 @@ const generateQRCode = async (pass) => {
       console.log('✅ QR code generated with toCanvas, drawing gate pass...')
 
       // Draw the complete gate pass design
-      drawGatePass(ctx, qrCanvas, pass, canvasWidth)
+      drawGatePass(ctx, qrCanvas, pass, canvasWidth, canvasHeight, logoImg)
       console.log('✅ Gate pass drawn successfully')
+      return canvas.toDataURL('image/png')
     } catch (toCanvasError) {
       console.warn('⚠️ toCanvas failed, trying dataURL method:', toCanvasError)
 
@@ -1878,144 +1991,148 @@ const generateQRCode = async (pass) => {
       console.log('✅ QR code generated with dataURL, creating image...')
 
       // Create image from QR code data URL
-      const img = new Image()
-      img.onload = () => {
-        console.log('✅ Image loaded, drawing gate pass...')
-        try {
-          // Draw the complete gate pass design
-          drawGatePass(ctx, img, pass, canvasWidth)
-          console.log('✅ Gate pass drawn successfully')
-        } catch (drawError) {
-          console.error('❌ Error drawing gate pass:', drawError)
-        }
-      }
-      img.onerror = (error) => {
-        console.error('❌ Error loading QR code image:', error)
-      }
-      img.src = qrCodeDataUrl
+      const img = await new Promise((resolve, reject) => {
+        const qrImage = new Image()
+        qrImage.onload = () => resolve(qrImage)
+        qrImage.onerror = (error) => reject(error)
+        qrImage.src = qrCodeDataUrl
+      })
+      drawGatePass(ctx, img, pass, canvasWidth, canvasHeight, null)
+      console.log('✅ Gate pass drawn successfully')
+      return canvas.toDataURL('image/png')
     }
   } catch (error) {
     console.error('❌ Error generating QR code:', error)
+    return null
   }
 }
 
-const drawGatePass = (ctx, qrImg, pass, canvasWidth) => {
+const drawGatePass = (ctx, qrImg, pass, canvasWidth, canvasHeight, logoImg = null) => {
   // Determine if Arabic mode
   const isArabic = locale.value === 'ar-SA' || locale.value.startsWith('ar')
   const dateLocale = isArabic ? 'ar-EG' : 'en-GB'
-  
-  // Set font properties with Arabic support
-  ctx.fillStyle = '#000000'
+
+  const safeDateParts = (value) => {
+    if (!value) return { date: 'N/A', time: 'N/A' }
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return { date: 'N/A', time: 'N/A' }
+    const date = parsed.toLocaleDateString(dateLocale, {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+    const time = parsed.toLocaleTimeString(dateLocale, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: !isArabic,
+    })
+    return { date, time }
+  }
+
+  const createdAtParts = safeDateParts(pass.createdAt)
+  const validUntilParts = safeDateParts(pass.validUntil)
+  const unitText = pass.unit || userUnitInfo.value || 'N/A'
+  const ownerText = pass.userName || pass.ownerName || pass.inviterName || 'N/A'
+  const guestText = pass.guestName || (isArabic ? 'ضيف' : 'Guest')
+
+  // Branded gradient background (like web guest-pass page)
+  const gradient = ctx.createLinearGradient(0, 0, canvasWidth, canvasHeight)
+  gradient.addColorStop(0, '#AF1E23')
+  gradient.addColorStop(1, '#231F20')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+
+  // Glass card layer
+  const cardX = 12
+  const cardY = 12
+  const cardWidth = canvasWidth - 24
+  const cardHeight = canvasHeight - 24
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.08)'
+  ctx.fillRect(cardX, cardY, cardWidth, cardHeight)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)'
+  ctx.lineWidth = 1
+  ctx.strokeRect(cardX, cardY, cardWidth, cardHeight)
+
   ctx.textAlign = 'center'
+  const centerX = canvasWidth / 2
 
-  // Draw title "Gate Pass" - larger and bolder
-  ctx.font = 'bold 32px Arial, sans-serif'
-  const titleText = isArabic ? 'تصريح الدخول' : 'Gate Pass'
-  ctx.fillText(titleText, canvasWidth / 2, 40)
+  if (logoImg) {
+    const logoWidth = 110
+    const logoHeight = 54
+    ctx.drawImage(logoImg, centerX - logoWidth / 2, cardY + 12, logoWidth, logoHeight)
+  } else {
+    ctx.fillStyle = '#FFFFFF'
+    ctx.font = '700 20px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
+    ctx.fillText('PRE', centerX, cardY + 52)
+  }
 
-  // Draw subtitle "One Time Pass" - smaller
-  ctx.font = '16px Arial, sans-serif'
-  const subtitleText = isArabic ? 'تصريح لمرة واحدة' : 'One Time Pass'
-  ctx.fillText(subtitleText, canvasWidth / 2, 65)
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = '700 24px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
+  ctx.fillText(isArabic ? 'تصريح دخول' : 'Gate Pass', centerX, cardY + 90)
 
-  // Draw QR code in center - much larger
-  const qrSize = 280
-  const qrX = (canvasWidth - qrSize) / 2
-  const qrY = 85
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.88)'
+  ctx.font = '500 11px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
+  ctx.fillText(
+    isArabic ? `تم الإنشاء: ${createdAtParts.date}` : `Generated: ${createdAtParts.date}`,
+    centerX,
+    cardY + 108
+  )
+  ctx.fillText(
+    isArabic ? `الوقت: ${createdAtParts.time}` : `Time: ${createdAtParts.time}`,
+    centerX,
+    cardY + 124
+  )
+
+  const qrSize = 300
+  const qrX = centerX - qrSize / 2
+  const qrY = cardY + 146
+  const qrFramePadding = 14
+  ctx.fillStyle = '#FFFFFF'
+  ctx.fillRect(qrX - qrFramePadding, qrY - qrFramePadding, qrSize + (qrFramePadding * 2), qrSize + (qrFramePadding * 2))
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'
+  ctx.lineWidth = 1.5
+  ctx.strokeRect(qrX - qrFramePadding, qrY - qrFramePadding, qrSize + (qrFramePadding * 2), qrSize + (qrFramePadding * 2))
   ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize)
 
-  // Draw information bar at bottom - closer to bottom
-  const infoBarY = qrY + qrSize + 10
-  const infoBarHeight = 80
-  const infoBarPadding = 25
+  // Details block
+  const detailsY = qrY + qrSize + 26
+  const leftX = cardX + 22
+  const rightX = centerX + 10
+  const rowGap = 72
 
-  // Draw grey background for info bar - lighter grey
-  ctx.fillStyle = '#F8F8F8'
-  ctx.fillRect(0, infoBarY, canvasWidth, infoBarHeight)
-
-  // Draw border for info bar - subtle
-  ctx.strokeStyle = '#DDDDDD'
-  ctx.lineWidth = 1
-  ctx.strokeRect(0, infoBarY, canvasWidth, infoBarHeight)
-
-  ctx.fillStyle = '#000000'
+  const drawField = (label, value, x, y, secondLine = null) => {
+    ctx.textAlign = 'left'
+    ctx.fillStyle = 'transparent'
+    ctx.font = '500 11px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
+    ctx.fillText(label, x, y)
+    ctx.fillStyle = '#FFFFFF'
+    ctx.font = '700 16px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
+    const displayValue = String(value || 'N/A')
+    ctx.fillText(displayValue.length > 26 ? `${displayValue.slice(0, 25)}…` : displayValue, x, y + 22)
+    if (secondLine) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.88)'
+      ctx.font = '600 14px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
+      const second = String(secondLine)
+      ctx.fillText(second.length > 28 ? `${second.slice(0, 27)}…` : second, x, y + 40)
+    }
+  }
 
   if (isArabic) {
-    // RTL layout for Arabic - Right side: Unit and Visitor info
-    ctx.textAlign = 'right'
-    
-    // Unit info
-    ctx.font = 'bold 13px Arial, sans-serif'
-    ctx.fillText('الوحدة', canvasWidth - infoBarPadding, infoBarY + 25)
-    ctx.font = '13px Arial, sans-serif'
-    const unitInfo = getUserUnitInfo()
-    ctx.fillText(unitInfo, canvasWidth - infoBarPadding, infoBarY + 42)
-    
-    // Visitor info
-    ctx.font = 'bold 13px Arial, sans-serif'
-    ctx.fillText('الزائر', canvasWidth - infoBarPadding, infoBarY + 62)
-    ctx.font = '13px Arial, sans-serif'
-    ctx.fillText(pass.guestName, canvasWidth - infoBarPadding, infoBarY + 79)
-    
-    // Left side: Date and Inviter info
-    ctx.textAlign = 'left'
-    
-    // Date info
-    ctx.font = 'bold 13px Arial, sans-serif'
-    ctx.fillText('التاريخ', infoBarPadding, infoBarY + 25)
-    ctx.font = '13px Arial, sans-serif'
-    const validDate = new Date(pass.validUntil).toLocaleDateString(dateLocale, {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      calendar: 'gregory'
-    })
-    ctx.fillText(validDate, infoBarPadding, infoBarY + 42)
-    
-    // Inviter info
-    ctx.font = 'bold 13px Arial, sans-serif'
-    ctx.fillText('المُضيف', infoBarPadding, infoBarY + 62)
-    ctx.font = '13px Arial, sans-serif'
-    const inviterName = pass.userName || 'مستخدم غير معروف'
-    ctx.fillText(inviterName, infoBarPadding, infoBarY + 79)
+    drawField('الزائر', guestText, leftX, detailsY)
+    drawField('المضيف', ownerText, rightX, detailsY)
+    drawField('الوحدة', unitText, leftX, detailsY + rowGap)
+    drawField('صالح حتى', validUntilParts.date, rightX, detailsY + rowGap, validUntilParts.time)
   } else {
-    // LTR layout for English - Left side: Unit and Visitor info
-    ctx.textAlign = 'left'
-    
-    // Unit info
-    ctx.font = 'bold 13px Arial, sans-serif'
-    ctx.fillText('Unit', infoBarPadding, infoBarY + 25)
-    ctx.font = '13px Arial, sans-serif'
-    const unitInfo = getUserUnitInfo()
-    ctx.fillText(unitInfo, infoBarPadding, infoBarY + 42)
-    
-    // Visitor info
-    ctx.font = 'bold 13px Arial, sans-serif'
-    ctx.fillText('Visitor', infoBarPadding, infoBarY + 62)
-    ctx.font = '13px Arial, sans-serif'
-    ctx.fillText(pass.guestName, infoBarPadding, infoBarY + 79)
-    
-    // Right side: Date and Inviter info
-    ctx.textAlign = 'right'
-    
-    // Date info
-    ctx.font = 'bold 13px Arial, sans-serif'
-    ctx.fillText('Date', canvasWidth - infoBarPadding, infoBarY + 25)
-    ctx.font = '13px Arial, sans-serif'
-    const validDate = new Date(pass.validUntil).toLocaleDateString(dateLocale, {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-    ctx.fillText(validDate, canvasWidth - infoBarPadding, infoBarY + 42)
-    
-    // Inviter info
-    ctx.font = 'bold 13px Arial, sans-serif'
-    ctx.fillText('Inviter', canvasWidth - infoBarPadding, infoBarY + 62)
-    ctx.font = '13px Arial, sans-serif'
-    const inviterName = pass.userName || 'Unknown User'
-    ctx.fillText(inviterName, canvasWidth - infoBarPadding, infoBarY + 79)
+    drawField('Visitor', guestText, leftX, detailsY)
+    drawField('Owner', ownerText, rightX, detailsY)
+    drawField('Unit', unitText, leftX, detailsY + rowGap)
+    drawField('Valid Until', validUntilParts.date, rightX, detailsY + rowGap, validUntilParts.time)
   }
+
+  ctx.textAlign = 'center'
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.70)'
+  ctx.font = '500 11px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
+  ctx.fillText('PRE Group', centerX, cardY + cardHeight - 16)
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -2051,9 +2168,13 @@ const deletePass = async (passId) => {
 
 const sharePass = async (pass) => {
   try {
-    console.log('🔗 Sharing guest pass:', pass.id)
+    console.log('🖼️ Sharing guest pass image:', pass.id)
+    const renderedImage = await generateQRCode(pass)
     
-    const result = await sharingService.sharePassWithLink(pass)
+    const result = await sharingService.sharePassWithImage({
+      ...pass,
+      qrImageDataUrl: renderedImage || pass.qrCodeUrl || '',
+    })
 
     if (result.success) {
       notificationStore.showSuccess(result.message || 'Pass shared successfully!')
@@ -2065,9 +2186,11 @@ const sharePass = async (pass) => {
           await markPassAsSent(pass.firebaseRef, projectId)
         }
       }
+      return true
     } else if (result.message !== 'Share cancelled') {
       throw new Error(result.message || 'Sharing failed')
     }
+    return false
   } catch (error) {
     console.error('❌ Error sharing pass:', error)
     
@@ -2075,6 +2198,23 @@ const sharePass = async (pass) => {
     if (error.message && !error.message.includes('cancelled')) {
       notificationStore.showError('Failed to share pass. Please try again.')
     }
+    return false
+  }
+}
+
+const closeGeneratedPassPreview = () => {
+  showGeneratedPassPreview.value = false
+}
+
+const shareGeneratedPass = async () => {
+  if (!generatedPassPreview.value) return
+  const passToShare = {
+    ...generatedPassPreview.value,
+    qrImageDataUrl: generatedPassPreviewImage.value || generatedPassPreview.value.qrCodeUrl || '',
+  }
+  const didShare = await sharePass(passToShare)
+  if (didShare) {
+    closeGeneratedPassPreview()
   }
 }
 
@@ -3378,21 +3518,21 @@ onMounted(async () => {
 /* Professional Generate Pass Modal */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: 999999;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
   margin: 0;
   box-sizing: border-box;
+  overscroll-behavior: contain;
 }
 
 .modal-container-pro {
@@ -3405,6 +3545,31 @@ onMounted(async () => {
   animation: modalSlideUp 0.3s ease-out;
   max-height: 85vh;
   overflow-y: scroll !important;
+}
+
+.preview-modal-container {
+  max-width: 420px;
+}
+
+.preview-modal-body {
+  padding-top: 20px;
+}
+
+.generated-pass-preview-image {
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.preview-image-fallback {
+  padding: 20px;
+  text-align: center;
+  border: 1px dashed #d1d5db;
+  border-radius: 12px;
+  color: #6b7280;
 }
 
 @keyframes modalSlideUp {

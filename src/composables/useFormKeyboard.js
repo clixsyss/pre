@@ -74,8 +74,8 @@ export function useFormKeyboard(options = {}) {
     isKeyboardVisible.value = true
     keyboardHeight.value = info.keyboardHeight || 0
 
-    // Hide bottom navigation by adding keyboard classes
-    document.body.classList.add('modal-open')
+    // Hide bottom navigation via keyboard class only.
+    // Do not toggle `modal-open` here, it is reserved for actual modals.
     document.body.classList.add('keyboard-open')
     
     // Force a reflow to ensure CSS applies immediately
@@ -98,8 +98,7 @@ export function useFormKeyboard(options = {}) {
     keyboardHeight.value = 0
     activeInput.value = null
 
-    // Show bottom navigation by removing keyboard classes
-    document.body.classList.remove('modal-open')
+    // Show bottom navigation by removing keyboard class only.
     document.body.classList.remove('keyboard-open')
     
     // Force a reflow to ensure CSS applies immediately
@@ -223,8 +222,7 @@ export function useFormKeyboard(options = {}) {
       document.removeEventListener('click', clickListener, true)
     }
     
-    // Clean up body classes
-    document.body.classList.remove('modal-open')
+    // Clean up keyboard body class
     document.body.classList.remove('keyboard-open')
   }
 

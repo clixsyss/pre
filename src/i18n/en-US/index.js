@@ -396,6 +396,7 @@ export default {
   // Gate Passes
   generateNewPass: 'Generate New Pass',
   generateQRCodeForGate: 'Generate QR code for gate access',
+  shareQrImage: 'Share QR Image',
   guestName: 'Guest Name',
   enterGuestFullName: 'Enter guest\'s full name',
   purpose: 'Purpose of Visit',

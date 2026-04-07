@@ -31,6 +31,8 @@ const validatePass = (pass) => {
     purpose: sanitizeString(pass.purpose, 200),
     code: sanitizeString(pass.code, 50),
     validUntil: pass.validUntil,
+    qrCodeUrl: typeof pass.qrCodeUrl === 'string' ? pass.qrCodeUrl.trim() : '',
+    qrImageDataUrl: typeof pass.qrImageDataUrl === 'string' ? pass.qrImageDataUrl.trim() : '',
   }
 }
 
@@ -39,10 +41,75 @@ const validatePass = (pass) => {
  * Handles sharing gate passes with QR codes using native share functionality
  */
 class SharingService {
+  async fetchImageBlob(imageUrlOrDataUrl) {
+    if (!imageUrlOrDataUrl) {
+      throw new Error('No QR image available to share')
+    }
+    const response = await fetch(imageUrlOrDataUrl)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch QR image: ${response.status}`)
+    }
+    return response.blob()
+  }
+
+  blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const result = reader.result
+        if (typeof result !== 'string') {
+          reject(new Error('Failed to convert image to base64'))
+          return
+        }
+        resolve(result.split(',')[1] || result)
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  }
+
+  async tryShareNativeImageFile({ Filesystem, Share, base64Data, fileName, message, validatedPass }) {
+    const directories = ['CACHE', 'DOCUMENTS']
+    for (const directory of directories) {
+      try {
+        const writeResult = await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory,
+          recursive: true,
+        })
+
+        // Some platforms return non-file URIs from writeFile; resolve to file:// URI explicitly.
+        const uriResult = await Filesystem.getUri({
+          path: fileName,
+          directory,
+        })
+
+        const candidateUris = [uriResult?.uri, writeResult?.uri].filter(Boolean)
+
+        for (const uri of candidateUris) {
+          try {
+            await Share.share({
+              title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
+              text: message,
+              files: [uri],
+              dialogTitle: 'Share PRE Group Guest Pass',
+            })
+            return true
+          } catch (shareUriError) {
+            console.warn(`⚠️ Share files failed for URI ${uri}:`, shareUriError)
+          }
+        }
+      } catch (fileWriteError) {
+        console.warn(`⚠️ Failed writing share file in ${directory}:`, fileWriteError)
+      }
+    }
+    return false
+  }
 
 
   /**
-   * Create guest pass message with shareable link
+   * Create guest pass message for QR image sharing.
    * @param {Object} pass - Gate pass object
    * @returns {string} - Formatted message
    */
@@ -60,9 +127,6 @@ class SharingService {
     const guestName = sanitizeString(pass.guestName, 100)
     const purpose = sanitizeString(pass.purpose, 200)
     
-    // Generate shareable link for the guest pass
-    const passUrl = this.generatePassUrl(pass)
-
     return `🏘️ *PRE Group - Guest Pass*
 
 Dear ${guestName},
@@ -74,11 +138,8 @@ You have been invited as a guest to PRE Group community.
 📅 Valid Until: ${validDate}
 🎯 Purpose: ${purpose}
 
-🔗 *Your Guest Pass:*
-${passUrl}
-
 ✅ *Instructions:*
-Open the link above to view your QR code. Present the QR code at the main gate for entry. The security team will scan it for verification.
+Please present the attached QR image at the main gate for entry. The security team will scan it for verification.
 
 Thank you for visiting PRE Group! 🌟
 
@@ -118,27 +179,40 @@ _This is an automated message from PRE Group Management System._`
     return url
   }
 
+  /**
+   * Get shareable QR image URL for pass.
+   * Falls back to pass URL for very old passes that lack image.
+   * @param {Object} pass
+   * @returns {string}
+   */
+  getPassShareImageUrl(pass) {
+    const dataUrl = typeof pass?.qrImageDataUrl === 'string' ? pass.qrImageDataUrl.trim() : ''
+    if (dataUrl) return dataUrl
+    const imageUrl = typeof pass?.qrCodeUrl === 'string' ? pass.qrCodeUrl.trim() : ''
+    if (imageUrl) return imageUrl
+    return this.generatePassUrl(pass)
+  }
+
 
 
 
 
 
   /**
-   * Share pass with link (NOT image)
-   * The link displays the QR code when opened
+   * Share pass as QR image URL (static image).
    * @param {Object} pass - Gate pass object
    * @returns {Promise<Object>} - Success status
    */
-  async sharePassWithLink(pass) {
+  async sharePassWithImage(pass) {
     try {
       // Validate inputs
       const validatedPass = validatePass(pass)
 
-      // Create message with shareable link
+      // Create message with image share
       const message = this.createGatePassMessage(validatedPass)
-      const passUrl = this.generatePassUrl(validatedPass)
+      const passImageUrl = this.getPassShareImageUrl(validatedPass)
 
-      console.log('🔗 Sharing pass with link:', passUrl)
+      console.log('🖼️ Sharing pass with image URL:', passImageUrl)
 
       // Enhanced iOS/Android detection
       const protocol = window.location.protocol
@@ -151,6 +225,7 @@ _This is an automated message from PRE Group Management System._`
         // For native platforms, use Share plugin from Capacitor.Plugins
         console.log('📱 Accessing Share from Capacitor.Plugins...')
         const Share = window.Capacitor?.Plugins?.Share
+        const Filesystem = window.Capacitor?.Plugins?.Filesystem
         
         if (!Share) {
           console.error('❌ Share not found in Capacitor.Plugins')
@@ -158,21 +233,40 @@ _This is an automated message from PRE Group Management System._`
         }
         
         try {
+          const imageBlob = await this.fetchImageBlob(passImageUrl)
+          let sharedAsFile = false
+
+          if (Filesystem?.writeFile && Filesystem?.getUri) {
+            try {
+              const base64Data = await this.blobToBase64(imageBlob)
+              const fileName = `guest-pass-${validatedPass.id || Date.now()}.png`
+              sharedAsFile = await this.tryShareNativeImageFile({
+                Filesystem,
+                Share,
+                base64Data,
+                fileName,
+                message,
+                validatedPass,
+              })
+            } catch (fileShareError) {
+              console.warn('⚠️ File share failed, falling back to URL share:', fileShareError)
+            }
+          }
+
+          if (!sharedAsFile) {
           console.log('📤 Opening native share dialog...')
-          console.log('📤 Share object:', Share)
-          console.log('📤 Pass URL:', passUrl)
-          console.log('📤 Pass data:', validatedPass)
             await Share.share({
               title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
               text: message,
-            url: passUrl, // Share the URL directly
+              url: passImageUrl,
               dialogTitle: 'Share PRE Group Guest Pass',
             })
+          }
           console.log('✅ Share dialog completed')
 
             return {
               success: true,
-              message: 'Pass shared successfully!',
+              message: 'Guest pass image shared successfully!',
             }
           } catch (shareError) {
           console.error('❌ Share failed:', shareError)
@@ -188,19 +282,38 @@ _This is an automated message from PRE Group Management System._`
           throw shareError
         }
       } else {
-        // For web, copy link to clipboard
+        // For web, share actual image file when supported
         try {
-          await navigator.clipboard.writeText(`${message}\n\n${passUrl}`)
+          const imageBlob = await this.fetchImageBlob(passImageUrl)
+          const imageFile = new File(
+            [imageBlob],
+            `guest-pass-${validatedPass.id || Date.now()}.png`,
+            { type: imageBlob.type || 'image/png' }
+          )
+
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [imageFile] })) {
+            await navigator.share({
+              title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
+              text: message,
+              files: [imageFile],
+            })
+          } else if (navigator.share) {
+            await navigator.share({
+              title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
+              text: message,
+              url: passImageUrl,
+            })
+          } else {
+            throw new Error('Image sharing is not supported on this browser')
+          }
+
           return {
             success: true,
-            message: 'Guest pass link copied to clipboard!',
+            message: 'Guest pass image shared successfully!',
           }
-        } catch (clipboardError) {
-          console.warn('Clipboard failed:', clipboardError)
-          return {
-            success: true,
-            message: `Pass URL: ${passUrl}`,
-          }
+        } catch (webShareError) {
+          console.warn('Web share failed:', webShareError)
+          throw new Error('Image sharing is not supported on this browser/device')
         }
       }
     } catch (error) {
@@ -210,12 +323,10 @@ _This is an automated message from PRE Group Management System._`
   }
 
   /**
-   * Legacy method - now redirects to link sharing
-   * @deprecated Use sharePassWithLink instead
+   * Backward-compatible alias for existing callers.
    */
-  async sharePassWithImage(pass) {
-    console.log('⚠️ sharePassWithImage is deprecated, using sharePassWithLink instead')
-    return this.sharePassWithLink(pass)
+  async sharePassWithLink(pass) {
+    return this.sharePassWithImage(pass)
   }
 
   /**

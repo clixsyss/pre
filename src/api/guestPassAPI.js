@@ -9,7 +9,7 @@
  * Replaces Firebase/Firestore implementation with AWS-only solution
  */
 
-import { putItem, query, getItem, updateItem } from '../aws/dynamodbClient'
+import { putItem, query, getItem, updateItem, scan } from '../aws/dynamodbClient'
 import fileUploadService from '../services/fileUploadService'
 import { projectsUnitGuestPassSettingsService } from '../services/dynamoDBTableServices'
 import QRCode from 'qrcode'
@@ -17,6 +17,83 @@ import QRCode from 'qrcode'
 const GUEST_PASSES_TABLE = 'projects__guestPasses'
 const GUEST_PASS_SETTINGS_TABLE = 'guestPassSettings'
 const USERS_TABLE = 'users'
+
+const getDaysRemainingInMonthIncludingToday = (date = new Date()) => {
+  const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  return Math.max(1, daysInMonth - date.getDate() + 1)
+}
+
+const normalizeLimit = (value, fallback = null) => {
+  if (value === undefined || value === null || value === '') return fallback
+  const parsed = typeof value === 'string' ? parseInt(value, 10) : value
+  if (Number.isNaN(parsed) || parsed < 0) return fallback
+  return parsed
+}
+
+const enforceMonthlyFloor = (monthlyLimit, dailyLimit) => {
+  if (dailyLimit === null || dailyLimit === undefined) return normalizeLimit(monthlyLimit, 0)
+  const minimumMonthly = dailyLimit * getDaysRemainingInMonthIncludingToday()
+  return Math.max(normalizeLimit(monthlyLimit, minimumMonthly), minimumMonthly)
+}
+
+const toTimestamp = (value) => {
+  if (value === undefined || value === null) return null
+  if (typeof value === 'number') return value
+  if (typeof value?.toDate === 'function') return value.toDate().getTime()
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed.getTime()
+}
+
+const getNested = (obj, path) => {
+  return path.split('.').reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), obj)
+}
+
+// Resolve users robustly across mixed legacy identifiers (id/authUid/email/uid).
+const findUserRecord = async (userIdentifier) => {
+  if (!userIdentifier) return null
+
+  const target = String(userIdentifier).trim().toLowerCase()
+  let lastEvaluatedKey = null
+  let scannedCount = 0
+  const maxScanItems = 10000
+
+  do {
+    const scanOptions = { Limit: 500 }
+    if (lastEvaluatedKey) {
+      scanOptions.ExclusiveStartKey = lastEvaluatedKey
+    }
+
+    const scanResult = await scan(USERS_TABLE, scanOptions)
+    const users = Array.isArray(scanResult) ? scanResult : []
+    const match = users.find((u) => {
+      const candidates = [
+        u?.id,
+        u?.authUid,
+        u?.uid,
+        u?.email,
+        u?.username,
+        getNested(u, 'attributes.sub'),
+        getNested(u, 'cognitoAttributes.sub'),
+        getNested(u, 'attributes.email'),
+        getNested(u, 'cognitoAttributes.email'),
+      ]
+        .filter(Boolean)
+        .map((v) => String(v).trim().toLowerCase())
+      return candidates.includes(target)
+    })
+
+    if (match) return match
+
+    lastEvaluatedKey = scanResult?.LastEvaluatedKey || null
+    scannedCount += 500
+    if (scannedCount >= maxScanItems) {
+      console.warn(`⚠️ findUserRecord reached scan cap (${maxScanItems}) for identifier: ${userIdentifier}`)
+      break
+    }
+  } while (lastEvaluatedKey)
+
+  return null
+}
 
 /**
  * Check if a user is eligible to generate guest passes
@@ -36,8 +113,8 @@ export const checkUserEligibility = async (projectId, userId) => {
 
     console.log(`🔍 Checking user eligibility for project ${projectId}`)
 
-    // Get user from DynamoDB
-    const user = await getItem(USERS_TABLE, { id: userId })
+    // Get user from DynamoDB (robust lookup for mixed legacy identifiers)
+    const user = await findUserRecord(userId)
 
     if (!user) {
       return {
@@ -109,8 +186,10 @@ export const checkUserEligibility = async (projectId, userId) => {
       globalSettings = {}
     }
 
-    // Get monthly limit (default: 30)
-    let monthlyLimit = globalSettings.monthlyLimit || 30
+    // Get monthly/daily limits (default monthly: 30, daily: disabled)
+    let monthlyLimit = normalizeLimit(globalSettings.monthlyLimit, 30)
+    let dailyLimit = normalizeLimit(globalSettings.dailyLimit, null)
+    let dailyResetAt = toTimestamp(globalSettings.dailyResetAt)
     let unitBlocked = false
     const userUnit = projectInfo.unit || user.unit || ''
     
@@ -123,8 +202,15 @@ export const checkUserEligibility = async (projectId, userId) => {
         if (unitSettings) {
           // Use unit-specific limit if set
           if (unitSettings.monthlyLimit !== undefined && unitSettings.monthlyLimit !== null) {
-            monthlyLimit = unitSettings.monthlyLimit
+            monthlyLimit = normalizeLimit(unitSettings.monthlyLimit, monthlyLimit)
             console.log(`📊 Using unit-specific limit: ${monthlyLimit} for unit ${userUnit}`)
+          }
+          if (unitSettings.dailyLimit !== undefined && unitSettings.dailyLimit !== null) {
+            dailyLimit = normalizeLimit(unitSettings.dailyLimit, dailyLimit)
+            console.log(`📊 Using unit-specific daily limit: ${dailyLimit} for unit ${userUnit}`)
+          }
+          if (unitSettings.dailyResetAt !== undefined && unitSettings.dailyResetAt !== null) {
+            dailyResetAt = toTimestamp(unitSettings.dailyResetAt) ?? dailyResetAt
           }
           
           // Check if unit is blocked
@@ -153,11 +239,15 @@ export const checkUserEligibility = async (projectId, userId) => {
       }
     }
 
-    // Count passes created this month for this user
+    monthlyLimit = enforceMonthlyFloor(monthlyLimit, dailyLimit)
+
+    // Count passes created this month/today for this user
     let usedThisMonth = 0
+    let usedToday = 0
     try {
       const now = new Date()
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
       
       // Query passes for this project (partition key is parentId, not projectId)
       // Then filter by userId and createdAt in application code
@@ -170,16 +260,43 @@ export const checkUserEligibility = async (projectId, userId) => {
       
       // Filter in application code: userId, createdAt, and not deleted
       const firstDayTimestamp = firstDayOfMonth.getTime()
+      const startOfTodayTimestamp = startOfToday.getTime()
+      const effectiveStartOfToday = dailyResetAt && dailyResetAt > startOfTodayTimestamp
+        ? dailyResetAt
+        : startOfTodayTimestamp
+      const canonicalUserId = user?.id || userId
+      const userPasses = passes.filter(p => p.userId === canonicalUserId && !p.deleted)
       usedThisMonth = passes.filter(p => 
-        p.userId === userId && 
+        p.userId === canonicalUserId &&
         p.createdAt >= firstDayTimestamp && 
         !p.deleted
       ).length
+      usedToday = userPasses.filter(p => p.createdAt >= effectiveStartOfToday).length
       
-      console.log(`📊 Counted ${usedThisMonth} active passes this month for user ${userId}`)
+      console.log(`📊 Counted ${usedThisMonth} active passes this month, ${usedToday} today for user ${canonicalUserId}`)
     } catch (error) {
       console.error('❌ Error counting monthly passes:', error)
       usedThisMonth = 0
+      usedToday = 0
+    }
+
+    if (dailyLimit !== null && usedToday >= dailyLimit) {
+      return {
+        success: false,
+        error: 'Daily limit reached',
+        message: `You have reached your daily limit of ${dailyLimit} passes for this project`,
+        data: {
+          canGenerate: false,
+          reason: 'daily_limit_reached',
+          user: user,
+          usedToday,
+          dailyLimit,
+          dailyRemainingQuota: 0,
+          usedThisMonth,
+          monthlyLimit,
+          remainingQuota: Math.max(0, monthlyLimit - usedThisMonth),
+        },
+      }
     }
 
     if (usedThisMonth >= monthlyLimit) {
@@ -193,6 +310,9 @@ export const checkUserEligibility = async (projectId, userId) => {
           user: user,
           usedThisMonth,
           monthlyLimit,
+          usedToday,
+          dailyLimit,
+          dailyRemainingQuota: dailyLimit !== null ? Math.max(0, dailyLimit - usedToday) : null,
           remainingQuota: 0,
         },
       }
@@ -209,6 +329,9 @@ export const checkUserEligibility = async (projectId, userId) => {
         user: user,
         usedThisMonth,
         monthlyLimit,
+        usedToday,
+        dailyLimit,
+        dailyRemainingQuota: dailyLimit !== null ? Math.max(0, dailyLimit - usedToday) : null,
         remainingQuota: monthlyLimit - usedThisMonth,
       },
     }
@@ -276,21 +399,23 @@ export const createGuestPass = async (
     const verificationToken = `${passId}-${Math.random().toString(36).substr(2, 16)}`.toUpperCase()
 
     // Look up the user's registered card ID for QR code content
-    const user = await getItem(USERS_TABLE, { id: userId })
+    const user = await findUserRecord(userId)
     const userCardId = user?.documents?.cardId || null
 
-    // QR code data: use the user's card ID (like the Python reference script)
-    // Falls back to pass metadata if the user has not completed face enrollment yet
-    const qrData = userCardId
-      ? String(userCardId)
-      : JSON.stringify({
-          passId: passId,
-          projectId: projectId,
-          guestName: guestName,
-          validUntil: validUntil.toISOString(),
-          createdAt: createdAt.toISOString(),
-          verificationToken: verificationToken
-        })
+    // QR code data MUST be unique per generated pass.
+    // Keep cardId in payload (if present) but always include pass-specific identifiers.
+    const qrPayload = {
+      type: 'guest_pass',
+      version: 1,
+      passId: passId,
+      projectId: projectId,
+      verificationToken: verificationToken,
+      cardId: userCardId || null,
+      guestName: guestName,
+      validUntil: validUntil.toISOString(),
+      createdAt: createdAt.toISOString(),
+    }
+    const qrData = JSON.stringify(qrPayload)
 
     // Generate QR code as data URL
     console.log('🎨 Generating QR code...')
@@ -394,10 +519,12 @@ export const createGuestPass = async (
         userName: userName,
         guestName: guestName,
         purpose: purpose,
+        unit: userUnit,
         validUntil: validUntil,
         phoneNumber: phoneNumber,
         createdAt: createdAt,
         cardId: userCardId || null,
+        verificationToken: verificationToken,
       },
     }
   } catch (error) {
@@ -606,7 +733,7 @@ export const getGuestPass = async (projectId, passId) => {
  */
 export const getUserStatus = async (userId, projectId = null) => {
   try {
-    const user = await getItem(USERS_TABLE, { id: userId })
+    const user = await findUserRecord(userId)
 
     if (!user) {
       throw new Error('User not found')
@@ -634,8 +761,10 @@ export const getUserStatus = async (userId, projectId = null) => {
     const userUnit = projectInfo?.unit || user.unit || ''
     const userRole = projectInfo?.role || user.role || ''
     
-    // Get monthly limit from global settings
+    // Get monthly/daily limits from global settings
     let monthlyLimit = 30
+    let dailyLimit = null
+    let dailyResetAt = null
     let blocked = false
     
     try {
@@ -651,7 +780,13 @@ export const getUserStatus = async (userId, projectId = null) => {
       }
       
       if (globalSettings?.monthlyLimit) {
-        monthlyLimit = globalSettings.monthlyLimit
+        monthlyLimit = normalizeLimit(globalSettings.monthlyLimit, monthlyLimit)
+      }
+      if (globalSettings?.dailyLimit !== undefined && globalSettings?.dailyLimit !== null) {
+        dailyLimit = normalizeLimit(globalSettings.dailyLimit, dailyLimit)
+      }
+      if (globalSettings?.dailyResetAt !== undefined && globalSettings?.dailyResetAt !== null) {
+        dailyResetAt = toTimestamp(globalSettings.dailyResetAt)
       }
     } catch (settingsError) {
       console.warn('⚠️ Could not fetch global settings:', settingsError)
@@ -666,8 +801,15 @@ export const getUserStatus = async (userId, projectId = null) => {
         if (unitSettings) {
           // Use unit-specific limit if set
           if (unitSettings.monthlyLimit !== undefined && unitSettings.monthlyLimit !== null) {
-            monthlyLimit = unitSettings.monthlyLimit
+            monthlyLimit = normalizeLimit(unitSettings.monthlyLimit, monthlyLimit)
             console.log(`📊 Using unit-specific limit: ${monthlyLimit} for unit ${userUnit}`)
+          }
+          if (unitSettings.dailyLimit !== undefined && unitSettings.dailyLimit !== null) {
+            dailyLimit = normalizeLimit(unitSettings.dailyLimit, dailyLimit)
+            console.log(`📊 Using unit-specific daily limit: ${dailyLimit} for unit ${userUnit}`)
+          }
+          if (unitSettings.dailyResetAt !== undefined && unitSettings.dailyResetAt !== null) {
+            dailyResetAt = toTimestamp(unitSettings.dailyResetAt) ?? dailyResetAt
           }
           
           // Check if unit is blocked
@@ -682,11 +824,15 @@ export const getUserStatus = async (userId, projectId = null) => {
       }
     }
     
-    // Get actual usage for this user this month
+    monthlyLimit = enforceMonthlyFloor(monthlyLimit, dailyLimit)
+
+    // Get actual usage for this user this month/today
     let usedThisMonth = 0
+    let usedToday = 0
     try {
       const now = new Date()
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
       
       // Query passes for this project (partition key is parentId, not projectId)
       // Then filter in application code
@@ -699,11 +845,14 @@ export const getUserStatus = async (userId, projectId = null) => {
       
       // Filter in application code
       const firstDayTimestamp = firstDayOfMonth.getTime()
-      usedThisMonth = passes.filter(p => 
-        p.userId === userId && 
-        p.createdAt >= firstDayTimestamp && 
-        !p.deleted
-      ).length
+      const startOfTodayTimestamp = startOfToday.getTime()
+      const effectiveStartOfToday = dailyResetAt && dailyResetAt > startOfTodayTimestamp
+        ? dailyResetAt
+        : startOfTodayTimestamp
+      const canonicalUserId = user?.id || userId
+      const userPasses = passes.filter(p => p.userId === canonicalUserId && !p.deleted)
+      usedThisMonth = userPasses.filter(p => p.createdAt >= firstDayTimestamp).length
+      usedToday = userPasses.filter(p => p.createdAt >= effectiveStartOfToday).length
     } catch (error) {
       console.error('❌ Error counting passes:', error)
     }
@@ -711,14 +860,17 @@ export const getUserStatus = async (userId, projectId = null) => {
     return {
       success: true,
       data: {
-        userId: userId,
+        userId: user?.id || userId,
         name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
         email: user.email,
         unit: userUnit,
         blocked: blocked,
         monthlyLimit: monthlyLimit,
+        dailyLimit: dailyLimit,
         usedThisMonth: usedThisMonth,
+        usedToday: usedToday,
         remainingQuota: Math.max(0, monthlyLimit - usedThisMonth),
+        dailyRemainingQuota: dailyLimit !== null ? Math.max(0, dailyLimit - usedToday) : null,
       },
     }
   } catch (error) {
