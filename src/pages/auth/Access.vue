@@ -88,12 +88,22 @@
       <transition name="fade" mode="out-in">
         <div v-if="activeTab === 'ble'" key="ble" class="content-panel">
           <div class="ble-panel">
-            <!-- Bluetooth Status Card -->
-            <div class="status-card">
+            <!-- Bluetooth Status Card (JDAR-style layout) -->
+            <div
+              class="status-card"
+              :class="[
+                { 'status-card--active': isSessionActive },
+                gatePhase === 'error' ? 'status-card--error' : '',
+              ]"
+              @click="!isSessionActive && startGateSession()"
+            >
               <div class="bluetooth-icon-wrapper">
                 <div
                   class="bluetooth-icon"
-                  :class="{ connected: isConnected, connecting: isConnecting }"
+                  :class="{
+                    connected: gatePhase === 'confirmed',
+                    connecting: gatePhase === 'broadcasting' || gatePhase === 'scanning',
+                  }"
                 >
                   <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
                     <path
@@ -118,13 +128,16 @@
                       stroke-linejoin="round"
                     />
                   </svg>
-                  <div v-if="isConnecting" class="pulse-ring"></div>
+                  <div
+                    v-if="gatePhase === 'broadcasting' || gatePhase === 'scanning'"
+                    class="pulse-ring"
+                  ></div>
                 </div>
               </div>
 
               <!-- Connection Status -->
               <div class="status-info">
-                <div v-if="isConnected" class="status-badge connected">
+                <div v-if="gatePhase === 'confirmed'" class="status-badge connected">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path
                       d="M20 6L9 17L4 12"
@@ -134,19 +147,40 @@
                       stroke-linejoin="round"
                     />
                   </svg>
-                  <span>{{ $t('connected') || 'Connected' }}</span>
+                  <span>Gate opened</span>
                 </div>
-                <div v-else-if="isConnecting" class="status-badge connecting">
+                <div v-else-if="gatePhase === 'broadcasting'" class="status-badge connecting">
                   <div class="spinner"></div>
-                  <span>{{ $t('connecting') || 'Connecting...' }}</span>
+                  <span>Searching for nearby gates...</span>
+                </div>
+                <div v-else-if="gatePhase === 'scanning'" class="status-badge connecting">
+                  <div class="spinner"></div>
+                  <span>Connecting to the nearest gate...</span>
+                </div>
+                <div v-else-if="gatePhase === 'error'" class="status-badge disconnected status-badge--error">
+                  <svg class="status-badge__icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                    <line x1="12" y1="8" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    <circle cx="12" cy="16" r="1.4" fill="currentColor" />
+                  </svg>
+                  <div class="status-badge__text">
+                    <span class="status-badge__title">Connection issue</span>
+                    <span class="status-badge__subtitle" v-if="bleErrorDetail === 'off'">
+                      Bluetooth is off - enable it in Settings to open the gate.
+                    </span>
+                    <span class="status-badge__subtitle" v-else-if="bleErrorDetail === 'unauthorized'">
+                      Bluetooth permission denied - enable it in Settings.
+                    </span>
+                    <span class="status-badge__subtitle" v-else>
+                      {{ statusMessage || 'Something went wrong while connecting to the gate.' }}
+                    </span>
+                  </div>
                 </div>
                 <div v-else class="status-badge disconnected">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-                    <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" />
-                    <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" />
                   </svg>
-                  <span>{{ $t('disconnected') || 'Disconnected' }}</span>
+                  <span>Ready</span>
                 </div>
 
                 <div v-if="deviceName" class="device-info">
@@ -230,198 +264,7 @@
               </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="actions-container">
-              <!-- Quick Open (Auto-connect and open) -->
-              <button
-                v-if="!isConnected && lastConnectedDevice"
-                class="action-button primary-action quick-open"
-                :class="{ loading: autoConnecting || isOpening }"
-                :disabled="autoConnecting || isOpening || (bleChecked && !isBLESupported)"
-                @click="quickOpenGate"
-              >
-                <svg
-                  v-if="!autoConnecting && !isOpening"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <polygon
-                    points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                <div v-else class="spinner"></div>
-                <span>{{ $t('quickOpen') || 'Quick Open Gate' }}</span>
-              </button>
-
-              <!-- Connect Button -->
-              <button
-                v-if="!isConnected && !lastConnectedDevice"
-                class="action-button primary-action"
-                :class="{ loading: isConnecting }"
-                :disabled="isConnecting || (bleChecked && !isBLESupported)"
-                @click="handleConnect"
-              >
-                <svg v-if="!isConnecting" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
-                  <path
-                    d="M12 1v6m0 6v6m9-9h-6m-6 0H3"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                </svg>
-                <div v-else class="spinner"></div>
-                <span>{{ $t('connect') || 'Connect to Gate' }}</span>
-              </button>
-
-              <!-- Open Gate Button -->
-              <button
-                v-if="isConnected"
-                class="action-button primary-action success"
-                :class="{ loading: isOpening }"
-                :disabled="isOpening"
-                @click="handleOpenGate"
-              >
-                <svg v-if="!isOpening" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M10 19H3V5C3 3.9 3.9 3 5 3H19C20.1 3 21 3.9 21 5V9"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                  <path
-                    d="M3 11H10M18 11H21M18 15V21M18 15L15 18M18 15L21 18"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                <div v-else class="spinner"></div>
-                <span>{{ $t('openGate') || 'Open Gate' }}</span>
-              </button>
-
-              <!-- Secondary Actions -->
-              <div v-if="isConnected || lastConnectedDevice" class="secondary-actions">
-                <button
-                  v-if="isConnected"
-                  class="secondary-button danger"
-                  @click="handleDisconnect"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M12 2L16 6L12 10L12 14L16 18L12 22L12 2Z"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <line
-                      x1="3"
-                      y1="3"
-                      x2="9"
-                      y2="9"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                    <line
-                      x1="15"
-                      y1="15"
-                      x2="21"
-                      y2="21"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                  </svg>
-                  <span>{{ $t('disconnect') || 'Disconnect' }}</span>
-                </button>
-
-                <button
-                  v-if="lastConnectedDevice && !isConnected"
-                  class="secondary-button"
-                  :class="{ loading: isConnecting }"
-                  :disabled="isConnecting"
-                  @click="handleConnect"
-                >
-                  <svg v-if="!isConnecting" width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
-                    <path
-                      d="M12 1v6m0 6v6m9-9h-6m-6 0H3"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                  </svg>
-                  <div v-else class="spinner small"></div>
-                  <span>{{ $t('newConnection') || 'New Device' }}</span>
-                </button>
-
-                <button
-                  v-if="lastConnectedDevice && !isConnected"
-                  class="secondary-button"
-                  @click="forgetDevice"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <polyline
-                      points="3 6 5 6 21 6"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path
-                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                  <span>{{ $t('forget') || 'Forget' }}</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Status Message -->
-            <transition name="slide-up">
-              <div v-if="statusMessage" class="status-message" :class="statusMessageType">
-                <svg
-                  v-if="statusMessageType === 'success'"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <path
-                    d="M20 6L9 17L4 12"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                <svg
-                  v-else-if="statusMessageType === 'error'"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-                  <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" />
-                  <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" />
-                </svg>
-                <span>{{ statusMessage }}</span>
-              </div>
-            </transition>
+            <!-- One-tap BLE flow: actions are handled by tapping the status card -->
           </div>
         </div>
 
@@ -495,9 +338,13 @@
                   stroke-linecap="round"
                 />
               </svg>
+              <span>{{ $t('generatePass') || 'Generate Pass' }}</span>
               <span
-                >{{ $t('generatePass') || 'Generate Pass' }}{{ passLimits.dailyLimit !== null && passLimits.dailyLimit !== undefined ? ` (${passLimits.usedToday || 0}/${passLimits.dailyLimit} • Left ${passLimits.dailyRemainingQuota !== null && passLimits.dailyRemainingQuota !== undefined ? passLimits.dailyRemainingQuota : Math.max(0, passLimits.dailyLimit - (passLimits.usedToday || 0))})` : '' }}</span
+                v-if="passLimits.dailyLimit !== null && passLimits.dailyLimit !== undefined"
+                class="generate-pass-counter"
               >
+                {{ `${passLimits.usedToday || 0}/${passLimits.dailyLimit}` }}
+              </span>
             </button>
 
             <div v-if="userBlockingStatus.isBlocked" class="blocked-hint">
@@ -815,7 +662,7 @@
     <!-- Floating Quick Action -->
     <transition name="fab">
       <button
-        v-if="lastConnectedDevice && !isConnected && activeTab === 'ble'"
+        v-if="false && lastConnectedDevice && !isConnected && activeTab === 'ble'"
         class="fab-button"
         :class="{ loading: autoConnecting || isOpening }"
         :disabled="autoConnecting || isOpening"
@@ -843,7 +690,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBluetooth } from '../../composables/useBluetooth'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
@@ -885,7 +732,6 @@ const GATE_PASSWORD = 'OPEN123'
 // Use bluetooth composable
 const {
   isConnected,
-  isConnecting,
   isBLESupported,
   deviceName,
   checkBLESupport,
@@ -901,6 +747,26 @@ const statusMessageType = ref('')
 const bleChecked = ref(false)
 const autoConnecting = ref(false)
 const lastConnectedDevice = ref(null)
+const gatePhase = ref('ready')
+const bleErrorDetail = ref('')
+
+let phaseTimer = null
+let resetTimer = null
+
+const clearGateTimers = () => {
+  if (phaseTimer) {
+    clearTimeout(phaseTimer)
+    phaseTimer = null
+  }
+  if (resetTimer) {
+    clearTimeout(resetTimer)
+    resetTimer = null
+  }
+}
+
+const isSessionActive = computed(() => {
+  return gatePhase.value === 'broadcasting' || gatePhase.value === 'scanning'
+})
 
 // Passes state
 const passes = ref([])
@@ -1018,6 +884,8 @@ const handleConnect = async () => {
   try {
     console.log('🔵 Starting BLE connection...')
     statusMessage.value = ''
+    bleErrorDetail.value = ''
+    gatePhase.value = 'broadcasting'
 
     const success = await connect(SERVICE_UUID)
 
@@ -1031,21 +899,56 @@ const handleConnect = async () => {
 
       statusMessage.value = t('successfullyConnected') || 'Successfully connected to gate device'
       statusMessageType.value = 'success'
+      gatePhase.value = 'confirmed'
 
       setTimeout(() => {
         if (statusMessage.value === (t('successfullyConnected') || 'Successfully connected to gate device')) {
           statusMessage.value = ''
         }
+        if (gatePhase.value === 'confirmed') {
+          gatePhase.value = 'ready'
+        }
       }, 3000)
     } else {
       statusMessage.value = t('failedToConnect') || 'Failed to connect. Please try again.'
       statusMessageType.value = 'error'
+      gatePhase.value = 'error'
     }
   } catch (error) {
     console.error('❌ Connection error:', error)
     statusMessage.value = error.message || t('connectionFailed') || 'Connection failed'
     statusMessageType.value = 'error'
+    const msg = String(error?.message || '').toLowerCase()
+    if (msg.includes('off') || msg.includes('disabled')) bleErrorDetail.value = 'off'
+    if (msg.includes('permission') || msg.includes('unauthorized') || msg.includes('denied')) bleErrorDetail.value = 'unauthorized'
+    gatePhase.value = 'error'
   }
+}
+
+const startGateSession = async () => {
+  if (isSessionActive.value) return
+  clearGateTimers()
+  bleErrorDetail.value = ''
+  statusMessage.value = ''
+  statusMessageType.value = ''
+  gatePhase.value = 'broadcasting'
+
+  // Match JDAR UX: searching phase first, then connecting phase.
+  phaseTimer = setTimeout(() => {
+    if (gatePhase.value === 'broadcasting') {
+      gatePhase.value = 'scanning'
+    }
+  }, 2000)
+
+  if (isConnected.value) {
+    await handleOpenGate()
+    return
+  }
+  if (lastConnectedDevice.value) {
+    await quickOpenGate()
+    return
+  }
+  await handleConnect()
 }
 
 const quickOpenGate = async () => {
@@ -1053,6 +956,7 @@ const quickOpenGate = async () => {
     autoConnecting.value = true
     statusMessage.value = t('connectingToGate') || 'Connecting to gate...'
     statusMessageType.value = 'info'
+    gatePhase.value = 'scanning'
 
     const connected = await connect(SERVICE_UUID)
 
@@ -1060,6 +964,11 @@ const quickOpenGate = async () => {
       autoConnecting.value = false
       statusMessage.value = t('failedToConnect') || 'Failed to connect. Please try again.'
       statusMessageType.value = 'error'
+      gatePhase.value = 'no_confirmation'
+      resetTimer = setTimeout(() => {
+        gatePhase.value = 'ready'
+        statusMessage.value = ''
+      }, 4000)
       return
     }
 
@@ -1071,65 +980,72 @@ const quickOpenGate = async () => {
     if (success) {
       statusMessage.value = t('gateOpenedSuccessfully') || 'Gate opened successfully! 🎉'
       statusMessageType.value = 'success'
+      gatePhase.value = 'confirmed'
 
       setTimeout(async () => {
         await disconnect()
         statusMessage.value = ''
+        gatePhase.value = 'ready'
       }, 3000)
     } else {
       statusMessage.value = t('failedToOpenGate') || 'Failed to open gate. Please try again.'
       statusMessageType.value = 'error'
+      gatePhase.value = 'error'
     }
   } catch (error) {
     console.error('❌ Quick open error:', error)
     statusMessage.value = error.message || t('quickOpenFailed') || 'Quick open failed'
     statusMessageType.value = 'error'
+    const msg = String(error?.message || '').toLowerCase()
+    if (msg.includes('off') || msg.includes('disabled')) bleErrorDetail.value = 'off'
+    if (msg.includes('permission') || msg.includes('unauthorized') || msg.includes('denied')) bleErrorDetail.value = 'unauthorized'
+    gatePhase.value = 'error'
   } finally {
     autoConnecting.value = false
     isOpening.value = false
   }
 }
 
-const forgetDevice = () => {
-  lastConnectedDevice.value = null
-  localStorage.removeItem('lastGateDevice')
-
-  notificationStore.showInfo('Device forgotten. You can connect to a new device.')
-}
-
-const handleDisconnect = async () => {
-  statusMessage.value = ''
-  await disconnect()
-}
-
 const handleOpenGate = async () => {
   try {
     isOpening.value = true
     statusMessage.value = ''
+    gatePhase.value = 'scanning'
 
     const success = await write(SERVICE_UUID, CHARACTERISTIC_UUID, GATE_PASSWORD)
 
     if (success) {
       statusMessage.value = t('gateOpenedSuccessfully') || 'Gate opened successfully! 🎉'
       statusMessageType.value = 'success'
+      gatePhase.value = 'confirmed'
 
       setTimeout(() => {
         if (statusMessage.value.includes(t('gateOpenedSuccessfully') || 'Gate opened successfully')) {
           statusMessage.value = ''
         }
+        gatePhase.value = 'ready'
       }, 5000)
     } else {
       statusMessage.value = t('failedToOpenGate') || 'Failed to open gate. Please try again.'
       statusMessageType.value = 'error'
+      gatePhase.value = 'error'
     }
   } catch (error) {
     console.error('❌ Error opening gate:', error)
     statusMessage.value = error.message || t('failedToOpenGate') || 'Failed to open gate'
     statusMessageType.value = 'error'
+    const msg = String(error?.message || '').toLowerCase()
+    if (msg.includes('off') || msg.includes('disabled')) bleErrorDetail.value = 'off'
+    if (msg.includes('permission') || msg.includes('unauthorized') || msg.includes('denied')) bleErrorDetail.value = 'unauthorized'
+    gatePhase.value = 'error'
   } finally {
     isOpening.value = false
   }
 }
+
+onUnmounted(() => {
+  clearGateTimers()
+})
 
 /**
  * User Unit Information Functions
@@ -2620,6 +2536,16 @@ onMounted(async () => {
   align-items: center;
   gap: 20px;
   border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+}
+
+.status-card--active {
+  transform: translateY(-1px);
+}
+
+.status-card--error {
+  border-width: 2px;
 }
 
 /* Status Info */
@@ -2657,6 +2583,35 @@ onMounted(async () => {
 .status-badge.disconnected {
   background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
   color: #c62828;
+}
+
+.status-badge--error {
+  align-items: flex-start;
+}
+
+.status-badge__icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.status-badge__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 2px;
+}
+
+.status-badge__title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.status-badge__subtitle {
+  font-size: 0.76rem;
+  line-height: 1.25;
+  opacity: 0.95;
 }
 
 /* Device Info */
@@ -3012,6 +2967,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 16px 24px;
   background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
@@ -3024,6 +2980,18 @@ onMounted(async () => {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 16px rgba(175, 30, 35, 0.3);
   margin-bottom: 20px;
+}
+
+.generate-pass-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .generate-pass-button:hover:not(:disabled) {

@@ -221,18 +221,6 @@ export async function getUserById(userId) {
       console.log(`[DynamoDBUsersService] User not found with id key: ${userId}`)
     }
     
-      // Try with 'userId' as key
-      try {
-        user = await getItem(TABLE_NAME, { userId: userId })
-      if (user) {
-        const convertedUser = convertUserFromDynamoDB(user)
-        console.log(`[DynamoDBUsersService] ✅ Found user by userId key: ${convertedUser.email || userId}`)
-        return convertedUser
-      }
-      } catch {
-      console.log(`[DynamoDBUsersService] User not found with userId key: ${userId}`)
-    }
-    
     // If userId looks like an email (contains @), try email lookup as fallback
     if (userId && userId.includes('@')) {
       console.log(`[DynamoDBUsersService] userId looks like an email, trying email lookup: ${userId}`)
