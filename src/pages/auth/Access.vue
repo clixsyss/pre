@@ -256,6 +256,7 @@
                   <strong>{{ $t('bleNotSupported') || 'Bluetooth Not Supported' }}</strong>
                   <p>
                     {{
+                      bleSupportError ||
                       $t('bleNotSupportedDesc') ||
                       'Your device or browser does not support Bluetooth Low Energy.'
                     }}
@@ -734,6 +735,7 @@ const {
   isConnected,
   isBLESupported,
   deviceName,
+  lastError: bleSupportError,
   checkBLESupport,
   connect,
   write,
