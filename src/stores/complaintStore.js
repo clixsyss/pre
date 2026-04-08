@@ -356,7 +356,18 @@ export const useComplaintStore = defineStore('complaint', () => {
       // Ensure project is loaded (async)
       const projectId = await ensureProjectLoaded()
 
-      return complaintService.subscribeToComplaints(projectId, filters, (updatedComplaints) => {
+      const currentUser = await optimizedAuthService.getCurrentUser()
+      if (!currentUser) {
+        throw new Error('User not authenticated')
+      }
+
+      // Always scope realtime complaints feed to current user.
+      const userScopedFilters = {
+        ...filters,
+        userId: currentUser.uid,
+      }
+
+      return complaintService.subscribeToComplaints(projectId, userScopedFilters, (updatedComplaints) => {
         complaints.value = updatedComplaints
       })
     } catch (error) {

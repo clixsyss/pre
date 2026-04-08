@@ -52,7 +52,7 @@
           />
         </div>
         
-        <div class="filters">
+        <!-- <div class="filters">
           <select v-model="categoryFilter" class="filter-select">
             <option value="all">{{ $t('allCategories') }}</option>
             <option value="food">{{ $t('foodBeverage') }}</option>
@@ -68,7 +68,7 @@
             <option value="delivery">{{ $t('fastestDelivery') }}</option>
             <option value="name">{{ $t('nameAZ') }}</option>
           </select>
-        </div>
+        </div> -->
       </div>
 
       <!-- Stores Grid -->
@@ -351,7 +351,7 @@
                 <div class="order-actions">
                   <button 
                     v-if="canCancelOrder(order)" 
-                    @click="openCancelModal(order)" 
+                    @click.stop="openCancelModal(order)" 
                     class="cancel-btn"
                     :class="{ 'processing-cancel': requiresStoreCall(order) }"
                   >
@@ -378,9 +378,10 @@
     </div>
 
     <!-- Order Details Modal -->
-    <template v-if="shouldShowOrderDetailsModal">
-      <div class="modal-overlay" @click="closeOrderModal">
-        <div class="modal-content" @click.stop>
+    <Teleport to="body">
+      <template v-if="shouldShowOrderDetailsModal">
+        <div class="modal-overlay" @click.self="closeOrderModal">
+          <div class="modal-content" @click.stop>
         <!-- Modal Header -->
         <div class="modal-header">
           <div class="header-content">
@@ -589,13 +590,15 @@
             </div>
           </div>
         </div>
-      </div>
-      </div>
-    </template>
+          </div>
+        </div>
+      </template>
+    </Teleport>
 
     <!-- Order Cancellation Modal -->
-    <div v-if="showCancelModal" class="modal-overlay" @click="closeCancelModal">
-      <div class="modal-content cancel-modal" @click.stop>
+    <Teleport to="body">
+      <div v-if="showCancelModal" class="modal-overlay" @click.self="closeCancelModal">
+        <div class="modal-content cancel-modal" @click.stop>
         <div class="modal-header">
           <div class="header-content">
             <h2>{{ $t('cancelOrder') }}</h2>
@@ -750,8 +753,9 @@
             </template>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -893,7 +897,7 @@ const ordersCount = computed(() => {
 });
 
 const shouldShowOrderDetailsModal = computed(() => {
-  return showOrderModal.value && selectedOrder.value !== null;
+  return showOrderModal.value && !showCancelModal.value && selectedOrder.value !== null;
 });
 
 // Methods
@@ -1320,6 +1324,8 @@ const openCancelModal = async (order) => {
     storeId: orderWithStoreDetails.storeId
   });
   
+  // Ensure only one modal is visible at a time.
+  showOrderModal.value = false;
   orderToCancel.value = orderWithStoreDetails;
   selectedReason.value = '';
   customReasonText.value = '';
@@ -1634,23 +1640,25 @@ watch(() => route.query.tab, (newTab) => {
 
 .store-image-container {
   position: relative;
-  min-height: 200px;
-  height: auto;
+  height: 160px;
   width: 100%;
-  padding: 10px;
+  padding: 0;
   overflow: hidden;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .store-image {
+  width: 100%;
   height: 100%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.store-image img {
+  width: 100%;
+  height: 100%;
+  display: block;
   object-fit: cover;
   object-position: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 0;
 }
 
 /* Mobile app - hover effects disabled */
@@ -1677,10 +1685,11 @@ watch(() => route.query.tab, (newTab) => {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
-.status-badge {
-  position: relative;
-  top: 0px;
-  left: 0px;
+.store-image-container > .status-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1719,6 +1728,7 @@ watch(() => route.query.tab, (newTab) => {
   position: absolute;
   top: 12px;
   right: 12px;
+  z-index: 4;
   display: flex;
   gap: 8px;
 }

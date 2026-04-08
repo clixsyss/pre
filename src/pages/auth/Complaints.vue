@@ -39,7 +39,6 @@
           </svg>
         </div>
         <h4>{{ $t('noCategoriesAvailable') }}</h4>
-        <p>{{ $t('adminHasntCreatedCategories') }}</p>
         <button @click="showNewComplaintModal = true" class="btn-primary">
           {{ $t('startManualComplaint') }}
         </button>
@@ -642,7 +641,7 @@ watch(showNewComplaintModal, (isOpen) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem 1.5rem;
+  padding: 1.5rem;
   text-align: center;
   background: #f9fafb;
   border-radius: 16px;

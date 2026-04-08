@@ -440,8 +440,18 @@ class ComplaintService {
             lastMessageAt: data.lastMessageAt?.toDate?.() || data.lastMessageAt
           });
         });
-        console.log('📨 Real-time complaints update received:', complaints.length, 'complaints');
-        callback(complaints);
+        
+        // Safety: enforce user/status scoping in-memory as a final guard.
+        let scopedComplaints = complaints;
+        if (filters?.userId) {
+          scopedComplaints = scopedComplaints.filter((c) => c.userId === filters.userId);
+        }
+        if (filters?.status) {
+          scopedComplaints = scopedComplaints.filter((c) => c.status === filters.status);
+        }
+
+        console.log('📨 Real-time complaints update received:', scopedComplaints.length, 'complaints');
+        callback(scopedComplaints);
       });
     } catch (error) {
       console.error('❌ Error setting up complaints subscription:', error);
