@@ -346,6 +346,10 @@ class FCMService {
       body = data.body_ar;
     }
     
+    // Try to play an audible cue for foreground notifications.
+    // Some platforms suppress OS push sound while app is active.
+    this.playForegroundAlertSound();
+
     // Show in-app notification using Quasar Notify
     Notify.create({
       type: 'info',
@@ -376,6 +380,40 @@ class FCMService {
         logger.error('FCMService: Handler error:', error);
       }
     });
+  }
+
+  playForegroundAlertSound() {
+    try {
+      // Vibrate first when available (mostly Android webviews)
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate(120);
+      }
+
+      // Lightweight WebAudio beep fallback for foreground notifications
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.value = 880;
+      gain.gain.value = 0.06;
+
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start();
+      oscillator.stop(ctx.currentTime + 0.12);
+      oscillator.onended = () => {
+        try {
+          ctx.close();
+        } catch {
+          // ignore cleanup errors
+        }
+      };
+    } catch (error) {
+      logger.warn('FCMService: Foreground sound playback not available', error?.message || error);
+    }
   }
 
   /**
@@ -457,10 +495,11 @@ class FCMService {
     
     // Import router dynamically to avoid circular dependencies
     import('src/router').then(({ default: router }) => {
-      logger.log('FCMService: Router loaded, navigating to:', data.type);
+      const notificationType = data?.type || data?.actionType || 'alert';
+      logger.log('FCMService: Router loaded, navigating to:', notificationType);
       
       // Handle different notification types
-      switch (data.type) {
+      switch (notificationType) {
         case 'booking':
           router.push('/bookings');
           break;
