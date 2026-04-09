@@ -731,6 +731,23 @@ const isActiveTab = (tabName) => {
   }
 }
 
+const clearStaleNavHideClasses = () => {
+  if (typeof document === 'undefined') return
+
+  const activeEl = document.activeElement
+  const isTyping =
+    !!activeEl &&
+    (activeEl.tagName === 'INPUT' ||
+      activeEl.tagName === 'TEXTAREA' ||
+      activeEl.getAttribute?.('contenteditable') === 'true')
+
+  // If user is not typing and keyboard state says closed, stale classes should not keep nav hidden.
+  if (!isTyping && !isKeyboardVisible.value) {
+    document.body.classList.remove('hide-bottom-nav')
+    document.body.classList.remove('keyboard-open')
+  }
+}
+
 // Watch for project changes and trigger data refresh
 watch(
   () => projectStore.selectedProject,
@@ -811,6 +828,8 @@ watch(
     // Reset modal count on every navigation — prevents stale state from
     // a missed closeModal() call keeping the nav hidden permanently
     resetModalState()
+    // Clear stale body classes that can keep nav hidden after login/navigation.
+    clearStaleNavHideClasses()
   },
   { immediate: true }
 )
@@ -865,6 +884,9 @@ watch(() => route.path, (newPath, oldPath) => {
 
 // Load user projects when component mounts
 onMounted(async () => {
+  // Safety reset: previous pages may leave hide classes on body.
+  clearStaleNavHideClasses()
+
   // Initialize Android safe area handling (must be early)
   await initializeAndroidSafeArea()
   

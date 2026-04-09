@@ -243,6 +243,25 @@ const canSubmit = computed(() =>
   !loading.value,
 )
 
+const resolveMigrationUserId = async () => {
+  const existingId = registrationStore.firestoreUserId
+  if (existingId && !String(existingId).includes('@')) {
+    return existingId
+  }
+
+  try {
+    const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
+    const user = await getUserByEmail(formData.email.trim().toLowerCase())
+    if (user?.id) {
+      return user.id
+    }
+  } catch (lookupError) {
+    console.warn('[MigrateAccount] Could not resolve DynamoDB user ID by email:', lookupError?.message || lookupError)
+  }
+
+  return existingId || null
+}
+
 const handleMigration = async () => {
   if (loading.value) return
 
@@ -282,6 +301,7 @@ const handleMigration = async () => {
         challenge.cognitoUser,
         formData.password,
       )
+      const migrationUserId = await resolveMigrationUserId()
       let cognitoSub =
         signedInAfterPw?.attributes?.sub ||
         signedInAfterPw?.signInUserSession?.idToken?.payload?.sub
@@ -297,7 +317,7 @@ const handleMigration = async () => {
       await deviceKeyService.resetDeviceBindingAfterMigration({
         cognitoSub,
         email: formData.email.trim(),
-        dynamoUserId: registrationStore.firestoreUserId,
+        dynamoUserId: migrationUserId,
       })
       await optimizedAuthService.signOutAfterMigration()
     } else if (migrationType === 'MIGRATION_REQUIRED') {
@@ -313,20 +333,21 @@ const handleMigration = async () => {
       
       // Always update DynamoDB with Cognito sub — never store email as authUid (breaks device-key lookup)
       const cognitoUserId = migrationResult.cognitoUserId
+      const migrationUserId = await resolveMigrationUserId()
       const authUidIsCognitoSub = cognitoUserId && !String(cognitoUserId).includes('@')
-      if (registrationStore.firestoreUserId && authUidIsCognitoSub) {
+      if (migrationUserId && authUidIsCognitoSub) {
         console.log('[MigrateAccount] Updating DynamoDB user with authUid...')
         const { updateUser } = await import('src/services/dynamoDBUsersService')
-        await updateUser(registrationStore.firestoreUserId, {
+        await updateUser(migrationUserId, {
           authUid: cognitoUserId,
           emailVerified: migrationResult.confirmed || false,
           deviceKey: '',
           deviceKeyUpdatedAt: new Date().toISOString(),
         })
-        cacheService.delete(`users/${registrationStore.firestoreUserId}`)
+        cacheService.delete(`users/${migrationUserId}`)
         deviceKeyService.removeLocalDeviceKey()
         console.log('[MigrateAccount] ✅ DynamoDB user updated with authUid:', cognitoUserId)
-      } else if (registrationStore.firestoreUserId && cognitoUserId && !authUidIsCognitoSub) {
+      } else if (migrationUserId && cognitoUserId && !authUidIsCognitoSub) {
         console.warn(
           '[MigrateAccount] Skipping authUid update — value looks like email, not Cognito sub:',
           cognitoUserId,
@@ -361,7 +382,7 @@ const handleMigration = async () => {
         await deviceKeyService.resetDeviceBindingAfterMigration({
           cognitoSub: authUidIsCognitoSub ? cognitoUserId : undefined,
           email: formData.email.trim(),
-          dynamoUserId: registrationStore.firestoreUserId,
+          dynamoUserId: migrationUserId,
         })
       }
     } else {
