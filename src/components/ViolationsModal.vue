@@ -1,4 +1,5 @@
 <template>
+  <Teleport to="body">
   <div v-if="isOpen" class="violations-modal-overlay" @click="closeModal">
     <div class="violations-modal" @click.stop>
       <!-- Modal Header -->
@@ -97,8 +98,10 @@
     </div>
   </div>
 
+  </Teleport>
+
   <!-- Violation Detail Modal -->
-  <ViolationDetailModal 
+  <ViolationDetailModal
     v-if="showDetailModal"
     :violation="selectedViolation"
     :is-open="showDetailModal"
@@ -228,34 +231,20 @@ const getUnreadCount = (violation) => {
   ).length
 }
 
-// Watch for modal open/close
+// Load violations when modal opens; manage nav visibility
 watch(() => props.isOpen, (isOpen) => {
   if (isOpen) {
+    openModal()
     loadViolations()
+  } else {
+    hideNavigationBars()
   }
 })
 
-// Load violations when component mounts
 onMounted(() => {
   if (props.isOpen) {
+    openModal()
     loadViolations()
-  }
-})
-
-// Watch modal states to manage navigation bar visibility and background scrolling
-watch(() => props.isOpen, (isOpen) => {
-  if (isOpen) {
-    openModal()
-  } else {
-    hideNavigationBars()
-  }
-})
-
-watch(showDetailModal, (isOpen) => {
-  if (isOpen) {
-    openModal()
-  } else {
-    hideNavigationBars()
   }
 })
 </script>
@@ -267,28 +256,33 @@ watch(showDetailModal, (isOpen) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  z-index: 9999999;
-  padding: 20px;
-  /* iOS Safari fixes */
+  z-index: 9999999 !important;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 0;
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
+  will-change: transform;
   backface-visibility: hidden;
+  isolation: isolate;
 }
 
 .violations-modal {
-  background: white;
-  border-radius: 20px;
-  width: 100%;
-  max-width: 600px;
-  max-height: 80vh;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background-color: #F6F6F6;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
+  margin: auto;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
 }
@@ -445,7 +439,7 @@ watch(showDetailModal, (isOpen) => {
 
 /* Mobile app - hover effects disabled */
 /* .violation-card:hover {
-  border-color: #AF1E23;
+  border-color: #01549b;
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.1);
 } */
 
@@ -561,10 +555,6 @@ watch(showDetailModal, (isOpen) => {
 
 /* Mobile Optimizations */
 @media (max-width: 480px) {
-  .violations-modal-overlay {
-    padding: 16px;
-  }
-  
   .modal-header {
     padding: 20px;
   }

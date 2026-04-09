@@ -348,7 +348,7 @@
                   <button 
                     class="pass-btn-compact pass-share-compact" 
                     @click="sharePass(pass)"
-                    :disabled="pass.used || isPassExpired(pass)"
+                    :disabled="pass.used || isPassExpired(pass) || sharingPassId === pass.id"
                   >
                     <template v-if="pass.used">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -366,6 +366,8 @@
                       Expired
                     </template>
                     <template v-else>
+                    <span v-if="sharingPassId === pass.id">Sharing...</span>
+                    <template v-else>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                       <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
                       <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
@@ -374,6 +376,7 @@
                       <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
                     </svg>
                     {{ $t('shareQrImage') || 'Share QR Image' }}
+                    </template>
                     </template>
                   </button>
 
@@ -565,7 +568,7 @@
             </div>
             <div class="modal-footer-pro">
               <button class="modal-btn-cancel" @click="closeGeneratedPassPreview">Close</button>
-              <button class="modal-btn-generate" @click="shareGeneratedPass">
+              <button class="modal-btn-generate" @click="shareGeneratedPass" :disabled="isSharingGeneratedPass">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
                   <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
@@ -573,7 +576,7 @@
                   <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
                   <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
                 </svg>
-                <span>{{ $t('shareQrImage') || 'Share QR Image' }}</span>
+                <span>{{ isSharingGeneratedPass ? ($t('sharing') || 'Sharing...') : ($t('shareQrImage') || 'Share QR Image') }}</span>
               </button>
             </div>
           </div>
@@ -712,6 +715,9 @@ const generatedPassPreview = ref(null)
 const generatedPassPreviewImage = ref('')
 const isValidatingLocation = ref(false)
 const isGeneratingPass = ref(false)
+const sharingPassId = ref(null)
+const isSharingGeneratedPass = ref(false)
+const currentUserDisplayName = ref('')
 const displayedPassesCount = ref(5) // Show 5 passes initially
 
 // Watch for modal state to hide bottom navigation
@@ -812,6 +818,83 @@ const loadImage = (src) =>
     img.onerror = reject
     img.src = src
   })
+
+const getDisplayNameFromEmail = (email) => {
+  const value = String(email || '').trim()
+  if (!value || !value.includes('@')) return ''
+  const localPart = value.split('@')[0] || ''
+  if (!localPart) return ''
+  return localPart
+    .replace(/[._-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (ch) => ch.toUpperCase())
+}
+
+const isLikelyEmail = (value) => {
+  const text = String(value || '').trim()
+  return Boolean(text) && text.includes('@')
+}
+
+const cleanCandidateName = (value) => {
+  const text = String(value || '').trim()
+  if (!text) return ''
+  if (isLikelyEmail(text)) return ''
+  const lower = text.toLowerCase()
+  if (lower === 'unknown' || lower === 'unknown user' || lower === 'n/a') return ''
+  return text
+}
+
+const resolveUserDisplayName = (userLike) => {
+  if (!userLike) return ''
+  const attributes = userLike.attributes || userLike.cognitoAttributes || {}
+  const candidates = [
+    attributes.name,
+    attributes.fullName,
+    attributes.displayName,
+    [attributes.given_name, attributes.family_name].filter(Boolean).join(' '),
+    userLike.fullName,
+    userLike.displayName,
+    [userLike.firstName, userLike.lastName].filter(Boolean).join(' '),
+    userLike.name,
+    userLike.username,
+    attributes.preferred_username,
+  ]
+  return candidates.map(cleanCandidateName).find(Boolean) || ''
+}
+
+const normalizeOwnerName = (ownerValue) => {
+  const raw = String(ownerValue || '').trim()
+  if (!raw || raw.toLowerCase() === 'unknown user') {
+    return cleanCandidateName(currentUserDisplayName.value) || 'User'
+  }
+  if (isLikelyEmail(raw)) {
+    return cleanCandidateName(currentUserDisplayName.value) || 'User'
+  }
+  return raw
+}
+
+const hydrateCurrentUserDisplayName = async (user, userId) => {
+  const fromAuth = resolveUserDisplayName(user)
+  if (fromAuth) {
+    currentUserDisplayName.value = fromAuth
+    return
+  }
+
+  if (!userId) return
+  try {
+    const userDoc = await firestoreService.getDoc(`users/${userId}`, { useCache: false })
+    const exists = typeof userDoc?.exists === 'function' ? userDoc.exists() : userDoc?.exists !== false
+    if (!exists) return
+    const data = typeof userDoc.data === 'function' ? userDoc.data() : (userDoc.data || userDoc)
+    const fromProfile = resolveUserDisplayName(data)
+    if (fromProfile) {
+      currentUserDisplayName.value = fromProfile
+    }
+  } catch (e) {
+    console.warn('⚠️ Could not hydrate user display name from profile:', e)
+  }
+}
 
 /**
  * BLE Functions
@@ -1401,6 +1484,10 @@ const loadPassesFromAWS = async () => {
 
     // Get user ID (Cognito sub)
     const userId = user.attributes?.sub || user.cognitoAttributes?.sub || user.userSub || user.uid
+    await hydrateCurrentUserDisplayName(user, userId)
+    if (!currentUserDisplayName.value) {
+      currentUserDisplayName.value = 'User'
+    }
     console.log('📥 Loading passes from AWS for project:', projectId)
     console.log('👤 User ID:', userId)
 
@@ -1442,7 +1529,7 @@ const loadPassesFromAWS = async () => {
     passes.value = loadedPasses.map(pass => ({
       id: pass.id,
       projectId: pass.projectId,
-      userName: pass.userName,
+      userName: normalizeOwnerName(pass.userName),
       unit: pass.unit || '',
       guestName: pass.guestName,
       purpose: pass.purpose,
@@ -1760,14 +1847,10 @@ const generatePass = async () => {
       // This is temporary until permissions boot file is deployed
     }
 
-    // Get user name from Cognito attributes
-    const userName = user.attributes?.name || 
-                     user.attributes?.fullName || 
-                     user.cognitoAttributes?.name ||
-                     user.cognitoAttributes?.fullName ||
-                     user.displayName || 
-                     user.email || 
-                     'Unknown User'
+    // Get user name from Cognito/profile attributes with robust fallback
+    await hydrateCurrentUserDisplayName(user, userId)
+    const userName = currentUserDisplayName.value || 'User'
+    currentUserDisplayName.value = userName
     
     // userId is already declared above (line 1543), reuse it
     const result = await createGuestPass(
@@ -1831,6 +1914,13 @@ const generatePass = async () => {
     await new Promise((resolve) => setTimeout(resolve, 100))
     const composedPassImage = await generateQRCode(pass)
 
+    // Persist generated image in local state so re-share works without regeneration
+    if (composedPassImage) {
+      passes.value = passes.value.map((p) =>
+        p.id === pass.id ? { ...p, qrImageDataUrl: composedPassImage } : p
+      )
+    }
+
     // Show generated pass preview modal (share is explicit action)
     generatedPassPreview.value = pass
     generatedPassPreviewImage.value = composedPassImage || pass.qrCodeUrl || ''
@@ -1847,19 +1937,21 @@ const generatePass = async () => {
 
 const generateQRCode = async (pass) => {
   try {
-    const canvas = qrRefs.get(pass.id)
-    if (!canvas) {
-      console.warn('⚠️ Canvas not found for pass:', pass.id)
-      return null
-    }
+    // Use in-DOM canvas when available; otherwise create an offscreen canvas
+    const canvas = qrRefs.get(pass.id) || document.createElement('canvas')
 
-    // Set canvas size to match the gate pass design
-    const canvasWidth = 420
-    const canvasHeight = 700
+    // Render at higher resolution for crisp sharing quality
+    const baseCanvasWidth = 420
+    const baseCanvasHeight = 800
+    const qualityScale = 3
+    const canvasWidth = baseCanvasWidth * qualityScale
+    const canvasHeight = baseCanvasHeight * qualityScale
     canvas.width = canvasWidth
     canvas.height = canvasHeight
 
     const ctx = canvas.getContext('2d')
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.scale(qualityScale, qualityScale)
 
     // Clear canvas with white background
     ctx.fillStyle = '#FFFFFF'
@@ -1889,7 +1981,7 @@ const generateQRCode = async (pass) => {
       // Method 1: Try using QRCode.toCanvas directly (more reliable)
       const qrCanvas = document.createElement('canvas')
       await QRCode.toCanvas(qrCanvas, qrData, {
-        width: 280,
+        width: 280 * qualityScale,
         margin: 2,
         color: {
           dark: '#000000',
@@ -1900,7 +1992,7 @@ const generateQRCode = async (pass) => {
       console.log('✅ QR code generated with toCanvas, drawing gate pass...')
 
       // Draw the complete gate pass design
-      drawGatePass(ctx, qrCanvas, pass, canvasWidth, canvasHeight, logoImg)
+      drawGatePass(ctx, qrCanvas, pass, baseCanvasWidth, baseCanvasHeight, logoImg)
       console.log('✅ Gate pass drawn successfully')
       return canvas.toDataURL('image/png')
     } catch (toCanvasError) {
@@ -1908,7 +2000,7 @@ const generateQRCode = async (pass) => {
 
       // Method 2: Fallback to dataURL method
       const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
-        width: 280,
+        width: 280 * qualityScale,
         margin: 2,
         color: {
           dark: '#000000',
@@ -1925,7 +2017,7 @@ const generateQRCode = async (pass) => {
         qrImage.onerror = (error) => reject(error)
         qrImage.src = qrCodeDataUrl
       })
-      drawGatePass(ctx, img, pass, canvasWidth, canvasHeight, null)
+      drawGatePass(ctx, img, pass, baseCanvasWidth, baseCanvasHeight, null)
       console.log('✅ Gate pass drawn successfully')
       return canvas.toDataURL('image/png')
     }
@@ -1960,8 +2052,64 @@ const drawGatePass = (ctx, qrImg, pass, canvasWidth, canvasHeight, logoImg = nul
   const createdAtParts = safeDateParts(pass.createdAt)
   const validUntilParts = safeDateParts(pass.validUntil)
   const unitText = pass.unit || userUnitInfo.value || 'N/A'
-  const ownerText = pass.userName || pass.ownerName || pass.inviterName || 'N/A'
+  const isGenericName = (name) => {
+    const v = String(name || '').trim().toLowerCase()
+    return !v || v === 'unknown user' || v === 'unknown' || v === 'n/a'
+  }
+  const rawOwnerText = pass.userName || pass.ownerName || pass.inviterName || ''
+  const ownerText = isGenericName(rawOwnerText)
+    ? (currentUserDisplayName.value || 'N/A')
+    : (isLikelyEmail(rawOwnerText)
+      ? (currentUserDisplayName.value || getDisplayNameFromEmail(rawOwnerText) || 'N/A')
+      : rawOwnerText)
   const guestText = pass.guestName || (isArabic ? 'ضيف' : 'Guest')
+  const purposeText = pass.purpose || (isArabic ? 'زيارة' : 'Visit')
+  const projectNameText = projectStore.selectedProject?.name || pass.projectName || 'PRE Group'
+  const passCodeText = pass.code || pass.id || 'N/A'
+
+  const drawWrappedText = (text, x, y, maxWidth, lineHeight, maxLines = 2) => {
+    const value = String(text || 'N/A')
+    const words = value.split(/\s+/).filter(Boolean)
+    if (words.length === 0) {
+      ctx.fillText('N/A', x, y)
+      return
+    }
+    const lines = []
+    let current = ''
+    for (const word of words) {
+      const test = current ? `${current} ${word}` : word
+      if (ctx.measureText(test).width <= maxWidth || !current) {
+        current = test
+      } else {
+        lines.push(current)
+        current = word
+      }
+    }
+    if (current) lines.push(current)
+
+    const visibleLines = lines.slice(0, maxLines)
+    if (lines.length > maxLines && visibleLines.length > 0) {
+      let lastLine = visibleLines[visibleLines.length - 1]
+      while (ctx.measureText(`${lastLine}…`).width > maxWidth && lastLine.length > 1) {
+        lastLine = lastLine.slice(0, -1)
+      }
+      visibleLines[visibleLines.length - 1] = `${lastLine}…`
+    }
+
+    visibleLines.forEach((line, index) => {
+      ctx.fillText(line, x, y + (index * lineHeight))
+    })
+  }
+
+  const fitTextWithEllipsis = (text, maxWidth) => {
+    const value = String(text || 'N/A')
+    if (ctx.measureText(value).width <= maxWidth) return value
+    let trimmed = value
+    while (ctx.measureText(`${trimmed}…`).width > maxWidth && trimmed.length > 1) {
+      trimmed = trimmed.slice(0, -1)
+    }
+    return `${trimmed}…`
+  }
 
   // Branded gradient background (like web guest-pass page)
   const gradient = ctx.createLinearGradient(0, 0, canvasWidth, canvasHeight)
@@ -1994,26 +2142,48 @@ const drawGatePass = (ctx, qrImg, pass, canvasWidth, canvasHeight, logoImg = nul
     ctx.fillText('PRE', centerX, cardY + 52)
   }
 
+  // Highlight current selected project under the logo
+  const projectPillY = cardY + 82
+  const maxProjectWidth = cardWidth - 60
+  ctx.font = '700 13px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
+  let displayProject = String(projectNameText)
+  while (ctx.measureText(displayProject).width > maxProjectWidth && displayProject.length > 1) {
+    displayProject = `${displayProject.slice(0, -2)}…`
+  }
+  const projectTextWidth = ctx.measureText(displayProject).width
+  const projectPillWidth = Math.min(maxProjectWidth + 24, projectTextWidth + 28)
+  const projectPillX = centerX - projectPillWidth / 2
+  const projectPillHeight = 24
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.16)'
+  ctx.fillRect(projectPillX, projectPillY, projectPillWidth, projectPillHeight)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)'
+  ctx.lineWidth = 1
+  ctx.strokeRect(projectPillX, projectPillY, projectPillWidth, projectPillHeight)
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = '700 13px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText(displayProject, centerX, projectPillY + 16)
+
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '700 24px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
-  ctx.fillText(isArabic ? 'تصريح دخول' : 'Gate Pass', centerX, cardY + 90)
+  ctx.fillText(isArabic ? 'تصريح دخول' : 'Gate Pass', centerX, cardY + 142)
 
   ctx.fillStyle = 'rgba(255, 255, 255, 0.88)'
   ctx.font = '500 11px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
   ctx.fillText(
     isArabic ? `تم الإنشاء: ${createdAtParts.date}` : `Generated: ${createdAtParts.date}`,
     centerX,
-    cardY + 108
+    cardY + 162
   )
   ctx.fillText(
     isArabic ? `الوقت: ${createdAtParts.time}` : `Time: ${createdAtParts.time}`,
     centerX,
-    cardY + 124
+    cardY + 178
   )
 
   const qrSize = 300
   const qrX = centerX - qrSize / 2
-  const qrY = cardY + 146
+  const qrY = cardY + 204
   const qrFramePadding = 14
   ctx.fillStyle = '#FFFFFF'
   ctx.fillRect(qrX - qrFramePadding, qrY - qrFramePadding, qrSize + (qrFramePadding * 2), qrSize + (qrFramePadding * 2))
@@ -2023,38 +2193,50 @@ const drawGatePass = (ctx, qrImg, pass, canvasWidth, canvasHeight, logoImg = nul
   ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize)
 
   // Details block
-  const detailsY = qrY + qrSize + 26
+  const detailsY = qrY + qrSize + 38
   const leftX = cardX + 22
   const rightX = centerX + 10
-  const rowGap = 72
+  const fieldColumnWidth = (cardWidth / 2) - 30
+  const rowGap = 70
 
-  const drawField = (label, value, x, y, secondLine = null) => {
+  const drawField = (label, value, x, y, options = {}) => {
+    const { secondLine = null, wrap = false, mono = false } = options
     ctx.textAlign = 'left'
-    ctx.fillStyle = 'transparent'
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.88)'
     ctx.font = '500 11px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
     ctx.fillText(label, x, y)
     ctx.fillStyle = '#FFFFFF'
-    ctx.font = '700 16px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
+    ctx.font = mono
+      ? '700 13px "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+      : '700 15px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
     const displayValue = String(value || 'N/A')
-    ctx.fillText(displayValue.length > 26 ? `${displayValue.slice(0, 25)}…` : displayValue, x, y + 22)
+    if (wrap) {
+      drawWrappedText(displayValue, x, y + 21, fieldColumnWidth, 16, 2)
+    } else {
+      ctx.fillText(fitTextWithEllipsis(displayValue, fieldColumnWidth), x, y + 21)
+    }
     if (secondLine) {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.88)'
-      ctx.font = '600 14px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
+      ctx.font = '600 13px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
       const second = String(secondLine)
-      ctx.fillText(second.length > 28 ? `${second.slice(0, 27)}…` : second, x, y + 40)
+      ctx.fillText(fitTextWithEllipsis(second, fieldColumnWidth), x, y + 38)
     }
   }
 
   if (isArabic) {
-    drawField('الزائر', guestText, leftX, detailsY)
-    drawField('المضيف', ownerText, rightX, detailsY)
+    drawField('الزائر', guestText, leftX, detailsY, { wrap: true })
+    drawField('المضيف', ownerText, rightX, detailsY, { wrap: true })
     drawField('الوحدة', unitText, leftX, detailsY + rowGap)
-    drawField('صالح حتى', validUntilParts.date, rightX, detailsY + rowGap, validUntilParts.time)
+    drawField('صالح حتى', validUntilParts.date, rightX, detailsY + rowGap, { secondLine: validUntilParts.time })
+    drawField('الغرض', purposeText, leftX, detailsY + rowGap * 2, { wrap: true })
+    drawField('رقم التصريح', passCodeText, rightX, detailsY + rowGap * 2, { mono: true })
   } else {
-    drawField('Visitor', guestText, leftX, detailsY)
-    drawField('Owner', ownerText, rightX, detailsY)
+    drawField('Visitor', guestText, leftX, detailsY, { wrap: true })
+    drawField('Owner', ownerText, rightX, detailsY, { wrap: true })
     drawField('Unit', unitText, leftX, detailsY + rowGap)
-    drawField('Valid Until', validUntilParts.date, rightX, detailsY + rowGap, validUntilParts.time)
+    drawField('Valid Until', validUntilParts.date, rightX, detailsY + rowGap, { secondLine: validUntilParts.time })
+    drawField('Purpose', purposeText, leftX, detailsY + rowGap * 2, { wrap: true })
+    drawField('Pass Code', passCodeText, rightX, detailsY + rowGap * 2, { mono: true })
   }
 
   ctx.textAlign = 'center'
@@ -2095,13 +2277,18 @@ const deletePass = async (passId) => {
 }
 
 const sharePass = async (pass) => {
+  if (!pass?.id) return false
+  if (sharingPassId.value === pass.id) return false
+
   try {
+    sharingPassId.value = pass.id
     console.log('🖼️ Sharing guest pass image:', pass.id)
     const renderedImage = await generateQRCode(pass)
     
     const result = await sharingService.sharePassWithImage({
       ...pass,
-      qrImageDataUrl: renderedImage || pass.qrCodeUrl || '',
+      projectName: projectStore.selectedProject?.name || pass.projectName || '',
+      qrImageDataUrl: renderedImage || pass.qrImageDataUrl || pass.qrCodeUrl || '',
     })
 
     if (result.success) {
@@ -2120,13 +2307,25 @@ const sharePass = async (pass) => {
     }
     return false
   } catch (error) {
-    console.error('❌ Error sharing pass:', error)
-    
-    // Don't show error if user cancelled
-    if (error.message && !error.message.includes('cancelled')) {
-      notificationStore.showError('Failed to share pass. Please try again.')
+    const errorText = String(error?.message || error?.errorMessage || '').toLowerCase()
+    const isCancelled =
+      errorText.includes('cancel') ||
+      errorText.includes('aborted') ||
+      errorText.includes('share canceled') ||
+      errorText.includes('share cancelled')
+
+    if (isCancelled) {
+      console.log('ℹ️ Share canceled by user')
+      return false
     }
+
+    console.error('❌ Error sharing pass:', error)
+    notificationStore.showError('Failed to share pass. Please try again.')
     return false
+  } finally {
+    if (sharingPassId.value === pass.id) {
+      sharingPassId.value = null
+    }
   }
 }
 
@@ -2135,14 +2334,20 @@ const closeGeneratedPassPreview = () => {
 }
 
 const shareGeneratedPass = async () => {
-  if (!generatedPassPreview.value) return
+  if (!generatedPassPreview.value || isSharingGeneratedPass.value) return
+  isSharingGeneratedPass.value = true
   const passToShare = {
     ...generatedPassPreview.value,
+    projectName: projectStore.selectedProject?.name || generatedPassPreview.value.projectName || '',
     qrImageDataUrl: generatedPassPreviewImage.value || generatedPassPreview.value.qrCodeUrl || '',
   }
-  const didShare = await sharePass(passToShare)
-  if (didShare) {
-    closeGeneratedPassPreview()
+  try {
+    const didShare = await sharePass(passToShare)
+    if (didShare) {
+      closeGeneratedPassPreview()
+    }
+  } finally {
+    isSharingGeneratedPass.value = false
   }
 }
 

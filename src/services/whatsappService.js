@@ -20,7 +20,7 @@ const validatePass = (pass) => {
     throw new Error('Invalid pass data')
   }
 
-  if (!pass.guestName || !pass.code || !pass.validUntil) {
+  if (!pass.guestName || !(pass.code || pass.id || pass.passId) || !pass.validUntil) {
     throw new Error('Pass data is incomplete')
   }
 
@@ -29,7 +29,7 @@ const validatePass = (pass) => {
     projectId: pass.projectId, // Preserve projectId for URL generation
     guestName: sanitizeString(pass.guestName, 100),
     purpose: sanitizeString(pass.purpose, 200),
-    code: sanitizeString(pass.code, 50),
+    code: sanitizeString(pass.code || pass.id || pass.passId || '', 80),
     validUntil: pass.validUntil,
     qrCodeUrl: typeof pass.qrCodeUrl === 'string' ? pass.qrCodeUrl.trim() : '',
     qrImageDataUrl: typeof pass.qrImageDataUrl === 'string' ? pass.qrImageDataUrl.trim() : '',
@@ -41,6 +41,32 @@ const validatePass = (pass) => {
  * Handles sharing gate passes with QR codes using native share functionality
  */
 class SharingService {
+  getErrorText(error) {
+    if (!error) return ''
+    if (typeof error === 'string') return error
+    const fromMessage = String(error?.message || '').trim()
+    if (fromMessage) return fromMessage
+    const fromErrorMessage = String(error?.errorMessage || '').trim()
+    if (fromErrorMessage) return fromErrorMessage
+    try {
+      return JSON.stringify(error)
+    } catch {
+      return String(error)
+    }
+  }
+
+  isShareCancelled(error) {
+    const msg = this.getErrorText(error).toLowerCase()
+    const name = String(error?.name || '').toLowerCase()
+    return (
+      msg.includes('cancel') ||
+      msg.includes('aborted') ||
+      msg.includes('share canceled') ||
+      msg.includes('share cancelled') ||
+      name.includes('aborterror')
+    )
+  }
+
   async fetchImageBlob(imageUrlOrDataUrl) {
     if (!imageUrlOrDataUrl) {
       throw new Error('No QR image available to share')
@@ -85,7 +111,16 @@ class SharingService {
           directory,
         })
 
-        const candidateUris = [uriResult?.uri, writeResult?.uri].filter(Boolean)
+        const candidateUris = [uriResult?.uri, writeResult?.uri]
+          .filter(Boolean)
+          .flatMap((uri) => {
+            const normalized = String(uri)
+            const variants = [normalized]
+            if (!normalized.startsWith('file://')) {
+              variants.push(`file://${normalized}`)
+            }
+            return variants
+          })
 
         for (const uri of candidateUris) {
           try {
@@ -97,7 +132,18 @@ class SharingService {
             })
             return true
           } catch (shareUriError) {
-            console.warn(`⚠️ Share files failed for URI ${uri}:`, shareUriError)
+            // Fallback: some Android share targets accept file URI in `url` better than `files`
+            try {
+              await Share.share({
+                title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
+                text: message,
+                url: uri,
+                dialogTitle: 'Share PRE Group Guest Pass',
+              })
+              return true
+            } catch (shareUrlError) {
+              console.warn(`⚠️ Share image failed for URI ${uri}:`, { shareUriError, shareUrlError })
+            }
           }
         }
       } catch (fileWriteError) {
@@ -126,6 +172,10 @@ class SharingService {
     // Sanitize all user inputs to prevent XSS
     const guestName = sanitizeString(pass.guestName, 100)
     const purpose = sanitizeString(pass.purpose, 200)
+    const projectName = sanitizeString(pass.projectName || pass.project || 'PRE Group', 120)
+    const hostName = sanitizeString(pass.userName || pass.ownerName || pass.inviterName || '', 120)
+    const unit = sanitizeString(pass.unit || '', 50)
+    const passCode = sanitizeString(pass.code || pass.id || '', 100)
     
     return `🏘️ *PRE Group - Guest Pass*
 
@@ -133,17 +183,19 @@ Dear ${guestName},
 
 You have been invited as a guest to PRE Group community.
 
-📋 *Pass Details:*
-👤 Guest: ${guestName}
-📅 Valid Until: ${validDate}
-🎯 Purpose: ${purpose}
+*Pass Details:*
+Project: ${projectName}
+Guest: ${guestName}
+${hostName ? `Host: ${hostName}\n` : ''}${unit ? `Unit: ${unit}\n` : ''}Pass Code: ${passCode}
+Valid Until: ${validDate}
+Purpose: ${purpose}
 
-✅ *Instructions:*
+*Instructions:*
 Please present the attached QR image at the main gate for entry. The security team will scan it for verification.
 
-Thank you for visiting PRE Group! 🌟
+Thank you for visiting PRE Group!
 
-_This is an automated message from PRE Group Management System._`
+This is an automated message from PRE Group Management System.`
   }
 
   /**
@@ -224,8 +276,9 @@ _This is an automated message from PRE Group Management System._`
       if (isNative) {
         // For native platforms, use Share plugin from Capacitor.Plugins
         console.log('📱 Accessing Share from Capacitor.Plugins...')
-        const Share = window.Capacitor?.Plugins?.Share
-        const Filesystem = window.Capacitor?.Plugins?.Filesystem
+        const plugins = window.Capacitor?.Plugins || Capacitor?.Plugins || {}
+        const Share = plugins.Share
+        const Filesystem = plugins.Filesystem
         
         if (!Share) {
           console.error('❌ Share not found in Capacitor.Plugins')
@@ -233,6 +286,17 @@ _This is an automated message from PRE Group Management System._`
         }
         
         try {
+          if (typeof Share.canShare === 'function') {
+            try {
+              const canShareResult = await Share.canShare()
+              if (canShareResult?.value === false) {
+                throw new Error('Native share is not available on this device')
+              }
+            } catch (canShareError) {
+              console.warn('⚠️ Share.canShare check failed, continuing:', canShareError)
+            }
+          }
+
           const imageBlob = await this.fetchImageBlob(passImageUrl)
           let sharedAsFile = false
 
@@ -254,13 +318,7 @@ _This is an automated message from PRE Group Management System._`
           }
 
           if (!sharedAsFile) {
-          console.log('📤 Opening native share dialog...')
-            await Share.share({
-              title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
-              text: message,
-              url: passImageUrl,
-              dialogTitle: 'Share PRE Group Guest Pass',
-            })
+            throw new Error('Could not attach QR image to native share')
           }
           console.log('✅ Share dialog completed')
 
@@ -269,20 +327,19 @@ _This is an automated message from PRE Group Management System._`
               message: 'Guest pass image shared successfully!',
             }
           } catch (shareError) {
-          console.error('❌ Share failed:', shareError)
-            
-          // If sharing failed, user might have cancelled
-          if (shareError.message && shareError.message.includes('cancelled')) {
+          if (this.isShareCancelled(shareError)) {
             return {
               success: false,
               message: 'Share cancelled',
             }
           }
-          
+          console.error('❌ Share failed:', shareError)
+            
+          // If sharing failed, user might have cancelled
           throw shareError
         }
       } else {
-        // For web, share actual image file when supported
+        // For web, share image file only (avoid silent text-only fallback)
         try {
           const imageBlob = await this.fetchImageBlob(passImageUrl)
           const imageFile = new File(
@@ -297,14 +354,8 @@ _This is an automated message from PRE Group Management System._`
               text: message,
               files: [imageFile],
             })
-          } else if (navigator.share) {
-            await navigator.share({
-              title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
-              text: message,
-              url: passImageUrl,
-            })
           } else {
-            throw new Error('Image sharing is not supported on this browser')
+            throw new Error('Image file sharing is not supported on this browser/device')
           }
 
           return {
@@ -313,12 +364,24 @@ _This is an automated message from PRE Group Management System._`
           }
         } catch (webShareError) {
           console.warn('Web share failed:', webShareError)
+          if (this.isShareCancelled(webShareError)) {
+            return {
+              success: false,
+              message: 'Share cancelled',
+            }
+          }
           throw new Error('Image sharing is not supported on this browser/device')
         }
       }
     } catch (error) {
+      if (this.isShareCancelled(error)) {
+        return {
+          success: false,
+          message: 'Share cancelled',
+        }
+      }
       console.error('❌ Error sharing pass:', error)
-      throw new Error('Failed to share pass: ' + (error.message || 'Unknown error'))
+      throw new Error('Failed to share pass: ' + (this.getErrorText(error) || 'Unknown error'))
     }
   }
 

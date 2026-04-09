@@ -170,12 +170,23 @@ class FCMService {
    */
   async initializeWeb() {
     logger.log('FCMService: Initializing web push notifications...');
-    
+
     try {
       // Check if messaging is supported
       if (!('Notification' in window)) {
         logger.warn('FCMService: Notifications not supported in this browser');
         return;
+      }
+
+      // Guard: do not attempt web push in a native WebView (WKWebView/Android WebView)
+      // These environments block Notification.requestPermission() — use initializeNative() instead
+      const isCapacitorNative = window.Capacitor?.isNativePlatform?.() ||
+        window.location.protocol === 'capacitor:' ||
+        window.webkit?.messageHandlers !== undefined
+      if (isCapacitorNative) {
+        logger.warn('FCMService: Native WebView detected in initializeWeb(), deferring to native path')
+        await this.initializeNative()
+        return
       }
       
       // Initialize messaging

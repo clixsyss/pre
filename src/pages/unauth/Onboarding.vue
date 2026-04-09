@@ -306,7 +306,7 @@
           </div>
 
           <div class="contact-cards">
-            <a href="tel:+201234567890" class="contact-card">
+            <a href="tel:19956" class="contact-card">
               <div class="contact-icon phone-icon">
                 <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
                   <path
@@ -315,8 +315,8 @@
                 </svg>
               </div>
               <div class="contact-info">
-                <h4>Phone</h4>
-                <p>+20 123 456 7890</p>
+                <h4>Call Center</h4>
+                <p>19956</p>
               </div>
               <svg class="arrow-icon" viewBox="0 0 24 24" width="20" height="20" fill="none">
                 <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -324,26 +324,7 @@
               </svg>
             </a>
 
-            <a href="mailto:info@pregroup.com" class="contact-card">
-              <div class="contact-icon email-icon">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                  <path d="M22 6l-10 7L2 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" />
-                </svg>
-              </div>
-              <div class="contact-info">
-                <h4>Email</h4>
-                <p>info@pregroup.com</p>
-              </div>
-              <svg class="arrow-icon" viewBox="0 0 24 24" width="20" height="20" fill="none">
-                <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </a>
-
-            <a href="https://www.pregroup.com" target="_blank" rel="noopener noreferrer" class="contact-card">
+            <a href="https://predevelopments.com" target="_blank" rel="noopener noreferrer" class="contact-card">
               <div class="contact-icon website-icon">
                 <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -354,27 +335,7 @@
               </div>
               <div class="contact-info">
                 <h4>Website</h4>
-                <p>www.pregroup.com</p>
-              </div>
-              <svg class="arrow-icon" viewBox="0 0 24 24" width="20" height="20" fill="none">
-                <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </a>
-
-            <a href="https://maps.google.com/?q=Cairo,Egypt" target="_blank" rel="noopener noreferrer"
-              class="contact-card">
-              <div class="contact-icon location-icon">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round" />
-                  <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" />
-                </svg>
-              </div>
-              <div class="contact-info">
-                <h4>Location</h4>
-                <p>Cairo, Egypt</p>
+                <p>www.predevelopments.com</p>
               </div>
               <svg class="arrow-icon" viewBox="0 0 24 24" width="20" height="20" fill="none">
                 <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"

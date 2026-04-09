@@ -235,7 +235,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { getDownloadURL, ref as storageRef } from 'firebase/storage'
@@ -538,44 +538,15 @@ const handleVideoClick = (item) => {
 }
 
 const openNewsDetail = (item) => {
-  console.log('📰 openNewsDetail called with item:', item?.title)
-  console.log('📰 Item data:', item)
-  
   selectedNewsItem.value = item
   showNewsModal.value = true
-  
-  // Use the modal state composable to properly manage navbar visibility
   openModal()
-  
-  console.log('📰 Modal state updated:', { 
-    showNewsModal: showNewsModal.value, 
-    hasItem: !!selectedNewsItem.value,
-    itemTitle: selectedNewsItem.value?.title 
-  })
 }
 
 const closeNewsModal = () => {
   showNewsModal.value = false
   selectedNewsItem.value = null
-  
-  // Use the modal state composable to properly restore navbar visibility
   closeModal()
-  
-  // Use nextTick to ensure modal state is updated before restoring any manual styles
-  nextTick(() => {
-    // Remove any manual style overrides to let CSS take control
-    const header = document.querySelector('.app-header')
-    const bottomNav = document.querySelector('.bottom-navigation')
-    const qHeader = document.querySelector('.q-header')
-    const qFooter = document.querySelector('.q-footer')
-    const qDrawer = document.querySelector('.q-drawer')
-    
-    if (header) header.style.display = ''
-    if (bottomNav) bottomNav.style.display = ''
-    if (qHeader) qHeader.style.display = ''
-    if (qFooter) qFooter.style.display = ''
-    if (qDrawer) qDrawer.style.display = ''
-  })
 }
 
 // Prevent background page scroll while news modal is open
@@ -809,22 +780,17 @@ onUnmounted(() => {
   if (videoIntersectionObserver.value) {
     videoIntersectionObserver.value.disconnect()
   }
-  
-  // Restore body styles in case component unmounts while modal is open
+
+  // If modal was open when component unmounts, close it properly
+  if (showNewsModal.value) {
+    showNewsModal.value = false
+    selectedNewsItem.value = null
+    closeModal()
+  }
+
+  // Restore body scroll styles
   document.body.style.overflow = ''
-  
-  // Restore app header and navigation visibility
-  const header = document.querySelector('.app-header')
-  const bottomNav = document.querySelector('.bottom-navigation')
-  const qHeader = document.querySelector('.q-header')
-  const qFooter = document.querySelector('.q-footer')
-  const qDrawer = document.querySelector('.q-drawer')
-  
-  if (header) header.style.display = ''
-  if (bottomNav) bottomNav.style.display = ''
-  if (qHeader) qHeader.style.display = ''
-  if (qFooter) qFooter.style.display = ''
-  if (qDrawer) qDrawer.style.display = ''
+  document.body.style.touchAction = ''
 })
 </script>
 

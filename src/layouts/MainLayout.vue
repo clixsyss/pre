@@ -304,7 +304,7 @@ const projectStore = useProjectStore()
 const smartMirrorStore = useSmartMirrorStore()
 const notificationCenterStore = useNotificationCenterStore()
 const appSettingsStore = useAppSettingsStore()
-const { openModal, closeModal } = useModalState()
+const { openModal, closeModal, isAnyModalOpen, resetModalState } = useModalState()
 const { preloadAppData, reset: resetPreloader } = useDataPreloader()
 
 // Initialize global keyboard handling
@@ -367,9 +367,9 @@ const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => currentProject.value?.id)
 const notificationUnreadCount = computed(() => notificationCenterStore.unreadCount)
 
-// Hide bottom navigation when keyboard is visible
+// Hide bottom navigation when keyboard is visible OR any modal is open
 const shouldHideBottomNav = computed(() => {
-  return isKeyboardVisible.value
+  return isKeyboardVisible.value || isAnyModalOpen.value
 })
 
 // Android platform detection is now handled via body.platform-android class in App.vue
@@ -803,12 +803,14 @@ watch(
   { deep: true }
 )
 
-// Watch for route changes to detect chat pages
+// Watch for route changes to detect chat pages and reset any stale modal state
 watch(
   () => route.path,
   () => {
     checkIfChatPage()
-    // Violation check removed - only show once on app load, not on every navigation
+    // Reset modal count on every navigation — prevents stale state from
+    // a missed closeModal() call keeping the nav hidden permanently
+    resetModalState()
   },
   { immediate: true }
 )
@@ -1690,16 +1692,11 @@ body.platform-android .bottom-navigation {
 /* Hide bottom nav when keyboard is open or ProfilePage modals are open */
 body.keyboard-open .bottom-navigation,
 body.hide-bottom-nav .bottom-navigation {
-  display: none !important;
+  transform: translateY(100%) !important;
+  -webkit-transform: translateY(100%) !important;
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
-  transform: translateY(100%) !important;
-  -webkit-transform: translateY(100%) !important;
-  z-index: -1 !important;
-  /* Disable transitions to ensure immediate hiding */
-  transition: none !important;
-  -webkit-transition: none !important;
 }
 
 .nav-item {

@@ -5,27 +5,36 @@ const isAnyModalOpen = ref(false)
 const modalCount = ref(0)
 
 export function useModalState() {
+  const syncBodyState = () => {
+    if (modalCount.value > 0) {
+      isAnyModalOpen.value = true
+      document.body.classList.add('modal-open')
+      return
+    }
+    isAnyModalOpen.value = false
+    document.body.classList.remove('modal-open')
+  }
+
   const openModal = () => {
     modalCount.value++
-    isAnyModalOpen.value = true
-    // Add class to body for iOS navigation bar hiding
-    document.body.classList.add('modal-open')
+    syncBodyState()
   }
 
   const closeModal = () => {
     modalCount.value = Math.max(0, modalCount.value - 1)
-    if (modalCount.value === 0) {
-      isAnyModalOpen.value = false
-      // Remove class from body
-      document.body.classList.remove('modal-open')
-    }
+    syncBodyState()
+  }
+
+  const resetModalState = () => {
+    modalCount.value = 0
+    syncBodyState()
   }
 
   return {
     isAnyModalOpen,
     modalCount,
     openModal,
-    closeModal
+    closeModal,
+    resetModalState
   }
 }
-

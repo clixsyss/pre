@@ -72,4 +72,4 @@ amplifytools.xcconfig
 .secret-*
 **.sample
 #amplify-do-not-edit-end
-src/aws/dynamodbClient.js
+# src/aws/dynamodbClient.js

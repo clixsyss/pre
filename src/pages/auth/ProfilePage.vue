@@ -1840,63 +1840,58 @@ const filteredGroupedDevices = computed(() => {
   return filtered
 })
 
-// Cache for profile data to prevent unnecessary reloads
-// Use sessionStorage to persist across component remounts
+// Cache for profile data — localStorage so it survives app restarts/kills
 const PROFILE_CACHE_KEY = 'profilePage_cache'
-const CACHE_DURATION = 15 * 60 * 1000 // 15 minutes (increased from 5)
+const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours — refresh on explicit save only
 
 const profileCache = {
   data: null,
   userId: null,
   timestamp: null,
   CACHE_DURATION: CACHE_DURATION,
-  
-  // Load from sessionStorage
+
   loadFromStorage() {
     try {
-      const stored = sessionStorage.getItem(PROFILE_CACHE_KEY)
+      const stored = localStorage.getItem(PROFILE_CACHE_KEY)
       if (stored) {
         const parsed = JSON.parse(stored)
         const now = Date.now()
-        if (parsed.data && parsed.userId && parsed.timestamp && 
+        if (parsed.data && parsed.userId && parsed.timestamp &&
             (now - parsed.timestamp) < this.CACHE_DURATION) {
           this.data = parsed.data
           this.userId = parsed.userId
           this.timestamp = parsed.timestamp
           return true
         } else {
-          // Cache expired, clear it
-          sessionStorage.removeItem(PROFILE_CACHE_KEY)
+          localStorage.removeItem(PROFILE_CACHE_KEY)
         }
       }
     } catch (e) {
-      console.warn('ProfilePage: Error loading cache from sessionStorage:', e)
+      console.warn('ProfilePage: Error loading cache from localStorage:', e)
     }
     return false
   },
-  
-  // Save to sessionStorage
+
   saveToStorage() {
     try {
       if (this.data && this.userId && this.timestamp) {
-        sessionStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({
+        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({
           data: this.data,
           userId: this.userId,
           timestamp: this.timestamp
         }))
       }
     } catch (e) {
-      console.warn('ProfilePage: Error saving cache to sessionStorage:', e)
+      console.warn('ProfilePage: Error saving cache to localStorage:', e)
     }
   },
-  
-  // Clear cache
+
   clear() {
     this.data = null
     this.userId = null
     this.timestamp = null
     try {
-      sessionStorage.removeItem(PROFILE_CACHE_KEY)
+      localStorage.removeItem(PROFILE_CACHE_KEY)
     } catch {
       // Ignore
     }
@@ -2839,6 +2834,9 @@ const handleLogout = async () => {
     }
 
     await optimizedAuthService.signOut()
+
+    // Clear cached profile so the next user starts fresh
+    profileCache.clear()
 
     notificationStore.showSuccess('Logged out successfully')
 

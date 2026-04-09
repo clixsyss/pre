@@ -137,8 +137,9 @@
     </div>
 
     <!-- New Complaint Modal -->
-    <div v-if="showNewComplaintModal" class="modal-overlay" :class="{ 'modal-overlay-keyboard-open': isKeyboardVisible }" @click="closeModal">
-      <div class="modal-content" :class="{ 'modal-keyboard-open': isKeyboardVisible }" @click.stop>
+    <Teleport to="body">
+    <div v-if="showNewComplaintModal" class="modal-overlay" @click="closeModal">
+      <div class="modal-content" @click.stop>
         <ModalHeader :title="$t('newComplaint')" :subtitle="$t('tellUsWhatWentWrong')" @close="closeModal">
           <template #icon>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -245,6 +246,7 @@
         </form>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 
@@ -264,7 +266,7 @@ defineOptions({
 });
 
 // Setup keyboard handling for better mobile UX (expose keyboard state for modal height)
-const { isKeyboardVisible } = useFormKeyboard({
+useFormKeyboard({
   scrollToInput: true,
   hideOnBackdropClick: true,
   scrollOffset: 150
@@ -991,32 +993,33 @@ watch(showNewComplaintModal, (isOpen) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  justify-content: center;
-  z-index: 999999;
-  padding: 1rem;
-}
-
-/* When keyboard is open, align modal to top of visible area so it stays in view */
-.modal-overlay.modal-overlay-keyboard-open {
   align-items: flex-start;
-  padding-top: 1.5rem;
+  justify-content: center;
+  z-index: 9999999 !important;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 0;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  isolation: isolate;
 }
 
 .modal-content {
-  background: white;
-  border-radius: 12px;
-  width: 100%;
+  background-color: #F6F6F6;
+  border-radius: 16px;
+  width: 90%;
   max-width: 500px;
-  max-height: 80vh;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
+  margin: auto;
+  max-height: calc(100vh - 40px);
   overflow-y: auto;
-  transition: max-height 0.2s ease-out;
-}
-
-/* When keyboard is open, constrain modal height so it stays visible above the keyboard */
-.modal-content.modal-keyboard-open {
-  max-height: 52vh;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  z-index: 1;
 }
 
 .modal-header {

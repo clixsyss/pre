@@ -1,4 +1,5 @@
 <template>
+  <Teleport to="body">
   <div v-if="isOpen" class="detail-modal-overlay" @click="closeModal">
     <div class="detail-modal" @click.stop>
       <!-- Modal Header -->
@@ -137,10 +138,11 @@
       <img :src="violation.evidenceImage" alt="Violation Evidence" class="full-evidence-image" />
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useModalState } from '../composables/useModalState'
 
 // Component name for ESLint
@@ -166,7 +168,7 @@ const props = defineProps({
 
 // Emits
 const emit = defineEmits(['close', 'start-chat'])
-const { openModal, closeModal: hideNavigationBars } = useModalState()
+const { openModal, closeModal: unregisterModal } = useModalState()
 
 // Reactive state
 const showImageModal = ref(false)
@@ -178,8 +180,8 @@ const totalMessages = computed(() => {
 
 const unreadCount = computed(() => {
   if (!props.violation?.messages || !Array.isArray(props.violation.messages)) return 0
-  
-  return props.violation.messages.filter(message => 
+
+  return props.violation.messages.filter(message =>
     (message.sender === 'admin' || message.sender === 'system') &&
     !message.readBy?.includes(props.userId)
   ).length
@@ -187,7 +189,7 @@ const unreadCount = computed(() => {
 
 const recentMessages = computed(() => {
   if (!props.violation?.messages || !Array.isArray(props.violation.messages)) return []
-  
+
   return props.violation.messages
     .slice(-3) // Get last 3 messages
     .reverse() // Show most recent first
@@ -258,22 +260,10 @@ const getStatusClass = (status) => {
   return classMap[status] || 'status-issued'
 }
 
-// Watch modal states to manage navigation bar visibility and background scrolling
-watch(() => props.isOpen, (isOpen) => {
-  if (isOpen) {
-    openModal()
-  } else {
-    hideNavigationBars()
-  }
-})
-
-watch(showImageModal, (isOpen) => {
-  if (isOpen) {
-    openModal()
-  } else {
-    hideNavigationBars()
-  }
-})
+// This component is always mounted via v-if in the parent, so
+// register/unregister once on mount/unmount.
+onMounted(() => openModal())
+onUnmounted(() => unregisterModal())
 </script>
 
 <style scoped>
@@ -283,28 +273,34 @@ watch(showImageModal, (isOpen) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  z-index: 9999999;
-  padding: 20px;
-  /* iOS Safari fixes */
+  z-index: 9999999 !important;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 0;
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
+  will-change: transform;
   backface-visibility: hidden;
+  isolation: isolate;
 }
 
 .detail-modal {
-  background: white;
-  border-radius: 20px;
-  width: 100%;
-  max-width: 600px;
-  max-height: 80vh;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background-color: #F6F6F6;
+  border-radius: 16px;
+  padding: 0;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
+  margin: auto;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
 }
@@ -413,7 +409,7 @@ watch(showImageModal, (isOpen) => {
 .amount {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #AF1E23;
+  color: #01549b;
 }
 
 .summary-description p {
@@ -590,7 +586,7 @@ watch(showImageModal, (isOpen) => {
 
 .chat-btn {
   flex: 1;
-  background: #AF1E23;
+  background: #01549b;
   color: white;
   border: none;
   border-radius: 8px;
@@ -675,10 +671,6 @@ watch(showImageModal, (isOpen) => {
 
 /* Mobile Optimizations */
 @media (max-width: 480px) {
-  .detail-modal-overlay {
-    padding: 16px;
-  }
-  
   .modal-header {
     padding: 20px;
   }
