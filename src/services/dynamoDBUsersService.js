@@ -21,6 +21,9 @@ import { getItem, scan, putItem, updateItem } from '../aws/dynamodbClient'
 
 const TABLE_NAME = 'users'
 
+/** Partition / sort key attribute names — must never appear in UpdateItem SET (DynamoDB rejects). */
+const TABLE_KEY_ATTRIBUTES = ['id']
+
 /**
  * Unmarshall DynamoDB Map for documents object
  * @param {Object} dynamoDocuments - DynamoDB Map format
@@ -495,6 +498,11 @@ export async function updateUser(userId, userData) {
       if (updateFields[key] === undefined) {
         delete updateFields[key]
       }
+    })
+
+    // Callers often spread full user records (e.g. from Firestore) which include `id`; SET on key attrs fails.
+    TABLE_KEY_ATTRIBUTES.forEach((k) => {
+      delete updateFields[k]
     })
     
     // Build update expression
