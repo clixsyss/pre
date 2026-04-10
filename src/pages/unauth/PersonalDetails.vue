@@ -185,7 +185,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useRegistrationStore } from '../../stores/registration'
@@ -210,6 +210,91 @@ const profilePicturePreview = ref(null)
 const profilePictureInput = ref(null)
 const frontIdInput = ref(null)
 const backIdInput = ref(null)
+
+/**
+ * Signup face verification (FaceVerificationPage) is skipped while true.
+ * Set to false to restore: personal details → /register/face-verification → property.
+ */
+const SKIP_FACE_VERIFICATION_DURING_SIGNUP = true
+
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024
+const ALLOWED_IMAGE_MIMES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+])
+
+function mimeFromFileName (name) {
+  const ext = (name.split('.').pop() || '').toLowerCase()
+  const map = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    heic: 'image/heic',
+    heif: 'image/heif',
+  }
+  return map[ext] || ''
+}
+
+function revokePreview (url) {
+  if (url && typeof url === 'string' && url.startsWith('blob:')) {
+    try {
+      URL.revokeObjectURL(url)
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/**
+ * Read gallery/camera File into memory immediately. iOS often revokes the
+ * underlying file handle before upload if we only keep the original File reference.
+ */
+async function snapshotImageFileForUpload (rawFile, label) {
+  if (!rawFile?.size) {
+    throw new Error(`${label}: no file selected`)
+  }
+  if (rawFile.size > MAX_IMAGE_BYTES) {
+    throw new Error(`${label} must be under 10MB`)
+  }
+  let mime =
+    rawFile.type && rawFile.type !== 'application/octet-stream'
+      ? rawFile.type
+      : mimeFromFileName(rawFile.name)
+  if (!mime || !ALLOWED_IMAGE_MIMES.has(mime)) {
+    mime = mimeFromFileName(rawFile.name)
+  }
+  if (!mime || !ALLOWED_IMAGE_MIMES.has(mime)) {
+    throw new Error(`${label}: use a JPEG, PNG, WebP, or HEIC photo`)
+  }
+  let buffer
+  try {
+    buffer = await rawFile.arrayBuffer()
+  } catch (e) {
+    const name = e?.name || ''
+    if (name === 'NotReadableError' || String(e?.message || '').includes('could not be read')) {
+      throw new Error(
+        `${label}: could not read this file (often happens with Photos on mobile). Try again or choose the image from Files.`
+      )
+    }
+    throw e
+  }
+  const fallbackExt =
+    mime.includes('png') ? 'png'
+      : mime.includes('webp') ? 'webp'
+        : mime.includes('heif') ? 'heif'
+          : mime.includes('heic') ? 'heic'
+            : 'jpg'
+  const safeName =
+    rawFile.name && rawFile.name.trim()
+      ? rawFile.name
+      : `upload.${fallbackExt}`
+  return new File([buffer], safeName, { type: mime })
+}
 
 // Setup keyboard handling for better mobile UX
 useFormKeyboard({
@@ -244,6 +329,12 @@ onMounted(() => {
   }
 })
 
+onUnmounted(() => {
+  revokePreview(profilePicturePreview.value)
+  revokePreview(frontIdPreview.value)
+  revokePreview(backIdPreview.value)
+})
+
 const goToOnboarding = () => {
   console.log('goToOnboarding called from PersonalDetails, navigating to /onboarding')
   router.push('/onboarding')
@@ -265,42 +356,54 @@ const saveToStore = () => {
   })
 }
 
-const handleFrontIdUpload = (event) => {
-  const file = event.target.files[0]
-  if (file) {
+const handleFrontIdUpload = async (event) => {
+  const input = event.target
+  const raw = input.files[0]
+  input.value = ''
+  if (!raw) return
+  try {
+    const file = await snapshotImageFileForUpload(raw, 'Front National ID')
+    revokePreview(frontIdPreview.value)
     frontIdFile.value = file
-    // Create preview
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      frontIdPreview.value = e.target.result
-    }
-    reader.readAsDataURL(file)
+    frontIdPreview.value = URL.createObjectURL(file)
+  } catch (e) {
+    frontIdFile.value = null
+    frontIdPreview.value = null
+    notificationStore.showError(e?.message || 'Could not load image')
   }
 }
 
-const handleBackIdUpload = (event) => {
-  const file = event.target.files[0]
-  if (file) {
+const handleBackIdUpload = async (event) => {
+  const input = event.target
+  const raw = input.files[0]
+  input.value = ''
+  if (!raw) return
+  try {
+    const file = await snapshotImageFileForUpload(raw, 'Back National ID')
+    revokePreview(backIdPreview.value)
     backIdFile.value = file
-    // Create preview
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      backIdPreview.value = e.target.result
-    }
-    reader.readAsDataURL(file)
+    backIdPreview.value = URL.createObjectURL(file)
+  } catch (e) {
+    backIdFile.value = null
+    backIdPreview.value = null
+    notificationStore.showError(e?.message || 'Could not load image')
   }
 }
 
-const handleProfilePictureUpload = (event) => {
-  const file = event.target.files[0]
-  if (file) {
+const handleProfilePictureUpload = async (event) => {
+  const input = event.target
+  const raw = input.files[0]
+  input.value = ''
+  if (!raw) return
+  try {
+    const file = await snapshotImageFileForUpload(raw, 'Profile picture')
+    revokePreview(profilePicturePreview.value)
     profilePictureFile.value = file
-    // Create preview
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      profilePicturePreview.value = e.target.result
-    }
-    reader.readAsDataURL(file)
+    profilePicturePreview.value = URL.createObjectURL(file)
+  } catch (e) {
+    profilePictureFile.value = null
+    profilePicturePreview.value = null
+    notificationStore.showError(e?.message || 'Could not load image')
   }
 }
 
@@ -309,9 +412,10 @@ const selectProfilePicture = () => {
 };
 
 const removeProfilePicture = () => {
-  profilePictureFile.value = null;
-  profilePicturePreview.value = null;
-};
+  revokePreview(profilePicturePreview.value)
+  profilePictureFile.value = null
+  profilePicturePreview.value = null
+}
 
 
 const selectFrontIdFromGallery = () => {
@@ -319,9 +423,10 @@ const selectFrontIdFromGallery = () => {
 };
 
 const removeFrontId = () => {
-  frontIdFile.value = null;
-  frontIdPreview.value = null;
-};
+  revokePreview(frontIdPreview.value)
+  frontIdFile.value = null
+  frontIdPreview.value = null
+}
 
 
 const selectBackIdFromGallery = () => {
@@ -329,8 +434,9 @@ const selectBackIdFromGallery = () => {
 };
 
 const removeBackId = () => {
-  backIdFile.value = null;
-  backIdPreview.value = null;
+  revokePreview(backIdPreview.value)
+  backIdFile.value = null
+  backIdPreview.value = null
 }
 
 const handleSubmit = async () => {
@@ -466,10 +572,15 @@ const handleSubmit = async () => {
     // Will be cleared after complete registration
 
     console.log('[PersonalDetails] Showing success notification')
-    notificationStore.showSuccess('Details saved! Now let\'s verify your face.')
-
-    console.log('[PersonalDetails] NAVIGATING to /register/face-verification')
-    router.push('/register/face-verification')
+    if (SKIP_FACE_VERIFICATION_DURING_SIGNUP) {
+      notificationStore.showSuccess('Details saved! Continue with your property information.')
+      console.log('[PersonalDetails] Skipping face verification; navigating to /register')
+      router.push('/register')
+    } else {
+      notificationStore.showSuccess('Details saved! Now let\'s verify your face.')
+      console.log('[PersonalDetails] NAVIGATING to /register/face-verification')
+      router.push('/register/face-verification')
+    }
     console.log('[PersonalDetails] ✅ Navigation triggered')
   } catch (error) {
     console.error('[PersonalDetails] ❌ Save error:', error)

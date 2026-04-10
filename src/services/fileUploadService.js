@@ -208,10 +208,30 @@ class FileUploadService {
         throw new Error('No file provided')
       }
 
-      // Validate file type (images only)
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-      if (!allowedTypes.includes(file.type)) {
-        throw new Error('Only JPEG, PNG, and WebP images are allowed')
+      // Validate file type (images only; HEIC common on iOS camera roll)
+      const allowedTypes = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/webp',
+        'image/heic',
+        'image/heif',
+      ]
+      const ext = (file.name && file.name.split('.').pop() || '').toLowerCase()
+      const extToMime = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        webp: 'image/webp',
+        heic: 'image/heic',
+        heif: 'image/heif',
+      }
+      let contentType = file.type
+      if (!contentType || contentType === 'application/octet-stream') {
+        contentType = extToMime[ext] || ''
+      }
+      if (!allowedTypes.includes(contentType)) {
+        throw new Error('Only JPEG, PNG, WebP, and HEIC images are allowed')
       }
 
       // Validate file size (max 10MB)
@@ -230,7 +250,7 @@ class FileUploadService {
       console.log('📤 Uploading to S3:', {
         bucket: S3_BUCKET,
         key: s3Key,
-        contentType: file.type,
+        contentType,
         size: file.size
       })
 
@@ -242,7 +262,7 @@ class FileUploadService {
         Bucket: S3_BUCKET,
         Key: s3Key,
         Body: uint8Array,
-        ContentType: file.type,
+        ContentType: contentType,
         // Make object publicly readable (adjust ACL based on your bucket policy)
         // ACL: 'public-read' // Uncomment if bucket allows public ACLs
       })

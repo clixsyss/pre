@@ -55,27 +55,20 @@
             </svg>
             Need Help?
           </h3>
-          <div class="support-item">
+          <!-- <div class="support-item">
             <svg class="support-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 8L7.89 12.26C8.22 12.52 8.78 12.52 9.11 12.26L21 8M5 19H19C20.1 19 21 18.1 21 17V7C21 5.9 20.1 5 19 5H5C3.9 5 3 5.9 3 7V17C3 18.1 3.9 19 5 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <span class="support-text">
               Email: <a href="mailto:support@pre-group.com" class="support-link">support@pre-group.com</a>
             </span>
-          </div>
+          </div> -->
           <div class="support-item">
-            <svg class="support-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 5C3 3.89543 3.89543 3 5 3H8.27924C8.70967 3 9.09181 3.27543 9.22792 3.68377L10.7257 8.31623C10.8618 8.72457 11.2439 9 11.6744 9H16.7053C17.4218 9 17.9129 9.67412 17.6081 10.3162L16.1141 13.6838C15.8093 14.3259 16.3004 15 17.0169 15H21C22.1046 15 23 15.8954 23 17V19C23 20.1046 22.1046 21 21 21H5C3.89543 21 3 20.1046 3 19V5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
             <span class="support-text">
-              Phone: <a href="tel:+201234567890" class="support-link">+20 123 456 7890</a>
+              Phone: <a href="tel:19956" class="support-link">19956</a>
             </span>
           </div>
           <div class="support-item">
-            <svg class="support-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17.657 16.657L13.414 20.9C13.0235 21.2905 12.3903 21.2905 11.9998 20.9L7.75699 16.657C7.36646 16.2665 7.36646 15.6333 7.75699 15.2428L9.1718 13.828C9.56233 13.4375 10.1955 13.4375 10.586 13.828L12 15.242L13.414 13.828C13.8045 13.4375 14.4377 13.4375 14.8282 13.828L16.243 15.2428C16.6335 15.6333 16.6335 16.2665 16.243 16.657Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M15 11C15 12.6569 13.6569 14 12 14C10.3431 14 9 12.6569 9 11C9 9.34315 10.3431 8 12 8C13.6569 8 15 9.34315 15 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
             <span class="support-text">
               Office: <span class="support-link">Visit our office for assistance</span>
             </span>
