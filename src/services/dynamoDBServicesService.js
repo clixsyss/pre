@@ -1,15 +1,12 @@
 /**
  * DynamoDB Services Service
- * 
- * Handles all operations for the "projects__serviceCategories__services" DynamoDB table.
- * This service replaces Firebase/Firestore calls for services data.
- * 
- * Table structure:
- * - Primary Key: parentId (String) - Project ID
- * - Sort Key: id (String) - Service ID
- * - Fields: arabicDescription, arabicTitle, categoryId, categoryName, createdAt,
- *           englishDescription, englishTitle, price, status, timeSlotEnd,
- *           timeSlotInterval, timeSlotStart, updatedAt
+ *
+ * Table: projects__serviceCategories__services
+ *
+ * Keys must match `dynamoDBAdapter.addDoc` (this repo and PRE admin) for nested path
+ * `projects/{projectId}/serviceCategories/{categoryId}/services`:
+ * partition key `parentId` is the **projectId** (not projectId#categoryId).
+ * Each item includes `categoryId` for filtering.
  */
 
 import { getItem, query } from '../aws/dynamodbClient'
@@ -34,48 +31,42 @@ export async function getServicesByProject(projectId, options = {}) {
       return []
     }
     
-    // Handle composite parentId (projectId#categoryId) or simple parentId (projectId)
-    // If categoryId is provided, use composite key; otherwise, try simple projectId
-    let keyCondition = 'parentId = :parentId'
-    const expressionValues = {
-      ':parentId': projectId
-    }
-    
-    // If categoryId is provided, try composite key format: projectId#categoryId
-    if (options.categoryId) {
-      const compositeKey = `${projectId}#${options.categoryId}`
-      keyCondition = 'parentId = :compositeKey'
-      expressionValues[':compositeKey'] = compositeKey
-      // Remove :parentId from expressionValues since we're using compositeKey
-      delete expressionValues[':parentId']
-    }
-    
+    // Dashboard writes services with parentId = projectId (see dynamoDBAdapter.addDoc).
     const queryOptions = {
-      KeyConditionExpression: keyCondition,
-      ExpressionAttributeValues: expressionValues
+      KeyConditionExpression: 'parentId = :parentId',
+      ExpressionAttributeValues: {
+        ':parentId': projectId
+      }
     }
-    
+
     if (options.limit) {
       queryOptions.Limit = options.limit
     }
-    
-    // Add filter expressions if provided
-    // Note: If we used composite key, we don't need categoryId filter
+
     const filterParts = []
-    if (options.categoryId && !keyCondition.includes('compositeKey')) {
-      // Only add categoryId filter if we're not using composite key
+    const expressionNames = {}
+
+    if (options.categoryId) {
       filterParts.push('categoryId = :categoryId')
       queryOptions.ExpressionAttributeValues[':categoryId'] = options.categoryId
     }
-    if (options.status) {
+
+    // Dashboard create flow may omit `status`; treat missing as published/available for the app.
+    if (options.status === 'available') {
+      expressionNames['#status'] = 'status'
+      filterParts.push('(attribute_not_exists(#status) OR #status = :statusAvailable)')
+      queryOptions.ExpressionAttributeValues[':statusAvailable'] = 'available'
+    } else if (options.status) {
+      expressionNames['#status'] = 'status'
       filterParts.push('#status = :status')
-      queryOptions.ExpressionAttributeNames = queryOptions.ExpressionAttributeNames || {}
-      queryOptions.ExpressionAttributeNames['#status'] = 'status'
       queryOptions.ExpressionAttributeValues[':status'] = options.status
     }
-    
+
     if (filterParts.length > 0) {
       queryOptions.FilterExpression = filterParts.join(' AND ')
+      if (Object.keys(expressionNames).length > 0) {
+        queryOptions.ExpressionAttributeNames = expressionNames
+      }
     }
     
     let items = []
@@ -122,7 +113,7 @@ export async function getServicesByProject(projectId, options = {}) {
         englishDescription: item.englishDescription || '',
         arabicDescription: item.arabicDescription || '',
         price: item.price ? parseFloat(item.price) : 0,
-        status: item.status || 'draft',
+        status: item.status != null && item.status !== '' ? item.status : 'available',
         timeSlotStart: item.timeSlotStart || '',
         timeSlotEnd: item.timeSlotEnd || '',
         timeSlotInterval: item.timeSlotInterval ? parseFloat(item.timeSlotInterval) : 0,
@@ -185,53 +176,19 @@ export async function getServiceById(projectId, serviceId, categoryId = null) {
       return null
     }
     
-    // Try to get service - parentId might be projectId or projectId#categoryId
     let service = null
-    
-    // If categoryId is provided, try composite key first
-    if (categoryId) {
-      const compositeKey = `${projectId}#${categoryId}`
-      try {
-        service = await getItem(TABLE_NAME, {
-          parentId: compositeKey,
-          id: serviceId
-        })
-      } catch (err) {
-        console.warn(`[DynamoDBServicesService] Composite key lookup failed:`, err)
-      }
+
+    try {
+      service = await getItem(TABLE_NAME, {
+        parentId: projectId,
+        id: serviceId
+      })
+    } catch (err) {
+      console.warn(`[DynamoDBServicesService] getItem lookup failed:`, err)
     }
-    
-    // If not found with composite key, try simple projectId
-    if (!service) {
-      try {
-        service = await getItem(TABLE_NAME, {
-          parentId: projectId,
-          id: serviceId
-        })
-      } catch (err) {
-        console.warn(`[DynamoDBServicesService] Simple key lookup failed:`, err)
-      }
-    }
-    
-    // If still not found, try querying with begins_with
-    if (!service) {
-      try {
-        const queryOptions = {
-          KeyConditionExpression: 'begins_with(parentId, :parentIdPrefix)',
-          FilterExpression: 'id = :serviceId',
-          ExpressionAttributeValues: {
-            ':parentIdPrefix': `${projectId}#`,
-            ':serviceId': serviceId
-          },
-          Limit: 1
-        }
-        const results = await query(TABLE_NAME, queryOptions)
-        if (results.length > 0) {
-          service = results[0]
-        }
-      } catch (err) {
-        console.warn(`[DynamoDBServicesService] Query lookup failed:`, err)
-      }
+
+    if (service && categoryId && service.categoryId && service.categoryId !== categoryId) {
+      service = null
     }
     
     if (service) {
@@ -246,14 +203,14 @@ export async function getServiceById(projectId, serviceId, categoryId = null) {
         englishDescription: service.englishDescription || '',
         arabicDescription: service.arabicDescription || '',
         price: service.price ? parseFloat(service.price) : 0,
-        status: service.status || 'draft',
+        status: service.status != null && service.status !== '' ? service.status : 'available',
         timeSlotStart: service.timeSlotStart || '',
         timeSlotEnd: service.timeSlotEnd || '',
         timeSlotInterval: service.timeSlotInterval ? parseFloat(service.timeSlotInterval) : 0,
         createdAt: service.createdAt || null,
         updatedAt: service.updatedAt || null
       }
-      
+
       console.log(`[DynamoDBServicesService] ✅ Found service: ${converted.englishTitle || serviceId}`)
       return converted
     }
@@ -296,14 +253,14 @@ export async function getAllServices(options = {}) {
       englishDescription: item.englishDescription || '',
       arabicDescription: item.arabicDescription || '',
       price: item.price ? parseFloat(item.price) : 0,
-      status: item.status || 'draft',
+      status: item.status != null && item.status !== '' ? item.status : 'available',
       timeSlotStart: item.timeSlotStart || '',
       timeSlotEnd: item.timeSlotEnd || '',
       timeSlotInterval: item.timeSlotInterval ? parseFloat(item.timeSlotInterval) : 0,
       createdAt: item.createdAt || null,
       updatedAt: item.updatedAt || null
     }))
-    
+
     console.log(`[DynamoDBServicesService] ✅ Fetched ${services.length} services from DynamoDB`)
     
     return services
@@ -320,4 +277,3 @@ export default {
   getServiceById,
   getAllServices
 }
-

@@ -21,9 +21,9 @@ body:not(.app-loaded) #app-root {
   background-color: #000 !important;
 }
 
-/* After app loads, allow background color changes */
+/* After app loads: match shell (#F6F6F6) so safe areas / gaps never flash #fafafa stripes next to MainLayout */
 body.app-loaded {
-  background-color: var(--background-color) !important;
+  background-color: #f6f6f6 !important;
 }
 
 body.app-loaded #app-root {

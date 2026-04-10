@@ -31,32 +31,47 @@ const handleKeyboardHide = () => {
   document.body.classList.remove('keyboard-open')
 }
 
-// DOM fallback: only trigger if Capacitor events didn't fire
+/** Clears stuck keyboard state (e.g. after login redirect when focus/blur did not fire). */
+export function resetKeyboardState() {
+  isKeyboardVisible.value = false
+  keyboardHeight.value = 0
+  if (typeof document !== 'undefined') {
+    document.body.classList.remove('keyboard-open')
+  }
+}
+
+const isEditableElement = (el) => {
+  if (!el || el.nodeType !== 1) return false
+  const tag = el.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return true
+  if (el.isContentEditable) return true
+  if (el.getAttribute?.('contenteditable') === 'true') return true
+  return false
+}
+
+// DOM fallback: only if focus *still* sits on an editable after the delay.
 const handleFocus = (event) => {
   const target = event.target
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-    setTimeout(() => {
-      if (!isKeyboardVisible.value) {
-        handleKeyboardShow({ keyboardHeight: 300 })
-      }
-    }, 150)
-  }
+  if (!isEditableElement(target)) return
+  setTimeout(() => {
+    const active = document.activeElement
+    if (!isEditableElement(active)) return
+    if (!isKeyboardVisible.value) {
+      handleKeyboardShow({ keyboardHeight: 300 })
+    }
+  }, 150)
 }
 
 const handleBlur = (event) => {
   const target = event.target
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-    setTimeout(() => {
-      const active = document.activeElement
-      const stillInInput =
-        active.tagName === 'INPUT' ||
-        active.tagName === 'TEXTAREA' ||
-        active.isContentEditable
-      if (!stillInInput && isKeyboardVisible.value) {
-        handleKeyboardHide()
-      }
-    }, 150)
-  }
+  if (!isEditableElement(target)) return
+  setTimeout(() => {
+    const active = document.activeElement
+    const stillInInput = isEditableElement(active)
+    if (!stillInInput && isKeyboardVisible.value) {
+      handleKeyboardHide()
+    }
+  }, 150)
 }
 
 const initListeners = async () => {
@@ -124,6 +139,7 @@ export function useGlobalKeyboard() {
   return {
     isKeyboardVisible,
     keyboardHeight,
-    hideKeyboard
+    hideKeyboard,
+    resetKeyboardState,
   }
 }

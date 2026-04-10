@@ -308,7 +308,7 @@ const { openModal, closeModal, isAnyModalOpen, resetModalState } = useModalState
 const { preloadAppData, reset: resetPreloader } = useDataPreloader()
 
 // Initialize global keyboard handling
-const { isKeyboardVisible } = useGlobalKeyboard()
+const { isKeyboardVisible, resetKeyboardState } = useGlobalKeyboard()
 
 // Initialize swipe navigation
 const {
@@ -741,12 +741,23 @@ const clearStaleNavHideClasses = () => {
       activeEl.tagName === 'TEXTAREA' ||
       activeEl.getAttribute?.('contenteditable') === 'true')
 
-  // If user is not typing and keyboard state says closed, stale classes should not keep nav hidden.
-  if (!isTyping && !isKeyboardVisible.value) {
+  // If user is not typing and no modal/keyboard, stale body classes must not keep chrome hidden.
+  if (!isTyping && !isKeyboardVisible.value && !isAnyModalOpen.value) {
     document.body.classList.remove('hide-bottom-nav')
     document.body.classList.remove('keyboard-open')
+    document.body.classList.remove('modal-open')
   }
 }
+
+watch(
+  shouldHideBottomNav,
+  (hidden) => {
+    if (!hidden) {
+      clearStaleNavHideClasses()
+    }
+  },
+  { immediate: true },
+)
 
 // Watch for project changes and trigger data refresh
 watch(
@@ -828,6 +839,8 @@ watch(
     // Reset modal count on every navigation — prevents stale state from
     // a missed closeModal() call keeping the nav hidden permanently
     resetModalState()
+    // Login / redirect can leave the DOM focus fallback keyboard flag true with no field focused.
+    resetKeyboardState()
     // Clear stale body classes that can keep nav hidden after login/navigation.
     clearStaleNavHideClasses()
   },
@@ -885,6 +898,7 @@ watch(() => route.path, (newPath, oldPath) => {
 // Load user projects when component mounts
 onMounted(async () => {
   // Safety reset: previous pages may leave hide classes on body.
+  resetKeyboardState()
   clearStaleNavHideClasses()
 
   // Initialize Android safe area handling (must be early)
@@ -1079,6 +1093,19 @@ body.platform-android .main-layout {
   padding-bottom: 5px;
   /* Force header to always be LTR, even in Arabic */
   direction: ltr !important;
+}
+
+/* iOS: paint status / notch area with header color — avoids grey body band above bar (viewport-fit=cover) */
+body.platform-ios .app-header {
+  padding-top: max(16px, env(safe-area-inset-top, 0px));
+}
+
+body.platform-ios .main-layout {
+  padding-top: calc(40px + env(safe-area-inset-top, 0px));
+}
+
+body.platform-ios .bottom-navigation {
+  padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Android safe area - simple padding approach */

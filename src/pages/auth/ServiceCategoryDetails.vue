@@ -86,12 +86,17 @@
       <p>{{ $t('noServicesInCategory') }}</p>
     </div>
 
-    <!-- Booking Dialog -->
-    <div v-if="showBookingDialog" class="booking-dialog-overlay" @click="closeBookingDialog">
-      <div class="booking-dialog" @click.stop>
-        <div class="dialog-header">
-          <h3 class="dialog-title">{{ $t('bookService') }}</h3>
-          <button @click="closeBookingDialog" class="close-btn">
+    <!-- Booking dialog: Teleport to body so fixed overlay covers full visual viewport (avoids top/bottom body bleed in WKWebView). -->
+    <Teleport to="body">
+      <div
+        v-if="showBookingDialog"
+        class="booking-dialog-overlay"
+        @click="closeBookingDialog"
+      >
+        <div class="booking-dialog" @click.stop>
+          <div class="dialog-header">
+            <h3 class="dialog-title">{{ $t('bookService') }}</h3>
+            <button type="button" @click="closeBookingDialog" class="close-btn">
             <svg
               width="24"
               height="24"
@@ -110,11 +115,11 @@
           </button>
         </div>
 
-        <div class="dialog-content">
+        <div class="dialog-scroll">
           <!-- Service Info Card -->
           <div class="service-info-card">
             <div class="service-header">
-              <div class="service-icon">
+              <div class="service-icon" aria-hidden="true">
                 <svg
                   width="24"
                   height="24"
@@ -145,11 +150,14 @@
                   />
                 </svg>
               </div>
-              <div class="service-details">
+              <div class="service-header-main">
                 <h4 class="service-name">{{ getLocalizedTitle(selectedService) }}</h4>
                 <p class="service-description">{{ getLocalizedDescription(selectedService) }}</p>
               </div>
+            </div>
+            <div class="service-price-row">
               <div class="service-price-badge">
+                <span class="price-label">{{ $t('price') }}</span>
                 <span class="price-amount">{{ $t('currency') }} {{ selectedService?.price }}</span>
               </div>
             </div>
@@ -305,11 +313,13 @@
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Action Buttons -->
+        <div class="dialog-footer">
           <div class="booking-actions">
-            <button @click="closeBookingDialog" class="cancel-btn">{{ $t('cancel') }}</button>
+            <button type="button" @click="closeBookingDialog" class="cancel-btn">{{ $t('cancel') }}</button>
             <button
+              type="button"
               @click="confirmBooking"
               :disabled="!selectedDate || !selectedTime || isBookingInProgress"
               class="book-btn"
@@ -340,8 +350,9 @@
             </button>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -542,9 +553,7 @@ const closeBookingDialog = () => {
   availableDays.value = []
   availableTimeSlots.value = []
   isBookingInProgress.value = false
-
-  // Ensure modal state is also closed
-  closeModal()
+  // Modal chrome: watch(showBookingDialog) calls closeModal() — do not call again here.
 }
 
 const generateAvailableDays = () => {
@@ -970,20 +979,22 @@ const confirmBooking = async () => {
   margin: 0;
 }
 
-/* Booking Dialog */
+/* Booking dialog — teleported to body; full visual viewport cover (no stripes from body/html) */
 .booking-dialog-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  width: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  z-index: 999999;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 999999;
-  padding: 20px;
-  /* iOS Safari fixes */
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.5);
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
@@ -991,15 +1002,26 @@ const confirmBooking = async () => {
 }
 
 .booking-dialog {
-  background: white;
+  background: #fff;
+  width: 100%;
+  max-width: 520px;
+  margin: 0;
   border-radius: 16px;
-  width: 98%;
-  max-height: 75vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: min(
+    88dvh,
+    calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)
+  );
+  max-height: min(
+    88vh,
+    calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)
+  );
+  overflow: hidden;
   pointer-events: auto;
   position: relative;
-  z-index: 10;
 }
 
 .dialog-header {
@@ -1008,6 +1030,7 @@ const confirmBooking = async () => {
   justify-content: space-between;
   padding: 20px;
   border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
 }
 
 [dir="rtl"] .dialog-header {
@@ -1037,41 +1060,55 @@ const confirmBooking = async () => {
   color: #374151;
 } */
 
-.dialog-content {
-  padding: 20px;
+.dialog-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 16px 20px 20px;
   pointer-events: auto;
   position: relative;
 }
 
-[dir="rtl"] .dialog-content {
+[dir="rtl"] .dialog-scroll {
   text-align: right;
 }
 
-.dialog-content .service-info {
+.dialog-scroll .service-info {
   margin-bottom: 24px;
   padding: 16px;
   background: #f9fafb;
   border-radius: 12px;
 }
 
-.dialog-content .service-name {
+.dialog-scroll .service-name {
   font-size: 1.125rem;
   font-weight: 600;
   color: #111827;
   margin: 0 0 8px 0;
 }
 
-.dialog-content .service-description {
+.dialog-scroll .service-description {
   font-size: 0.875rem;
   color: #6b7280;
   margin: 0 0 12px 0;
   line-height: 1.4;
 }
 
-.dialog-content .service-price {
+.dialog-scroll .service-price {
   font-size: 1rem;
   font-weight: 600;
   color: #af1e23;
+}
+
+.dialog-footer {
+  flex-shrink: 0;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  padding: 12px 20px max(12px, env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.06);
 }
 
 .availability-section {
@@ -1085,12 +1122,12 @@ const confirmBooking = async () => {
   margin: 0 0 16px 0;
 }
 
-/* Service Info Card */
+/* Service Info Card (booking modal) */
 .service-info-card {
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 32px;
+  padding: 20px;
+  margin-bottom: 24px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.2s ease;
@@ -1102,8 +1139,8 @@ const confirmBooking = async () => {
 
 .service-header {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  align-items: flex-start;
+  gap: 14px;
 }
 
 [dir="rtl"] .service-header {
@@ -1112,8 +1149,8 @@ const confirmBooking = async () => {
 }
 
 .service-icon {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   background: linear-gradient(135deg, #af1e23 0%, #dc2626 100%);
   border-radius: 12px;
   display: flex;
@@ -1121,36 +1158,69 @@ const confirmBooking = async () => {
   justify-content: center;
   color: white;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
-.service-details {
+.service-header-main {
   flex: 1;
   min-width: 0;
 }
 
-.service-name {
-  font-size: 1.25rem;
+.service-info-card .service-name {
+  font-size: 1.125rem;
   font-weight: 700;
   color: #1e293b;
-  margin: 0 0 8px 0;
-  line-height: 1.3;
+  margin: 0 0 10px 0;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
-.service-description {
+.service-info-card .service-description {
   font-size: 0.875rem;
   color: #64748b;
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.service-price-row {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .service-price-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
   background: linear-gradient(135deg, #af1e23 0%, #dc2626 100%);
   color: white;
-  padding: 12px 20px;
+  padding: 14px 18px;
   border-radius: 12px;
   font-weight: 700;
+  font-size: 1.05rem;
+  box-shadow: 0 4px 8px rgba(175, 30, 35, 0.25);
+}
+
+[dir="rtl"] .service-price-badge {
+  flex-direction: row-reverse;
+}
+
+.service-price-badge .price-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  opacity: 0.92;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.service-price-badge .price-amount {
   font-size: 1.125rem;
-  box-shadow: 0 4px 8px rgba(175, 30, 35, 0.3);
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 /* Booking Steps */
@@ -1463,15 +1533,11 @@ const confirmBooking = async () => {
   color: #6b7280;
 }
 
-/* Booking Actions */
+/* Booking actions (pinned in .dialog-footer) */
 .booking-actions {
   display: flex;
   gap: 16px;
-  padding-top: 24px;
-  border-top: 1px solid #e2e8f0;
   pointer-events: auto;
-  position: relative;
-  z-index: 10;
 }
 
 [dir="rtl"] .booking-actions {
@@ -1579,12 +1645,6 @@ const confirmBooking = async () => {
 
 /* Enhanced Mobile Experience */
 @media (max-width: 768px) {
-  .booking-dialog {
-    width: 95%;
-    max-height: 85vh;
-    margin: 10px;
-  }
-
   .service-info-card {
     padding: 20px;
     margin-bottom: 24px;
@@ -1647,12 +1707,8 @@ const confirmBooking = async () => {
 }
 
 @media (max-width: 480px) {
-  .booking-dialog-overlay {
-    padding: 5px;
-  }
-
-  .dialog-content {
-    padding: 16px;
+  .dialog-scroll {
+    padding: 14px 16px 16px;
   }
 
   .service-info-card {

@@ -334,13 +334,16 @@ class FastCollectionService {
           ...doc.data()
         }))
         
-        // Apply client-side filtering
+        // Apply client-side filtering (missing status = treat as available; matches dashboard create flow)
         if (availableOnly) {
-          services = services.filter(service => service.status === 'available')
+          services = services.filter(
+            (service) => !service.status || service.status === 'available'
+          )
         }
-        
-        // Sort by name
-        services.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+
+        services.sort((a, b) =>
+          (a.englishTitle || a.name || '').localeCompare(b.englishTitle || b.name || '')
+        )
         
         // Cache the processed data
         cacheService.setCollectionData(`projects/${projectId}/serviceCategories/${categoryId}/services`, { availableOnly }, services)
