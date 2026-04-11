@@ -314,6 +314,19 @@ const handleMigration = async () => {
           /* ignore */
         }
       }
+      // Same guarantees as MIGRATION_REQUIRED: set authUid to Cognito sub, clear device binding, bust cache.
+      // Without this, Dynamo can still hold a legacy deviceKey while localStorage was cleared → next login
+      // looks like a "new" phone against an "old" registered device and prompts device-key reset (often called "passkey").
+      const authUidIsCognitoSub = cognitoSub && !String(cognitoSub).includes('@')
+      if (migrationUserId && authUidIsCognitoSub) {
+        const { updateUser } = await import('src/services/dynamoDBUsersService')
+        await updateUser(migrationUserId, {
+          authUid: cognitoSub,
+          deviceKey: '',
+          deviceKeyUpdatedAt: new Date().toISOString(),
+        })
+        cacheService.delete(`users/${migrationUserId}`)
+      }
       await deviceKeyService.resetDeviceBindingAfterMigration({
         cognitoSub,
         email: formData.email.trim(),

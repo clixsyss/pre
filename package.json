@@ -52,6 +52,7 @@
     "date-fns": "^4.1.0",
     "face-api.js": "^0.22.2",
     "firebase": "^11.10.0",
+    "lucide-vue-next": "^0.294.0",
     "mqtt": "^5.14.1",
     "pinia": "^3.0.1",
     "qrcode": "^1.5.4",

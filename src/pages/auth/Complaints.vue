@@ -44,23 +44,41 @@
         </button>
       </div>
       
-      <!-- Categories Dropdown -->
-      <div v-else class="category-dropdown-container">
-        <label class="dropdown-label">{{ $t('selectComplaintCategory') }}</label>
-        <select 
-          @change="handleCategorySelect" 
-          class="category-dropdown"
-          v-model="selectedCategoryId"
-        >
-          <option value="">{{ $t('chooseCategory') }}</option>
-          <option 
-            v-for="category in complaintStore.complaintCategories" 
+      <!-- Category picker (supports custom icons from dashboard) -->
+      <div v-else class="category-picker-wrap">
+        <p class="dropdown-label">{{ $t('selectComplaintCategory') }}</p>
+        <div class="category-picker-grid" role="list">
+          <button
+            v-for="category in complaintStore.complaintCategories"
             :key="category.id"
-            :value="category.id"
+            type="button"
+            class="category-picker-card"
+            role="listitem"
+            @click="startQuickComplaint(category)"
           >
-            {{ getCategoryEmoji(category.icon) }} {{ category.name }}
-          </option>
-        </select>
+            <span
+              class="category-picker-icon"
+              :style="{
+                backgroundColor:
+                  category.iconUrl || category.lucideIcon ? '#ffffff' : (category.color || '#3B82F6')
+              }"
+            >
+              <img
+                v-if="category.iconUrl"
+                :src="category.iconUrl"
+                alt=""
+                class="category-picker-img"
+              />
+              <ComplaintLucideIcon
+                v-else-if="category.lucideIcon"
+                :name="category.lucideIcon"
+                :size="26"
+              />
+              <span v-else class="category-picker-emoji">{{ getComplaintCategoryEmoji(category.icon) }}</span>
+            </span>
+            <span class="category-picker-label">{{ category.name }}</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -107,7 +125,22 @@
           <div class="complaint-header">
             <div class="complaint-title-section">
               <h4 class="complaint-title">{{ complaint.title }}</h4>
-              <span class="complaint-category">{{ getCategoryName(complaint.category) }}</span>
+              <span class="complaint-category complaint-category-row">
+                <template v-if="getCategoryRow(complaint.category).iconUrl">
+                  <img
+                    :src="getCategoryRow(complaint.category).iconUrl"
+                    alt=""
+                    class="complaint-category-thumb"
+                  />
+                </template>
+                <ComplaintLucideIcon
+                  v-else-if="getCategoryRow(complaint.category).lucideIcon"
+                  :name="getCategoryRow(complaint.category).lucideIcon"
+                  :size="16"
+                />
+                <span v-else class="complaint-category-emoji">{{ getCategoryRow(complaint.category).emoji }}</span>
+                <span class="complaint-category-text">{{ getCategoryRow(complaint.category).name }}</span>
+              </span>
             </div>
             <span :class="['status-badge', complaint.status.toLowerCase().replace(' ', '-')]">
               {{ getStatusLabel(complaint.status) }}
@@ -158,12 +191,38 @@
 
           <div class="form-group">
             <label>{{ $t('category') }}</label>
-            <select v-model="newComplaint.category" required>
-              <option value="">{{ $t('selectCategory') }}</option>
-              <option v-for="category in complaintStore.complaintCategories" :key="category.id" :value="category.id">
-                {{ category.name }}
-              </option>
-            </select>
+            <div class="modal-category-picker" role="radiogroup" :aria-label="$t('category')">
+              <button
+                v-for="category in complaintStore.complaintCategories"
+                :key="category.id"
+                type="button"
+                class="modal-category-chip"
+                :class="{ selected: newComplaint.category === category.id }"
+                @click="newComplaint.category = category.id"
+              >
+                <span
+                  class="modal-category-chip-icon"
+                  :style="{
+                    backgroundColor:
+                      category.iconUrl || category.lucideIcon ? '#ffffff' : (category.color || '#3B82F6')
+                  }"
+                >
+                  <img
+                    v-if="category.iconUrl"
+                    :src="category.iconUrl"
+                    alt=""
+                    class="category-picker-img"
+                  />
+                  <ComplaintLucideIcon
+                    v-else-if="category.lucideIcon"
+                    :name="category.lucideIcon"
+                    :size="20"
+                  />
+                  <span v-else>{{ getComplaintCategoryEmoji(category.icon) }}</span>
+                </span>
+                <span class="modal-category-chip-name">{{ category.name }}</span>
+              </button>
+            </div>
           </div>
 
           <div class="form-group">
@@ -259,6 +318,8 @@ import { useNotificationStore } from '../../stores/notifications';
 import { useModalState } from '../../composables/useModalState';
 import { useFormKeyboard } from '../../composables/useFormKeyboard';
 import ModalHeader from '../../components/ModalHeader.vue';
+import ComplaintLucideIcon from '../../components/ComplaintLucideIcon.vue';
+import { getComplaintCategoryEmoji } from '../../utils/complaintCategoryDisplay';
 
 // Component name for ESLint
 defineOptions({
@@ -282,8 +343,6 @@ const { t } = useI18n();
 const showNewComplaintModal = ref(false);
 const selectedStatus = ref('all');
 const unsubscribe = ref(null);
-const selectedCategoryId = ref('');
-
 const newComplaint = ref({
   title: '',
   category: '',
@@ -335,18 +394,6 @@ const startQuickComplaint = (category) => {
   showNewComplaintModal.value = true;
 };
 
-const handleCategorySelect = (event) => {
-  const categoryId = event.target.value;
-  if (!categoryId) return;
-  
-  const category = complaintStore.complaintCategories.find(c => c.id === categoryId);
-  if (category) {
-    startQuickComplaint(category);
-    // Reset selection after opening modal
-    selectedCategoryId.value = '';
-  }
-};
-
 const openComplaint = (complaint) => {
   router.push(`/complaints/${complaint.id}`);
 };
@@ -363,6 +410,11 @@ const closeModal = () => {
 
 const submitComplaint = async () => {
   if (complaintStore.loading) return; // Prevent multiple submissions
+
+  if (!newComplaint.value.category) {
+    notificationStore.showError(t('selectCategory'));
+    return;
+  }
 
   try {
     let imageUrl = null;
@@ -424,28 +476,17 @@ const getLastMessage = (complaint) => {
   return lastMessage.text || t('imageMessage');
 };
 
-const getCategoryName = (categoryId) => {
-  const category = complaintStore.complaintCategories.find(c => c.id === categoryId);
-  return category ? category.name : 'Other';
-};
-
-// Map icon names to emojis
-const getCategoryEmoji = (iconName) => {
-  const emojiMap = {
-    'gate': '🚪',
-    'volume_off': '🔇',
-    'build': '🔧',
-    'security': '🛡️',
-    'home': '🏠',
-    'receipt': '🧾',
-    'water': '💧',
-    'electric': '⚡',
-    'cleaning': '🧹',
-    'elevator': '🛗',
-    'parking': '🅿️',
-    'help': '❓'
+const getCategoryRow = (categoryId) => {
+  const category = complaintStore.complaintCategories.find((c) => c.id === categoryId);
+  if (!category) {
+    return { name: 'Other', emoji: '📋', iconUrl: '', lucideIcon: '' };
+  }
+  return {
+    name: category.name,
+    emoji: getComplaintCategoryEmoji(category.icon),
+    iconUrl: category.iconUrl || '',
+    lucideIcon: category.lucideIcon || '',
   };
-  return emojiMap[iconName] || '❓';
 };
 
 const formatTime = (timestamp) => {
@@ -709,6 +750,123 @@ watch(showNewComplaintModal, (isOpen) => {
   margin-bottom: 8px;
 }
 
+.category-picker-wrap {
+  padding: 8px 0;
+}
+
+.category-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+}
+
+.category-picker-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  border: 2px solid #e5e7eb;
+  border-radius: 14px;
+  background: white;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.category-picker-card:active {
+  border-color: #AF1E23;
+  box-shadow: 0 2px 10px rgba(175, 30, 35, 0.12);
+}
+
+.category-picker-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+.category-picker-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+}
+
+.category-picker-emoji {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.category-picker-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #374151;
+  line-height: 1.25;
+  max-width: 100%;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.modal-category-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.modal-category-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #374151;
+  max-width: 100%;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.modal-category-chip.selected {
+  border-color: #AF1E23;
+  background: #fff5f5;
+}
+
+.modal-category-chip-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.modal-category-chip-name {
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+
 .category-dropdown {
   width: 100%;
   padding: 14px 16px;
@@ -892,6 +1050,34 @@ watch(showNewComplaintModal, (isOpen) => {
   padding: 2px 8px;
   border-radius: 4px;
   display: inline-block;
+}
+
+.complaint-category-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.complaint-category-thumb {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.complaint-category-emoji {
+  font-size: 0.85rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.complaint-category-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .status-badge {

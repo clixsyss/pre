@@ -34,20 +34,18 @@ const complaint = computed(() => complaintStore.currentComplaint);
 const chatData = computed(() => {
   const c = complaint.value;
   if (!c) return null;
+  const cat = complaintStore.complaintCategories.find((x) => x.id === c.category);
   return {
     ...c,
-    categoryName: getCategoryName(c.category)
+    categoryName: cat?.name || 'Other',
+    categoryIconUrl: cat?.iconUrl || '',
+    categoryLucideIcon: cat?.lucideIcon || '',
+    categoryIconKey: cat?.icon || '',
   };
 });
 const isComplaintClosed = computed(() =>
   complaint.value?.status === 'Resolved' || complaint.value?.status === 'Closed'
 );
-
-// Methods
-const getCategoryName = (categoryId) => {
-  const category = complaintStore.complaintCategories.find(c => c.id === categoryId);
-  return category ? `${category.icon || '📋'} ${category.name}` : categoryId || 'General';
-};
 
 const handleSendMessage = async (messageText) => {
   if (!messageText.trim() || complaintStore.loading || isComplaintClosed.value) return;

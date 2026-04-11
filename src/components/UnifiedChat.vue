@@ -15,7 +15,27 @@
             <span :class="['status-badge', getStatusClass(chatData?.status)]">
               {{ chatData?.status || 'Loading...' }}
             </span>
-            <span class="category">{{ getCategoryInfo(chatData) }}</span>
+            <span
+              v-if="chatType === 'complaint'"
+              class="category complaint-category-with-icon"
+            >
+              <img
+                v-if="chatData?.categoryIconUrl"
+                :src="chatData.categoryIconUrl"
+                alt=""
+                class="category-icon-img"
+              />
+              <ComplaintLucideIcon
+                v-else-if="chatData?.categoryLucideIcon"
+                :name="chatData.categoryLucideIcon"
+                :size="20"
+              />
+              <span v-else-if="chatData?.categoryIconKey" class="category-emoji-inline">
+                {{ getComplaintCategoryEmoji(chatData.categoryIconKey) }}
+              </span>
+              <span class="category-label-text">{{ chatData?.categoryName || 'Other' }}</span>
+            </span>
+            <span v-else class="category">{{ getCategoryInfo(chatData) }}</span>
           </div>
         </div>
       </div>
@@ -220,6 +240,8 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Keyboard } from '@capacitor/keyboard';
+import { getComplaintCategoryEmoji } from '../utils/complaintCategoryDisplay';
+import ComplaintLucideIcon from './ComplaintLucideIcon.vue';
 
 // Props
 const props = defineProps({
@@ -835,6 +857,34 @@ body.keyboard-open .unified-chat {
   background: #f3f4f6;
   padding: 0.25rem 0.5rem;
   border-radius: 6px;
+}
+
+.complaint-category-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+}
+
+.category-icon-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.category-emoji-inline {
+  font-size: 0.95rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.category-label-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .header-actions {
