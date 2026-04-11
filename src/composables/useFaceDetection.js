@@ -1,6 +1,9 @@
 import { ref, onUnmounted } from 'vue'
-import * as faceapi from 'face-api.js'
 import { Capacitor } from '@capacitor/core'
+
+// face-api.js is a large ML library (~900KB). It is loaded on demand the first
+// time loadModels() is called so it never appears in the main bundle.
+let faceapi = null
 
 /**
  * Composable for face detection using face-api.js
@@ -45,6 +48,11 @@ export function useFaceDetection() {
     detectionError.value = null
 
     try {
+      // Dynamically import face-api.js so it is excluded from the main bundle
+      if (!faceapi) {
+        faceapi = await import('face-api.js')
+      }
+
       // Use CDN for models - face-api.js models
       // Alternative: Can also use local models by placing them in /public/models/
       const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/'

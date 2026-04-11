@@ -158,9 +158,14 @@ export default boot(async ({ app }) => {
           }
         })() // Immediately invoke, don't await
         
-        // Now fetch projects using the DynamoDB users table ID
-        // This is the critical path - don't wait for profile preload
-        const restored = await projectStore.rehydrateStore(dynamoDbUserId)
+        // Now fetch projects using the DynamoDB users table ID.
+        // Wrap in a 5-second timeout so a slow or hanging DynamoDB call
+        // never permanently blocks the boot sequence.
+        const rehydrateWithTimeout = Promise.race([
+          projectStore.rehydrateStore(dynamoDbUserId),
+          new Promise((resolve) => setTimeout(() => resolve(false), 5000))
+        ])
+        const restored = await rehydrateWithTimeout
         
         // Validate and fix selected project to ensure it's in user's available projects
         projectStore.validateAndFixSelectedProject()

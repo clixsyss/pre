@@ -15,6 +15,10 @@ export default defineBoot(async ({ app, router }) => {
   // Make FCM service available globally
   app.config.globalProperties.$fcm = fcmService;
 
+  // Track cleanup handles so listeners and intervals are released on logout/unmount
+  let authUnsubscribe = null;
+  let tokenUpdateIntervalId = null;
+
   // Helper function to initialize FCM (uses fcmService's internal tracking)
   const initializeFCM = async (source) => {
     // Check fcmService's internal flag instead of local variable
@@ -33,10 +37,10 @@ export default defineBoot(async ({ app, router }) => {
         logger.log(`FCM Boot: FCM initialized successfully (source: ${source})`);
         
         // Update token last seen periodically (every 24 hours)
-        // Only set interval once
+        // Only set interval once; store the ID so it can be cleared on logout
         if (!fcmService.hasTokenUpdateInterval) {
           fcmService.hasTokenUpdateInterval = true;
-          setInterval(() => {
+          tokenUpdateIntervalId = setInterval(() => {
             fcmService.updateTokenLastSeen();
           }, 24 * 60 * 60 * 1000);
         }
@@ -73,7 +77,8 @@ export default defineBoot(async ({ app, router }) => {
   logger.log('FCM Boot: Detected platform:', detectedPlatform);
 
   // Listen for Cognito auth state changes (AWS-only, no Firebase Auth)
-  optimizedAuthService.onAuthStateChanged(async (user) => {
+  // Store the returned unsubscribe function so it can be called on logout
+  authUnsubscribe = optimizedAuthService.onAuthStateChanged(async (user) => {
     if (user) {
       logger.log('FCM Boot: Cognito auth state changed - user authenticated');
       
@@ -85,7 +90,20 @@ export default defineBoot(async ({ app, router }) => {
       }, delay);
     } else {
       logger.log('FCM Boot: User logged out, unregistering FCM...');
-      
+
+      // Clear the token update interval so it doesn't fire after logout
+      if (tokenUpdateIntervalId !== null) {
+        clearInterval(tokenUpdateIntervalId);
+        tokenUpdateIntervalId = null;
+        fcmService.hasTokenUpdateInterval = false;
+      }
+
+      // Remove the auth state listener now that the user is logged out
+      if (authUnsubscribe !== null) {
+        authUnsubscribe();
+        authUnsubscribe = null;
+      }
+
       try {
         await fcmService.unregister();
       } catch (error) {

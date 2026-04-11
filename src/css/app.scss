@@ -13,7 +13,7 @@ body {
 
 html, #app-root {
   background-color: #000000 !important;
-  transition: background-color 0.5s ease;
+  /* No transition — prevents animated color shift when app-loaded class lands */
 }
 
 /* Keep black during splash screen */
@@ -21,8 +21,19 @@ body:not(.app-loaded) #app-root {
   background-color: #000 !important;
 }
 
-/* After app loads: match shell (#F6F6F6) so safe areas / gaps never flash #fafafa stripes next to MainLayout */
-body.app-loaded {
+/* Suppress background-color transitions before app loads to prevent flash.
+   We target only html/body/#app-root — NOT all elements, which would break
+   Vue <Transition> leave animations (splash fade-out would hang indefinitely). */
+body:not(.app-loaded),
+body:not(.app-loaded) #app-root,
+body:not(.app-loaded) #q-app {
+  transition: none !important;
+}
+
+/* After app loads: only go light when the authenticated shell (main-layout) is visible.
+   Auth pages (onboarding, login) have their own dark backgrounds — keep body dark so
+   there is no color mismatch if the page component takes a frame to paint. */
+body.app-loaded:has(.main-layout) {
   background-color: #f6f6f6 !important;
 }
 
@@ -239,9 +250,8 @@ body.modal-open {
 
 /* Apply theme variables to body */
 body {
-  background-color: var(--background-color);
   color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  /* background-color managed by app-loaded + has() rules above — no default here */
   /* Enable scrolling when keyboard appears */
   overflow-y: auto !important;
   overflow-x: hidden;
@@ -309,8 +319,8 @@ body.keyboard-open select {
   min-height: 100vh;
 }
 
-/* Theme transition for smooth switching */
-* {
+/* Theme transition for smooth switching — only after app is fully painted */
+body.transitions-ready * {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 

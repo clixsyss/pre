@@ -335,22 +335,16 @@ const isAuthenticatedPage = computed(() => {
 </script>
 
 <style>
-/* App root - prevent white background flash */
+/* App root - always dark until main layout is visible */
 #app-root {
   min-height: 100vh;
   background-color: #000 !important;
-  transition: background-color 0.5s ease;
 }
 
-/* Keep app root black until app loads */
-#app-root:not(:has(.main-layout)):not(:has(.auth-layout)) {
-  background-color: #000 !important;
-}
-
-/* Clean layout for authentication pages */
+/* Clean layout for authentication pages - transparent so body black shows through */
 .auth-layout {
   min-height: 100vh;
-  background-color: #F6F6F6;
+  background-color: transparent;
 }
 
 /* Main layout */
@@ -364,19 +358,13 @@ body.platform-android.chat-page-active .main-layout {
   padding-top: 0 !important;
 }
 
-/* Override dark background for auth pages only after app loads */
-body:has(.auth-layout) {
-  background-color: #F6F6F6 !important;
-}
-
 /* Keep body black during app load to prevent white flash */
 body {
   background-color: #000 !important;
-  transition: background-color 0.3s ease;
 }
 
-/* Update body background after main layout is visible */
-body:has(.main-layout) {
+/* Update body background only after the authenticated shell is visible */
+body.app-loaded:has(.main-layout) {
   background-color: #F6F6F6 !important;
 }
 </style>

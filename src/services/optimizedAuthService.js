@@ -16,7 +16,7 @@ class OptimizedAuthService {
     this._fetchPromiseTimestamp = null
     // Cache auth state in localStorage for faster startup
     this.AUTH_CACHE_KEY = 'pre_auth_state_cache'
-    this.AUTH_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+    this.AUTH_CACHE_DURATION = 15 * 60 * 1000 // 15 minutes
   }
 
   /**
@@ -35,8 +35,8 @@ class OptimizedAuthService {
       (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
     )
     
-    // iOS-optimized: Longer cache duration for iOS (10 minutes) since sessions are more stable
-    this.AUTH_CACHE_DURATION = isIOS ? 10 * 60 * 1000 : 5 * 60 * 1000
+    // iOS-optimized: Longer cache duration for iOS (20 minutes) since sessions are more stable
+    this.AUTH_CACHE_DURATION = isIOS ? 20 * 60 * 1000 : 15 * 60 * 1000
     return this.AUTH_CACHE_DURATION
   }
 

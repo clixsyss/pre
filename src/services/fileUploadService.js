@@ -302,12 +302,18 @@ class FileUploadService {
    */
   async uploadMultipleFiles(files) {
     try {
-      const uploadPromises = files.map(({ file, path, fileName }) => 
-        this.uploadFile(file, path, fileName)
-      )
-      
-      const downloadURLs = await Promise.all(uploadPromises)
-      return downloadURLs
+      // Upload at most 2 files at a time to avoid saturating the mobile radio.
+      // Promise.all on all files simultaneously can stall every upload on weak networks.
+      const CONCURRENCY = 2
+      const results = []
+      for (let i = 0; i < files.length; i += CONCURRENCY) {
+        const batch = files.slice(i, i + CONCURRENCY)
+        const batchURLs = await Promise.all(
+          batch.map(({ file, path, fileName }) => this.uploadFile(file, path, fileName))
+        )
+        results.push(...batchURLs)
+      }
+      return results
     } catch (error) {
       console.error('Error uploading multiple files:', error)
       throw error

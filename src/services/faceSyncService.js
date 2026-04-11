@@ -7,7 +7,8 @@
  * parallel system using S3, DynamoDB FaceSyncQueue, and MQTT topic facesync/...
  */
 
-import mqtt from 'mqtt'
+// mqtt is imported dynamically so it is excluded from the main bundle.
+// It is only needed when face-sync is triggered, which is infrequent.
 import FileUploadService from './fileUploadService'
 import { getUserById, updateUser } from './dynamoDBUsersService'
 import { getProjectById } from './dynamoDBProjectsService'
@@ -98,44 +99,50 @@ export async function trySendFaceToDevice(target, payload) {
   const payloadStr = JSON.stringify(payload)
 
   return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      if (!resolved) {
-        resolved = true
-        try { client.end(true) } catch { /* ignore */ }
-        resolve({ success: false, reason: 'timeout' })
-      }
-    }, MQTT_PUBLISH_TIMEOUT_MS)
+    // Async IIFE so we can use await import() inside the Promise executor.
+    ;(async () => {
+      const { default: mqtt } = await import('mqtt')
 
-    let resolved = false
-    const client = mqtt.connect(brokerUrl, {
-      keepalive: 10,
-      connectTimeout: 6000,
-      reconnectPeriod: 0,
-    })
+      let resolved = false
+      const client = mqtt.connect(brokerUrl, {
+        keepalive: 10,
+        connectTimeout: 6000,
+        reconnectPeriod: 0,
+      })
 
-    client.on('connect', () => {
-      if (resolved) return
-      client.publish(topic, payloadStr, { qos: 1 }, (err) => {
+      // Timeout must be set after client is created so it can call client.end()
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true
+          try { client.end(true) } catch { /* ignore */ }
+          resolve({ success: false, reason: 'timeout' })
+        }
+      }, MQTT_PUBLISH_TIMEOUT_MS)
+
+      client.on('connect', () => {
         if (resolved) return
-        resolved = true
-        clearTimeout(timeout)
-        try { client.end(true) } catch { /* ignore */ }
-        if (err) {
-          resolve({ success: false, reason: 'publish error' })
-        } else {
-          resolve({ success: true })
+        client.publish(topic, payloadStr, { qos: 1 }, (err) => {
+          if (resolved) return
+          resolved = true
+          clearTimeout(timeout)
+          try { client.end(true) } catch { /* ignore */ }
+          if (err) {
+            resolve({ success: false, reason: 'publish error' })
+          } else {
+            resolve({ success: true })
+          }
+        })
+      })
+
+      client.on('error', () => {
+        if (!resolved) {
+          resolved = true
+          clearTimeout(timeout)
+          try { client.end(true) } catch { /* ignore */ }
+          resolve({ success: false, reason: 'connect error' })
         }
       })
-    })
-
-    client.on('error', () => {
-      if (!resolved) {
-        resolved = true
-        clearTimeout(timeout)
-        try { client.end(true) } catch { /* ignore */ }
-        resolve({ success: false, reason: 'connect error' })
-      }
-    })
+    })() // end async IIFE
   })
 }
 

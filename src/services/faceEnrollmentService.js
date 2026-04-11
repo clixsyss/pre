@@ -9,7 +9,8 @@
  * - Persistence: Only after successful reply; store in documents.faceEnrollments[projectId].
  */
 
-import mqtt from 'mqtt'
+// mqtt is imported dynamically so it is excluded from the main bundle.
+// It is only needed when face enrollment is triggered, which is infrequent.
 
 // Python: MAX_SIDE = 480, JPEG_QUALITY = 85, backupnum = 50, ADMIN = 0, TIMEOUT_SEC = 12
 const MAX_SIDE = 480
@@ -629,18 +630,21 @@ export function enrollViaMqtt({ brokerWsUrl, deviceSn, payload, enrollId, timeou
   const subTopic = `aiface/${deviceSn}/sub`
 
   return new Promise((resolve) => {
-    let resolved = false
-    let setReply = null
-    let connected = false
-    let sawChecklive = false
+    // Async IIFE so we can use await import() inside the Promise executor.
+    ;(async () => {
+      let resolved = false
+      let setReply = null
+      let connected = false
+      let sawChecklive = false
 
-    const client = mqtt.connect(brokerWsUrl, {
-      keepalive: 60,
-      reconnectPeriod: 0,
-      connectTimeout: 10000,
-    })
+      const { default: mqtt } = await import('mqtt')
+      const client = mqtt.connect(brokerWsUrl, {
+        keepalive: 60,
+        reconnectPeriod: 0,
+        connectTimeout: 10000,
+      })
 
-    const done = (success, reply = null, errorReason = null) => {
+      const done = (success, reply = null, errorReason = null) => {
       if (resolved) return
       resolved = true
       try {
@@ -732,6 +736,7 @@ export function enrollViaMqtt({ brokerWsUrl, deviceSn, payload, enrollId, timeou
         }
       }
     }, timeoutSec * 1000)
+    })() // end async IIFE
   })
 }
 
@@ -761,14 +766,17 @@ export function enrollFaceAndCardViaMqtt({
   const subTopic = `aiface/${deviceSn}/sub`
 
   return new Promise((resolve) => {
-    let finished = false
-    let sawChecklive = false
-    const result = { faceSuccess: false, cardSuccess: false, faceError: null, cardError: null }
+    // Async IIFE so we can use await import() inside the Promise executor.
+    ;(async () => {
+      let finished = false
+      let sawChecklive = false
+      const result = { faceSuccess: false, cardSuccess: false, faceError: null, cardError: null }
 
-    console.log('[FaceEnroll] Connecting to', brokerWsUrl, '| device:', deviceSn)
-    console.log('[FaceEnroll] Topics — pub:', pubTopic, '| sub:', subTopic)
+      console.log('[FaceEnroll] Connecting to', brokerWsUrl, '| device:', deviceSn)
+      console.log('[FaceEnroll] Topics — pub:', pubTopic, '| sub:', subTopic)
 
-    const client = mqtt.connect(brokerWsUrl, {
+      const { default: mqtt } = await import('mqtt')
+      const client = mqtt.connect(brokerWsUrl, {
       keepalive: 60,
       reconnectPeriod: 0,
       connectTimeout: 10000,
@@ -892,6 +900,7 @@ export function enrollFaceAndCardViaMqtt({
         }, 1000)
       })
     })
+    })() // end async IIFE
   })
 }
 

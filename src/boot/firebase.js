@@ -115,7 +115,8 @@ if (auth.currentUser) {
 }
 
 // Set up listener for future auth state changes
-onAuthStateChanged(auth, (user) => {
+// Store the unsubscribe function so it can be released when no longer needed
+export const unsubscribeFirebaseAuth = onAuthStateChanged(auth, (user) => {
   if (user) {
     console.log('🔐 Firebase Boot: PRE user logged in:', user.uid)
     console.log('🔐 User email:', user.email)

@@ -106,7 +106,7 @@
 
               <!-- Message Time -->
               <div class="message-time">
-                {{ formatMessageTime(message.timestamp || message.createdAt) }}
+                {{ formatMessageTime(message.timestamp || message.createdAt, message.id) }}
               </div>
             </div>
           </div>
@@ -237,7 +237,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick, watch, shallowRef } from 'vue';
 import { useRouter } from 'vue-router';
 import { Keyboard } from '@capacitor/keyboard';
 import { getComplaintCategoryEmoji } from '../utils/complaintCategoryDisplay';
@@ -364,11 +364,16 @@ const handleEnterKey = (event) => {
   }
 };
 
+// Debounced so that rapid keystrokes don't each trigger a layout reflow.
+let _adjustHeightTimer = null;
 const adjustTextareaHeight = () => {
-  if (messageInput.value) {
-    messageInput.value.style.height = 'auto';
-    messageInput.value.style.height = messageInput.value.scrollHeight + 'px';
-  }
+  if (_adjustHeightTimer) clearTimeout(_adjustHeightTimer);
+  _adjustHeightTimer = setTimeout(() => {
+    if (messageInput.value) {
+      messageInput.value.style.height = 'auto';
+      messageInput.value.style.height = messageInput.value.scrollHeight + 'px';
+    }
+  }, 50);
 };
 
 const sendMessage = async () => {
@@ -472,28 +477,35 @@ const getCategoryInfo = (chatData) => {
   }
 };
 
-const formatMessageTime = (timestamp) => {
+// Cache formatted timestamps so they are only recomputed when the messages array changes,
+// not on every render cycle. The cache is keyed by message id.
+const _timeCache = shallowRef(new Map());
+watch(() => props.messages, () => { _timeCache.value = new Map(); }, { deep: false });
+
+const formatMessageTime = (timestamp, messageId) => {
   if (!timestamp) return '';
+  if (messageId && _timeCache.value.has(messageId)) return _timeCache.value.get(messageId);
 
   let date;
   if (timestamp.toDate) {
-    // Firestore Timestamp
     date = timestamp.toDate();
   } else if (timestamp.seconds) {
-    // Firestore Timestamp object with seconds property
     date = new Date(timestamp.seconds * 1000);
   } else {
-    // Regular Date or timestamp
     date = new Date(timestamp);
   }
 
   const now = new Date();
   const diffInMinutes = (now - date) / (1000 * 60);
 
-  if (diffInMinutes < 1) return 'Just now';
-  if (diffInMinutes < 60) return `${Math.floor(diffInMinutes)}m ago`;
-  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-  return date.toLocaleDateString();
+  let result;
+  if (diffInMinutes < 1) result = 'Just now';
+  else if (diffInMinutes < 60) result = `${Math.floor(diffInMinutes)}m ago`;
+  else if (diffInMinutes < 1440) result = `${Math.floor(diffInMinutes / 60)}h ago`;
+  else result = date.toLocaleDateString();
+
+  if (messageId) _timeCache.value.set(messageId, result);
+  return result;
 };
 
 // Keyboard handling functions

@@ -568,8 +568,8 @@ router.beforeEach(async (to, from, next) => {
         // iOS-optimized: Use faster timeout with localStorage cache
         // BUT: If this is notification navigation on iOS, wait much longer
         if (isIOS && mightBeNotificationNavigation) {
-          logger.log('Navigation guard: iOS notification navigation detected, waiting longer for auth state (max 10000ms)...')
-          currentUser = await optimizedAuthService.waitForAuthState(10000) // 10 seconds for iOS notification navigation
+          logger.log('Navigation guard: iOS notification navigation detected, waiting for auth state (max 3000ms)...')
+          currentUser = await optimizedAuthService.waitForAuthState(3000) // 3 seconds for iOS notification navigation
         } else if (isIOS) {
           // Try cached user first for instant navigation
           const cachedUser = await optimizedAuthService.getCurrentUser()
@@ -827,7 +827,7 @@ router.beforeEach(async (to, from, next) => {
     
     // Wait longer for authentication state to be established, especially for iOS notification navigation
     // iOS cold starts from notifications can take 5-10 seconds to restore Cognito session
-    const timeoutDuration = (isIOS && mightBeNotificationNavigation) ? 10000 : 5000
+    const timeoutDuration = (isIOS && mightBeNotificationNavigation) ? 5000 : 3000
     const timeout = setTimeout(() => {
       if (!resolved) {
         logger.log(`Auth check timeout after ${timeoutDuration}ms, allowing navigation`)
@@ -874,8 +874,8 @@ router.beforeEach(async (to, from, next) => {
           
           // On iOS, use waitForAuthState with longer timeout for cold starts
           // iOS cold starts from notifications can take 5-8 seconds to restore Cognito session
-          const retryUser = isIOS 
-            ? await optimizedAuthService.waitForAuthState(8000) // 8s max for iOS cold starts
+          const retryUser = isIOS
+            ? await optimizedAuthService.waitForAuthState(3000) // 3s max for iOS cold starts
             : await (async () => {
                 await new Promise((resolve) => setTimeout(resolve, 2000)) // 2s for Android/web
                 return await optimizedAuthService.getCurrentUser()
