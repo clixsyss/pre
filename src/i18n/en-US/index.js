@@ -307,7 +307,7 @@ export default {
   accountApproved: 'Account approved',
   needHelp: 'Need Help?',
   supportEmail: 'support@pre-group.com',
-  supportPhone: '+20 123 456 7890',
+  supportPhone: '19956',
   officeLocation: 'PRE Group HQ, New Cairo',
   signOut: 'Sign Out',
   signedOutSuccessfully: 'Signed out successfully',

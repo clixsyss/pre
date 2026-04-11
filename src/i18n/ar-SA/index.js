@@ -293,7 +293,7 @@ export default {
   accountApproved: 'تمت الموافقة على الحساب',
   needHelp: 'تحتاج مساعدة؟',
   supportEmail: 'support@pre-group.com',
-  supportPhone: '+20 123 456 7890',
+  supportPhone: '19956',
   officeLocation: 'PRE Group HQ، القاهرة الجديدة',
   signOut: 'تسجيل الخروج',
   signedOutSuccessfully: 'تم تسجيل الخروج بنجاح',
