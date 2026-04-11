@@ -602,6 +602,7 @@ import { fetchProjects } from '../../services/dynamoDBProjectsService'
 import { getUnitsByProject } from '../../services/dynamoDBUnitsService'
 import { projectsUnitsService } from '../../services/dynamoDBTableServices'
 import optimizedAuthService from '../../services/optimizedAuthService'
+import { signupDraftService } from '../../services/signupDraftService'
 import {
   getPendingRegistrationEnrollments,
   clearPendingRegistrationEnrollments,
@@ -833,42 +834,43 @@ const canAddAdditionalProperty = computed(() => {
 // Firestore writes are now handled by iosRegistrationService for better iOS compatibility
 
 onMounted(() => {
-  // Load existing data from store if available
-  if (registrationStore.personalData.email) {
-    personalForm.email = registrationStore.personalData.email
-  }
-  if (registrationStore.propertyData.compound) {
-    propertyForm.compound = registrationStore.propertyData.compound
-    propertyForm.unit = registrationStore.propertyData.unit
-    propertyForm.role = registrationStore.propertyData.role
+  // --- Draft Resume Logic ---
+  const draft = signupDraftService.load()
+  if (draft?.email) {
+    console.log('[Register] 🔄 Resuming signup draft at step:', draft.step)
+    registrationStore.setPersonalData({ email: draft.email })
+    personalForm.email = draft.email
+
+    if (draft.userDetails) registrationStore.setUserDetails(draft.userDetails)
+    if (draft.documents) registrationStore.setUserDetails({ documents: draft.documents })
+    if (draft.projects?.length) {
+      registrationStore.setPropertyData({ projects: draft.projects })
+      selectedProjects.value = draft.projects
+    }
+    if (draft.tempUserId) registrationStore.setTempUserId(draft.tempUserId)
+
+    if (draft.step === 'property' || draft.step === 'details') {
+      currentStep.value = 'property'
+      if (draft.step === 'property') {
+        notificationStore.showInfo('Welcome back! Please select your property to finish registration.')
+      }
+    }
+  } else {
+    if (registrationStore.personalData.email) {
+      personalForm.email = registrationStore.personalData.email
+    }
   }
 
-  // Clear password fields for security
+  // Always clear password fields on mount
   personalForm.password = ''
   personalForm.confirmPassword = ''
 
-  // If email is verified, show property step
-  if (registrationStore.isEmailVerified) {
-    console.log('Email verified, switching to property step')
+  if (isPersonalDetailsCompleted.value && currentStep.value === 'personal') {
+    console.log('[Register] Personal details completed, switching to property step')
     currentStep.value = 'property'
-    // Don't show notification here to avoid spam
   }
 
-  // If personal details are already completed, show property step and hide personal step
-  if (isPersonalDetailsCompleted.value) {
-    console.log('Personal details completed, switching to property step')
-    currentStep.value = 'property'
-    // Show only one notification for the user's current status
-    notificationStore.showInfo('Please complete your property details to finish registration.')
-
-    // Hide the personal step content since it's already completed
-    // The user should only see the property step
-  }
-
-  // Fetch available projects on mount
   fetchAvailableProjects()
-
-  // Development verification code listener removed to avoid unnecessary notifications
 })
 
 const goToPreviousStep = () => {
@@ -931,17 +933,14 @@ const handlePersonalSubmit = async () => {
     notificationStore.showError('Please enter your email address')
     return
   }
-
   if (!personalForm.password) {
     notificationStore.showError('Please enter a password')
     return
   }
-
   if (personalForm.password.length < 8) {
     notificationStore.showError('Password must be at least 8 characters long')
     return
   }
-
   if (personalForm.password !== personalForm.confirmPassword) {
     notificationStore.showError('Passwords do not match')
     return
@@ -950,90 +949,45 @@ const handlePersonalSubmit = async () => {
   loading.value = true
 
   try {
-    console.log('[Register] STEP 1: Checking if email already exists in users table...')
     const normalizedEmail = personalForm.email.trim().toLowerCase()
-    
-    // Check if email already exists in DynamoDB users table
+    console.log('[Register] STEP 1: Checking for duplicate email in DynamoDB...')
+
+    // Only check DynamoDB — do NOT probe Cognito with a fake signUp call here.
+    // A Cognito probe creates an unconfirmed user, which would then trigger
+    // UsernameExistsException on the real signUp at the final step.
     const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
-    const existingUser = await getUserByEmail(normalizedEmail)
-    
-    if (existingUser) {
-      console.warn('[Register] ⚠️ Email already exists in users table:', existingUser.id)
+    const dynamoUser = await getUserByEmail(normalizedEmail)
+
+    if (dynamoUser) {
       notificationStore.showError('An account with this email already exists. Please sign in instead.')
       loading.value = false
       return
     }
-    
-    console.log('[Register] ✅ Email is available, proceeding with registration')
-    console.log('[Register] STEP 2: Storing credentials')
+
+    console.log('[Register] ✅ Email available — saving draft')
     registrationStore.setPersonalData({ email: personalForm.email })
     registrationStore.setUserDetails({ password: personalForm.password })
 
-    console.log('[Register] STEP 3: Creating account via Amplify Auth (will be pending admin approval)...')
-    // Use createUserWithEmailAndPassword instead of registerOrSignIn to ensure new account creation
-    const authResult = await optimizedAuthService.createUserWithEmailAndPassword(personalForm.email, personalForm.password)
-    console.log('[Register] ✅ Cognito account created:', authResult.userSub)
-    console.log('[Register] User confirmed status:', authResult.userConfirmed)
-
-    console.log('[Register] STEP 4: Storing user ID')
-    registrationStore.setTempUserId(authResult.userSub || authResult.user?.uid)
-    registrationStore.setUserDetails({
-      password: personalForm.password,
-      authToken: null, // No token until admin approves and user signs in
-      refreshToken: null
-    })
-
-    console.log('[Register] STEP 5: Creating user in DynamoDB users table with pending status...')
-    // Create user in DynamoDB users table with pending approval status
-    const { createUser } = await import('src/services/dynamoDBUsersService')
-    await createUser(authResult.userSub || authResult.user?.uid, {
+    signupDraftService.save({
+      step: 'personal',
       email: normalizedEmail,
-      approvalStatus: 'pending', // Pending admin approval
-      registrationStatus: 'pending', // Pending admin approval
-      registrationStep: 'personal', // Just started registration
-      isProfileComplete: false,
-      emailVerified: false
+      password: personalForm.password,
     })
-    console.log('[Register] ✅ User created in DynamoDB users table with pending status')
 
-    console.log('[Register] STEP 6: Clearing password fields')
     personalForm.password = ''
     personalForm.confirmPassword = ''
 
-    console.log('[Register] STEP 7: NAVIGATING to /register/personal-details')
     router.push('/register/personal-details')
-    console.log('[Register] ✅ NAVIGATION TRIGGERED')
   } catch (error) {
-    console.error('[Register] ❌ CAUGHT ERROR:', error)
-    console.error('[Register] Error type:', typeof error)
-    console.error('[Register] Error code:', error?.code)
-    console.error('[Register] Error message:', error?.message)
-    console.error('[Register] Error stack:', error?.stack)
-    console.error('[Register] Error keys:', Object.keys(error || {}))
-    
+    console.error('[Register] ❌ Error in handlePersonalSubmit:', error)
     let errorMessage = 'Registration failed. Please try again.'
-    
-    // Handle normalized error codes (from optimizedAuthService)
-    if (error?.code === 'auth/signup-disabled' || 
-        (error?.code === 'NotAuthorizedException' && error?.message?.toLowerCase().includes('signup is not permitted'))) {
-      errorMessage = 'Self-registration is currently disabled. Please contact an administrator to create your account.'
-    } else if (error?.code === 'auth/invalid-email' || error?.code === 'InvalidParameterException') {
+    if (error?.code === 'auth/invalid-email' || error?.code === 'InvalidParameterException') {
       errorMessage = 'Invalid email address'
     } else if (error?.code === 'auth/network-request-failed' || error?.code === 'NetworkError') {
       errorMessage = 'Network error. Please check your connection'
-    } else if (error?.code === 'auth/email-already-in-use' || 
-               error?.code === 'UsernameExistsException' || 
-               error?.message?.includes('already exists') ||
-               error?.message?.includes('An account with this email already exists')) {
-      errorMessage = 'An account with this email already exists. Please sign in instead.'
-    } else if (error?.code === 'auth/weak-password' || error?.code === 'InvalidPasswordException') {
-      errorMessage = 'Password does not meet requirements. Please use a stronger password.'
-    } else if (error?.code === 'auth/too-many-requests' || error?.code === 'LimitExceededException') {
-      errorMessage = 'Too many attempts. Please try again later.'
     } else if (error?.message) {
       errorMessage = error.message
     }
-
     notificationStore.showError(errorMessage)
   } finally {
     loading.value = false
@@ -1051,156 +1005,135 @@ const handlePropertySubmit = async () => {
   loading.value = true
 
   try {
-    console.log('[Register] Property submit - selected projects:', selectedProjects.value)
-    
-    // Store property data in registration store
-    registrationStore.setPropertyData({
-      compound: '',
-      unit: '',
-      role: '',
-      projects: selectedProjects.value
-    })
+    console.log('[Register] Final submit — selected projects:', selectedProjects.value)
 
-    // Save COMPLETE user data to DynamoDB users table
-    if (registrationStore.tempUserId) {
-      console.log('[Register] Saving complete registration to DynamoDB users table...')
-      console.log('[Register] Projects to save:', selectedProjects.value)
-      
-      const userDetails = registrationStore.userDetails
-      const now = new Date().toISOString()
-      
-      // Prepare complete user data
-      const completeUserData = {
-        // Personal info
-        email: registrationStore.personalData.email.trim().toLowerCase(),
-        firstName: userDetails.firstName || '',
-        lastName: userDetails.lastName || '',
-        fullName: `${userDetails.firstName || ''} ${userDetails.lastName || ''}`.trim() || '',
-        mobile: userDetails.mobile || '',
-        dateOfBirth: userDetails.dateOfBirth || null,
-        gender: userDetails.gender || null,
-        nationalId: userDetails.nationalId || '',
-        
-        // Documents: faceEnrollments from store (results + pending) or existing user doc (never overwrite persisted face)
-        documents: await (async () => {
-          const base = { ...(userDetails.documents || {}) }
-          const fromResults = (registrationStore.faceEnrollmentResults || []).reduce(
-            (acc, e) => {
-              acc[e.projectId] = {
-                enrollId: e.enrollId,
-                deviceSn: e.deviceSn,
-                mqttClusterId: e.mqttClusterId,
-                enrolledAt: e.enrolledAt,
-              }
-              return acc
-            },
-            {}
-          )
-          const pending = getPendingRegistrationEnrollments(registrationStore.tempUserId)
-          const fromPending = pending.reduce(
-            (acc, e) => {
-              acc[e.projectId] = {
-                enrollId: e.enrollId,
-                deviceSn: e.deviceSn,
-                mqttClusterId: e.mqttClusterId,
-                enrolledAt: e.enrolledAt,
-              }
-              return acc
-            },
-            {}
-          )
-          const faceEnrollments = { ...fromResults, ...fromPending }
-          if (registrationStore.faceEnrollmentCompleted && Object.keys(faceEnrollments).length > 0) {
-            return {
-              ...base,
-              faceEnrolledAt: new Date().toISOString(),
-              faceEnrollments,
-            }
-          }
-          const { getUserById } = await import('src/services/dynamoDBUsersService')
-          const user = await getUserById(registrationStore.tempUserId)
-          const existing = user?.documents || {}
-          const hasExisting = existing.faceEnrollments && Object.keys(existing.faceEnrollments).length > 0
-          if (!hasExisting) return base
-          return {
-            ...base,
-            ...(existing.faceEnrolledAt && { faceEnrolledAt: existing.faceEnrolledAt }),
-            ...(existing.faceEnrollments && { faceEnrollments: existing.faceEnrollments }),
-          }
-        })(),
-        
-        // Projects (with proper structure)
-        projects: selectedProjects.value || [],
-        unit: '', // Will be set per project
-        role: '', // Will be set per project
-        
-        // Registration status - PENDING ADMIN APPROVAL
-        registrationStep: 'completed',
-        registrationStatus: 'pending', // Pending admin approval
-        isProfileComplete: true,
-        
-        // Approval status - PENDING ADMIN APPROVAL
-        approvalStatus: 'pending', // Pending admin approval
-        approvedBy: '', // Will be set by admin
-        approvedAt: null, // Will be set when admin approves
-        
-        // Auth and verification
-        authUid: registrationStore.tempUserId,
-        emailVerified: false,
-        
-        // Account type (unknown for new registrations)
-        accountType: '',
-        
-        // Suspension fields (initialize as not suspended)
-        isSuspended: false,
-        isTemporary: false,
-        suspendedAt: null,
-        suspendedBy: '',
-        suspensionReason: '',
-        suspensionType: '',
-        suspensionEndDate: null,
-        unsuspendedAt: null,
-        unsuspendedBy: '',
-        
-        // Timestamps
-        createdAt: now,
-        updatedAt: now,
-        lastLoginAt: null, // No login yet, pending approval
-        
-        // Admin and creation fields
-        createdByAdmin: false,
-        oldId: '',
-        
-        // Password reset fields
-        passwordResetCount: 0,
-        passwordResetSent: false,
-        passwordResetSentAt: null
-      }
-      
-      // Face ID enrollment is handled in FaceVerificationPage via enrollment API (single image, Base64).
-      // No face verification photos are stored here.
-      
-      // Update user in DynamoDB users table (user was already created in handlePersonalSubmit)
-      console.log('[Register] Updating user in DynamoDB users table...')
-      const { updateUser } = await import('src/services/dynamoDBUsersService')
-      await updateUser(registrationStore.tempUserId, completeUserData)
-      console.log('[Register] ✅ Complete registration data saved to DynamoDB users table')
-      clearPendingRegistrationEnrollments(registrationStore.tempUserId)
+    signupDraftService.save({ step: 'property', projects: selectedProjects.value })
+    registrationStore.setPropertyData({ compound: '', unit: '', role: '', projects: selectedProjects.value })
 
-      // Clear password for security after successful save
-      console.log('[Register] Clearing stored password for security')
-      registrationStore.setUserDetails({ password: '', authToken: '', refreshToken: '' })
+    const email = registrationStore.personalData.email.trim().toLowerCase()
+    const password = signupDraftService.getPassword()
+
+    if (!email || !password) {
+      throw new Error('Registration session expired. Please start over.')
     }
 
-    console.log('[Register] Showing success notification')
+    console.log('[Register] STEP A: Creating Cognito account...')
+    let userSub
+    try {
+      const authResult = await optimizedAuthService.createUserWithEmailAndPassword(email, password)
+      userSub = authResult.userSub || authResult.user?.uid
+      console.log('[Register] ✅ Cognito account created:', userSub)
+    } catch (cognitoError) {
+      if (
+        cognitoError?.code === 'auth/email-already-in-use' ||
+        cognitoError?.code === 'UsernameExistsException' ||
+        cognitoError?.name === 'UsernameExistsException'
+      ) {
+        console.warn('[Register] ⚠️ Cognito UsernameExistsException — recovering orphaned account')
+        const recovered = await optimizedAuthService.recoverOrphanedCognitoUser(email, password)
+        if (!recovered) {
+          notificationStore.showError('An account with this email already exists. Please sign in.')
+          return
+        }
+        userSub = recovered.userSub
+        console.log('[Register] ✅ Recovered orphaned Cognito account, sub:', userSub)
+      } else {
+        throw cognitoError
+      }
+    }
+
+    registrationStore.setTempUserId(userSub)
+    signupDraftService.save({ tempUserId: userSub })
+
+    const userDetails = registrationStore.userDetails
+    const now = new Date().toISOString()
+
+    const base = { ...(userDetails.documents || {}) }
+    const fromResults = (registrationStore.faceEnrollmentResults || []).reduce((acc, e) => {
+      acc[e.projectId] = { enrollId: e.enrollId, deviceSn: e.deviceSn, mqttClusterId: e.mqttClusterId, enrolledAt: e.enrolledAt }
+      return acc
+    }, {})
+    const pending = getPendingRegistrationEnrollments(userSub)
+    const fromPending = pending.reduce((acc, e) => {
+      acc[e.projectId] = { enrollId: e.enrollId, deviceSn: e.deviceSn, mqttClusterId: e.mqttClusterId, enrolledAt: e.enrolledAt }
+      return acc
+    }, {})
+    const faceEnrollments = { ...fromResults, ...fromPending }
+    const documents = registrationStore.faceEnrollmentCompleted && Object.keys(faceEnrollments).length > 0
+      ? { ...base, faceEnrolledAt: now, faceEnrollments }
+      : base
+
+    const completeUserData = {
+      email,
+      firstName: userDetails.firstName || '',
+      lastName: userDetails.lastName || '',
+      fullName: `${userDetails.firstName || ''} ${userDetails.lastName || ''}`.trim() || '',
+      mobile: userDetails.mobile || '',
+      dateOfBirth: userDetails.dateOfBirth || null,
+      gender: userDetails.gender || null,
+      nationalId: userDetails.nationalId || '',
+      documents,
+      projects: selectedProjects.value || [],
+      unit: '',
+      role: '',
+      registrationStep: 'completed',
+      registrationStatus: 'pending',
+      isProfileComplete: true,
+      approvalStatus: 'pending',
+      approvedBy: '',
+      approvedAt: null,
+      authUid: userSub,
+      emailVerified: false,
+      accountType: '',
+      isSuspended: false,
+      isTemporary: false,
+      suspendedAt: null,
+      suspendedBy: '',
+      suspensionReason: '',
+      suspensionType: '',
+      suspensionEndDate: null,
+      unsuspendedAt: null,
+      unsuspendedBy: '',
+      createdAt: now,
+      updatedAt: now,
+      lastLoginAt: null,
+      createdByAdmin: false,
+      oldId: '',
+      passwordResetCount: 0,
+      passwordResetSent: false,
+      passwordResetSentAt: null,
+    }
+
+    console.log('[Register] STEP B: confirmUser + createUser in parallel...')
+    const { createUser } = await import('src/services/dynamoDBUsersService')
+    const { confirmUser } = await import('src/services/confirmUserService')
+
+    const [confirmResult, dynamoResult] = await Promise.allSettled([
+      confirmUser(email, password),
+      createUser(userSub, completeUserData),
+    ])
+
+    if (confirmResult.status === 'rejected') {
+      console.warn('[Register] ⚠️ confirmUser failed (non-fatal):', confirmResult.reason?.message)
+    } else {
+      console.log('[Register] ✅ User confirmed:', confirmResult.value?.message)
+    }
+
+    if (dynamoResult.status === 'rejected') {
+      throw new Error('Failed to save your registration. Please try again.')
+    }
+
+    console.log('[Register] ✅ Registration saved to DynamoDB')
+    clearPendingRegistrationEnrollments(userSub)
+
+    signupDraftService.clear()
+    registrationStore.setUserDetails({ password: '', authToken: '', refreshToken: '' })
+
     notificationStore.showSuccess('Registration completed!')
-    
-    console.log('[Register] ✅ Registration complete - showing pending approval modal')
-    // Show pending approval modal since all new registrations are pending by default
     showPendingModal.value = true
   } catch (error) {
-    console.error('Property save error:', error)
-    notificationStore.showError('Something went wrong saving your registration. Please try again.')
+    console.error('[Register] ❌ Property submit error:', error)
+    notificationStore.showError(error?.message || 'Something went wrong saving your registration. Please try again.')
   } finally {
     loading.value = false
   }

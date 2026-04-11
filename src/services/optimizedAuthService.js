@@ -567,6 +567,50 @@ class OptimizedAuthService {
   }
 
   /**
+   * Lightweight check: does a Cognito account exist for this email?
+   * Uses a dummy signUp attempt and inspects the error — does NOT create any account.
+   * Returns true if UsernameExistsException, false otherwise.
+   */
+  async checkEmailExists(email) {
+    try {
+      await Auth.signUp({
+        username: email.trim().toLowerCase(),
+        password: '__PROBE__x9X!neverUsed__',
+        attributes: { email: email.trim().toLowerCase() },
+        autoSignIn: { enabled: false },
+      })
+      return false
+    } catch (error) {
+      if (
+        error?.code === 'UsernameExistsException' ||
+        error?.name === 'UsernameExistsException'
+      ) {
+        return true
+      }
+      return false
+    }
+  }
+
+  /**
+   * Handle an orphaned Cognito account (UsernameExistsException but no DynamoDB row).
+   * Attempts to sign in with the provided password to retrieve the existing sub.
+   * Returns { userSub } if successful, null if the password doesn't match.
+   */
+  async recoverOrphanedCognitoUser(email, password) {
+    try {
+      const signInResult = await this.signInWithEmailAndPassword(email, password)
+      const sub = signInResult?.user?.attributes?.sub
+        || signInResult?.user?.uid
+        || signInResult?.user?.username
+      if (!sub) return null
+      try { await Auth.signOut() } catch { /* ignore */ }
+      return { userSub: sub }
+    } catch {
+      return null
+    }
+  }
+
+  /**
    * Register or sign in (handles both cases - similar to firebaseRestAuth.registerOrSignIn)
    * Tries to create account first, if it exists, signs in instead
    */

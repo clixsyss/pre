@@ -191,6 +191,7 @@ import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 import fileUploadService from '../../services/fileUploadService'
+import { signupDraftService } from '../../services/signupDraftService'
 
 // Component name for ESLint
 defineOptions({
@@ -314,18 +315,20 @@ const formData = reactive({
 })
 
 onMounted(() => {
-  // Get email from registration store
-  const email = registrationStore.personalData.email || 'Example@gmail.com'
+  // Restore from draft (handles app-reopen resume), then fall back to in-session store
+  const draft = signupDraftService.load()
+  const email = draft?.email || registrationStore.personalData.email || ''
   formData.email = email
+  if (email) registrationStore.setPersonalData({ email })
 
-  // Load existing data from store if available
-  if (registrationStore.userDetails.firstName) {
-    formData.firstName = registrationStore.userDetails.firstName
-    formData.lastName = registrationStore.userDetails.lastName
-    formData.mobile = registrationStore.userDetails.mobile
-    formData.dateOfBirth = registrationStore.userDetails.dateOfBirth
-    formData.gender = registrationStore.userDetails.gender
-    formData.nationalId = registrationStore.userDetails.nationalId
+  const details = draft?.userDetails || registrationStore.userDetails
+  if (details?.firstName) {
+    formData.firstName = details.firstName
+    formData.lastName = details.lastName
+    formData.mobile = details.mobile
+    formData.dateOfBirth = details.dateOfBirth
+    formData.gender = details.gender || 'male'
+    formData.nationalId = details.nationalId
   }
 })
 
@@ -442,20 +445,15 @@ const removeBackId = () => {
 const handleSubmit = async () => {
   if (loading.value) return
 
-  // Validate required fields
   if (!formData.firstName || !formData.lastName || !formData.mobile ||
     !formData.dateOfBirth || !formData.nationalId) {
     notificationStore.showError('Please fill in all required fields')
     return
   }
-
-  // Validate required file uploads
   if (!frontIdFile.value || !backIdFile.value) {
     notificationStore.showError('Please upload both front and back National ID pictures')
     return
   }
-
-  // Validate profile picture is uploaded
   if (!profilePictureFile.value) {
     notificationStore.showError('Please upload a profile picture')
     return
@@ -464,66 +462,20 @@ const handleSubmit = async () => {
   loading.value = true
 
   try {
-    console.log('[PersonalDetails] Getting user ID...')
+    // Use sanitized email as the S3 folder key — no DynamoDB lookup needed at this stage
+    const email = formData.email.trim().toLowerCase()
+    const safeEmailFolder = email.replace(/[^a-z0-9]/g, '_')
 
-    // Get the DynamoDB user ID (MongoDB ObjectId format) instead of Cognito userSub
-    // This ensures S3 folders match the existing structure
-    let userId = registrationStore.tempUserId // Fallback to Cognito userSub
-
-    // Try to get the DynamoDB user by email to get the actual user ID
-    try {
-      const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
-      const dynamoUser = await getUserByEmail(formData.email.trim().toLowerCase())
-
-      if (dynamoUser && dynamoUser.id) {
-        // Use DynamoDB user ID (MongoDB ObjectId format) for S3 uploads
-        userId = dynamoUser.id
-        console.log('[PersonalDetails] ✅ Using DynamoDB user ID for S3 upload:', userId)
-      } else {
-        console.warn('[PersonalDetails] ⚠️ DynamoDB user not found, using Cognito userSub:', userId)
-      }
-    } catch (error) {
-      console.warn('[PersonalDetails] ⚠️ Could not fetch DynamoDB user, using Cognito userSub:', error.message)
-    }
-
-    if (!userId) {
-      console.error('[PersonalDetails] ❌ No userId found. Registration may have failed.')
-      throw new Error('User ID not found. Please start registration over.')
-    }
-
-    console.log('[PersonalDetails] Using userId for S3 upload:', userId)
-
-    // Upload files with detailed logging
-    console.log('[PersonalDetails] Starting file upload...', {
-      userId,
-      hasFrontId: !!frontIdFile.value,
-      hasBackId: !!backIdFile.value,
-      hasProfile: !!profilePictureFile.value
-    })
-
+    console.log('[PersonalDetails] Uploading 3 documents to S3 (parallel)...')
     const uploadedDocuments = await fileUploadService.uploadUserDocuments(
-      userId,
+      safeEmailFolder,
       frontIdFile.value,
       backIdFile.value,
       profilePictureFile.value
     )
     console.log('[PersonalDetails] ✅ Documents uploaded:', uploadedDocuments)
 
-    // Save user details to store
-    registrationStore.setUserDetails({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      mobile: formData.mobile,
-      dateOfBirth: formData.dateOfBirth,
-      gender: formData.gender,
-      nationalId: formData.nationalId,
-    })
-
-    console.log('[PersonalDetails] Saving user data to Firestore (non-blocking)...')
-
-    // Save user details to store (for property page to use)
-    registrationStore.setUserDetails({
-      ...registrationStore.userDetails,
+    const userDetailsPayload = {
       firstName: formData.firstName,
       lastName: formData.lastName,
       mobile: formData.mobile,
@@ -533,62 +485,29 @@ const handleSubmit = async () => {
       documents: {
         frontIdUrl: uploadedDocuments.frontId,
         backIdUrl: uploadedDocuments.backId,
-        profilePictureUrl: uploadedDocuments.profilePicture || null
-      }
+        profilePictureUrl: uploadedDocuments.profilePicture || null,
+      },
+    }
+
+    registrationStore.setUserDetails(userDetailsPayload)
+
+    signupDraftService.save({
+      step: 'details',
+      userDetails: userDetailsPayload,
+      documents: userDetailsPayload.documents,
     })
 
-    // Save to DynamoDB users table (non-blocking - don't wait)
-    console.log('[PersonalDetails] Saving to DynamoDB users table (background)...')
-      ; (async () => {
-        try {
-          const { updateUser } = await import('src/services/dynamoDBUsersService')
-          await updateUser(userId, {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            mobile: formData.mobile,
-            dateOfBirth: formData.dateOfBirth,
-            gender: formData.gender,
-            nationalId: formData.nationalId,
-            email: formData.email.trim().toLowerCase(),
-            fullName: `${formData.firstName} ${formData.lastName}`,
-            documents: {
-              frontIdUrl: uploadedDocuments.frontId,
-              backIdUrl: uploadedDocuments.backId,
-              profilePictureUrl: uploadedDocuments.profilePicture || null
-            },
-            registrationStep: 'personal_complete',
-            registrationStatus: 'pending', // Still pending admin approval
-            isProfileComplete: true
-          })
-          console.log('[PersonalDetails] ✅ DynamoDB save completed')
-        } catch (e) {
-          console.warn('[PersonalDetails] Background DynamoDB save failed:', e)
-        }
-      })()
+    console.log('[PersonalDetails] ✅ Draft updated — navigating to property step')
 
-    console.log('[PersonalDetails] DynamoDB save initiated in background')
-
-    // DON'T clear password/token yet - needed for final save in Register.vue
-    // Will be cleared after complete registration
-
-    console.log('[PersonalDetails] Showing success notification')
     if (SKIP_FACE_VERIFICATION_DURING_SIGNUP) {
       notificationStore.showSuccess('Details saved! Continue with your property information.')
-      console.log('[PersonalDetails] Skipping face verification; navigating to /register')
       router.push('/register')
     } else {
       notificationStore.showSuccess('Details saved! Now let\'s verify your face.')
-      console.log('[PersonalDetails] NAVIGATING to /register/face-verification')
       router.push('/register/face-verification')
     }
-    console.log('[PersonalDetails] ✅ Navigation triggered')
   } catch (error) {
     console.error('[PersonalDetails] ❌ Save error:', error)
-    console.error('[PersonalDetails] Error type:', typeof error)
-    console.error('[PersonalDetails] Error code:', error?.code)
-    console.error('[PersonalDetails] Error message:', error?.message)
-    console.error('[PersonalDetails] Error stack:', error?.stack)
-
     notificationStore.showError('Failed to save: ' + (error?.message || 'Unknown error'))
   } finally {
     loading.value = false
