@@ -83,7 +83,7 @@
 
         <!-- Units List -->
         <div v-else class="units-list">
-          <!-- All Units (Vacant first, then Occupied) - All Selectable -->
+          <!-- All matching units (vacant + occupied); relevance-sorted -->
           <div v-if="allVisibleUnits.length > 0" class="units-section">
             <div
               v-for="unit in allVisibleUnits"
@@ -155,22 +155,45 @@ const loading = ref(false)
 const searchInput = ref(null)
 const selectedUnit = ref(props.modelValue)
 
-// Computed: Occupied unit identifiers
+/** Normalize unit strings for matching user.projects[].unit to catalog rows */
+function normalizeUnitKey(s) {
+  return String(s ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/_/g, '-')
+}
+
+// Occupied unit keys (users may store "90-12", "90 - 12", or same as unitIdentifier)
 const occupiedUnitIdentifiers = computed(() => {
   if (!props.projectUsers || props.projectUsers.length === 0) return new Set()
-  
+
   const occupied = new Set()
-  props.projectUsers.forEach(user => {
+  props.projectUsers.forEach((user) => {
     if (user.projects && Array.isArray(user.projects)) {
-      user.projects.forEach(p => {
+      user.projects.forEach((p) => {
         if (p.projectId === props.projectId && p.unit) {
-          occupied.add(p.unit)
+          occupied.add(normalizeUnitKey(p.unit))
         }
       })
     }
   })
   return occupied
 })
+
+function isUnitRowOccupied(unit, normalizedOccupied) {
+  const id = unit.unitIdentifier
+  const b = unit.buildingNum
+  const u = unit.unitNum
+  const candidates = []
+  if (id != null && id !== '') candidates.push(normalizeUnitKey(id))
+  if (b != null && b !== '' && u != null && u !== '') {
+    candidates.push(normalizeUnitKey(`${b}-${u}`))
+  }
+  if (u != null && u !== '') candidates.push(normalizeUnitKey(u))
+  if (b != null && b !== '') candidates.push(normalizeUnitKey(b))
+  return candidates.some((k) => k && normalizedOccupied.has(k))
+}
 
 // Computed: Filtered units based on search
 const filteredUnits = computed(() => {
@@ -179,47 +202,44 @@ const filteredUnits = computed(() => {
   }
 
   const term = searchTerm.value.toLowerCase()
-  return allUnits.value.filter(unit => {
+  return allUnits.value.filter((unit) => {
     const identifier = unit.unitIdentifier?.toLowerCase() || ''
-    const building = String(unit.buildingNum || '').toLowerCase()
-    const unitNum = String(unit.unitNum || '').toLowerCase()
-    
-    return identifier.includes(term) || 
-           building.includes(term) || 
-           unitNum.includes(term)
+    const building = String(unit.buildingNum ?? '').toLowerCase()
+    const unitNum = String(unit.unitNum ?? '').toLowerCase()
+    const floor = String(unit.floor ?? '').toLowerCase()
+
+    return (
+      identifier.includes(term) ||
+      building.includes(term) ||
+      unitNum.includes(term) ||
+      floor.includes(term)
+    )
   })
 })
 
-// Computed: Vacant units (not occupied, visible by default)
-const vacantUnits = computed(() => {
-  return filteredUnits.value.filter(unit => 
-    !occupiedUnitIdentifiers.value.has(unit.unitIdentifier)
-  ).sort((a, b) => {
-    // Sort by building then unit number
-    if (a.buildingNum !== b.buildingNum) {
-      return String(a.buildingNum).localeCompare(String(b.buildingNum))
+const sortUnitsByRelevanceThenBuilding = (list) => {
+  const term = searchTerm.value.trim().toLowerCase()
+  return [...list].sort((a, b) => {
+    if (term) {
+      const ra = unitSearchMatchScore(a, term)
+      const rb = unitSearchMatchScore(b, term)
+      if (ra !== rb) return ra - rb
     }
-    return String(a.unitNum).localeCompare(String(b.unitNum))
-  })
-})
-
-// Computed: Occupied units (only shown when searching)
-const occupiedUnits = computed(() => {
-  return filteredUnits.value.filter(unit => 
-    occupiedUnitIdentifiers.value.has(unit.unitIdentifier)
-  ).sort((a, b) => {
     if (a.buildingNum !== b.buildingNum) {
-      return String(a.buildingNum).localeCompare(String(b.buildingNum))
+      return String(a.buildingNum).localeCompare(String(b.buildingNum), undefined, { numeric: true, sensitivity: 'base' })
     }
-    return String(a.unitNum).localeCompare(String(b.unitNum))
+    return String(a.unitNum).localeCompare(String(b.unitNum), undefined, { numeric: true, sensitivity: 'base' })
   })
-})
+}
 
-// Computed: All units (vacant first, then occupied) - all selectable
+// All matches: occupied and vacant together (occupied must stay visible for picking / awareness)
 const allVisibleUnits = computed(() => {
-  const vacant = vacantUnits.value.map(unit => ({ ...unit, isOccupied: false }))
-  const occupied = occupiedUnits.value.map(unit => ({ ...unit, isOccupied: true }))
-  return [...vacant, ...occupied]
+  const occSet = occupiedUnitIdentifiers.value
+  const tagged = filteredUnits.value.map((unit) => ({
+    ...unit,
+    isOccupied: isUnitRowOccupied(unit, occSet)
+  }))
+  return sortUnitsByRelevanceThenBuilding(tagged)
 })
 
 // Search units when user types in search box
@@ -241,6 +261,37 @@ watch(() => props.projectId, () => {
 watch(() => props.modelValue, (newValue) => {
   selectedUnit.value = newValue
 })
+
+/** Lower score = better match. Deprioritizes middle-substring hits (e.g. "190" for query "90") vs exact "90". */
+function unitSearchMatchScore(unit, termLower) {
+  if (!termLower) return 99
+  const u = String(unit.unitNum ?? '').toLowerCase()
+  const b = String(unit.buildingNum ?? '').toLowerCase()
+  const id = String(unit.unitIdentifier ?? '').toLowerCase()
+  const floor = String(unit.floor ?? '').toLowerCase()
+
+  if (u === termLower || b === termLower || id === termLower || floor === termLower) return 0
+
+  const segments = id.split(/[-_/]/).filter(Boolean)
+  if (segments.some((s) => s === termLower)) return 1
+
+  if (u.startsWith(termLower) || b.startsWith(termLower) || id.startsWith(termLower) || floor.startsWith(termLower)) {
+    return 2
+  }
+  if (u.endsWith(termLower) || b.endsWith(termLower) || id.endsWith(termLower)) return 3
+
+  const midOnly = (s) =>
+    s &&
+    s.includes(termLower) &&
+    s !== termLower &&
+    !s.startsWith(termLower) &&
+    !s.endsWith(termLower)
+
+  if (midOnly(u) || midOnly(b)) return 6
+  if (u.includes(termLower) || b.includes(termLower) || floor.includes(termLower)) return 4
+  if (id.includes(termLower)) return 5
+  return 99
+}
 
 // Search units from DynamoDB based on user input
 let searchTimeout = null
@@ -264,13 +315,13 @@ const searchUnits = async (searchQuery) => {
       
       try {
         // Try with parentId first (dynamoDBUnitsService)
-        units = await getUnitsByProject(props.projectId, { limit: 1000 })
+        units = await getUnitsByProject(props.projectId, { pageSize: 500, maxPages: 200 })
         console.log(`✅ [SearchableUnitDropdown] Found ${units.length} units using parentId`)
       } catch (error) {
         console.warn(`⚠️ [SearchableUnitDropdown] Failed with parentId, trying projectId:`, error.message)
         // Try with projectId (projectsUnitsService)
         try {
-          units = await projectsUnitsService.getUnitsByProject(props.projectId, { limit: 1000 })
+          units = await projectsUnitsService.getUnitsByProject(props.projectId, { pageSize: 500, maxPages: 200 })
           console.log(`✅ [SearchableUnitDropdown] Found ${units.length} units using projectId`)
         } catch (altError) {
           console.error(`❌ [SearchableUnitDropdown] Both queries failed:`, altError.message)
@@ -278,32 +329,50 @@ const searchUnits = async (searchQuery) => {
         }
       }
       
-      // Process units and create unitIdentifier
-      const processedUnits = units.map(unit => ({
-        id: unit.id || unit.unitId || '',
-        ...unit,
-        unitIdentifier: unit.buildingNum && unit.unitNum 
-          ? `${unit.buildingNum}-${unit.unitNum}`
-          : unit.unitNum || unit.buildingNum || unit.id || ''
-      }))
+      // Process units and create unitIdentifier (building "0" is valid — avoid falsy skip)
+      const processedUnits = units.map((unit) => {
+        const b = unit.buildingNum
+        const u = unit.unitNum
+        const hasBuilding = b !== undefined && b !== null && String(b).trim() !== ''
+        const hasUnit = u !== undefined && u !== null && String(u).trim() !== ''
+        const unitIdentifier =
+          hasBuilding && hasUnit ? `${b}-${u}` : hasUnit ? String(u) : hasBuilding ? String(b) : unit.id || unit.unitId || ''
+        return {
+          id: unit.id || unit.unitId || '',
+          ...unit,
+          unitIdentifier
+        }
+      })
       
       // Filter by search query (client-side filtering)
       const searchLower = searchQuery.toLowerCase()
       
-      allUnits.value = processedUnits
-        .filter(unit => {
-          // Search in unitNum, buildingNum, and combined identifier
-          const unitNum = String(unit.unitNum || '').toLowerCase()
-          const buildingNum = String(unit.buildingNum || '').toLowerCase()
-          const identifier = String(unit.unitIdentifier || '').toLowerCase()
-          const floor = String(unit.floor || '').toLowerCase()
-          
-          return unitNum.includes(searchLower) || 
-                 buildingNum.includes(searchLower) || 
-                 identifier.includes(searchLower) ||
-                 floor.includes(searchLower)
+      const matched = processedUnits.filter((unit) => {
+        const unitNum = String(unit.unitNum || '').toLowerCase()
+        const buildingNum = String(unit.buildingNum || '').toLowerCase()
+        const identifier = String(unit.unitIdentifier || '').toLowerCase()
+        const floor = String(unit.floor || '').toLowerCase()
+
+        return (
+          unitNum.includes(searchLower) ||
+          buildingNum.includes(searchLower) ||
+          identifier.includes(searchLower) ||
+          floor.includes(searchLower)
+        )
+      })
+
+      matched.sort((a, b) => {
+        const ra = unitSearchMatchScore(a, searchLower)
+        const rb = unitSearchMatchScore(b, searchLower)
+        if (ra !== rb) return ra - rb
+        return String(a.unitIdentifier || '').localeCompare(String(b.unitIdentifier || ''), undefined, {
+          numeric: true,
+          sensitivity: 'base'
         })
-        .slice(0, 50) // Limit to 50 results for performance
+      })
+
+      // After full-table pagination, keep full match list (UI scroll); optional hard cap for extreme projects
+      allUnits.value = matched.length > 3000 ? matched.slice(0, 3000) : matched
       
       console.log(`✅ [SearchableUnitDropdown] Found ${allUnits.value.length} matching units after filtering`)
     } catch (error) {
@@ -351,11 +420,8 @@ const selectUnit = (unit) => {
 
 // Select first visible unit (on Enter)
 const selectFirstVisible = () => {
-  if (vacantUnits.value.length > 0) {
-    selectUnit(vacantUnits.value[0])
-  } else if (occupiedUnits.value.length > 0) {
-    selectUnit(occupiedUnits.value[0])
-  }
+  const list = allVisibleUnits.value
+  if (list.length > 0) selectUnit(list[0])
 }
 
 // Close dropdown when clicking outside

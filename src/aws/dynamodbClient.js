@@ -188,6 +188,48 @@ export async function query(tableName, options = {}) {
 }
 
 /**
+ * Query all pages for a partition (or key condition) until LastEvaluatedKey is absent.
+ * Use for large children collections (e.g. all units in a project) — plain `query` with Limit only returns one page.
+ * @param {string} tableName
+ * @param {Object} options - Same as query(); optional pageSize (default 500), maxPages (default 200)
+ */
+export async function queryAll(tableName, options = {}) {
+  const { QueryCommand } = await import('@aws-sdk/lib-dynamodb')
+  const pageSize = Math.min(Math.max(Number(options.pageSize) || 500, 1), 1000)
+  const maxPages = Math.min(Math.max(Number(options.maxPages) || 200, 1), 500)
+
+  const rest = { ...options }
+  delete rest.pageSize
+  delete rest.maxPages
+  delete rest.Limit
+  delete rest.limit
+  delete rest.ExclusiveStartKey
+
+  const all = []
+  let exclusiveStartKey = undefined
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const queryParams = {
+      TableName: tableName,
+      Limit: pageSize,
+      ...rest
+    }
+    if (exclusiveStartKey) {
+      queryParams.ExclusiveStartKey = exclusiveStartKey
+    }
+
+    const command = new QueryCommand(queryParams)
+    const response = await docClient.send(command)
+    const batch = response.Items || []
+    all.push(...batch)
+    exclusiveStartKey = response.LastEvaluatedKey
+    if (!exclusiveStartKey) break
+  }
+
+  return all
+}
+
+/**
  * Scan entire table
  * @param {string} tableName - Table name
  * @param {Object} options - Scan options

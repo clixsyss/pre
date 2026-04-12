@@ -15,7 +15,8 @@ export const useProjectStore = defineStore('project', () => {
   
   // Cache management (Extended for cost optimization)
   const lastFetchTime = ref(0)
-  const cacheDuration = 24 * 60 * 60 * 1000 // 24 hours
+  // Shorter TTL so admin actions (e.g. project approval) show up without waiting a full day.
+  const cacheDuration = 10 * 60 * 1000 // 10 minutes
 
   // Getters
   const hasMultipleProjects = computed(() => userProjects.value.length > 1)
@@ -56,10 +57,11 @@ export const useProjectStore = defineStore('project', () => {
   })
 
   // Actions
-  const fetchUserProjects = async (userId) => {
-    // Check cache first
+  const fetchUserProjects = async (userId, options = {}) => {
+    const force = options.force === true
+    // Long TTL avoids hammering DynamoDB; callers must pass { force: true } after local writes (e.g. join project / new unit).
     const now = Date.now()
-    if (userProjects.value.length > 0 && (now - lastFetchTime.value) < cacheDuration) {
+    if (!force && userProjects.value.length > 0 && (now - lastFetchTime.value) < cacheDuration) {
       console.log('Using cached projects data')
       return
     }

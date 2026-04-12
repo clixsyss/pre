@@ -10,7 +10,7 @@
  * - Fields: buildingNum, developer, floor, unitNum
  */
 
-import { getItem, query } from '../aws/dynamodbClient'
+import { getItem, queryAll } from '../aws/dynamodbClient'
 
 const TABLE_NAME = 'projects__units'
 
@@ -49,18 +49,14 @@ export async function getUnitsByProject(projectId, options = {}) {
       return []
     }
     
-    const queryOptions = {
+    const items = await queryAll(TABLE_NAME, {
       KeyConditionExpression: 'parentId = :parentId',
       ExpressionAttributeValues: {
         ':parentId': projectId
-      }
-    }
-    
-    if (options.limit) {
-      queryOptions.Limit = options.limit
-    }
-    
-    const items = await query(TABLE_NAME, queryOptions)
+      },
+      pageSize: Math.min(Math.max(Number(options.pageSize) || 500, 1), 1000),
+      maxPages: Math.min(Math.max(Number(options.maxPages) || 200, 1), 500)
+    })
     
     // Convert DynamoDB format to JavaScript objects
     const units = items.map(item => convertUnitFromDynamoDB(item, projectId))

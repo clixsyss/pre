@@ -10,7 +10,7 @@
  * - Returns data in format compatible with existing UI expectations
  */
 
-import { getItem, putItem, query } from '../aws/dynamodbClient'
+import { getItem, putItem, query, queryAll } from '../aws/dynamodbClient'
 
 // ============================================================================
 // USERS TOKENS SERVICE
@@ -243,10 +243,12 @@ const PROJECTS_UNITS_TABLE = 'projects__units'
 export const projectsUnitsService = {
   async getUnitsByProject(projectId, options = {}) {
     try {
-      return await query(PROJECTS_UNITS_TABLE, {
+      const { pageSize, maxPages } = options
+      return await queryAll(PROJECTS_UNITS_TABLE, {
         KeyConditionExpression: 'projectId = :projectId',
         ExpressionAttributeValues: { ':projectId': projectId },
-        ...options
+        pageSize: pageSize ?? 500,
+        maxPages: maxPages ?? 200
       })
     } catch (error) {
       console.error('[ProjectsUnitsService] Error:', error)

@@ -430,7 +430,7 @@
 
           <!-- Unified Project Management -->
           <div v-if="userProjects.length > 0" class="unified-projects-section">
-            <div v-for="project in userProjects" :key="project.id"
+            <div v-for="project in userProjects" :key="`${project.id}__${project.userUnit || ''}__${project.userRole || ''}`"
               :class="['unified-project-card', { 'current': project.id === currentProjectId }]">
               <!-- Project Header -->
               <div class="project-header">
@@ -1911,9 +1911,14 @@ const loadProfile = async (forceReload = false) => {
       return
     }
 
-    // Fast path: Check if profile is already loaded and valid
+    // Fast path: profile object in memory — still refresh project rows (approval can change on server).
     if (!forceReload && userProfile.value?.id && userProfile.value.id === currentUser.uid) {
-      console.log('ProfilePage: Profile already loaded, skipping reload')
+      console.log('ProfilePage: Profile already loaded, refreshing projects from server')
+      try {
+        await projectStore.fetchUserProjects(userProfile.value.id, { force: true })
+      } catch (e) {
+        console.warn('ProfilePage: refresh projects (fast path) failed', e?.message)
+      }
       loading.value = false
       return
     }
@@ -1933,6 +1938,14 @@ const loadProfile = async (forceReload = false) => {
         loading.value = false
         error.value = null
         checkFaceVerificationStatus()
+        const cachedId = profileCache.data?.id
+        if (cachedId) {
+          try {
+            await projectStore.fetchUserProjects(cachedId, { force: true })
+          } catch (e) {
+            console.warn('ProfilePage: refresh projects (session cache) failed', e?.message)
+          }
+        }
         return // Exit early - no need to fetch
       }
     }
@@ -1980,6 +1993,13 @@ const loadProfile = async (forceReload = false) => {
         profileCache.saveToStorage() // Persist to sessionStorage
         loading.value = false
         error.value = null
+        if (profileObj.id) {
+          try {
+            await projectStore.fetchUserProjects(profileObj.id, { force: true })
+          } catch (e) {
+            console.warn('ProfilePage: refresh projects (preload cache) failed', e?.message)
+          }
+        }
         return
       }
     }
@@ -1996,6 +2016,14 @@ const loadProfile = async (forceReload = false) => {
       userProfile.value = profileCache.data
       loading.value = false // Set to false immediately when using cache
       error.value = null
+      const cachedId = profileCache.data?.id
+      if (cachedId) {
+        try {
+          await projectStore.fetchUserProjects(cachedId, { force: true })
+        } catch (e) {
+          console.warn('ProfilePage: refresh projects (profile cache) failed', e?.message)
+        }
+      }
       return
     }
 
@@ -2414,7 +2442,7 @@ const loadProfile = async (forceReload = false) => {
       // 4. Format them with userUnit and userRole from the projects array
       // Use the userIdToUse that was already defined above (from DynamoDB users table ID)
       console.log('ProfilePage: Loading projects for user ID:', userIdToUse)
-      await projectStore.fetchUserProjects(userIdToUse)
+      await projectStore.fetchUserProjects(userIdToUse, { force: true })
       await fetchAvailableProjects()
 
       // Load family members
@@ -3002,8 +3030,15 @@ const addNewProject = async () => {
   try {
     addProjectLoading.value = true
 
+    const selectedProjectId = String(newProject.value.projectId || '').trim()
+    if (!selectedProjectId) {
+      notificationStore.showError('Please select a project')
+      addProjectLoading.value = false
+      return
+    }
+
     // Get the selected project details
-    const selectedProject = availableProjects.value.find(p => p.id === newProject.value.projectId)
+    const selectedProject = availableProjects.value.find(p => String(p.id) === selectedProjectId)
 
     if (!selectedProject) {
       notificationStore.showError('Selected project not found')
@@ -3033,7 +3068,7 @@ const addNewProject = async () => {
 
             // Create the project object to add to the user's projects array with pending approval status
             const newUserProject = {
-              projectId: newProject.value.projectId,
+              projectId: selectedProjectId,
               role: newProject.value.userRole,
               unit: newProject.value.userUnit,
               approvalStatus: 'pending',
@@ -3067,7 +3102,8 @@ const addNewProject = async () => {
               userName: userData.name || userData.fullName || currentUser.displayName || currentUser.email,
               userEmail: currentUser.email,
               userPhone: userData.mobile || userData.phone || '',
-              projectId: newProject.value.projectId,
+              projectId: selectedProjectId,
+              parentId: selectedProjectId,
               projectName: selectedProject.name,
               unit: newProject.value.userUnit,
               role: newProject.value.userRole,
@@ -3087,7 +3123,7 @@ const addNewProject = async () => {
             }, 1500)
 
             // Refresh user's projects using the correct ID
-            await projectStore.fetchUserProjects(userByEmail.id)
+            await projectStore.fetchUserProjects(userByEmail.id, { force: true })
             return
           }
         }
@@ -3101,7 +3137,7 @@ const addNewProject = async () => {
 
     // Create the project object to add to the user's projects array with pending approval status
     const newUserProject = {
-      projectId: newProject.value.projectId,
+      projectId: selectedProjectId,
       role: newProject.value.userRole,
       unit: newProject.value.userUnit,
       approvalStatus: 'pending', // New field for admin approval
@@ -3136,7 +3172,8 @@ const addNewProject = async () => {
       userName: userData.name || userData.fullName || currentUser.displayName || currentUser.email,
       userEmail: currentUser.email,
       userPhone: userData.mobile || userData.phone || '',
-      projectId: newProject.value.projectId,
+      projectId: selectedProjectId,
+      parentId: selectedProjectId,
       projectName: selectedProject.name,
       unit: newProject.value.userUnit,
       role: newProject.value.userRole,
@@ -3156,7 +3193,7 @@ const addNewProject = async () => {
     }, 1500)
 
     // Refresh user's projects using the correct ID
-    await projectStore.fetchUserProjects(userId)
+    await projectStore.fetchUserProjects(userId, { force: true })
 
   } catch (err) {
     console.error('Error joining project:', err)
@@ -4036,6 +4073,14 @@ const initializeFromCache = async () => {
     userProfile.value = profileCache.data
     loading.value = false
     checkFaceVerificationStatus()
+    const initId = profileCache.data?.id
+    if (initId) {
+      try {
+        await projectStore.fetchUserProjects(initId, { force: true })
+      } catch (e) {
+        console.warn('ProfilePage: refresh projects (init cache) failed', e?.message)
+      }
+    }
     return true // Cache was loaded
   }
   
@@ -4065,8 +4110,15 @@ onMounted(async () => {
 })
 
 // Refresh profile status when component is activated (e.g., when returning from face verification page)
-onActivated(() => {
+onActivated(async () => {
   console.log('[ProfilePage] Component activated, checking face verification status...')
+  if (userProfile.value?.id) {
+    try {
+      await projectStore.fetchUserProjects(userProfile.value.id, { force: true })
+    } catch (e) {
+      console.warn('[ProfilePage] refresh projects on activate failed', e?.message)
+    }
+  }
   // Re-check face verification status in case it was updated
   if (userProfile.value?.documents) {
     checkFaceVerificationStatus()
