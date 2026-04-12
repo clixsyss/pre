@@ -183,6 +183,8 @@ export default {
   // News
   allNews: 'جميع الأخبار',
   stayUpdated: 'تابع آخر أخبار المجتمع',
+  newsContent: 'محتوى الخبر',
+  newsBodyImages: 'وسائط المقال',
 
   // Project Selection
   welcomeBackUser: 'مرحباً بعودتك',
@@ -428,6 +430,11 @@ export default {
 
   // Home Page
   welcomeBack: 'أهلاً بعودتك!',
+  temporaryAccountExpiryBanner: 'تنتهي صلاحية حسابك في {date} · {daysPhrase}',
+  temporaryAccountExpiredStatus: 'انتهت الصلاحية — تواصل مع الإدارة',
+  temporaryAccountLastDay: 'آخر يوم للوصول',
+  temporaryAccountOneDayLeft: 'يوم واحد متبقٍ',
+  temporaryAccountDaysLeft: '{n} يوم متبقٍ',
   communityHappening: 'آخر الأنشطة في مجتمعك',
   quickActions: 'أوامر سريعة',
   gateAccess: 'دخول البوابة',

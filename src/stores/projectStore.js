@@ -12,6 +12,24 @@ export const useProjectStore = defineStore('project', () => {
   const availableProjects = ref([])
   const loading = ref(false)
   const error = ref(null)
+
+  /** Shown on Home for temporary accounts (from last user document load). */
+  const userAccountExpiry = ref({
+    isTemporary: false,
+    validityEndDate: null
+  })
+
+  const setUserAccountExpiryFromProfile = (userData) => {
+    if (!userData) {
+      userAccountExpiry.value = { isTemporary: false, validityEndDate: null }
+      return
+    }
+    const isTemp = !!(userData.isTemporary || userData.accountType === 'temporary')
+    userAccountExpiry.value = {
+      isTemporary: isTemp,
+      validityEndDate: userData.validityEndDate ?? null
+    }
+  }
   
   // Cache management (Extended for cost optimization)
   const lastFetchTime = ref(0)
@@ -63,6 +81,29 @@ export const useProjectStore = defineStore('project', () => {
     const now = Date.now()
     if (!force && userProjects.value.length > 0 && (now - lastFetchTime.value) < cacheDuration) {
       console.log('Using cached projects data')
+      try {
+        let userData = await getUserById(userId)
+        if (!userData && userId && userId.includes('@')) {
+          const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
+          const currentUser = await optimizedAuthService.getCurrentUser()
+          if (currentUser?.id) userData = await getUserById(currentUser.id)
+          else if (currentUser?.userSub) userData = await getUserById(currentUser.userSub)
+        }
+        if (!userData && userId && !String(userId).includes('@')) {
+          const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
+          const currentUser = await optimizedAuthService.getCurrentUser()
+          const sessionEmail =
+            currentUser?.attributes?.email ||
+            currentUser?.cognitoAttributes?.email ||
+            (typeof currentUser?.username === 'string' && currentUser.username.includes('@')
+              ? currentUser.username
+              : null)
+          if (sessionEmail) userData = await getUserByEmail(sessionEmail)
+        }
+        setUserAccountExpiryFromProfile(userData)
+      } catch (e) {
+        console.warn('ProjectStore: Could not refresh temporary-account banner fields from cache path', e)
+      }
       return
     }
     
@@ -113,12 +154,15 @@ export const useProjectStore = defineStore('project', () => {
       
       if (!userData) {
         console.warn('ProjectStore: User not found in DynamoDB')
+        setUserAccountExpiryFromProfile(null)
         // Show user-friendly error message
         error.value = 'User document not found. Please contact support if this issue persists.'
         userProjects.value = []
         loading.value = false
         return
       }
+
+      setUserAccountExpiryFromProfile(userData)
       
       console.log('ProjectStore: User document data:', userData)
       
@@ -230,6 +274,7 @@ export const useProjectStore = defineStore('project', () => {
     } catch (err) {
       console.error('Error fetching user projects:', err)
       error.value = err.message
+      setUserAccountExpiryFromProfile(null)
     } finally {
       loading.value = false
     }
@@ -462,6 +507,7 @@ export const useProjectStore = defineStore('project', () => {
     availableProjects.value = []
     loading.value = false
     error.value = null
+    userAccountExpiry.value = { isTemporary: false, validityEndDate: null }
     localStorage.removeItem('selectedProjectId')
     localStorage.removeItem('selectedUnit')
     localStorage.removeItem('selectedProjectTimestamp')
@@ -492,6 +538,7 @@ export const useProjectStore = defineStore('project', () => {
     availableProjects,
     loading,
     error,
+    userAccountExpiry,
     
     // Getters
     hasMultipleProjects,

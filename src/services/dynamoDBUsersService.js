@@ -14,7 +14,8 @@
  *           passwordResetSent, passwordResetSentAt, projects (List of Maps),
  *           registrationStatus, registrationStep, role, suspendedAt,
  *           suspendedBy, suspensionEndDate, suspensionReason,
- *           suspensionType, unit, unsuspendedAt, unsuspendedBy, updatedAt
+ *           suspensionType, unit, unsuspendedAt, unsuspendedBy, updatedAt,
+ *           validityStartDate, validityEndDate (temporary accounts)
  */
 
 import { getItem, scan, putItem, updateItem } from '../aws/dynamodbClient'
@@ -141,7 +142,9 @@ function convertUserFromDynamoDB(item) {
     unit: item.unit || '',
     unsuspendedAt: item.unsuspendedAt || null,
     unsuspendedBy: item.unsuspendedBy || '',
-    updatedAt: item.updatedAt || null
+    updatedAt: item.updatedAt || null,
+    validityStartDate: item.validityStartDate ?? null,
+    validityEndDate: item.validityEndDate ?? null
   }
 }
 

@@ -195,6 +195,8 @@ export default {
   // News
   allNews: 'All News',
   stayUpdated: 'Stay updated with the latest community news',
+  newsContent: 'News content',
+  newsBodyImages: 'Article media',
 
   // Project Selection
   welcomeBackUser: 'Welcome Back',
@@ -459,6 +461,11 @@ export default {
 
   // Home Page
   welcomeBack: 'Welcome back!',
+  temporaryAccountExpiryBanner: 'Your account expires on {date} · {daysPhrase}',
+  temporaryAccountExpiredStatus: 'access has ended — contact your administrator',
+  temporaryAccountLastDay: 'last day of access',
+  temporaryAccountOneDayLeft: '1 day left',
+  temporaryAccountDaysLeft: '{n} days left',
   communityHappening: "Here's what's happening in your community",
   quickActions: 'Quick Actions',
   gateAccess: 'Gate Access',

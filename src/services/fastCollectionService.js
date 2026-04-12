@@ -153,9 +153,27 @@ class FastCollectionService {
         }
       })
       
+      const newsScheduleToDate = (value) => {
+        if (!value) return null
+        if (value instanceof Date && !isNaN(value.getTime())) return value
+        if (typeof value.toDate === 'function') {
+          const d = value.toDate()
+          return d instanceof Date && !isNaN(d.getTime()) ? d : null
+        }
+        const d = new Date(value)
+        return isNaN(d.getTime()) ? null : d
+      }
+
+      const newsItemIsReaderVisible = (item) => {
+        if (item.isPublished === true) return true
+        const t = newsScheduleToDate(item.scheduledPublishAt)
+        if (t && Date.now() >= t.getTime()) return true
+        return false
+      }
+
       // Apply client-side filtering based on options
       if (options.publishedOnly) {
-        news = news.filter(item => item.isPublished !== false)
+        news = news.filter(newsItemIsReaderVisible)
       }
       
       if (options.featuredOnly) {

@@ -1,5 +1,13 @@
 <template>
   <div class="home-page">
+    <div
+      v-if="temporaryExpiryBanner"
+      class="temp-account-expiry-banner"
+      :class="{ 'temp-account-expiry-banner--urgent': temporaryExpiryBanner.urgent }"
+      role="status"
+    >
+      {{ temporaryExpiryBanner.text }}
+    </div>
     <!-- Hero Section -->
     <div class="hero-section">
       <div class="hero-content">
@@ -126,6 +134,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, onActivated } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useProjectStore } from '../../stores/projectStore'
 import { useAcademiesStore } from '../../stores/academyStore'
 import { useSmartMirrorStore } from '../../stores/smartMirrorStore'
@@ -144,7 +153,60 @@ defineOptions({
 
 const router = useRouter()
 const route = useRoute()
+const { t, locale } = useI18n()
 const projectStore = useProjectStore()
+
+function parseProfileDate(value) {
+  if (value == null || value === '') return null
+  if (value instanceof Date) return isNaN(value.getTime()) ? null : value
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value)
+    return isNaN(d.getTime()) ? null : d
+  }
+  if (typeof value.toDate === 'function') {
+    try {
+      const d = value.toDate()
+      return d instanceof Date && !isNaN(d.getTime()) ? d : null
+    } catch {
+      return null
+    }
+  }
+  const d = new Date(value)
+  return isNaN(d.getTime()) ? null : d
+}
+
+const temporaryExpiryBanner = computed(() => {
+  const meta = projectStore.userAccountExpiry
+  if (!meta?.isTemporary || meta.validityEndDate == null || meta.validityEndDate === '') {
+    return null
+  }
+  const end = parseProfileDate(meta.validityEndDate)
+  if (!end) return null
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const endDay = new Date(end)
+  endDay.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((endDay - today) / 86400000)
+
+  const loc = locale.value === 'ar-SA' ? 'ar-SA' : undefined
+  const dateStr = end.toLocaleDateString(loc, { year: 'numeric', month: 'short', day: 'numeric' })
+
+  let daysPhrase
+  if (diffDays < 0) {
+    daysPhrase = t('temporaryAccountExpiredStatus')
+  } else if (diffDays === 0) {
+    daysPhrase = t('temporaryAccountLastDay')
+  } else if (diffDays === 1) {
+    daysPhrase = t('temporaryAccountOneDayLeft')
+  } else {
+    daysPhrase = t('temporaryAccountDaysLeft', { n: diffDays })
+  }
+
+  const text = t('temporaryAccountExpiryBanner', { date: dateStr, daysPhrase })
+  const urgent = diffDays < 0 || (diffDays >= 0 && diffDays <= 7)
+  return { text, urgent }
+})
 const academiesStore = useAcademiesStore()
 const smartMirrorStore = useSmartMirrorStore()
 const user = ref(null)
@@ -568,6 +630,26 @@ onActivated(async () => {
   margin: 0 auto;
   box-sizing: border-box;
   overflow-x: hidden;
+}
+
+.temp-account-expiry-banner {
+  font-size: 0.7rem;
+  line-height: 1.35;
+  padding: 5px 10px;
+  margin: 0 0 8px;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.temp-account-expiry-banner--urgent {
+  background: rgba(220, 38, 38, 0.1);
+  color: #991b1b;
+  border-color: rgba(220, 38, 38, 0.4);
 }
 
 /* Hero Section */

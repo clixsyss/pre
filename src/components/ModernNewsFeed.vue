@@ -78,7 +78,7 @@
             </div>
           </div>
           <div v-else class="image-container">
-            <img :src="item.mediaUrl || defaultLogoUrl" :alt="item.title" class="news-image" @error="handleMediaError"
+            <img :src="item.mediaUrl || defaultLogoUrl" :alt="locTitle(item)" class="news-image" @error="handleMediaError"
               loading="lazy" />
             <div v-if="item.featured" class="featured-badge">Featured</div>
           </div>
@@ -88,13 +88,26 @@
         <div class="news-content">
           <div class="news-meta">
             <span class="news-category" :style="getCategoryStyle(item.category)">
+              <img
+                v-if="getCategoryMeta(item.category).iconUrl"
+                :src="getCategoryMeta(item.category).iconUrl"
+                alt=""
+                class="news-cat-thumb"
+              />
+              <ComplaintLucideIcon
+                v-else-if="getCategoryMeta(item.category).lucideIcon"
+                :name="getCategoryMeta(item.category).lucideIcon"
+                :size="16"
+                :color="getCategoryMeta(item.category).lucideColor"
+              />
+              <span v-else class="news-cat-emoji">{{ getCategoryMeta(item.category).emoji }}</span>
               {{ getCategoryLabel(item.category) }}
             </span>
             <span class="news-time">{{ formatTime(item.createdAt) }}</span>
           </div>
 
-          <h3 class="news-headline">{{ item.title }}</h3>
-          <p class="news-excerpt">{{ item.excerpt || item.message }}</p>
+          <h3 class="news-headline">{{ locTitle(item) }}</h3>
+          <p class="news-excerpt">{{ locExcerpt(item) }}</p>
 
           <div class="news-actions">
             <button class="read-more-btn" @click.stop="openNewsDetail(item)">
@@ -131,7 +144,7 @@
         <div class="modal-content" @click.stop>
           <!-- Modal Header -->
           <div class="modal-header">
-            <h2>{{ selectedNewsItem.title }}</h2>
+            <h2>{{ locTitle(selectedNewsItem) }}</h2>
             <button class="close-btn" @click="closeNewsModal">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -146,6 +159,19 @@
             <div class="detail-section">
               <div class="news-meta-info">
                 <span class="news-category-badge" :style="getCategoryStyle(selectedNewsItem.category)">
+                  <img
+                    v-if="getCategoryMeta(selectedNewsItem.category).iconUrl"
+                    :src="getCategoryMeta(selectedNewsItem.category).iconUrl"
+                    alt=""
+                    class="news-cat-thumb"
+                  />
+                  <ComplaintLucideIcon
+                    v-else-if="getCategoryMeta(selectedNewsItem.category).lucideIcon"
+                    :name="getCategoryMeta(selectedNewsItem.category).lucideIcon"
+                    :size="16"
+                    :color="getCategoryMeta(selectedNewsItem.category).lucideColor"
+                  />
+                  <span v-else class="news-cat-emoji">{{ getCategoryMeta(selectedNewsItem.category).emoji }}</span>
                   {{ getCategoryLabel(selectedNewsItem.category) }}
                 </span>
                 <span class="news-time-badge">{{ formatTime(selectedNewsItem.createdAt) }}</span>
@@ -173,15 +199,62 @@
                 </div>
               </div>
               <div v-else class="media-container">
-                <img :src="selectedNewsItem.mediaUrl || defaultLogoUrl" :alt="selectedNewsItem.title" class="news-image" 
+                <img :src="selectedNewsItem.mediaUrl || defaultLogoUrl" :alt="locTitle(selectedNewsItem)" class="news-image" 
                   @error="handleMediaError" loading="lazy" />
               </div>
             </div>
 
             <!-- Content Section -->
             <div class="detail-section">
-              <h3>News Content</h3>
-              <div class="news-content-text" v-html="selectedNewsItem.message || selectedNewsItem.content"></div>
+              <h3>{{ $t('newsContent') }}</h3>
+              <div
+                class="news-content-text"
+                :dir="locBodyDir(selectedNewsItem)"
+                v-html="locBodyHtml(selectedNewsItem)"
+              ></div>
+            </div>
+
+            <!-- Body gallery (fixed layout; separate from banner media) -->
+            <div v-if="bodyImagesForItem(selectedNewsItem).length" class="detail-section">
+              <h3>{{ $t('newsBodyImages') }}</h3>
+              <div class="news-body-gallery" role="list">
+                <div
+                  v-for="(entry, idx) in bodyImagesForItem(selectedNewsItem)"
+                  :key="`${selectedNewsItem.id}-body-${idx}-${entry.url}`"
+                  class="news-body-media-frame"
+                  role="listitem"
+                >
+                  <video
+                    v-if="entry.mediaType === 'video'"
+                    :src="entry.url"
+                    class="news-body-video"
+                    controls
+                    playsinline
+                    webkit-playsinline
+                    preload="metadata"
+                    @click.stop
+                    @loadstart="handleVideoLoadStart(bodyGalleryVideoId(selectedNewsItem, idx))"
+                    @loadeddata="handleVideoLoaded(bodyGalleryVideoId(selectedNewsItem, idx))"
+                    @error="handleVideoError(bodyGalleryVideoId(selectedNewsItem, idx))"
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                  <div
+                    v-if="entry.mediaType === 'video' && videoLoadingStates[bodyGalleryVideoId(selectedNewsItem, idx)]"
+                    class="news-body-video-loading"
+                  >
+                    <div class="loading-spinner"></div>
+                  </div>
+                  <img
+                    v-if="entry.mediaType !== 'video'"
+                    :src="entry.url"
+                    alt=""
+                    loading="lazy"
+                    class="news-body-image-img"
+                    @error="handleMediaError"
+                  />
+                </div>
+              </div>
             </div>
 
             <!-- External Link Section -->
@@ -237,6 +310,13 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import {
+  localizedNewsTitle,
+  localizedNewsExcerpt,
+  localizedNewsContentHtml,
+  newsBodyTextDirection
+} from '../utils/newsLocalization'
 import { useProjectStore } from '../stores/projectStore'
 import { getDownloadURL, ref as storageRef } from 'firebase/storage'
 import { getStorage } from 'firebase/storage'
@@ -244,6 +324,7 @@ import { smartMirrorApp, detectPlatformFromUrl } from '../boot/smartMirrorFireba
 const storage = getStorage(smartMirrorApp)
 const { isNative } = detectPlatformFromUrl()
 import NewsComments from './NewsComments.vue'
+import ComplaintLucideIcon from './ComplaintLucideIcon.vue'
 import { useModalState } from '../composables/useModalState'
 import newsService from '../services/newsService'
 
@@ -251,7 +332,8 @@ import newsService from '../services/newsService'
 defineOptions({
   name: 'ModernNewsFeed',
   components: {
-    NewsComments
+    NewsComments,
+    ComplaintLucideIcon
   }
 })
 
@@ -273,7 +355,55 @@ const props = defineProps({
 const emit = defineEmits(['newsCountUpdate', 'goBack'])
 
 const router = useRouter()
+const { locale } = useI18n()
 const projectStore = useProjectStore()
+
+const locTitle = (item) => (item ? localizedNewsTitle(item, locale.value) : '')
+const locExcerpt = (item) => (item ? localizedNewsExcerpt(item, locale.value) : '')
+const locBodyHtml = (item) => (item ? localizedNewsContentHtml(item, locale.value) : '')
+const locBodyDir = (item) => (item ? newsBodyTextDirection(item, locale.value) : 'ltr')
+
+function inferBodyGalleryMediaType(raw, url) {
+  if (raw && typeof raw === 'object') {
+    if (raw.mediaType === 'video' || raw.type === 'video') return 'video'
+    if (raw.mediaType === 'image' || raw.type === 'image') return 'image'
+  }
+  const u = String(url || '').toLowerCase()
+  if (/\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i.test(u)) return 'video'
+  return 'image'
+}
+
+function bodyGalleryVideoId(item, idx) {
+  return item?.id ? `${item.id}-body-${idx}` : `body-${idx}`
+}
+
+function normalizeBodyImageEntry(raw, idx) {
+  if (raw == null) return null
+  if (typeof raw === 'string') {
+    const url = raw.trim()
+    if (!url) return null
+    return {
+      url,
+      order: idx,
+      mediaType: inferBodyGalleryMediaType(null, url)
+    }
+  }
+  const url = (raw.url || '').trim()
+  if (!url) return null
+  return {
+    url,
+    order: typeof raw.order === 'number' ? raw.order : idx,
+    mediaType: inferBodyGalleryMediaType(raw, url)
+  }
+}
+
+function bodyImagesForItem(item) {
+  if (!item || !Array.isArray(item.bodyImages)) return []
+  return item.bodyImages
+    .map((r, i) => normalizeBodyImageEntry(r, i))
+    .filter(Boolean)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+}
 const { openModal, closeModal } = useModalState()
 const loading = ref(false)
 const newsItems = ref([])
@@ -426,9 +556,22 @@ const getCategoryStyle = (catId) => {
   };
 }
 
+const getCategoryMeta = (catId) => {
+  const category = newsCategories.value.find(c => c.id === catId)
+  if (!category) {
+    return { iconUrl: '', lucideIcon: '', emoji: '📰', lucideColor: '#AF1E23' }
+  }
+  return {
+    iconUrl: category.iconUrl || '',
+    lucideIcon: (category.lucideIcon || '').trim(),
+    emoji: category.icon || '📰',
+    lucideColor: category.color || '#AF1E23'
+  }
+}
+
 const getCategoryLabel = (catId) => {
   const category = newsCategories.value.find(c => c.id === catId);
-  return category ? `${category.icon} ${category.name}` : 'News';
+  return category ? (category.name || 'News') : 'News';
 }
 
 const formatTime = (timestamp) => {
@@ -686,21 +829,22 @@ const fetchNews = async () => {
     })
     console.log('✅ ModernNewsFeed: News service returned:', news?.length || 0, 'items')
 
-    // Transform news items to display format
+    // Normalize display object; keep all Firestore fields (titleEn, titleAr, …) for locale resolution
     newsItems.value = news.map(item => {
-      // Prefer createdAt, then publishedAt, then updatedAt for display; no fallback to now
       const displayCreatedAt = item.createdAt || item.publishedAt || item.updatedAt || null
-      
+      const message = item.message || item.content || item.contentEn || ''
+      const excerpt =
+        item.excerpt ||
+        item.excerptEn ||
+        (typeof message === 'string' && message.length > 150 ? `${message.substring(0, 150)}...` : message)
       return {
+        ...item,
         id: item.id,
-        title: item.title,
-        message: item.content,
-        excerpt: item.excerpt || item.content?.substring(0, 150) + '...',
         type: item.category,
         category: item.category,
         priority: 'normal',
         featured: item.featured || false,
-        interactionsEnabled: item.interactionsEnabled !== false, // Default to true if undefined
+        interactionsEnabled: item.interactionsEnabled !== false,
         mediaUrl: item.mediaUrl || null,
         mediaType: item.mediaType || 'image',
         thumbnailUrl: item.thumbnailUrl || null,
@@ -708,7 +852,9 @@ const fetchNews = async () => {
         linkTitle: item.linkTitle || null,
         createdAt: displayCreatedAt,
         updatedAt: item.updatedAt,
-        publishedAt: item.publishedAt
+        publishedAt: item.publishedAt,
+        message,
+        excerpt
       }
     })
   } catch (error) {
@@ -1034,12 +1180,29 @@ onUnmounted(() => {
 }
 
 .news-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.news-cat-thumb {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.news-cat-emoji {
+  font-size: 0.85rem;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .category-general {
@@ -1261,6 +1424,9 @@ onUnmounted(() => {
 }
 
 .news-category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 0.75rem;
@@ -1327,6 +1493,51 @@ onUnmounted(() => {
   color: #475569;
   font-size: 1rem;
   line-height: 1.7;
+}
+
+/* Body gallery — consistent card size in the article modal */
+.news-body-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.news-body-media-frame {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  max-height: min(40vh, 240px);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.news-body-image-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.news-body-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #0f172a;
+}
+
+.news-body-video-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(15, 23, 42, 0.25);
 }
 
 /* External Link Card */
