@@ -13,7 +13,7 @@
  *   email: string,
  *   passwordObfuscated: string,   // base64(XOR(password, SALT))
  *   userDetails: { firstName, lastName, mobile, dateOfBirth, gender, nationalId },
- *   documents: { frontIdUrl, backIdUrl, profilePictureUrl },
+ *   documents: { frontIdUrl, backIdUrl, profilePictureUrl, propertyContractUrl },
  *   projects: [{ projectId, unit, role }],
  * }
  */

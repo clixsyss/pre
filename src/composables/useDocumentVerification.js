@@ -1,13 +1,14 @@
 import { ref } from 'vue'
 import optimizedAuthService from '../services/optimizedAuthService'
-import { getUserById } from '../services/dynamoDBUsersService'
+import { getUserById, getUserByEmail } from '../services/dynamoDBUsersService'
 
 export function useDocumentVerification() {
   const showDocumentModal = ref(false)
   const missingDocuments = ref({
     profilePicture: false,
     frontId: false,
-    backId: false
+    backId: false,
+    propertyContract: false
   })
   const isChecking = ref(false)
   
@@ -27,7 +28,10 @@ export function useDocumentVerification() {
       console.log('[DocumentVerification] Checking documents for user:', userId)
 
       // Get user from DynamoDB
-      const user = await getUserById(userId)
+      let user = await getUserById(userId)
+      if (!user && typeof userId === 'string' && userId.includes('@')) {
+        user = await getUserByEmail(userId.trim().toLowerCase())
+      }
       
       if (!user) {
         console.log('[DocumentVerification] User document does not exist')
@@ -36,26 +40,33 @@ export function useDocumentVerification() {
       }
 
       const documents = user.documents || {}
+      const hasProfilePicture = !!(documents.profilePictureUrl || documents.profilePicture)
+      const hasFrontId = !!(documents.frontIdUrl || documents.frontId)
+      const hasBackId = !!(documents.backIdUrl || documents.backId)
+      const hasPropertyContract = !!(documents.propertyContractUrl || documents.propertyContract || documents.deedUrl || documents.contractUrl)
 
       console.log('[DocumentVerification] User documents object:', documents)
       console.log('[DocumentVerification] User documents check:', {
-        hasProfilePicture: !!documents.profilePictureUrl,
-        hasFrontId: !!documents.frontIdUrl,
-        hasBackId: !!documents.backIdUrl,
-        profilePictureUrl: documents.profilePictureUrl || 'MISSING',
-        frontIdUrl: documents.frontIdUrl || 'MISSING',
-        backIdUrl: documents.backIdUrl || 'MISSING'
+        hasProfilePicture,
+        hasFrontId,
+        hasBackId,
+        hasPropertyContract,
+        profilePicture: documents.profilePictureUrl || documents.profilePicture || 'MISSING',
+        frontId: documents.frontIdUrl || documents.frontId || 'MISSING',
+        backId: documents.backIdUrl || documents.backId || 'MISSING',
+        propertyContract: documents.propertyContractUrl || documents.propertyContract || documents.deedUrl || documents.contractUrl || 'MISSING'
       })
 
       // Check which documents are missing
       const missing = {
-        profilePicture: !documents.profilePictureUrl,
-        frontId: !documents.frontIdUrl,
-        backId: !documents.backIdUrl
+        profilePicture: !hasProfilePicture,
+        frontId: !hasFrontId,
+        backId: !hasBackId,
+        propertyContract: !hasPropertyContract
       }
 
       // Only show modal if at least one document is missing
-      const hasAnyMissing = missing.profilePicture || missing.frontId || missing.backId
+      const hasAnyMissing = missing.profilePicture || missing.frontId || missing.backId || missing.propertyContract
 
       console.log('[DocumentVerification] Missing documents check:', {
         missing,
@@ -108,12 +119,16 @@ export function useDocumentVerification() {
         const currentUser = await optimizedAuthService.getCurrentUser()
         if (currentUser) {
           // Get Cognito sub (DynamoDB user ID) - priority: attributes.sub > cognitoAttributes.sub > userSub > id > uid
-          const userId = currentUser.attributes?.sub || 
+          let userId = currentUser.attributes?.sub || 
                         currentUser.cognitoAttributes?.sub || 
                         currentUser.userSub || 
                         currentUser.id || 
                         currentUser.uid ||
                         currentUser.username
+          const userEmail = (currentUser.email || currentUser.attributes?.email || currentUser.cognitoAttributes?.email || '').trim().toLowerCase()
+          if ((!userId || (typeof userId === 'string' && userId.includes('@'))) && userEmail) {
+            userId = userEmail
+          }
           
           if (!userId) {
             console.warn('[DocumentVerification] No user ID found in user object')

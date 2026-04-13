@@ -146,10 +146,11 @@
                 Upload Image
               </button>
             </div>
-            <input ref="frontIdInput" type="file" accept="image/*" @change="handleFrontIdUpload"
+            <input ref="frontIdInput" type="file" accept="image/*,.pdf,application/pdf" @change="handleFrontIdUpload"
               style="display: none" />
             <div v-if="frontIdFile" class="file-preview">
-              <img :src="frontIdPreview" alt="Front ID Preview" class="preview-image" />
+              <img v-if="frontIdPreview" :src="frontIdPreview" alt="Front ID Preview" class="preview-image" />
+              <div v-else class="text-sm text-gray-700 font-medium">{{ frontIdFile.name }}</div>
               <button type="button" @click="removeFrontId" class="remove-file-btn">✕ Remove</button>
             </div>
           </div>
@@ -167,11 +168,46 @@
                 Upload Image
               </button>
             </div>
-            <input ref="backIdInput" type="file" accept="image/*" @change="handleBackIdUpload" style="display: none" />
+            <input ref="backIdInput" type="file" accept="image/*,.pdf,application/pdf" @change="handleBackIdUpload" style="display: none" />
             <div v-if="backIdFile" class="file-preview">
-              <img :src="backIdPreview" alt="Back ID Preview" class="preview-image" />
+              <img v-if="backIdPreview" :src="backIdPreview" alt="Back ID Preview" class="preview-image" />
+              <div v-else class="text-sm text-gray-700 font-medium">{{ backIdFile.name }}</div>
               <button type="button" @click="removeBackId" class="remove-file-btn">✕ Remove</button>
             </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Property Contract / Deed <span class="required">*</span></label>
+          <div class="media-upload-options">
+            <button type="button" @click="selectPropertyContract" class="upload-option-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+                <path d="M7 12H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                <path d="M7 16H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                <path d="M8 8H8.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+              Upload Contract/Deed
+            </button>
+          </div>
+          <input
+            ref="propertyContractInput"
+            type="file"
+            accept="image/*,.pdf,application/pdf"
+            @change="handlePropertyContractUpload"
+            style="display: none"
+          />
+          <div v-if="propertyContractFile" class="file-preview">
+            <img
+              v-if="propertyContractPreview && propertyContractIsImage"
+              :src="propertyContractPreview"
+              alt="Property Contract Preview"
+              class="preview-image"
+            />
+            <div v-else class="text-sm text-gray-700 font-medium">
+              {{ propertyContractFile.name }}
+            </div>
+            <button type="button" @click="removePropertyContract" class="remove-file-btn">✕ Remove</button>
           </div>
         </div>
 
@@ -205,12 +241,16 @@ const loading = ref(false)
 const frontIdFile = ref(null)
 const backIdFile = ref(null)
 const profilePictureFile = ref(null)
+const propertyContractFile = ref(null)
 const frontIdPreview = ref(null)
 const backIdPreview = ref(null)
 const profilePicturePreview = ref(null)
+const propertyContractPreview = ref(null)
+const propertyContractIsImage = ref(false)
 const profilePictureInput = ref(null)
 const frontIdInput = ref(null)
 const backIdInput = ref(null)
+const propertyContractInput = ref(null)
 
 /**
  * Signup face verification (FaceVerificationPage) is skipped while true.
@@ -297,6 +337,45 @@ async function snapshotImageFileForUpload (rawFile, label) {
   return new File([buffer], safeName, { type: mime })
 }
 
+async function snapshotDocumentFileForUpload (rawFile, label) {
+  if (!rawFile?.size) {
+    throw new Error(`${label}: no file selected`)
+  }
+
+  const ext = (rawFile.name.split('.').pop() || '').toLowerCase()
+  const extToMime = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    heic: 'image/heic',
+    heif: 'image/heif',
+    pdf: 'application/pdf',
+  }
+
+  let mime =
+    rawFile.type && rawFile.type !== 'application/octet-stream'
+      ? rawFile.type
+      : (extToMime[ext] || '')
+
+  if (!mime) {
+    mime = extToMime[ext] || ''
+  }
+
+  const isImage = mime.startsWith('image/')
+  const isPdf = mime === 'application/pdf'
+  if (!isImage && !isPdf) {
+    throw new Error(`${label}: use an image or PDF file`)
+  }
+
+  const buffer = await rawFile.arrayBuffer()
+  const safeName = rawFile.name && rawFile.name.trim()
+    ? rawFile.name
+    : `property-contract.${mime === 'application/pdf' ? 'pdf' : 'jpg'}`
+
+  return new File([buffer], safeName, { type: mime })
+}
+
 // Setup keyboard handling for better mobile UX
 useFormKeyboard({
   scrollToInput: true,
@@ -336,6 +415,7 @@ onUnmounted(() => {
   revokePreview(profilePicturePreview.value)
   revokePreview(frontIdPreview.value)
   revokePreview(backIdPreview.value)
+  revokePreview(propertyContractPreview.value)
 })
 
 const goToOnboarding = () => {
@@ -365,10 +445,10 @@ const handleFrontIdUpload = async (event) => {
   input.value = ''
   if (!raw) return
   try {
-    const file = await snapshotImageFileForUpload(raw, 'Front National ID')
+    const file = await snapshotDocumentFileForUpload(raw, 'Front National ID')
     revokePreview(frontIdPreview.value)
     frontIdFile.value = file
-    frontIdPreview.value = URL.createObjectURL(file)
+    frontIdPreview.value = file.type.startsWith('image/') ? URL.createObjectURL(file) : null
   } catch (e) {
     frontIdFile.value = null
     frontIdPreview.value = null
@@ -382,10 +462,10 @@ const handleBackIdUpload = async (event) => {
   input.value = ''
   if (!raw) return
   try {
-    const file = await snapshotImageFileForUpload(raw, 'Back National ID')
+    const file = await snapshotDocumentFileForUpload(raw, 'Back National ID')
     revokePreview(backIdPreview.value)
     backIdFile.value = file
-    backIdPreview.value = URL.createObjectURL(file)
+    backIdPreview.value = file.type.startsWith('image/') ? URL.createObjectURL(file) : null
   } catch (e) {
     backIdFile.value = null
     backIdPreview.value = null
@@ -442,6 +522,36 @@ const removeBackId = () => {
   backIdPreview.value = null
 }
 
+const handlePropertyContractUpload = async (event) => {
+  const input = event.target
+  const raw = input.files[0]
+  input.value = ''
+  if (!raw) return
+  try {
+    const file = await snapshotDocumentFileForUpload(raw, 'Property contract/deed')
+    revokePreview(propertyContractPreview.value)
+    propertyContractFile.value = file
+    propertyContractIsImage.value = file.type.startsWith('image/')
+    propertyContractPreview.value = propertyContractIsImage.value ? URL.createObjectURL(file) : null
+  } catch (e) {
+    propertyContractFile.value = null
+    propertyContractPreview.value = null
+    propertyContractIsImage.value = false
+    notificationStore.showError(e?.message || 'Could not load contract/deed file')
+  }
+}
+
+const selectPropertyContract = () => {
+  propertyContractInput.value.click();
+};
+
+const removePropertyContract = () => {
+  revokePreview(propertyContractPreview.value)
+  propertyContractFile.value = null
+  propertyContractPreview.value = null
+  propertyContractIsImage.value = false
+}
+
 const handleSubmit = async () => {
   if (loading.value) return
 
@@ -458,6 +568,10 @@ const handleSubmit = async () => {
     notificationStore.showError('Please upload a profile picture')
     return
   }
+  if (!propertyContractFile.value) {
+    notificationStore.showError('Please upload your property contract/deed')
+    return
+  }
 
   loading.value = true
 
@@ -466,12 +580,13 @@ const handleSubmit = async () => {
     const email = formData.email.trim().toLowerCase()
     const safeEmailFolder = email.replace(/[^a-z0-9]/g, '_')
 
-    console.log('[PersonalDetails] Uploading 3 documents to S3 (parallel)...')
+    console.log('[PersonalDetails] Uploading 4 documents to S3 (parallel)...')
     const uploadedDocuments = await fileUploadService.uploadUserDocuments(
       safeEmailFolder,
       frontIdFile.value,
       backIdFile.value,
-      profilePictureFile.value
+      profilePictureFile.value,
+      propertyContractFile.value
     )
     console.log('[PersonalDetails] ✅ Documents uploaded:', uploadedDocuments)
 
@@ -486,6 +601,7 @@ const handleSubmit = async () => {
         frontIdUrl: uploadedDocuments.frontId,
         backIdUrl: uploadedDocuments.backId,
         profilePictureUrl: uploadedDocuments.profilePicture || null,
+        propertyContractUrl: uploadedDocuments.propertyContract || null,
       },
     }
 

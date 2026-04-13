@@ -424,6 +424,13 @@
                 <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                   stroke-linejoin="round" />
               </svg>
+              {{ $t('addCommunity') }}
+            </button>
+            <button @click="openAddUnitModal" class="add-project-btn secondary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
               {{ $t('addUnit') }}
             </button>
           </div>
@@ -580,7 +587,7 @@
       </div>
 
       <!-- Account Information Accordion -->
-      <div class="accordion-section">
+      <!-- <div class="accordion-section">
         <button @click="toggleAccordion('account')" class="accordion-header"
           :class="{ active: activeAccordion === 'account' }">
           <div class="accordion-title">
@@ -675,7 +682,7 @@
             </div>
           </div>
         </div>
-      </div>
+      </div> -->
 
       <!-- Smart Home Settings Accordion - Only show if current project has Smart Mirror connection -->
       <div v-if="isProjectSmartHomeConnected(currentProjectId)" class="accordion-section">
@@ -1333,6 +1340,48 @@
       </div>
     </Teleport>
 
+    <!-- Add Unit Modal (current selected project only) -->
+    <Teleport to="body">
+      <div v-if="showAddUnitModal" class="modal-overlay" @click.self="showAddUnitModal = false">
+      <div class="modal-content add-project-modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ $t('addUnit') }} - {{ projectStore.selectedProject?.name || $t('currentCommunity') }}</h3>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="addUnitToCurrentProject" class="add-project-form">
+            <div class="form-group">
+              <SearchableUnitDropdown
+                v-model="addUnitForm.userUnit"
+                :project-id="currentProjectId"
+                :project-users="profileProjectUsers"
+                :label="$t('yourUnit')"
+                :placeholder="$t('selectYourUnit')"
+                :search-placeholder="$t('searchUnits')"
+                :disabled="!currentProjectId"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="currentProjectUserRole">{{ $t('yourRole') }}</label>
+              <select id="currentProjectUserRole" v-model="addUnitForm.userRole" required>
+                <option value="">{{ $t('selectYourRole') }}</option>
+                <option value="owner">{{ $t('owner') }}</option>
+                <option value="family">{{ $t('familyMember') }}</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-actions">
+          <button @click="showAddUnitModal = false" class="cancel-btn">{{ $t('cancel') }}</button>
+          <button @click="addUnitToCurrentProject" class="confirm-btn" :disabled="addProjectLoading || !currentProjectId">
+            <span v-if="addProjectLoading">{{ $t('joiningProject') }}</span>
+            <span v-else>{{ $t('addUnit') }}</span>
+          </button>
+        </div>
+      </div>
+      </div>
+    </Teleport>
+
     <!-- Smart Mirror Login Modal -->
     <Teleport to="body">
       <div v-if="showLoginModalFlag" class="modal-overlay" @click="closeLoginModal">
@@ -1532,8 +1581,9 @@
     </Teleport>
 
     <!-- Upload Documents Modal -->
-    <div v-if="showUploadDocumentsModal" class="modal-overlay" @click="showUploadDocumentsModal = false">
-      <div class="modal-content upload-documents-modal" @click.stop>
+    <Teleport to="body">
+      <div v-if="showUploadDocumentsModal" class="modal-overlay upload-documents-overlay" @click.self="showUploadDocumentsModal = false">
+        <div class="modal-content upload-documents-modal" @click.stop>
         <div class="modal-header">
           <h3>Upload Documents</h3>
           <button @click="showUploadDocumentsModal = false" class="close-btn">
@@ -1544,7 +1594,7 @@
           </button>
         </div>
         <div class="modal-body">
-          <p class="modal-subtitle">Upload your profile picture and ID documents. All images will be uploaded to AWS S3.</p>
+          <p class="modal-subtitle">Upload your profile picture, IDs, and deed/contract. Files are uploaded to AWS S3.</p>
           
           <!-- Profile Picture Upload -->
           <div class="upload-section">
@@ -1585,19 +1635,27 @@
               <input 
                 ref="frontIdInput" 
                 type="file" 
-                accept="image/*" 
+                accept="image/*,.pdf,application/pdf" 
                 @change="handleFrontIdSelect"
                 style="display: none;"
               />
-              <div v-if="!frontIdPreview && !userProfile?.documents?.frontIdUrl" class="upload-placeholder">
+              <div v-if="!frontIdPreview && !userProfile?.documents?.frontIdUrl && !frontIdFile" class="upload-placeholder">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <span>Tap to upload</span>
               </div>
               <div v-else class="upload-preview">
-                <img :src="frontIdPreview || userProfile?.documents?.frontIdUrl" alt="Front ID Preview" class="preview-image" />
-                <button v-if="frontIdPreview" @click.stop="removeFrontId" class="remove-preview-btn">×</button>
+                <img
+                  v-if="frontIdPreview || isImageDocumentUrl(userProfile?.documents?.frontIdUrl)"
+                  :src="frontIdPreview || userProfile?.documents?.frontIdUrl"
+                  alt="Front ID Preview"
+                  class="preview-image"
+                />
+                <div v-else class="document-preview">
+                  <span>{{ frontIdFile?.name || 'Front ID document uploaded' }}</span>
+                </div>
+                <button v-if="frontIdFile" @click.stop="removeFrontId" class="remove-preview-btn">×</button>
               </div>
             </div>
           </div>
@@ -1613,26 +1671,76 @@
               <input 
                 ref="backIdInput" 
                 type="file" 
-                accept="image/*" 
+                accept="image/*,.pdf,application/pdf" 
                 @change="handleBackIdSelect"
                 style="display: none;"
               />
-              <div v-if="!backIdPreview && !userProfile?.documents?.backIdUrl" class="upload-placeholder">
+              <div v-if="!backIdPreview && !userProfile?.documents?.backIdUrl && !backIdFile" class="upload-placeholder">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <span>Tap to upload</span>
               </div>
               <div v-else class="upload-preview">
-                <img :src="backIdPreview || userProfile?.documents?.backIdUrl" alt="Back ID Preview" class="preview-image" />
-                <button v-if="backIdPreview" @click.stop="removeBackId" class="remove-preview-btn">×</button>
+                <img
+                  v-if="backIdPreview || isImageDocumentUrl(userProfile?.documents?.backIdUrl)"
+                  :src="backIdPreview || userProfile?.documents?.backIdUrl"
+                  alt="Back ID Preview"
+                  class="preview-image"
+                />
+                <div v-else class="document-preview">
+                  <span>{{ backIdFile?.name || 'Back ID document uploaded' }}</span>
+                </div>
+                <button v-if="backIdFile" @click.stop="removeBackId" class="remove-preview-btn">×</button>
               </div>
+            </div>
+          </div>
+
+          <!-- Property Deed/Contract Upload -->
+          <div class="upload-section">
+            <label class="upload-label">
+              <span class="label-text">{{ $t('propertyDeedContract') }}</span>
+              <span v-if="hasExistingPropertyContracts" class="label-status uploaded">✓ Uploaded</span>
+              <span v-else class="label-status missing">Required</span>
+            </label>
+            <div class="upload-area" @click="selectPropertyContract">
+              <input
+                ref="propertyContractInput"
+                type="file"
+                accept="image/*,.pdf,application/pdf"
+                @change="handlePropertyContractSelect"
+                style="display: none;"
+              />
+              <div v-if="!propertyContractPreview && !hasExistingPropertyContracts && !propertyContractFiles.length" class="upload-placeholder">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Tap to upload</span>
+              </div>
+              <div v-else class="upload-preview">
+                <img
+                  v-if="propertyContractPreview || isImageDocumentUrl(primaryPropertyContractUrl)"
+                  :src="propertyContractPreview || primaryPropertyContractUrl"
+                  alt="Property Deed Preview"
+                  class="preview-image"
+                />
+                <div v-else class="document-preview">
+                  <span>{{ propertyContractLabel }}</span>
+                </div>
+                <button v-if="propertyContractFiles.length" @click.stop="removePropertyContract" class="remove-preview-btn">×</button>
+              </div>
+            </div>
+            <div v-if="propertyContractFiles.length || hasExistingPropertyContracts" class="extra-deed-actions">
+              <button type="button" class="add-another-btn" @click.stop="selectPropertyContract">
+                {{ $t('addAnotherContractDeed') }}
+              </button>
+              <span class="deed-count-label">{{ propertyContractCountLabel }}</span>
             </div>
           </div>
         </div>
         <div class="modal-actions">
           <button @click="showUploadDocumentsModal = false" class="cancel-btn" :disabled="uploadDocumentsLoading">{{ $t('cancel') }}</button>
-          <button @click="uploadDocuments" class="confirm-btn" :disabled="uploadDocumentsLoading || (!profilePictureFile && !frontIdFile && !backIdFile)">
+          <button @click="uploadDocuments" class="confirm-btn" :disabled="uploadDocumentsLoading || (!profilePictureFile && !frontIdFile && !backIdFile && !propertyContractFiles.length)">
             <span v-if="uploadDocumentsLoading">
               <svg class="spinner" width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/>
@@ -1643,14 +1751,15 @@
             <span v-else>Upload Documents</span>
           </button>
         </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
 
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, onActivated } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import optimizedAuthService from '../../services/optimizedAuthService'
@@ -1691,8 +1800,8 @@ const projectStore = useProjectStore()
 const smartMirrorStore = useSmartMirrorStore()
 const settingsStore = useSettingsStore()
 const appSettingsStore = useAppSettingsStore()
-const { openModal, closeModal } = useModalState()
-const { formatDate, formatDateTime } = useDateFormat()
+const { openModal, closeModal, resetModalState } = useModalState()
+const { formatDateTime } = useDateFormat()
 
 // Get sensitivity label with translation
 // const getSensitivityLabel = (value) => {
@@ -1711,6 +1820,7 @@ const logoutLoading = ref(false)
 const showGuidelinesDialog = ref(false)
 const showEditProfileDialog = ref(false)
 const showAddProjectModal = ref(false)
+const showAddUnitModal = ref(false)
 const addProjectLoading = ref(false)
 const projectJoinSuccess = ref(false)
 
@@ -1720,9 +1830,11 @@ const uploadDocumentsLoading = ref(false)
 const profilePictureFile = ref(null)
 const frontIdFile = ref(null)
 const backIdFile = ref(null)
+const propertyContractFiles = ref([])
 const profilePicturePreview = ref(null)
 const frontIdPreview = ref(null)
 const backIdPreview = ref(null)
+const propertyContractPreview = ref(null)
 
 // Delete account state (Apple App Store Requirement)
 const showDeleteAccountConfirm = ref(false)
@@ -1733,6 +1845,10 @@ const isKeyboardOpen = ref(false)
 // New project form data
 const newProject = ref({
   projectId: '',
+  userUnit: '',
+  userRole: ''
+})
+const addUnitForm = ref({
   userUnit: '',
   userRole: ''
 })
@@ -3015,7 +3131,8 @@ const fetchAvailableProjects = async () => {
   }
 }
 
-const addNewProject = async () => {
+const addNewProject = async (options = {}) => {
+  const closeTarget = options.closeTarget || 'project'
   const currentUser = await optimizedAuthService.getCurrentUser()
   if (!currentUser) {
     notificationStore.showError('You must be logged in to join a project')
@@ -3118,8 +3235,13 @@ const addNewProject = async () => {
             projectJoinSuccess.value = true
             setTimeout(() => {
               projectJoinSuccess.value = false
-              showAddProjectModal.value = false
+              if (closeTarget === 'unit') {
+                showAddUnitModal.value = false
+              } else {
+                showAddProjectModal.value = false
+              }
               resetNewProjectForm()
+              resetAddUnitForm()
             }, 1500)
 
             // Refresh user's projects using the correct ID
@@ -3188,8 +3310,13 @@ const addNewProject = async () => {
     projectJoinSuccess.value = true
     setTimeout(() => {
       projectJoinSuccess.value = false
-      showAddProjectModal.value = false
+      if (closeTarget === 'unit') {
+        showAddUnitModal.value = false
+      } else {
+        showAddProjectModal.value = false
+      }
       resetNewProjectForm()
+      resetAddUnitForm()
     }, 1500)
 
     // Refresh user's projects using the correct ID
@@ -3219,25 +3346,104 @@ const resetNewProjectForm = () => {
   }
 }
 
+const resetAddUnitForm = () => {
+  addUnitForm.value = {
+    userUnit: '',
+    userRole: ''
+  }
+}
+
+const openAddUnitModal = async () => {
+  if (!currentProjectId.value) {
+    notificationStore.showError(t('pleaseSelectCommunityFirst'))
+    return
+  }
+  resetAddUnitForm()
+  showAddUnitModal.value = true
+  await fetchProfileProjectUsers(currentProjectId.value)
+}
+
+const addUnitToCurrentProject = async () => {
+  if (!currentProjectId.value) {
+    notificationStore.showError(t('pleaseSelectCommunityFirst'))
+    return
+  }
+  if (!addUnitForm.value.userUnit || !addUnitForm.value.userRole) {
+    notificationStore.showError('Please fill in all required fields')
+    return
+  }
+
+  newProject.value = {
+    projectId: currentProjectId.value,
+    userUnit: addUnitForm.value.userUnit,
+    userRole: addUnitForm.value.userRole
+  }
+  await addNewProject({ closeTarget: 'unit' })
+}
+
 // Document upload functions
 const profilePictureInput = ref(null)
 const frontIdInput = ref(null)
 const backIdInput = ref(null)
+const propertyContractInput = ref(null)
 
 const selectProfilePicture = () => {
+  if (profilePictureInput.value) profilePictureInput.value.value = ''
   profilePictureInput.value?.click()
 }
 
 const selectFrontId = () => {
+  if (frontIdInput.value) frontIdInput.value.value = ''
   frontIdInput.value?.click()
 }
 
 const selectBackId = () => {
+  if (backIdInput.value) backIdInput.value.value = ''
   backIdInput.value?.click()
 }
 
+const selectPropertyContract = () => {
+  if (propertyContractInput.value) propertyContractInput.value.value = ''
+  propertyContractInput.value?.click()
+}
+
+const isImageDocumentUrl = (url) => {
+  if (!url || typeof url !== 'string') return false
+  return /\.(jpg|jpeg|png|webp|gif|bmp|heic|heif|avif|jxl)(\?|#|$)/i.test(url)
+}
+
+const getPropertyContractUrls = (documents = {}) => {
+  const multi = Array.isArray(documents?.propertyContractUrls) ? documents.propertyContractUrls.filter(Boolean) : []
+  if (multi.length > 0) return multi
+  return documents?.propertyContractUrl ? [documents.propertyContractUrl] : []
+}
+
+const hasExistingPropertyContracts = computed(() => getPropertyContractUrls(userProfile.value?.documents).length > 0)
+const primaryPropertyContractUrl = computed(() => getPropertyContractUrls(userProfile.value?.documents)[0] || '')
+const propertyContractCountLabel = computed(() => {
+  const selected = propertyContractFiles.value.length
+  const existing = getPropertyContractUrls(userProfile.value?.documents).length
+  if (selected > 0) return `${selected} selected`
+  if (existing > 0) return `${existing} uploaded`
+  return 'No files'
+})
+const propertyContractLabel = computed(() => {
+  if (propertyContractFiles.value.length > 1) {
+    return `${propertyContractFiles.value.length} files selected`
+  }
+  if (propertyContractFiles.value.length === 1) {
+    return propertyContractFiles.value[0]?.name || 'Property deed/contract selected'
+  }
+  const existingCount = getPropertyContractUrls(userProfile.value?.documents).length
+  if (existingCount > 1) {
+    return `${existingCount} files uploaded`
+  }
+  return 'Property deed/contract uploaded'
+})
+
 const handleProfilePictureSelect = (event) => {
   const file = event.target.files?.[0]
+  event.target.value = ''
   if (file) {
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -3261,70 +3467,89 @@ const handleProfilePictureSelect = (event) => {
 
 const handleFrontIdSelect = (event) => {
   const file = event.target.files?.[0]
+  event.target.value = ''
   if (file) {
-    if (!file.type.startsWith('image/')) {
-      notificationStore.showError('Please select an image file')
-      return
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      notificationStore.showError('Image size must be less than 10MB')
+    const mime = (file.type || '').toLowerCase()
+    const isPdf = mime === 'application/pdf' || /\.pdf$/i.test(file.name || '')
+    if (!mime.startsWith('image/') && !isPdf) {
+      notificationStore.showError('Please select an image or PDF document')
       return
     }
     frontIdFile.value = file
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      frontIdPreview.value = e.target.result
+    if (mime.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        frontIdPreview.value = e.target.result
+      }
+      reader.readAsDataURL(file)
+    } else {
+      frontIdPreview.value = null
     }
-    reader.readAsDataURL(file)
   }
 }
 
 const handleBackIdSelect = (event) => {
   const file = event.target.files?.[0]
+  event.target.value = ''
   if (file) {
-    if (!file.type.startsWith('image/')) {
-      notificationStore.showError('Please select an image file')
-      return
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      notificationStore.showError('Image size must be less than 10MB')
+    const mime = (file.type || '').toLowerCase()
+    const isPdf = mime === 'application/pdf' || /\.pdf$/i.test(file.name || '')
+    if (!mime.startsWith('image/') && !isPdf) {
+      notificationStore.showError('Please select an image or PDF document')
       return
     }
     backIdFile.value = file
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      backIdPreview.value = e.target.result
+    if (mime.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        backIdPreview.value = e.target.result
+      }
+      reader.readAsDataURL(file)
+    } else {
+      backIdPreview.value = null
     }
-    reader.readAsDataURL(file)
   }
 }
 
-const removeProfilePicture = () => {
-  profilePictureFile.value = null
-  profilePicturePreview.value = null
-  if (profilePictureInput.value) {
-    profilePictureInput.value.value = ''
+const handlePropertyContractSelect = (event) => {
+  const files = Array.from(event.target.files || [])
+  event.target.value = ''
+  if (files.length > 0) {
+    for (const file of files) {
+      const mime = (file.type || '').toLowerCase()
+      const isPdf = mime === 'application/pdf' || /\.pdf$/i.test(file.name || '')
+      if (!mime.startsWith('image/') && !isPdf) {
+        notificationStore.showError('Please select images or PDF documents only')
+        return
+      }
+    }
+    const nextFiles = [...propertyContractFiles.value]
+    files.forEach((file) => nextFiles.push(file))
+    propertyContractFiles.value = nextFiles
+    const firstFile = propertyContractFiles.value[0]
+    const firstMime = (firstFile.type || '').toLowerCase()
+    if (firstMime.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        propertyContractPreview.value = e.target.result
+      }
+      reader.readAsDataURL(firstFile)
+    } else {
+      propertyContractPreview.value = null
+    }
   }
 }
 
-const removeFrontId = () => {
-  frontIdFile.value = null
-  frontIdPreview.value = null
-  if (frontIdInput.value) {
-    frontIdInput.value.value = ''
-  }
-}
-
-const removeBackId = () => {
-  backIdFile.value = null
-  backIdPreview.value = null
-  if (backIdInput.value) {
-    backIdInput.value.value = ''
+const removePropertyContract = () => {
+  propertyContractFiles.value = []
+  propertyContractPreview.value = null
+  if (propertyContractInput.value) {
+    propertyContractInput.value.value = ''
   }
 }
 
 const uploadDocuments = async () => {
-  if (!profilePictureFile.value && !frontIdFile.value && !backIdFile.value) {
+  if (!profilePictureFile.value && !frontIdFile.value && !backIdFile.value && !propertyContractFiles.value.length) {
     notificationStore.showError('Please select at least one document to upload')
     return
   }
@@ -3339,8 +3564,19 @@ const uploadDocuments = async () => {
       return
     }
 
-    // Get the correct user ID - use Cognito sub ID
-    const userId = currentUser.userSub || currentUser.attributes?.sub || currentUser.id || currentUser.uid
+    // Resolve canonical DynamoDB user ID
+    let userId = currentUser.userSub || currentUser.attributes?.sub || currentUser.id || currentUser.uid
+    const currentEmail = (currentUser.email || currentUser.attributes?.email || '').trim().toLowerCase()
+    const { getUserById, getUserByEmail, updateUser } = await import('src/services/dynamoDBUsersService')
+    let userData = userId ? await getUserById(userId) : null
+    if (!userData && currentEmail) {
+      userData = await getUserByEmail(currentEmail)
+      if (userData?.id) userId = userData.id
+    }
+    if (!userData || !userId) {
+      notificationStore.showError('Unable to resolve user record. Please re-login and try again.')
+      return
+    }
     console.log('ProfilePage: Uploading documents for user:', userId)
 
     // Import file upload service
@@ -3351,27 +3587,20 @@ const uploadDocuments = async () => {
       userId,
       frontIdFile.value,
       backIdFile.value,
-      profilePictureFile.value
+      profilePictureFile.value,
+      propertyContractFiles.value
     )
 
     console.log('ProfilePage: Documents uploaded to S3:', uploadedDocuments)
 
-    // Get current user document to update
-    const { getUserById, updateUser } = await import('src/services/dynamoDBUsersService')
-    const userData = await getUserById(userId)
-    
-    if (!userData) {
-      notificationStore.showError('User document not found')
-      return
-    }
-
     // Update user document with new document URLs
-    // The uploadUserDocuments returns: { profilePicture: url, frontId: url, backId: url }
     const updatedDocuments = {
       ...(userData.documents || {}),
       ...(uploadedDocuments.profilePicture && { profilePictureUrl: uploadedDocuments.profilePicture }),
       ...(uploadedDocuments.frontId && { frontIdUrl: uploadedDocuments.frontId }),
-      ...(uploadedDocuments.backId && { backIdUrl: uploadedDocuments.backId })
+      ...(uploadedDocuments.backId && { backIdUrl: uploadedDocuments.backId }),
+      ...(uploadedDocuments.propertyContract && { propertyContractUrl: uploadedDocuments.propertyContract }),
+      ...(uploadedDocuments.propertyContractUrls?.length && { propertyContractUrls: uploadedDocuments.propertyContractUrls })
     }
 
     const updatedUserData = {
@@ -3397,12 +3626,15 @@ const uploadDocuments = async () => {
     profilePictureFile.value = null
     frontIdFile.value = null
     backIdFile.value = null
+    propertyContractFiles.value = []
     profilePicturePreview.value = null
     frontIdPreview.value = null
     backIdPreview.value = null
+    propertyContractPreview.value = null
     if (profilePictureInput.value) profilePictureInput.value.value = ''
     if (frontIdInput.value) frontIdInput.value.value = ''
     if (backIdInput.value) backIdInput.value.value = ''
+    if (propertyContractInput.value) propertyContractInput.value.value = ''
 
     notificationStore.showSuccess('Documents uploaded successfully!')
     showUploadDocumentsModal.value = false
@@ -3421,6 +3653,30 @@ const uploadDocuments = async () => {
     uploadDocumentsLoading.value = false
   }
 }
+const removeProfilePicture = () => {
+  profilePictureFile.value = null
+  profilePicturePreview.value = null
+  if (profilePictureInput.value) {
+    profilePictureInput.value.value = ''
+  }
+}
+
+const removeFrontId = () => {
+  frontIdFile.value = null
+  frontIdPreview.value = null
+  if (frontIdInput.value) {
+    frontIdInput.value.value = ''
+  }
+}
+
+const removeBackId = () => {
+  backIdFile.value = null
+  backIdPreview.value = null
+  if (backIdInput.value) {
+    backIdInput.value.value = ''
+  }
+}
+
 
 // Function to fetch users for the selected project (to determine occupied units)
 const fetchProfileProjectUsers = async (projectId) => {
@@ -4160,6 +4416,16 @@ watch(showAddProjectModal, (isOpen) => {
   }
 })
 
+watch(showAddUnitModal, (isOpen) => {
+  if (isOpen) {
+    openModal()
+    document.body.classList.add('hide-bottom-nav')
+  } else {
+    closeModal()
+    document.body.classList.remove('hide-bottom-nav')
+  }
+})
+
 watch(() => userProfile.value?.documents, () => {
   checkFaceVerificationStatus()
 }, { deep: true })
@@ -4188,10 +4454,33 @@ watch(showUploadDocumentsModal, (isOpen) => {
   if (isOpen) {
     openModal()
     document.body.classList.add('hide-bottom-nav')
+    // Always refresh profile docs before rendering this modal.
+    // Missing-doc uploads can happen outside this page and cache may be stale.
+    loadProfile(true)
   } else {
     closeModal()
     document.body.classList.remove('hide-bottom-nav')
+    if (
+      !showLogoutConfirm.value &&
+      !showAddProjectModal.value &&
+      !showAddUnitModal.value &&
+      !showLoginModalFlag.value &&
+      !showDeviceManagementModal.value &&
+      !showUploadDocumentsModal.value &&
+      !showDeleteAccountConfirm.value
+    ) {
+      resetModalState()
+      document.body.classList.remove('modal-open')
+      document.body.classList.remove('keyboard-open')
+    }
   }
+})
+
+onBeforeUnmount(() => {
+  document.body.classList.remove('hide-bottom-nav')
+  document.body.classList.remove('modal-open')
+  document.body.classList.remove('keyboard-open')
+  resetModalState()
 })
 </script>
 
@@ -4486,6 +4775,8 @@ watch(showUploadDocumentsModal, (isOpen) => {
   padding: 20px 0;
   border-bottom: 1px solid #e5e7eb;
   margin-bottom: 20px;
+  display: flex;
+  gap: 12px;
 }
 
 /* Info Sections */
@@ -5307,18 +5598,42 @@ watch(showUploadDocumentsModal, (isOpen) => {
 }
 
 .upload-documents-modal {
-  max-width: 600px;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-width: min(600px, 92vw);
+  width: 92%;
+  height: min(80vh, calc(100dvh - 24px));
+  max-height: min(80vh, calc(100dvh - 24px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  margin: 0 !important;
+}
+
+.upload-documents-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 12px !important;
+  overflow: hidden !important;
+  overscroll-behavior: contain;
 }
 
 .upload-documents-modal .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
+  margin-bottom: 0;
+  padding: 20px 20px 16px;
   border-bottom: 1px solid #e5e7eb;
+}
+
+.upload-documents-modal .modal-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 20px 10px;
 }
 
 .upload-documents-modal .modal-header h3 {
@@ -5347,7 +5662,7 @@ watch(showUploadDocumentsModal, (isOpen) => {
 }
 
 .upload-documents-modal .modal-subtitle {
-  margin: 0 0 24px 0;
+  margin: 0 0 16px 0;
   color: #6b7280;
   font-size: 14px;
   line-height: 1.5;
@@ -5355,11 +5670,16 @@ watch(showUploadDocumentsModal, (isOpen) => {
 
 .upload-documents-modal .modal-actions{
   flex-direction: column;
-  margin-top: 0;
+  width: 100%;
+  margin: 0;
+  padding: 12px 20px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #F6F6F6;
+  flex-shrink: 0;
 }
 
 .upload-section {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .upload-label {
@@ -5396,7 +5716,8 @@ watch(showUploadDocumentsModal, (isOpen) => {
 .upload-area {
   position: relative;
   width: 100%;
-  min-height: 200px;
+  min-height: clamp(140px, 24vh, 220px);
+  height: clamp(140px, 24vh, 220px);
   border: 2px dashed #d1d5db;
   border-radius: 12px;
   display: flex;
@@ -5438,17 +5759,28 @@ watch(showUploadDocumentsModal, (isOpen) => {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 200px;
   border-radius: 12px;
   overflow: hidden;
 }
 
-.preview-image {
+.upload-documents-modal .preview-image {
   width: 100%;
   height: 100%;
-  min-height: 200px;
   object-fit: cover;
   border-radius: 12px;
+}
+
+.document-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .remove-preview-btn {
@@ -5474,6 +5806,35 @@ watch(showUploadDocumentsModal, (isOpen) => {
 .remove-preview-btn:hover {
   background: rgba(0, 0, 0, 0.8);
   transform: scale(1.1);
+}
+
+.extra-deed-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.add-another-btn {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add-another-btn:hover {
+  background: #f9fafb;
+}
+
+.deed-count-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
 }
 
 .spinner {

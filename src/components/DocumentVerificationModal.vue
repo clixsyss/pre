@@ -46,7 +46,7 @@
         </div>
 
         <!-- Front ID - Only show if missing -->
-        <div v-if="missingDocuments.frontId" class="upload-section" :class="{ 'uploaded': frontIdPreview }">
+        <div v-if="missingDocuments.frontId" class="upload-section" :class="{ 'uploaded': frontIdFile }">
           <div class="section-header">
             <div class="section-icon id">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -57,30 +57,31 @@
               <h3>Front of National ID</h3>
               <p>Clear photo of the front side</p>
             </div>
-            <div v-if="frontIdPreview" class="check-icon">✓</div>
+            <div v-if="frontIdFile" class="check-icon">✓</div>
           </div>
           
           <div class="upload-area" @click="selectFrontId">
             <input 
               ref="frontIdInput" 
               type="file" 
-              accept="image/*" 
+              accept="image/*,.pdf,application/pdf" 
               @change="handleFrontIdUpload"
               style="display: none;"
             />
-            <div v-if="!frontIdPreview" class="upload-placeholder">
+            <div v-if="!frontIdFile" class="upload-placeholder">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="upload-icon">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
               </svg>
               <span>Tap to upload</span>
             </div>
-            <img v-else :src="frontIdPreview" alt="Front ID Preview" class="preview-image" />
+            <img v-else-if="frontIdPreview" :src="frontIdPreview" alt="Front ID Preview" class="preview-image" />
+            <div v-else class="document-preview">{{ frontIdFile?.name || 'Document selected' }}</div>
           </div>
-          <button v-if="frontIdPreview" @click.stop="removeFrontId" class="remove-btn">Remove</button>
+          <button v-if="frontIdFile" @click.stop="removeFrontId" class="remove-btn">Remove</button>
         </div>
 
         <!-- Back ID - Only show if missing -->
-        <div v-if="missingDocuments.backId" class="upload-section" :class="{ 'uploaded': backIdPreview }">
+        <div v-if="missingDocuments.backId" class="upload-section" :class="{ 'uploaded': backIdFile }">
           <div class="section-header">
             <div class="section-icon id">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -91,26 +92,63 @@
               <h3>Back of National ID</h3>
               <p>Clear photo of the back side</p>
             </div>
-            <div v-if="backIdPreview" class="check-icon">✓</div>
+            <div v-if="backIdFile" class="check-icon">✓</div>
           </div>
           
           <div class="upload-area" @click="selectBackId">
             <input 
               ref="backIdInput" 
               type="file" 
-              accept="image/*" 
+              accept="image/*,.pdf,application/pdf" 
               @change="handleBackIdUpload"
               style="display: none;"
             />
-            <div v-if="!backIdPreview" class="upload-placeholder">
+            <div v-if="!backIdFile" class="upload-placeholder">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="upload-icon">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
               </svg>
               <span>Tap to upload</span>
             </div>
-            <img v-else :src="backIdPreview" alt="Back ID Preview" class="preview-image" />
+            <img v-else-if="backIdPreview" :src="backIdPreview" alt="Back ID Preview" class="preview-image" />
+            <div v-else class="document-preview">{{ backIdFile?.name || 'Document selected' }}</div>
           </div>
-          <button v-if="backIdPreview" @click.stop="removeBackId" class="remove-btn">Remove</button>
+          <button v-if="backIdFile" @click.stop="removeBackId" class="remove-btn">Remove</button>
+        </div>
+
+        <!-- Property Contract - Only show if missing -->
+        <div v-if="missingDocuments.propertyContract" class="upload-section" :class="{ 'uploaded': propertyContractFiles.length > 0 }">
+          <div class="section-header">
+            <div class="section-icon id">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5A3.375 3.375 0 0010.125 2.25H6.75A2.25 2.25 0 004.5 4.5v15A2.25 2.25 0 006.75 21.75h10.5a2.25 2.25 0 002.25-2.25V16.5" />
+              </svg>
+            </div>
+            <div class="section-title">
+              <h3>{{ t('propertyDeedContract') }}</h3>
+              <p>Upload deed/contract (image or PDF)</p>
+            </div>
+            <div v-if="propertyContractFiles.length > 0" class="check-icon">✓</div>
+          </div>
+
+          <div class="upload-area" @click="selectPropertyContract">
+            <input
+              ref="propertyContractInput"
+              type="file"
+              accept="image/*,.pdf,application/pdf"
+              @change="handlePropertyContractUpload"
+              style="display: none;"
+            />
+            <div v-if="!propertyContractFiles.length" class="upload-placeholder">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="upload-icon">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+              <span>Tap to upload</span>
+            </div>
+            <img v-else-if="propertyContractPreview" :src="propertyContractPreview" alt="Property Contract Preview" class="preview-image" />
+            <div v-else class="document-preview">{{ propertyContractFiles.length > 1 ? `${propertyContractFiles.length} files selected` : (propertyContractFiles[0]?.name || 'Document selected') }}</div>
+          </div>
+          <button v-if="propertyContractFiles.length" @click.stop="removePropertyContract" class="remove-btn">Remove</button>
+          <button v-if="propertyContractFiles.length" @click.stop="selectPropertyContract" class="remove-btn">{{ t('addAnotherContractDeed') }}</button>
         </div>
       </div>
 
@@ -142,12 +180,14 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import fileUploadService from '../services/fileUploadService'
 import optimizedAuthService from '../services/optimizedAuthService'
 import { updateUser, getUserById } from '../services/dynamoDBUsersService'
 import { useNotificationStore } from '../stores/notifications'
 
 const notificationStore = useNotificationStore()
+const { t } = useI18n()
 
 const emit = defineEmits(['documentsUploaded'])
 
@@ -159,7 +199,8 @@ const props = defineProps({
     default: () => ({
       profilePicture: true,
       frontId: true,
-      backId: true
+      backId: true,
+      propertyContract: true
     })
   }
 })
@@ -168,16 +209,19 @@ const props = defineProps({
 const profilePictureInput = ref(null)
 const frontIdInput = ref(null)
 const backIdInput = ref(null)
+const propertyContractInput = ref(null)
 
 // Preview refs
 const profilePicturePreview = ref(null)
 const frontIdPreview = ref(null)
 const backIdPreview = ref(null)
+const propertyContractPreview = ref(null)
 
 // File data refs
 const profilePictureFile = ref(null)
 const frontIdFile = ref(null)
 const backIdFile = ref(null)
+const propertyContractFiles = ref([])
 
 const loading = ref(false)
 
@@ -196,39 +240,97 @@ const handleProfilePictureUpload = (event) => {
 
 const handleFrontIdUpload = (event) => {
   const file = event.target.files[0]
+  event.target.value = ''
   if (file) {
-    frontIdFile.value = file
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      frontIdPreview.value = e.target.result
+    const mime = (file.type || '').toLowerCase()
+    const isPdf = mime === 'application/pdf' || /\.pdf$/i.test(file.name || '')
+    if (!mime.startsWith('image/') && !isPdf) {
+      notificationStore.showError('Please select an image or PDF document')
+      return
     }
-    reader.readAsDataURL(file)
+    frontIdFile.value = file
+    if ((file.type || '').startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        frontIdPreview.value = e.target.result
+      }
+      reader.readAsDataURL(file)
+    } else {
+      frontIdPreview.value = null
+    }
   }
 }
 
 const handleBackIdUpload = (event) => {
   const file = event.target.files[0]
+  event.target.value = ''
   if (file) {
-    backIdFile.value = file
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      backIdPreview.value = e.target.result
+    const mime = (file.type || '').toLowerCase()
+    const isPdf = mime === 'application/pdf' || /\.pdf$/i.test(file.name || '')
+    if (!mime.startsWith('image/') && !isPdf) {
+      notificationStore.showError('Please select an image or PDF document')
+      return
     }
-    reader.readAsDataURL(file)
+    backIdFile.value = file
+    if ((file.type || '').startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        backIdPreview.value = e.target.result
+      }
+      reader.readAsDataURL(file)
+    } else {
+      backIdPreview.value = null
+    }
+  }
+}
+
+const handlePropertyContractUpload = (event) => {
+  const files = Array.from(event.target.files || [])
+  event.target.value = ''
+  if (files.length > 0) {
+    for (const file of files) {
+      const mime = (file.type || '').toLowerCase()
+      const isPdf = mime === 'application/pdf' || /\.pdf$/i.test(file.name || '')
+      if (!mime.startsWith('image/') && !isPdf) {
+        notificationStore.showError('Please select image or PDF documents only')
+        return
+      }
+    }
+    const nextFiles = [...propertyContractFiles.value]
+    files.forEach((file) => nextFiles.push(file))
+    propertyContractFiles.value = nextFiles
+    const first = propertyContractFiles.value[0]
+    if ((first.type || '').startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        propertyContractPreview.value = e.target.result
+      }
+      reader.readAsDataURL(first)
+    } else {
+      propertyContractPreview.value = null
+    }
   }
 }
 
 // Select handlers
 const selectProfilePicture = () => {
+  if (profilePictureInput.value) profilePictureInput.value.value = ''
   profilePictureInput.value.click()
 }
 
 const selectFrontId = () => {
+  if (frontIdInput.value) frontIdInput.value.value = ''
   frontIdInput.value.click()
 }
 
 const selectBackId = () => {
+  if (backIdInput.value) backIdInput.value.value = ''
   backIdInput.value.click()
+}
+
+const selectPropertyContract = () => {
+  if (propertyContractInput.value) propertyContractInput.value.value = ''
+  propertyContractInput.value.click()
 }
 
 // Remove handlers
@@ -247,17 +349,24 @@ const removeBackId = () => {
   backIdPreview.value = null
 }
 
+const removePropertyContract = () => {
+  propertyContractFiles.value = []
+  propertyContractPreview.value = null
+}
+
 // Check if all required documents are uploaded
 const canSubmit = computed(() => {
   const needsProfilePicture = props.missingDocuments.profilePicture
   const needsFrontId = props.missingDocuments.frontId
   const needsBackId = props.missingDocuments.backId
+  const needsPropertyContract = props.missingDocuments.propertyContract
 
   const hasProfilePicture = !needsProfilePicture || profilePictureFile.value
   const hasFrontId = !needsFrontId || frontIdFile.value
   const hasBackId = !needsBackId || backIdFile.value
+  const hasPropertyContract = !needsPropertyContract || propertyContractFiles.value.length > 0
 
-  return hasProfilePicture && hasFrontId && hasBackId
+  return hasProfilePicture && hasFrontId && hasBackId && hasPropertyContract
 })
 
 // Submit handler
@@ -275,8 +384,9 @@ const handleSubmit = async () => {
       throw new Error('No authenticated user found')
     }
 
-    // Get user ID - try different possible fields
+    // Resolve canonical DynamoDB user ID
     let userId = currentUser.uid || currentUser.userSub || currentUser.id || currentUser.username
+    const currentEmail = (currentUser.email || currentUser.attributes?.email || '').trim().toLowerCase()
     
     // If userId looks like an email, try to get DynamoDB user ID
     if (userId && userId.includes('@')) {
@@ -291,6 +401,19 @@ const handleSubmit = async () => {
         console.warn('[DocumentVerification] Could not fetch DynamoDB user by email:', error)
       }
     }
+
+    if (!userId && currentEmail) {
+      try {
+        const { getUserByEmail } = await import('../services/dynamoDBUsersService')
+        const byEmail = await getUserByEmail(currentEmail)
+        if (byEmail?.id) {
+          userId = byEmail.id
+          console.log('[DocumentVerification] Resolved user ID by email:', userId)
+        }
+      } catch (error) {
+        console.warn('[DocumentVerification] Could not resolve user by email:', error)
+      }
+    }
     
     if (!userId) {
       throw new Error('User ID not found')
@@ -300,14 +423,16 @@ const handleSubmit = async () => {
     const filesToUpload = {
       profilePicture: props.missingDocuments.profilePicture ? profilePictureFile.value : null,
       frontId: props.missingDocuments.frontId ? frontIdFile.value : null,
-      backId: props.missingDocuments.backId ? backIdFile.value : null
+      backId: props.missingDocuments.backId ? backIdFile.value : null,
+      propertyContract: props.missingDocuments.propertyContract ? propertyContractFiles.value : null
     }
 
     console.log('[DocumentVerification] Uploading documents:', {
       userId,
       hasProfilePicture: !!filesToUpload.profilePicture,
       hasFrontId: !!filesToUpload.frontId,
-      hasBackId: !!filesToUpload.backId
+      hasBackId: !!filesToUpload.backId,
+      propertyContractFiles: Array.isArray(filesToUpload.propertyContract) ? filesToUpload.propertyContract.length : 0
     })
 
     // Upload documents using the file upload service
@@ -315,13 +440,27 @@ const handleSubmit = async () => {
       userId,
       filesToUpload.frontId,
       filesToUpload.backId,
-      filesToUpload.profilePicture
+      filesToUpload.profilePicture,
+      filesToUpload.propertyContract
     )
 
     console.log('[DocumentVerification] Documents uploaded:', uploadedDocuments)
 
     // Get existing user to preserve existing documents
-    const existingUser = await getUserById(userId)
+    let existingUser = await getUserById(userId)
+    if (!existingUser && currentEmail) {
+      try {
+        const { getUserByEmail } = await import('../services/dynamoDBUsersService')
+        const byEmail = await getUserByEmail(currentEmail)
+        if (byEmail?.id) {
+          userId = byEmail.id
+          existingUser = byEmail
+          console.log('[DocumentVerification] Switched to DynamoDB user ID for update:', userId)
+        }
+      } catch (error) {
+        console.warn('[DocumentVerification] Could not fetch fallback user by email:', error)
+      }
+    }
     const existingDocuments = existingUser?.documents || {}
 
     // Merge uploaded documents with existing documents
@@ -338,6 +477,12 @@ const handleSubmit = async () => {
     }
     if (uploadedDocuments.backId) {
       updatedDocuments.backIdUrl = uploadedDocuments.backId
+    }
+    if (uploadedDocuments.propertyContract) {
+      updatedDocuments.propertyContractUrl = uploadedDocuments.propertyContract
+    }
+    if (uploadedDocuments.propertyContractUrls?.length) {
+      updatedDocuments.propertyContractUrls = uploadedDocuments.propertyContractUrls
     }
 
     // Update user document in DynamoDB
@@ -544,6 +689,20 @@ const handleSubmit = async () => {
   object-fit: cover;
   min-height: 120px;
   max-height: 200px;
+}
+
+.document-preview {
+  width: 100%;
+  min-height: 120px;
+  max-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .remove-btn {

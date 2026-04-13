@@ -208,36 +208,34 @@ class FileUploadService {
         throw new Error('No file provided')
       }
 
-      // Validate file type (images only; HEIC common on iOS camera roll)
-      const allowedTypes = [
-        'image/jpeg',
-        'image/jpg',
-        'image/png',
-        'image/webp',
-        'image/heic',
-        'image/heif',
-      ]
+      // Validate file type (any image type + PDF for IDs/deed)
       const ext = (file.name && file.name.split('.').pop() || '').toLowerCase()
       const extToMime = {
         jpg: 'image/jpeg',
         jpeg: 'image/jpeg',
         png: 'image/png',
         webp: 'image/webp',
+        gif: 'image/gif',
+        bmp: 'image/bmp',
+        tif: 'image/tiff',
+        tiff: 'image/tiff',
+        avif: 'image/avif',
+        jxl: 'image/jxl',
         heic: 'image/heic',
         heif: 'image/heif',
+        pdf: 'application/pdf',
       }
-      let contentType = file.type
+      let contentType = (file.type || '').toLowerCase()
       if (!contentType || contentType === 'application/octet-stream') {
         contentType = extToMime[ext] || ''
+        if (!contentType && ext && ext !== 'pdf') {
+          contentType = `image/${ext}`
+        }
       }
-      if (!allowedTypes.includes(contentType)) {
-        throw new Error('Only JPEG, PNG, WebP, and HEIC images are allowed')
-      }
-
-      // Validate file size (max 10MB)
-      const maxSize = 10 * 1024 * 1024 // 10MB
-      if (file.size > maxSize) {
-        throw new Error('File size must be less than 10MB')
+      const isImage = contentType.startsWith('image/')
+      const isPdf = contentType === 'application/pdf'
+      if (!isImage && !isPdf) {
+        throw new Error('Only image files or PDF documents are allowed')
       }
 
       // Get file as ArrayBuffer
@@ -373,14 +371,15 @@ class FileUploadService {
   }
 
   /**
-   * Upload user documents (National ID and Profile Picture) to S3
+   * Upload user documents (National ID, Profile Picture, Property Contract) to S3
    * @param {string} userId - User ID
    * @param {File} frontIdFile - Front National ID file
    * @param {File} backIdFile - Back National ID file
    * @param {File} profilePictureFile - Profile picture file (optional)
+   * @param {File} propertyContractFile - Property contract/deed file (optional)
    * @returns {Promise<Object>} - Object with download URLs
    */
-  async uploadUserDocuments(userId, frontIdFile, backIdFile, profilePictureFile = null) {
+  async uploadUserDocuments(userId, frontIdFile, backIdFile, profilePictureFile = null, propertyContractFile = null) {
     try {
       console.log('[FileUpload] Starting S3 upload for user:', userId)
       const uploads = []
@@ -424,6 +423,25 @@ class FileUploadService {
         })
       }
 
+      // Upload property contract/deed - supports single file or array of files
+      const propertyContractFiles = Array.isArray(propertyContractFile)
+        ? propertyContractFile.filter(Boolean)
+        : (propertyContractFile ? [propertyContractFile] : [])
+      if (propertyContractFiles.length > 0) {
+        propertyContractFiles.forEach((file, index) => {
+          const extension = file.name.split('.').pop() || 'pdf'
+          const suffix = propertyContractFiles.length > 1 ? `-${index + 1}` : ''
+          const contractName = `property-contract${suffix}.${extension}`
+          console.log('[FileUpload] Adding property contract/deed:', contractName)
+          uploads.push({
+            file,
+            path: `users/${userId}/`,
+            fileName: contractName,
+            type: `propertyContract:${index}`
+          })
+        })
+      }
+
       console.log('[FileUpload] Uploading', uploads.length, 'files to S3...')
       
       // Upload all files
@@ -432,10 +450,20 @@ class FileUploadService {
 
       // Map URLs to their types
       const result = {}
+      const propertyContractUrls = []
       uploads.forEach((upload, index) => {
+        if (upload.type.startsWith('propertyContract:')) {
+          propertyContractUrls.push(downloadURLs[index])
+          console.log('[FileUpload]', upload.type, '→', downloadURLs[index])
+          return
+        }
         result[upload.type] = downloadURLs[index]
         console.log('[FileUpload]', upload.type, '→', downloadURLs[index])
       })
+      if (propertyContractUrls.length > 0) {
+        result.propertyContractUrls = propertyContractUrls
+        result.propertyContract = propertyContractUrls[0]
+      }
 
       console.log('[FileUpload] ✅ S3 upload complete')
       return result
