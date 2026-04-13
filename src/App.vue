@@ -245,6 +245,7 @@ const authenticatedRoutes = [
   '/complaints/:id',
   '/facilities',
   '/service-booking-chat/:id',
+  '/warnings',
   '/violations',
   '/violation-chat/:id',
   '/support',
@@ -303,6 +304,10 @@ const isAuthenticatedPage = computed(() => {
   }
   
   if (route.path.startsWith('/service-booking-chat/')) {
+    return true
+  }
+
+  if (route.path.startsWith('/warnings/')) {
     return true
   }
 

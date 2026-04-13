@@ -68,10 +68,12 @@ export const usersNotificationReadStatusService = {
   
   async getAllReadStatuses(userId) {
     try {
+      const normalizedUserId = String(userId || '').trim()
+      if (!normalizedUserId) return new Map()
       const results = await query(USERS_NOTIFICATION_READ_STATUS_TABLE, {
         KeyConditionExpression: 'parentId = :userId',
         ExpressionAttributeValues: {
-          ':userId': userId
+          ':userId': normalizedUserId
         }
       })
       
@@ -80,7 +82,7 @@ export const usersNotificationReadStatusService = {
         results.forEach(item => {
           const nid = item.id || item.notificationId
           if (nid && item.read) {
-            readStatusMap.set(nid, {
+            readStatusMap.set(String(nid), {
               read: item.read,
               readAt: item.readAt
             })
@@ -97,11 +99,16 @@ export const usersNotificationReadStatusService = {
   /** Persist to AWS DynamoDB only (users__notificationReadStatus). Never Firestore. */
   async markAsRead(userId, notificationId) {
     try {
+      const normalizedUserId = String(userId || '').trim()
+      const normalizedNotificationId = String(notificationId || '').trim()
+      if (!normalizedUserId || !normalizedNotificationId) {
+        throw new Error('Invalid userId or notificationId for markAsRead')
+      }
       const item = {
-        parentId: userId,
-        id: notificationId,
-        userId,
-        notificationId,
+        parentId: normalizedUserId,
+        id: normalizedNotificationId,
+        userId: normalizedUserId,
+        notificationId: normalizedNotificationId,
         read: true,
         readAt: new Date().toISOString()
       }
@@ -115,8 +122,10 @@ export const usersNotificationReadStatusService = {
   
   async markMultipleAsRead(userId, notificationIds) {
     try {
+      const uniqueIds = [...new Set((notificationIds || []).map((id) => String(id || '').trim()).filter(Boolean))]
+      if (!uniqueIds.length) return []
       // Use Promise.all to mark multiple notifications as read in parallel
-      const promises = notificationIds.map(notificationId => 
+      const promises = uniqueIds.map(notificationId => 
         this.markAsRead(userId, notificationId).catch(error => {
           console.error(`[UsersNotificationReadStatusService] Failed to mark ${notificationId} as read:`, error)
           // Continue with other notifications even if one fails
@@ -127,7 +136,10 @@ export const usersNotificationReadStatusService = {
       const results = await Promise.all(promises)
       const successful = results.filter(r => r !== null)
       
-      console.log(`[UsersNotificationReadStatusService] ✅ Marked ${successful.length}/${notificationIds.length} notifications as read`)
+      if (uniqueIds.length > 0 && successful.length === 0) {
+        throw new Error('Failed to persist read status for all notifications')
+      }
+      console.log(`[UsersNotificationReadStatusService] ✅ Marked ${successful.length}/${uniqueIds.length} notifications as read`)
       return successful
     } catch (error) {
       console.error('[UsersNotificationReadStatusService] Error marking multiple as read:', error)

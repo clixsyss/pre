@@ -30,47 +30,154 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
     notifications.value.filter(n => !n.read)
   )
 
-  const sortedNotifications = computed(() => 
-    [...notifications.value].sort((a, b) => {
-      // Sort by timestamp, most recent first
-      // Handle different timestamp formats (Firestore web SDK vs Capacitor Firebase)
-      const aTime = a.createdAt || a.scheduledAt || 0
-      const bTime = b.createdAt || b.scheduledAt || 0
-      
-      // Convert to milliseconds if needed
-      let aMs, bMs
-      
-      // Handle Firestore Timestamp objects (web SDK)
-      if (aTime && typeof aTime.toMillis === 'function') {
-        aMs = aTime.toMillis()
+  const sortedNotifications = computed(() => {
+    const toMs = (item) => {
+      const candidates = [
+        item?.createdAt,
+        item?.updatedAt,
+        item?.sentAt,
+        item?.scheduledAt,
+        item?.issuedAt,
+        item?.startDate,
+      ]
+      for (const value of candidates) {
+        if (!value) continue
+        if (typeof value?.toMillis === 'function') return value.toMillis()
+        if (typeof value === 'object' && value.seconds) return value.seconds * 1000
+        if (typeof value === 'number') return value
+        const parsed = new Date(value).getTime()
+        if (!Number.isNaN(parsed)) return parsed
       }
-      // Handle plain objects with seconds property (Capacitor Firebase)
-      else if (aTime && typeof aTime === 'object' && aTime.seconds) {
-        aMs = aTime.seconds * 1000
-      }
-      // Handle plain numbers
-      else if (typeof aTime === 'number') {
-        aMs = aTime
-      } else {
-        aMs = 0
-      }
-      
-      // Same for bTime
-      if (bTime && typeof bTime.toMillis === 'function') {
-        bMs = bTime.toMillis()
-      }
-      else if (bTime && typeof bTime === 'object' && bTime.seconds) {
-        bMs = bTime.seconds * 1000
-      }
-      else if (typeof bTime === 'number') {
-        bMs = bTime
-      } else {
-        bMs = 0
-      }
-      
-      return bMs - aMs // Newest first
+      return 0
+    }
+    return [...notifications.value].sort((a, b) => toMs(b) - toMs(a))
+  })
+
+  const normalizeIdentifier = (value) => String(value || '').trim().toLowerCase()
+
+  const valueMatchesUser = (value, identifiers) => {
+    if (!value) return false
+    const normalized = normalizeIdentifier(value)
+    return identifiers.has(normalized)
+  }
+
+  const anyValueMatchesUser = (values, identifiers) => {
+    if (!Array.isArray(values)) return false
+    return values.some((value) => valueMatchesUser(value, identifiers))
+  }
+
+  const resolveUserIdentifiers = async (primaryUserId) => {
+    const identifiers = new Set()
+    if (primaryUserId) identifiers.add(normalizeIdentifier(primaryUserId))
+    try {
+      const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
+      const currentUser = await optimizedAuthService.getCurrentUser()
+      const candidates = [
+        currentUser?.uid,
+        currentUser?.userSub,
+        currentUser?.attributes?.sub,
+        currentUser?.cognitoAttributes?.sub,
+        currentUser?.email,
+        currentUser?.attributes?.email,
+        currentUser?.cognitoAttributes?.email
+      ]
+      candidates.forEach((value) => {
+        if (value) identifiers.add(normalizeIdentifier(value))
+      })
+    } catch (error) {
+      console.warn('NotificationCenter: Could not resolve user aliases:', error)
+    }
+    return identifiers
+  }
+
+  const isNotificationForCurrentUser = (notif, userIdentifiers) => {
+    if (!notif) return false
+    const audience = notif.audience || {}
+    if (audience.all === true) return true
+    if (
+      anyValueMatchesUser(audience.uids, userIdentifiers) ||
+      anyValueMatchesUser(audience.userIds, userIdentifiers) ||
+      anyValueMatchesUser(audience.emails, userIdentifiers) ||
+      valueMatchesUser(audience.userId, userIdentifiers) ||
+      valueMatchesUser(audience.uid, userIdentifiers) ||
+      valueMatchesUser(audience.email, userIdentifiers)
+    ) {
+      return true
+    }
+
+    return (
+      valueMatchesUser(notif.userId, userIdentifiers) ||
+      valueMatchesUser(notif.uid, userIdentifiers) ||
+      valueMatchesUser(notif.recipientId, userIdentifiers) ||
+      valueMatchesUser(notif.targetUserId, userIdentifiers) ||
+      valueMatchesUser(notif.userEmail, userIdentifiers) ||
+      valueMatchesUser(notif.email, userIdentifiers)
+    )
+  }
+
+  const getNotificationTimestampMs = (notification) => {
+    const value = notification?.createdAt || notification?.scheduledAt || notification?.issuedAt || notification?.startDate || 0
+    if (value && typeof value.toMillis === 'function') return value.toMillis()
+    if (value && typeof value === 'object' && value.seconds) return value.seconds * 1000
+    if (typeof value === 'number') return value
+    const parsed = new Date(value).getTime()
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
+
+  const mergeAndSortNotifications = (items = []) => {
+    const byId = new Map()
+    items.forEach((item) => {
+      if (!item?.id) return
+      byId.set(String(item.id), item)
     })
-  )
+    return [...byId.values()].sort((a, b) => getNotificationTimestampMs(b) - getNotificationTimestampMs(a))
+  }
+
+  const fetchSupplementalNotifications = async (projectId, userId) => {
+    const supplemental = []
+
+    try {
+      const { getUserFines } = await import('../services/finesService')
+      const fines = await getUserFines(projectId, userId)
+      fines.forEach((fine) => {
+        supplemental.push({
+          id: `fine-${fine.id}`,
+          type: 'violation',
+          title: fine.reason || fine.title || 'Fine Update',
+          message: fine.description || `Fine status: ${fine.status || 'issued'}`,
+          actionUrl: '/violations',
+          createdAt: fine.createdAt || fine.issuingDate || fine.occurrenceDate || Date.now(),
+          read: false
+        })
+      })
+    } catch (error) {
+      console.log('NotificationCenter: Unable to fetch fines for supplemental feed:', error?.message || error)
+    }
+
+    try {
+      const warningModule = await import('../services/warningsService')
+      const getUserWarnings = warningModule.getUserWarnings || warningModule.default?.getUserWarnings
+      if (typeof getUserWarnings === 'function') {
+        const warnings = await getUserWarnings(projectId, userId)
+        warnings.forEach((warning) => {
+          supplemental.push({
+            id: `warning-${warning.id}`,
+            type: 'warning',
+            title: warning.title || 'Warning',
+            message: warning.description || '',
+            actionUrl: '/warnings',
+            createdAt: warning.createdAt || warning.startDate || Date.now(),
+            read: false
+          })
+        })
+      }
+    } catch (error) {
+      // Some apps might not include warnings feature; ignore silently.
+      console.log('NotificationCenter: Warnings feed unavailable:', error?.message || error)
+    }
+
+    return supplemental
+  }
 
   /**
    * Fetch notifications manually (polling-based, not real-time)
@@ -78,14 +185,64 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
    * @param {string} userId - The user's ID
    * @param {string} projectId - The current project ID
    */
-  const fetchNotifications = async (userId, projectId) => {
+  const mergeWithEphemeralNotifications = (serverNotifications = []) => {
+    const ephemeral = notifications.value.filter((n) => n?.isEphemeral)
+    const seenIds = new Set(serverNotifications.map((n) => n.id))
+    const merged = [...serverNotifications]
+    ephemeral.forEach((n) => {
+      if (!seenIds.has(n.id)) merged.push(n)
+    })
+    return merged
+  }
+
+  const registerIncomingNotification = (notificationPayload = {}) => {
+    const rawId =
+      notificationPayload.id ||
+      notificationPayload.notificationId ||
+      notificationPayload.messageId ||
+      notificationPayload.data?.id ||
+      notificationPayload.data?.notificationId
+
+    const generatedId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const id = rawId ? String(rawId) : generatedId
+
+    const title = notificationPayload.title || notificationPayload.data?.title_en || notificationPayload.data?.title_ar || ''
+    const message = notificationPayload.message || notificationPayload.body || notificationPayload.data?.body_en || notificationPayload.data?.body_ar || ''
+    const type = notificationPayload.type || notificationPayload.data?.type || notificationPayload.data?.actionType || 'announcement'
+    const actionUrl = notificationPayload.actionUrl || notificationPayload.data?.actionUrl || notificationPayload.data?.deepLink || null
+
+    const existingIndex = notifications.value.findIndex((n) => n.id === id)
+    const normalized = {
+      id,
+      title,
+      message,
+      type,
+      actionUrl,
+      data: notificationPayload.data || null,
+      createdAt: notificationPayload.createdAt || Date.now(),
+      read: false,
+      isEphemeral: true
+    }
+
+    if (existingIndex >= 0) {
+      const next = [...notifications.value]
+      next[existingIndex] = { ...next[existingIndex], ...normalized, read: next[existingIndex].read ?? false }
+      notifications.value = next
+    } else {
+      notifications.value = [normalized, ...notifications.value]
+      unreadCount.value += 1
+    }
+  }
+
+  const fetchNotifications = async (userId, projectId, options = {}) => {
+    const force = !!options.force
     if (!userId || !projectId) {
       console.warn('NotificationCenter: Cannot fetch without userId and projectId')
       return
     }
 
     // Check cache to prevent duplicate fetches
-    if (lastFetchTime.value && Date.now() - lastFetchTime.value < CACHE_DURATION_MS) {
+    if (!force && lastFetchTime.value && Date.now() - lastFetchTime.value < CACHE_DURATION_MS) {
       console.log('NotificationCenter: ⚡ Using cached data (fetched', Math.round((Date.now() - lastFetchTime.value) / 1000), 'seconds ago)')
       return
     }
@@ -94,6 +251,7 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
 
     try {
       console.log('NotificationCenter: 📊 Fetching notifications (polling mode)...', { userId, projectId })
+      const userIdentifiers = await resolveUserIdentifiers(userId)
       
       // Use DynamoDB service first
       try {
@@ -130,24 +288,7 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
           const notifDate = new Date(notif.createdAt)
           if (notifDate < oneMonthAgo) return
           
-          // Filter notifications based on audience targeting
-          let isForCurrentUser = false
-          
-          // Check if this is a dashboard notification (has audience field)
-          if (notif.audience) {
-            // Check if sent to all users
-            if (notif.audience.all) {
-              isForCurrentUser = true
-            }
-            // Check if sent to specific users
-            else if (notif.audience.uids && Array.isArray(notif.audience.uids)) {
-              isForCurrentUser = notif.audience.uids.includes(userId)
-            }
-          }
-          // Check if this is an in-app notification (has userId field)
-          else if (notif.userId === userId) {
-            isForCurrentUser = true
-          }
+          const isForCurrentUser = isNotificationForCurrentUser(notif, userIdentifiers)
           
           // Only include notifications meant for this user
           if (isForCurrentUser) {
@@ -176,17 +317,29 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         
         // Apply read status from DynamoDB
         recentNotifications.forEach(notif => {
-          const readStatus = readStatusMap.value.get(notif.id)
+          const readStatus = readStatusMap.value.get(String(notif.id))
           if (readStatus) {
             notif.read = readStatus.read || false
           }
         })
         
+        const supplementalNotifications = await fetchSupplementalNotifications(projectId, userId)
+        supplementalNotifications.forEach((item) => {
+          const status = readStatusMap.value.get(String(item.id))
+          if (status) item.read = status.read || false
+        })
+
+        const combinedNotifications = mergeAndSortNotifications([
+          ...recentNotifications,
+          ...supplementalNotifications
+        ]).slice(0, 100)
+
         // Recalculate unread count after applying read status
-        unreadCounter = recentNotifications.filter(n => !n.read).length
+        unreadCounter = combinedNotifications.filter(n => !n.read).length
         
-        notifications.value = recentNotifications
-        unreadCount.value = unreadCounter
+        const mergedNotifications = mergeWithEphemeralNotifications(combinedNotifications)
+        notifications.value = mergeAndSortNotifications(mergedNotifications)
+        unreadCount.value = mergedNotifications.filter((n) => !n.read).length
         lastFetchTime.value = Date.now()
         isLoading.value = false
         
@@ -231,8 +384,14 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         
         // Process notifications
         if (notificationsSnapshot.empty) {
-          notifications.value = []
-          unreadCount.value = 0
+          const supplementalNotifications = await fetchSupplementalNotifications(projectId, userId)
+          supplementalNotifications.forEach((item) => {
+            const status = readStatusMap.value.get(String(item.id))
+            if (status) item.read = status.read || false
+          })
+          const mergedNotifications = mergeWithEphemeralNotifications(supplementalNotifications)
+          notifications.value = mergeAndSortNotifications(mergedNotifications)
+          unreadCount.value = notifications.value.filter((n) => !n.read).length
           isLoading.value = false
           lastFetchTime.value = Date.now()
           console.log('NotificationCenter: No notifications found')
@@ -244,27 +403,10 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
 
         notificationsSnapshot.forEach((doc) => {
           const data = doc.data()
-          const readStatus = readStatusMap.value.get(doc.id)
+          const readStatus = readStatusMap.value.get(String(doc.id))
           const isRead = readStatus?.read || false
           
-          // Filter notifications based on audience targeting
-          let isForCurrentUser = false
-          
-          // Check if this is a dashboard notification (has audience field)
-          if (data.audience) {
-            // Check if sent to all users
-            if (data.audience.all) {
-              isForCurrentUser = true
-            }
-            // Check if sent to specific users
-            else if (data.audience.uids && Array.isArray(data.audience.uids)) {
-              isForCurrentUser = data.audience.uids.includes(userId)
-            }
-          }
-          // Check if this is an in-app notification (has userId field)
-          else if (data.userId === userId) {
-            isForCurrentUser = true
-          }
+          const isForCurrentUser = isNotificationForCurrentUser(data, userIdentifiers)
           
           // Only include notifications meant for this user
           if (isForCurrentUser) {
@@ -280,8 +422,20 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
           }
         })
 
-        notifications.value = notificationsList
-        unreadCount.value = unreadCounter
+        const supplementalNotifications = await fetchSupplementalNotifications(projectId, userId)
+        supplementalNotifications.forEach((item) => {
+          const status = readStatusMap.value.get(String(item.id))
+          if (status) item.read = status.read || false
+        })
+
+        const combinedNotifications = mergeAndSortNotifications([
+          ...notificationsList,
+          ...supplementalNotifications
+        ]).slice(0, 100)
+
+        const mergedNotifications = mergeWithEphemeralNotifications(combinedNotifications)
+        notifications.value = mergeAndSortNotifications(mergedNotifications)
+        unreadCount.value = notifications.value.filter((n) => !n.read).length
         lastFetchTime.value = Date.now()
         isLoading.value = false
 
@@ -339,15 +493,23 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         return
       }
 
-      console.log(`NotificationCenter: Marking notification ${notificationId} as read for user ${userId}`)
+      const normalizedNotificationId = String(notificationId || '').trim()
+      const normalizedUserId = String(userId || '').trim()
+      if (!normalizedNotificationId || !normalizedUserId) return
 
-      const { usersNotificationReadStatusService } = await import('../services/dynamoDBTableServices')
-      await usersNotificationReadStatusService.markAsRead(userId, notificationId)
-      console.log(`NotificationCenter: ✅ Notification ${notificationId} marked as read in DynamoDB (AWS)`)
+      const isEphemeralNotification = normalizedNotificationId.startsWith('local-') || normalizedNotificationId.startsWith('toast-')
 
-      readStatusMap.value.set(notificationId, { read: true, readAt: Date.now() })
+      console.log(`NotificationCenter: Marking notification ${normalizedNotificationId} as read for user ${normalizedUserId}`)
 
-      const idx = notifications.value.findIndex(n => n.id === notificationId)
+      if (!isEphemeralNotification) {
+        const { usersNotificationReadStatusService } = await import('../services/dynamoDBTableServices')
+        await usersNotificationReadStatusService.markAsRead(normalizedUserId, normalizedNotificationId)
+        console.log(`NotificationCenter: ✅ Notification ${normalizedNotificationId} marked as read in DynamoDB (AWS)`)
+      }
+
+      readStatusMap.value.set(normalizedNotificationId, { read: true, readAt: Date.now() })
+
+      const idx = notifications.value.findIndex(n => String(n.id) === normalizedNotificationId)
       if (idx !== -1) {
         const next = [...notifications.value]
         next[idx] = { ...next[idx], read: true }
@@ -393,9 +555,9 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
       // Store original unread count for potential rollback
       const originalUnreadCount = unreadCount.value
       
-      const unreadIds = new Set(unreadNotifs.map(n => n.id))
+      const unreadIds = new Set(unreadNotifs.map(n => String(n.id)))
       unreadNotifs.forEach(notification => {
-        readStatusMap.value.set(notification.id, { read: true, readAt: Date.now() })
+        readStatusMap.value.set(String(notification.id), { read: true, readAt: Date.now() })
       })
 
       // Replace array to trigger Vue reactivity (avoid in-place mutation)
@@ -407,11 +569,15 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
       console.log(`NotificationCenter: Local state updated - ${unreadCount.value} unread`)
 
       const { usersNotificationReadStatusService } = await import('../services/dynamoDBTableServices')
-      const notificationIds = unreadNotifs.map(n => n.id)
+      const notificationIds = unreadNotifs
+        .map(n => String(n.id))
+        .filter((id) => !id.startsWith('local-') && !id.startsWith('toast-'))
 
       try {
-        await usersNotificationReadStatusService.markMultipleAsRead(userId, notificationIds)
-        console.log(`NotificationCenter: ✅ Successfully marked ${unreadNotifs.length} notifications as read in DynamoDB (AWS)`)
+        if (notificationIds.length > 0) {
+          await usersNotificationReadStatusService.markMultipleAsRead(String(userId), notificationIds)
+        }
+        console.log(`NotificationCenter: ✅ Successfully marked ${unreadNotifs.length} notifications as read`)
       } catch (dynamoError) {
         console.error('NotificationCenter: DynamoDB (AWS) mark-all-as-read failed:', dynamoError)
         unreadNotifs.forEach(({ id }) => readStatusMap.value.delete(id))
@@ -508,6 +674,7 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
     // Methods
     subscribeToNotifications,
     fetchNotifications, // Manual refresh function
+    registerIncomingNotification,
     markAsRead,
     markAllAsRead,
     unsubscribeFromNotifications,

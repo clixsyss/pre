@@ -19,6 +19,20 @@ export const useNotificationStore = defineStore('notifications', () => {
 
     notifications.value.push(notification)
 
+    // Mirror toast/in-app notifications to notification center
+    import('./notificationCenter').then(({ useNotificationCenterStore }) => {
+      const centerStore = useNotificationCenterStore()
+      centerStore.registerIncomingNotification({
+        id: `toast-${id}`,
+        title: message,
+        message,
+        type,
+        createdAt: notification.timestamp
+      })
+    }).catch(() => {
+      // Notification center is optional in some contexts
+    })
+
     // Auto-remove after duration
     if (duration > 0) {
       setTimeout(() => {

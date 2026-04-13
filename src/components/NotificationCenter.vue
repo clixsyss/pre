@@ -209,7 +209,7 @@ const handleMarkAllAsRead = async () => {
     // Get userId from optimizedAuthService
     const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
     const currentUser = await optimizedAuthService.getCurrentUser()
-    const userId = currentUser?.uid
+    const userId = currentUser?.attributes?.sub || currentUser?.cognitoAttributes?.sub || currentUser?.userSub || currentUser?.uid
     
     console.log('NotificationCenter: User ID:', userId)
     console.log('NotificationCenter: Current user:', { uid: userId, email: currentUser?.email })
@@ -242,11 +242,6 @@ const handleMarkAllAsRead = async () => {
       // Haptics not available
     }
     
-    // Show success toast with correct parameters
-    const { useNotificationStore } = await import('../stores/notifications')
-    const toastStore = useNotificationStore()
-    toastStore.showSuccess(`${countBefore} notification${countBefore > 1 ? 's' : ''} marked as read`)
-    
   } catch (error) {
     console.error('NotificationCenter: ❌ Error in handleMarkAllAsRead:', error)
     console.error('NotificationCenter: Error details:', {
@@ -275,21 +270,19 @@ const handleMarkAllAsRead = async () => {
 }
 
 const handleNotificationClick = async (notification) => {
+  // Open details immediately; don't block UI on network write
+  selectedNotification.value = notification
+
   const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
   const currentUser = await optimizedAuthService.getCurrentUser()
-  const userId = currentUser?.uid
+  const userId = currentUser?.attributes?.sub || currentUser?.cognitoAttributes?.sub || currentUser?.userSub || currentUser?.uid
 
   // Always mark as read when user opens a notification (if we have userId)
   if (userId) {
-    try {
-      await notificationStore.markAsRead(notification.id, userId)
-    } catch (error) {
+    notificationStore.markAsRead(notification.id, userId).catch((error) => {
       console.error('NotificationCenter: Failed to mark notification as read:', error)
-    }
+    })
   }
-
-  // Show details modal
-  selectedNotification.value = notification
 }
 
 const closeDetails = () => {
@@ -309,7 +302,17 @@ const formatTime = (timestamp) => {
   if (!timestamp) return ''
   
   try {
-    const date = timestamp.toDate()
+    let date
+    if (typeof timestamp?.toDate === 'function') {
+      date = timestamp.toDate()
+    } else if (typeof timestamp === 'number') {
+      date = new Date(timestamp)
+    } else if (timestamp?.seconds) {
+      date = new Date(timestamp.seconds * 1000)
+    } else {
+      date = new Date(timestamp)
+    }
+    if (Number.isNaN(date.getTime())) return ''
     return formatDistanceToNow(date, { addSuffix: true })
   } catch {
     return ''
@@ -327,7 +330,7 @@ const getNotificationTitle = (notification) => {
   }
   
   // In-app notifications have simple title
-  return notification.title || ''
+  return notification.title || notification.subject || notification.data?.title || ''
 }
 
 // Get notification body based on language and format
@@ -341,7 +344,7 @@ const getNotificationBody = (notification) => {
   }
   
   // In-app notifications have simple message
-  return notification.message || ''
+  return notification.message || notification.body || notification.content || notification.text || notification.data?.body || ''
 }
 
 const getIconClass = (type) => {

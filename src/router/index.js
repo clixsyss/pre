@@ -224,6 +224,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/warnings',
+    name: 'Warnings',
+    component: () => import('../pages/auth/WarningsPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/violations',
     name: 'Violations',
     component: () => import('../pages/auth/ViolationsPage.vue'),

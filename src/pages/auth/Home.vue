@@ -1,13 +1,10 @@
 <template>
   <div class="home-page">
-    <div
-      v-if="temporaryExpiryBanner"
-      class="temp-account-expiry-banner"
-      :class="{ 'temp-account-expiry-banner--urgent': temporaryExpiryBanner.urgent }"
-      role="status"
-    >
+    <div v-if="temporaryExpiryBanner" class="temp-account-expiry-banner"
+      :class="{ 'temp-account-expiry-banner--urgent': temporaryExpiryBanner.urgent }" role="status">
       {{ temporaryExpiryBanner.text }}
     </div>
+
     <!-- Hero Section -->
     <div class="hero-section">
       <div class="hero-content">
@@ -23,6 +20,9 @@
         </button> -->
       </div>
     </div>
+
+    <!-- Warning Banner (persistent, shown when user has active warnings) -->
+    <WarningBanner :show="showWarningBanner" :count="activeWarningsCount" @click="navigateToWarnings" />
 
     <!-- Ads Carousel -->
     <AdsCarousel />
@@ -73,6 +73,9 @@
         <ModernNewsFeed :project-id="currentProjectId" />
       </div>
     </div>
+
+    <!-- Warning Modal (first-time new warning popup) -->
+    <WarningModal :is-open="showWarningModal" :warning="unseenWarning" @close="dismissWarningModal" />
 
     <!-- Project Switcher Modal -->
     <div v-if="showProjectSwitcher" class="modal-overlay" @click="showProjectSwitcher = false">
@@ -142,9 +145,14 @@ import UpcomingBookingsCard from '../../components/UpcomingBookingsCard.vue'
 import ModernNewsFeed from '../../components/ModernNewsFeed.vue'
 import SmartDeviceWidget from '../../components/SmartDeviceWidget.vue'
 import AdsCarousel from '../../components/AdsCarousel.vue'
-// import sampleDataService from '../../services/sampleDataService.js' // Disabled - using real Firebase data only
-// import notificationService from '../../services/notificationService.js' // Disabled - using Notification Center in header
+import WarningBanner from '../../components/WarningBanner.vue'
+import WarningModal from '../../components/WarningModal.vue'
 import optimizedAuthService from '../../services/optimizedAuthService'
+import {
+  getActiveUserWarnings,
+  getUnseenWarnings,
+  markWarningsAsSeen,
+} from '../../services/warningsService'
 
 // Component name for ESLint
 defineOptions({
@@ -155,6 +163,52 @@ const router = useRouter()
 const route = useRoute()
 const { t, locale } = useI18n()
 const projectStore = useProjectStore()
+
+// ── Warnings banner & modal ───────────────────────────────────────────────
+const showWarningBanner = ref(false)
+const activeWarningsCount = ref(0)
+const showWarningModal = ref(false)
+const unseenWarning = ref(null)
+
+const navigateToWarnings = () => {
+  router.push('/warnings')
+}
+
+const dismissWarningModal = () => {
+  showWarningModal.value = false
+  unseenWarning.value = null
+}
+
+const checkWarnings = async () => {
+  try {
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    if (!currentUser || !projectStore.selectedProject) return
+
+    const userId =
+      currentUser.attributes?.sub ||
+      currentUser.cognitoAttributes?.sub ||
+      currentUser.id ||
+      currentUser.userSub ||
+      currentUser.uid
+
+    const active = await getActiveUserWarnings(projectStore.selectedProject.id, userId)
+
+    // Persistent banner
+    activeWarningsCount.value = active.length
+    showWarningBanner.value = active.length > 0
+
+    // First-time modal: show the first unseen warning
+    const unseen = getUnseenWarnings(active)
+    if (unseen.length > 0) {
+      unseenWarning.value = unseen[0]
+      showWarningModal.value = true
+      // Mark all as seen so the modal won't reappear on next launch
+      markWarningsAsSeen(active.map((w) => w.id))
+    }
+  } catch (err) {
+    console.warn('Home: checkWarnings failed', err)
+  }
+}
 
 function parseProfileDate(value) {
   if (value == null || value === '') return null
@@ -464,6 +518,9 @@ const handleProjectChange = async (event) => {
     // Restart polling for the new project
     setupBookingsPolling()
 
+    // Refresh warning banner for the new project
+    checkWarnings().catch(() => { })
+
     // Notifications now handled by Notification Center in header
     // await fetchNotifications()
   } catch (error) {
@@ -489,8 +546,8 @@ const setupBookingsPolling = () => {
         try {
           // Silently refresh bookings in the background
           await academiesStore.fetchUserBookings(
-            currentUser.uid, 
-            projectStore.selectedProject.id, 
+            currentUser.uid,
+            projectStore.selectedProject.id,
             true // Force refresh to get latest updates
           )
         } catch (error) {
@@ -511,13 +568,16 @@ const handleVisibilityChange = async () => {
       // Force refresh when app becomes visible
       try {
         await academiesStore.fetchUserBookings(
-          currentUser.uid, 
-          projectStore.selectedProject.id, 
+          currentUser.uid,
+          projectStore.selectedProject.id,
           true
         )
       } catch (error) {
         console.error('Error refreshing bookings on visibility change:', error)
       }
+
+      // Re-check warnings when app returns to foreground
+      checkWarnings().catch((e) => console.warn('checkWarnings on visibility change failed:', e))
     }
   }
 }
@@ -536,7 +596,7 @@ onMounted(async () => {
   // Register event listeners first (synchronously)
   window.addEventListener('projectChanged', handleProjectChange)
   document.addEventListener('visibilitychange', handleVisibilityChange)
-  
+
   // Wait for auth state to be established - use optimized auth service instead of direct auth.currentUser
   try {
     const currentUser = await optimizedAuthService.getCurrentUser()
@@ -586,6 +646,9 @@ onMounted(async () => {
       // Setup polling for bookings updates
       setupBookingsPolling()
 
+      // Check for active warnings (banner + first-time modal)
+      checkWarnings().catch((e) => console.warn('checkWarnings error:', e))
+
       // Notifications now handled by Notification Center in header
       // await fetchNotifications()
     } else {
@@ -608,6 +671,7 @@ watch(() => route.path, async () => {
     const currentUser = await optimizedAuthService.getCurrentUser()
     if (currentUser) {
       await checkAndLoadProjectData()
+      checkWarnings().catch((e) => console.warn('checkWarnings on route change failed:', e))
     }
   }
 })
@@ -617,13 +681,13 @@ onActivated(async () => {
   const currentUser = await optimizedAuthService.getCurrentUser()
   if (currentUser) {
     await checkAndLoadProjectData()
+    checkWarnings().catch((e) => console.warn('checkWarnings on activated failed:', e))
   }
 })
 </script>
 
 <style scoped>
 .home-page {
-  min-height: 100vh;
   background: #fafafa;
   width: 100%;
   max-width: 1400px;
@@ -796,7 +860,7 @@ onActivated(async () => {
   letter-spacing: -0.01em;
 }
 
-.section-title h2{
+.section-title h2 {
   line-height: normal;
 }
 

@@ -519,8 +519,14 @@ const initializeNotificationCenter = async () => {
       return
     }
 
-    console.log('NotificationCenter: Initializing for user:', currentUser.uid, 'project:', currentProject.value.id)
-    notificationCenterStore.subscribeToNotifications(currentUser.uid, currentProject.value.id)
+    const userId = currentUser?.attributes?.sub || currentUser?.cognitoAttributes?.sub || currentUser?.userSub || currentUser?.uid
+    if (!userId) {
+      console.log('NotificationCenter: Missing resolved user id, skipping initialization')
+      return
+    }
+
+    console.log('NotificationCenter: Initializing for user:', userId, 'project:', currentProject.value.id)
+    notificationCenterStore.subscribeToNotifications(userId, currentProject.value.id)
   } catch (error) {
     console.error('NotificationCenter: Error initializing:', error)
   }

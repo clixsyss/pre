@@ -213,7 +213,84 @@
         </div>
       </div>
 
-      <!-- Violations & Fines Accordion -->
+      <!-- Warnings Accordion -->
+      <div class="accordion-section">
+        <button @click="toggleAccordion('warnings')" class="accordion-header"
+          :class="{ active: activeAccordion === 'warnings' }">
+          <div class="accordion-title">
+            <div class="section-icon warnings-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div class="section-text">
+              <h3>Warnings</h3>
+              <p>View warnings issued to your account</p>
+            </div>
+          </div>
+          <!-- Active warnings badge -->
+          <div v-if="warningStats.active > 0" class="warnings-badge-pill">
+            {{ warningStats.active }}
+          </div>
+          <div class="accordion-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </button>
+        <div class="accordion-content" :class="{ active: activeAccordion === 'warnings' }">
+          <div class="violations-container">
+            <div class="violations-summary">
+              <div class="violations-stats">
+                <div class="stat-item">
+                  <span class="stat-number">{{ warningStats.total }}</span>
+                  <span class="stat-label">Total</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-number" style="color:#dc2626">{{ warningStats.active }}</span>
+                  <span class="stat-label">Active</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-number" style="color:#059669">{{ warningStats.resolved }}</span>
+                  <span class="stat-label">Resolved</span>
+                </div>
+              </div>
+            </div>
+            <button @click="handleViewWarnings" class="violations-btn">
+              <div class="violations-btn-content">
+                <div class="violations-btn-icon warnings-btn-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                  </svg>
+                  <div v-if="warningStats.active > 0" class="notification-badge violations-badge">
+                    {{ warningStats.active }}
+                  </div>
+                </div>
+                <div class="violations-btn-text">
+                  <h4>View My Warnings</h4>
+                  <p>See all warnings on your account</p>
+                </div>
+              </div>
+              <div class="violations-btn-arrow">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+            </button>
+            <div v-if="warningStats.total === 0" class="no-violations">
+              <p>No warnings on your account.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Warnings & Violations Accordion -->
       <div class="accordion-section">
         <button @click="toggleAccordion('violations')" class="accordion-header"
           :class="{ active: activeAccordion === 'violations' }">
@@ -226,7 +303,7 @@
               </svg>
             </div>
             <div class="section-text">
-              <h3>{{ $t('finesAndViolations') }}</h3>
+              <h3>Fines &amp; Violations</h3>
               <p>{{ $t('viewMyViolations') }}</p>
             </div>
           </div>
@@ -1057,8 +1134,8 @@
             <!-- Pending request message -->
             <div v-else class="pending-request-message">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="#f59e0b" stroke-width="2"/>
-                <path d="M12 6V12L16 14" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="12" cy="12" r="10" stroke="#dc2626" stroke-width="2"/>
+                <path d="M12 6V12L16 14" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
               </svg>
               <h4>{{ $t('requestPending') }}</h4>
               <p>{{ $t('deviceKeyResetPendingMessage') }}</p>
@@ -1778,6 +1855,7 @@ import EditProfileDialog from '../../components/EditProfileDialog.vue'
 import ViolationsModal from '../../components/ViolationsModal.vue'
 import SearchableUnitDropdown from '../../components/SearchableUnitDropdown.vue'
 import { getUserFines } from '../../services/finesService'
+import { getUserWarnings } from '../../services/warningsService'
 import complaintService from '../../services/complaintService'
 import deviceKeyResetService from '../../services/deviceKeyResetService'
 
@@ -1910,6 +1988,9 @@ const violationStats = ref({
   disputed: 0,
   cancelled: 0
 })
+
+// Warnings state
+const warningStats = ref({ total: 0, active: 0, resolved: 0, converted: 0 })
 
 // Complaints state
 const complaintStats = ref({
@@ -2728,6 +2809,21 @@ const loadViolationStats = async (forceReload = false) => {
 }
 
 
+const loadWarningStats = async () => {
+  const currentUser = await optimizedAuthService.getCurrentUser()
+  if (!currentUser || !projectStore.selectedProject) return
+  try {
+    const userId = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.id || currentUser.userSub || currentUser.uid
+    const data = await getUserWarnings(projectStore.selectedProject.id, userId)
+    warningStats.value = data.reduce(
+      (acc, w) => { acc.total++; acc[w.status] = (acc[w.status] || 0) + 1; return acc },
+      { total: 0, active: 0, resolved: 0, converted: 0 },
+    )
+  } catch (err) {
+    console.error('ProfilePage: Error loading warning stats:', err)
+  }
+}
+
 // Cache for complaints stats
 const complaintsCache = {
   projectId: null,
@@ -3099,6 +3195,9 @@ const toggleAccordion = (section) => {
   activeAccordion.value = newSection
 
   // Lazily load stats when sections are opened
+  if (!isCurrentlyActive && newSection === 'warnings') {
+    loadWarningStats()
+  }
   if (!isCurrentlyActive && newSection === 'violations') {
     loadViolationStats()
   }
@@ -4180,8 +4279,11 @@ const saveDeviceSettings = async () => {
 }
 
 const handleViolationChat = () => {
-  // Navigate to violations page
   router.push('/violations')
+}
+
+const handleViewWarnings = () => {
+  router.push('/warnings')
 }
 
 const handleComplaintChat = () => {
@@ -4605,7 +4707,7 @@ onBeforeUnmount(() => {
 }
 
 .avatar-status.status-pending {
-  background: #f59e0b;
+  background: #dc2626;
   color: white;
 }
 
@@ -6221,7 +6323,7 @@ onBeforeUnmount(() => {
 
 .pending-approval-message svg {
   flex-shrink: 0;
-  color: #f59e0b;
+  color: #dc2626;
 }
 
 .project-role-info {
@@ -6417,7 +6519,7 @@ onBeforeUnmount(() => {
   margin-top: 4px;
   padding: 4px 8px;
   background: #fef3c7;
-  border: 1px solid #f59e0b;
+  border: 1px solid #dc2626;
   border-radius: 4px;
   font-size: 0.75rem;
   color: #92400e;
@@ -6425,7 +6527,7 @@ onBeforeUnmount(() => {
 }
 
 .reauth-warning svg {
-  color: #f59e0b;
+  color: #dc2626;
 }
 
 
@@ -6682,7 +6784,7 @@ onBeforeUnmount(() => {
   margin-top: 8px;
   padding: 6px 10px;
   background: #fef3c7;
-  border: 1px solid #f59e0b;
+  border: 1px solid #dc2626;
   border-radius: 6px;
   font-size: 0.8rem;
   color: #92400e;
@@ -6690,7 +6792,7 @@ onBeforeUnmount(() => {
 }
 
 .existing-connection svg {
-  color: #f59e0b;
+  color: #dc2626;
 }
 
 .modal-body {
@@ -7249,9 +7351,35 @@ input:checked+.toggle-slider:before {
   animation: spin 1s linear infinite;
 }
 
+/* Warnings Styles */
+.warnings-icon {
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
+  color: white;
+}
+
+.warnings-btn-icon {
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%) !important;
+}
+
+.warnings-badge-pill {
+  background: #dc2626;
+  color: white;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-right: 8px;
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 /* Violations Styles */
 .violations-icon {
-  background: #AF1E23;
+  background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: #f0fdf4;
 }
 
@@ -7618,7 +7746,7 @@ input:checked+.toggle-slider:before {
 }
 
 .complaints-badge {
-  background: #f59e0b;
+  background: #dc2626;
 }
 
 @keyframes badge-pulse {

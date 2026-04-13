@@ -371,6 +371,11 @@ class FCMService {
         }
       ]
     });
+
+    // Ensure every received push is immediately reflected in Notification Center
+    this.syncNotificationCenter({ title, body, data }).catch((error) => {
+      logger.warn('FCMService: Notification center sync failed', error?.message || error);
+    });
     
     // Call registered handlers
     this.notificationHandlers.forEach(handler => {
@@ -380,6 +385,38 @@ class FCMService {
         logger.error('FCMService: Handler error:', error);
       }
     });
+  }
+
+  async syncNotificationCenter({ title, body, data }) {
+    try {
+      const [{ useNotificationCenterStore }, { useProjectStore }, { default: optimizedAuthService }] = await Promise.all([
+        import('../stores/notificationCenter'),
+        import('../stores/projectStore'),
+        import('./optimizedAuthService')
+      ]);
+
+      const notificationCenterStore = useNotificationCenterStore();
+      const projectStore = useProjectStore();
+      const currentUser = await optimizedAuthService.getCurrentUser();
+      const userId = currentUser?.attributes?.sub || currentUser?.cognitoAttributes?.sub || currentUser?.userSub || currentUser?.uid;
+      const projectId = data?.projectId || data?.project || projectStore?.selectedProject?.id || localStorage.getItem('selectedProjectId');
+
+      notificationCenterStore.registerIncomingNotification({
+        id: data?.notificationId || data?.id || data?.messageId,
+        title: title || data?.title_en || data?.title_ar || '',
+        message: body || data?.body_en || data?.body_ar || '',
+        type: data?.type || data?.actionType || 'announcement',
+        actionUrl: data?.actionUrl || data?.deepLink || null,
+        data,
+        createdAt: Date.now()
+      });
+
+      if (userId && projectId) {
+        await notificationCenterStore.fetchNotifications(userId, projectId, { force: true });
+      }
+    } catch (error) {
+      logger.warn('FCMService: Failed to sync incoming notification with center', error?.message || error);
+    }
   }
 
   playForegroundAlertSound() {
