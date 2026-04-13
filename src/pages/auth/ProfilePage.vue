@@ -1594,7 +1594,7 @@
           </button>
         </div>
         <div class="modal-body">
-          <p class="modal-subtitle">Upload your profile picture, IDs, and deed/contract. Files are uploaded to AWS S3.</p>
+          <p class="modal-subtitle">Upload your profile picture, IDs, and deed/contract.</p>
           
           <!-- Profile Picture Upload -->
           <div class="upload-section">
