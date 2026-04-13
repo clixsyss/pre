@@ -157,20 +157,44 @@
                   <div class="spinner"></div>
                   <span>Connecting to the gate...</span>
                 </div>
-                <div v-else-if="gatePhase === 'error'" class="status-badge disconnected status-badge--error">
-                  <svg class="status-badge__icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <div
+                  v-else-if="gatePhase === 'error'"
+                  class="status-badge disconnected status-badge--error"
+                >
+                  <svg
+                    class="status-badge__icon"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-                    <line x1="12" y1="8" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    <line
+                      x1="12"
+                      y1="8"
+                      x2="12"
+                      y2="13"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
                     <circle cx="12" cy="16" r="1.4" fill="currentColor" />
                   </svg>
                   <div class="status-badge__text">
                     <span class="status-badge__title">
-                      {{ statusMessage === 'No suitable gate detected nearby' ? 'No suitable gate detected' : 'Connection issue' }}
+                      {{
+                        statusMessage === 'No suitable gate detected nearby'
+                          ? 'No suitable gate detected'
+                          : 'Connection issue'
+                      }}
                     </span>
                     <span class="status-badge__subtitle" v-if="bleErrorDetail === 'off'">
                       Bluetooth is off - enable it in Settings to open the gate.
                     </span>
-                    <span class="status-badge__subtitle" v-else-if="bleErrorDetail === 'unauthorized'">
+                    <span
+                      class="status-badge__subtitle"
+                      v-else-if="bleErrorDetail === 'unauthorized'"
+                    >
                       Bluetooth permission denied - enable it in Settings.
                     </span>
                     <span class="status-badge__subtitle" v-else>
@@ -186,7 +210,6 @@
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
@@ -225,9 +248,16 @@
               />
             </svg>
             <div class="alert-content">
-              <strong>{{ userBlockingStatus.blockingDetails?.global ? 'Temporarily Disabled' : 'Access Restricted' }}</strong>
+              <strong>{{
+                userBlockingStatus.blockingDetails?.global
+                  ? 'Temporarily Disabled'
+                  : 'Access Restricted'
+              }}</strong>
               <p>
-                {{ userBlockingStatus.blockingDetails?.reason || 'You are currently blocked from generating passes. Please contact support for assistance.' }}
+                {{
+                  userBlockingStatus.blockingDetails?.reason ||
+                  'You are currently blocked from generating passes. Please contact support for assistance.'
+                }}
               </p>
             </div>
           </div>
@@ -291,7 +321,7 @@
                 <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" />
               </svg>
               <span>
-                Location Restriction: 
+                Location Restriction:
                 <strong :style="{ color: '#AF1E23' }">Active</strong>
               </span>
             </div> -->
@@ -301,24 +331,35 @@
                 <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" />
               </svg>
               <span>
-                Location Restriction: 
+                Location Restriction:
                 <strong style="color: #10b981">Inactive</strong>
               </span>
             </div> -->
 
             <!-- Passes Grid -->
             <div v-if="currentProjectPasses.length > 0" class="passes-grid">
-              <div v-for="pass in displayedPasses" :key="pass.id" class="pass-card-compact" :class="{ 'pass-used': pass.used, 'pass-expired': isPassExpired(pass) }">
+              <div
+                v-for="pass in displayedPasses"
+                :key="pass.id"
+                class="pass-card-compact"
+                :class="{ 'pass-used': pass.used, 'pass-expired': isPassExpired(pass) }"
+              >
                 <!-- Hidden canvas for QR code generation (for legacy passes) -->
                 <canvas :ref="(el) => setQRRef(el, pass.id)" class="qr-code-hidden"></canvas>
-                
+
                 <!-- Compact Pass Layout -->
                 <div class="pass-compact-header">
                   <!-- Icon and Name -->
                   <div class="pass-icon-compact">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                      <path
+                        d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
                     </svg>
                   </div>
                   <div class="pass-info-compact">
@@ -326,13 +367,21 @@
                     <div class="pass-meta-compact">
                       <span class="meta-item">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                          <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                          <path
+                            d="M12 6v6l4 2"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                          />
                         </svg>
                         {{ formatCreationDate(pass.createdAt) }}
                       </span>
                       <span class="meta-divider">•</span>
-                      <span class="meta-item" :class="{ 'text-red': isPassExpiringSoon(pass) || isPassExpired(pass) }">
+                      <span
+                        class="meta-item"
+                        :class="{ 'text-red': isPassExpiringSoon(pass) || isPassExpired(pass) }"
+                      >
                         {{ getRemainingTime(pass) }}
                       </span>
                     </div>
@@ -345,41 +394,76 @@
 
                 <!-- Compact Actions -->
                 <div class="pass-actions-compact">
-                  <button 
-                    class="pass-btn-compact pass-share-compact" 
+                  <button
+                    class="pass-btn-compact pass-share-compact"
                     @click="sharePass(pass)"
                     :disabled="pass.used || isPassExpired(pass) || sharingPassId === pass.id"
                   >
                     <template v-if="pass.used">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                        <polyline points="9 12 11 14 15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                        <polyline
+                          points="9 12 11 14 15 10"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
                       </svg>
                       Used
                     </template>
                     <template v-else-if="isPassExpired(pass)">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                        <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                        <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                        <line
+                          x1="12"
+                          y1="8"
+                          x2="12"
+                          y2="12"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                        />
+                        <line
+                          x1="12"
+                          y1="16"
+                          x2="12.01"
+                          y2="16"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                        />
                       </svg>
                       Expired
                     </template>
                     <template v-else>
-                    <span v-if="sharingPassId === pass.id">Sharing...</span>
-                    <template v-else>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
-                      <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                      <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
-                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
-                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                    {{ $t('shareQrImage') || 'Share QR Image' }}
-                    </template>
+                      <span v-if="sharingPassId === pass.id">Sharing...</span>
+                      <template v-else>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2" />
+                          <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                          <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2" />
+                          <line
+                            x1="8.59"
+                            y1="13.51"
+                            x2="15.42"
+                            y2="17.49"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          />
+                          <line
+                            x1="15.41"
+                            y1="6.51"
+                            x2="8.59"
+                            y2="10.49"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          />
+                        </svg>
+                        {{ $t('shareQrImage') || 'Share QR Image' }}
+                      </template>
                     </template>
                   </button>
-
                 </div>
               </div>
             </div>
@@ -388,7 +472,13 @@
             <div v-if="hasMorePasses" class="load-more-container">
               <button @click="loadMorePasses" class="load-more-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M12 5v14M5 12l7 7 7-7"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
                 Load More ({{ currentProjectPasses.length - displayedPassesCount }} more)
               </button>
@@ -445,28 +535,85 @@
     <!-- Generate Pass Modal - Professional Design -->
     <Teleport to="body">
       <transition name="modal">
-        <div v-if="showGenerateDialog" class="modal-overlay" @click.self="showGenerateDialog = false">
+        <div
+          v-if="showGenerateDialog"
+          class="modal-overlay"
+          @click.self="showGenerateDialog = false"
+        >
           <div class="modal-container-pro" @click.stop>
             <!-- Modal Header -->
             <div class="modal-header-pro">
               <div class="modal-header-content">
                 <div class="modal-icon">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="2" rx="2"/>
-                    <rect x="5" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
-                    <rect x="13" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
-                    <rect x="5" y="13" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
+                  <svg
+                    width="28"
+                    height="28"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <rect
+                      x="3"
+                      y="3"
+                      width="18"
+                      height="18"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      rx="2"
+                    />
+                    <rect
+                      x="5"
+                      y="5"
+                      width="6"
+                      height="6"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                    <rect
+                      x="13"
+                      y="5"
+                      width="6"
+                      height="6"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                    <rect
+                      x="5"
+                      y="13"
+                      width="6"
+                      height="6"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
                   </svg>
                 </div>
                 <div>
                   <h2 class="modal-title-pro">{{ $t('generateNewPass') || 'New Guest Pass' }}</h2>
-                  <p class="modal-subtitle-pro">{{ $t('generateQRCodeForGate') || 'Generate QR code for gate access' }}</p>
+                  <p class="modal-subtitle-pro">
+                    {{ $t('generateQRCodeForGate') || 'Generate QR code for gate access' }}
+                  </p>
                 </div>
               </div>
               <button class="modal-close-pro" @click="showGenerateDialog = false">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line
+                    x1="18"
+                    y1="6"
+                    x2="6"
+                    y2="18"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <line
+                    x1="6"
+                    y1="6"
+                    x2="18"
+                    y2="18"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
                 </svg>
               </button>
             </div>
@@ -476,8 +623,14 @@
               <div class="form-group-pro">
                 <label class="form-label-pro">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                    <path
+                      d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
                   </svg>
                   <span>{{ $t('guestName') || 'Guest Name' }}</span>
                   <span class="required-star">*</span>
@@ -492,21 +645,42 @@
               </div>
 
               <!-- Location Permission Info -->
-              <div v-if="locationRestriction.active" class="info-box-pro" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-color: #fecaca;">
+              <div
+                v-if="locationRestriction.active"
+                class="info-box-pro"
+                style="
+                  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+                  border-color: #fecaca;
+                "
+              >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2"/>
-                  <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
+                  <path
+                    d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" />
                 </svg>
-                <p style="color: #7f1d1d;">
-                  <strong>{{ $t('locationVerificationRequired') || 'Location verification required.' }}</strong><br/>
-                  {{ $t('mustBeWithinProjectPremises') || 'You must be within the project premises. The app will request location access when you generate the pass.' }}
+                <p style="color: #7f1d1d">
+                  <strong>{{
+                    $t('locationVerificationRequired') || 'Location verification required.'
+                  }}</strong
+                  ><br />
+                  {{
+                    $t('mustBeWithinProjectPremises') ||
+                    'You must be within the project premises. The app will request location access when you generate the pass.'
+                  }}
                 </p>
               </div>
             </div>
 
             <!-- Modal Footer -->
             <div class="modal-footer-pro">
-              <button class="modal-btn-cancel" @click="showGenerateDialog = false" :disabled="isValidatingLocation">
+              <button
+                class="modal-btn-cancel"
+                @click="showGenerateDialog = false"
+                :disabled="isValidatingLocation"
+              >
                 {{ $t('cancel') || 'Cancel' }}
               </button>
               <button
@@ -516,13 +690,31 @@
               >
                 <div v-if="isValidatingLocation || isGeneratingPass" class="button-spinner"></div>
                 <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
-                  <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                  <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
-                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
-                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2" />
+                  <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                  <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2" />
+                  <line
+                    x1="8.59"
+                    y1="13.51"
+                    x2="15.42"
+                    y2="17.49"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <line
+                    x1="15.41"
+                    y1="6.51"
+                    x2="8.59"
+                    y2="10.49"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
                 </svg>
-                <span>{{ isValidatingLocation ? ($t('checkingLocation') || 'Checking Location...') : ($t('generateAndShare') || 'Generate & Share') }}</span>
+                <span>{{
+                  isValidatingLocation
+                    ? $t('checkingLocation') || 'Checking Location...'
+                    : $t('generateAndShare') || 'Generate & Share'
+                }}</span>
               </button>
             </div>
           </div>
@@ -533,16 +725,49 @@
     <!-- Generated Pass Preview Modal -->
     <Teleport to="body">
       <transition name="modal">
-        <div v-if="showGeneratedPassPreview && generatedPassPreview" class="modal-overlay" @click.self="closeGeneratedPassPreview">
+        <div
+          v-if="showGeneratedPassPreview && generatedPassPreview"
+          class="modal-overlay"
+          @click.self="closeGeneratedPassPreview"
+        >
           <div class="modal-container-pro preview-modal-container" @click.stop>
             <div class="modal-header-pro">
               <div class="modal-header-content">
                 <div class="modal-icon">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                    <rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="2" rx="2"/>
-                    <rect x="5" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
-                    <rect x="13" y="5" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
-                    <rect x="5" y="13" width="6" height="6" stroke="currentColor" stroke-width="1.5"/>
+                    <rect
+                      x="3"
+                      y="3"
+                      width="18"
+                      height="18"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      rx="2"
+                    />
+                    <rect
+                      x="5"
+                      y="5"
+                      width="6"
+                      height="6"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                    <rect
+                      x="13"
+                      y="5"
+                      width="6"
+                      height="6"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                    <rect
+                      x="5"
+                      y="13"
+                      width="6"
+                      height="6"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
                   </svg>
                 </div>
                 <div>
@@ -552,8 +777,24 @@
               </div>
               <button class="modal-close-pro" @click="closeGeneratedPassPreview">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line
+                    x1="18"
+                    y1="6"
+                    x2="6"
+                    y2="18"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <line
+                    x1="6"
+                    y1="6"
+                    x2="18"
+                    y2="18"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
                 </svg>
               </button>
             </div>
@@ -568,15 +809,37 @@
             </div>
             <div class="modal-footer-pro">
               <button class="modal-btn-cancel" @click="closeGeneratedPassPreview">Close</button>
-              <button class="modal-btn-generate" @click="shareGeneratedPass" :disabled="isSharingGeneratedPass">
+              <button
+                class="modal-btn-generate"
+                @click="shareGeneratedPass"
+                :disabled="isSharingGeneratedPass"
+              >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
-                  <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                  <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
-                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
-                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2" />
+                  <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                  <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2" />
+                  <line
+                    x1="8.59"
+                    y1="13.51"
+                    x2="15.42"
+                    y2="17.49"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <line
+                    x1="15.41"
+                    y1="6.51"
+                    x2="8.59"
+                    y2="10.49"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
                 </svg>
-                <span>{{ isSharingGeneratedPass ? ($t('sharing') || 'Sharing...') : ($t('shareQrImage') || 'Share QR Image') }}</span>
+                <span>{{
+                  isSharingGeneratedPass
+                    ? $t('sharing') || 'Sharing...'
+                    : $t('shareQrImage') || 'Share QR Image'
+                }}</span>
               </button>
             </div>
           </div>
@@ -771,7 +1034,7 @@ const passLimits = ref({
 const currentProjectPasses = computed(() => {
   const projectId = projectStore.selectedProject?.id
   if (!projectId) return []
-  
+
   // Filter passes to only show those for the current project
   return passes.value.filter(pass => pass.projectId === projectId)
 })
@@ -1329,7 +1592,7 @@ const getUserUnitInfo = () => {
 
 /**
  * Load passes from Firebase AND calculate limits
- * 
+ *
  * NEW Per-Unit Limit Hierarchy:
  * 1. Check if project-wide blocking is enabled (blockAllUsers) → block everyone
  * 2. Fetch global limit from guestPassSettings/{projectId} (set by admin in dashboard)
@@ -1337,10 +1600,10 @@ const getUserUnitInfo = () => {
  * 4. Check if unit has custom limit in projects/{projectId}/unitGuestPassSettings/{unit}.monthlyLimit
  * 5. Use per-unit custom limit if exists, otherwise use global limit
  * 6. Fallback to 30 if both fail
- * 
+ *
  * All family members in the same unit share ONE limit!
  * Example: Unit A has 20 passes/month (shared by all family), Unit B has 50, Unit C is blocked
- * 
+ *
  * NOTE: This function is no longer used. Replaced by loadPassesFromAWS()
  */
 // eslint-disable-next-line no-unused-vars
@@ -1348,7 +1611,7 @@ const loadPassesFromFirebase = async () => {
   try {
     const user = await optimizedAuthService.getCurrentUser()
     const projectId = projectStore.selectedProject?.id
-    
+
     if (!user || !projectId) {
       console.log('👤 No user or project, skipping pass load')
       passes.value = []
@@ -1371,23 +1634,23 @@ const loadPassesFromFirebase = async () => {
     const userData = cachedUserData.data ? cachedUserData.data() : cachedUserData
     const projectInfo = userData?.projects?.find(p => p.projectId === projectId)
     const userUnit = projectInfo?.unit || userData?.unit || ''
-    
+
     console.log('🏠 User unit:', userUnit)
-    
+
     // Check for global settings first
     let globalMonthlyLimit = 30
     let globalBlockAllUsers = false
     let globalBlockFamilyMembers = false
     let globalSettingsDoc = null
-    
+
     try {
       const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
       globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
-      
+
       if (globalSettingsDoc?.monthlyLimit) {
         // Handle both string and number values
-        globalMonthlyLimit = typeof globalSettingsDoc.monthlyLimit === 'string' 
-          ? parseInt(globalSettingsDoc.monthlyLimit, 10) 
+        globalMonthlyLimit = typeof globalSettingsDoc.monthlyLimit === 'string'
+          ? parseInt(globalSettingsDoc.monthlyLimit, 10)
           : globalSettingsDoc.monthlyLimit
         console.log('🌐 Global monthly limit from settings:', globalMonthlyLimit, '(type:', typeof globalSettingsDoc.monthlyLimit, ')')
       }
@@ -1396,13 +1659,13 @@ const loadPassesFromFirebase = async () => {
     } catch (settingsError) {
       console.warn('⚠️ Could not fetch global settings, using defaults:', settingsError)
     }
-    
+
     // Check user role for family member blocking
     const userRole = projectInfo?.role || userData?.role || ''
     console.log('👥 User role in project:', userRole)
     const isFamilyMember = userRole === 'family'
     const isFamilyBlocked = globalBlockFamilyMembers && isFamilyMember
-    
+
     // Get per-UNIT settings (NEW structure)
     let unitSettings = {}
     let unitBlocked = false
@@ -1416,7 +1679,7 @@ const loadPassesFromFirebase = async () => {
         console.log('ℹ️ No per-unit settings found for unit', userUnit)
       }
     }
-    
+
     // Use per-unit limit if set, otherwise use global limit
     let monthlyLimit = globalMonthlyLimit
     if (unitSettings?.monthlyLimit !== undefined && unitSettings?.monthlyLimit !== null) {
@@ -1425,7 +1688,7 @@ const loadPassesFromFirebase = async () => {
         ? parseInt(unitSettings.monthlyLimit, 10)
         : unitSettings.monthlyLimit
     }
-    
+
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('📊 GUEST PASS LIMIT CALCULATION (PER-UNIT)')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
@@ -1443,11 +1706,11 @@ const loadPassesFromFirebase = async () => {
     console.log('🔒 Family blocked:', isFamilyBlocked)
     console.log('🔒 Unit blocked:', unitBlocked)
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    
+
     // Update user blocking status based on global, role-based, and per-unit settings
     userBlockingStatus.value = {
       isBlocked: unitBlocked || globalBlockAllUsers || isFamilyBlocked,
-      blockingDetails: globalBlockAllUsers 
+      blockingDetails: globalBlockAllUsers
         ? { reason: 'Guest pass generation has been temporarily disabled by administration', global: true }
         : isFamilyBlocked
         ? { reason: 'Guest pass generation is currently disabled for family members. Only property owners can generate passes.', roleBlocked: true }
@@ -1470,10 +1733,10 @@ const loadPassesFromFirebase = async () => {
         ]
       }
     )
-    
+
     const allPasses = (allPassesResult?.docs || [])
     console.log('✅ Total passes found:', allPasses.length)
-    
+
     // Log first pass to see structure
     if (allPasses.length > 0) {
       const firstDoc = allPasses[0]
@@ -1492,38 +1755,38 @@ const loadPassesFromFirebase = async () => {
         deleted: firstData.deleted
       })
     }
-    
+
     // Filter out soft-deleted passes
     const activePasses = allPasses.filter((docSnapshot) => {
       const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
       return !docData.deleted // Exclude passes with deleted: true
     })
-    
+
     console.log('✅ Active passes (not deleted):', activePasses.length, 'out of', allPasses.length)
-    
+
     // Count passes created this month (excluding deleted)
     const now = new Date()
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    
+
     const passesThisMonth = activePasses.filter(docSnapshot => {
       const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
       if (!docData.createdAt) return false
-      
+
       let createdDate
       if (docData.createdAt?.seconds) {
         createdDate = new Date(docData.createdAt.seconds * 1000)
       } else {
         createdDate = new Date(docData.createdAt)
       }
-      
+
       return createdDate >= firstDayOfMonth
     })
-    
+
     const usedThisMonth = passesThisMonth.length
-    
+
     console.log(`📊 Passes this month: ${usedThisMonth}/${monthlyLimit}`)
     console.log(`📅 Month start: ${firstDayOfMonth}`)
-    
+
     // Update limits
     passLimits.value = {
       monthlyLimit: monthlyLimit,
@@ -1533,18 +1796,18 @@ const loadPassesFromFirebase = async () => {
       usedToday: 0,
       dailyRemainingQuota: null,
     }
-    
+
     console.log('✅ Pass limits set:', passLimits.value)
-    
+
     // Map ACTIVE passes for display (excluding soft-deleted)
     // Note: docs from firestoreService already have their data as direct properties
     passes.value = activePasses.map(docSnapshot => {
       // Extract data from Firestore document - handle both formats
       const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
       const docId = docSnapshot.id || docData.id
-      
+
       console.log('📄 Mapping pass:', { docId, guestName: docData.guestName, hasData: !!docData })
-      
+
       // Convert Firestore Timestamps to ISO strings for proper date handling
       const convertTimestamp = (timestamp) => {
         if (!timestamp) return null
@@ -1559,7 +1822,7 @@ const loadPassesFromFirebase = async () => {
         // If it's already a string or number, return as is
         return timestamp
       }
-      
+
       return {
         id: docId,
         projectId: projectId,
@@ -1611,7 +1874,7 @@ const loadPassesFromAWS = async () => {
   try {
     const user = await optimizedAuthService.getCurrentUser()
     const projectId = projectStore.selectedProject?.id
-    
+
     if (!user || !projectId) {
       console.log('👤 No user or project, skipping pass load')
       passes.value = []
@@ -1638,14 +1901,14 @@ const loadPassesFromAWS = async () => {
     // Get user status (includes unit info and limits)
     const { status: userStatus, resolvedUserId } = await getUserStatusWithAndroidFallback(user, projectId)
     const userUnit = userStatus.data?.unit || ''
-    
+
     console.log('🏠 User unit:', userUnit)
     console.log('📊 User status:', userStatus.data)
 
     // Update blocking status
     userBlockingStatus.value = {
       isBlocked: userStatus.data?.blocked || false,
-      blockingDetails: userStatus.data?.blocked 
+      blockingDetails: userStatus.data?.blocked
         ? { reason: 'Guest pass generation is currently disabled' }
         : null,
       loading: false,
@@ -1666,7 +1929,7 @@ const loadPassesFromAWS = async () => {
     // Load passes for this unit (or user if no unit)
     // This function already sorts by newest first
     const loadedPasses = await getGuestPassesForUnit(projectId, resolvedUserId, userUnit || null)
-    
+
     console.log(`✅ Loaded ${loadedPasses.length} passes from AWS (sorted newest first)`)
 
     // Map passes to the format expected by the component
@@ -1725,7 +1988,7 @@ const checkUserBlockingStatus = async () => {
 
     const user = await optimizedAuthService.getCurrentUser()
     const projectId = projectStore.selectedProject?.id
-    
+
     if (!user || !projectId) {
       userBlockingStatus.value = {
         isBlocked: false,
@@ -1743,14 +2006,14 @@ const checkUserBlockingStatus = async () => {
     } catch {
       console.log('ℹ️ No per-project settings found for blocking check')
     }
-    
+
     // Check global settings for block all users
     const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
     const globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
     const globalBlockAllUsers = globalSettingsDoc?.blockAllUsers || false
-    
+
     const isBlockedInProject = userProjectSettings.blocked || false
-    
+
     console.log('🔍 Per-project user settings:', userProjectSettings)
     console.log('🔒 Global block all users:', globalBlockAllUsers)
     console.log('🚫 Blocked in this project:', isBlockedInProject)
@@ -1811,20 +2074,20 @@ const setQRRef = (el, passId) => {
 const checkLocationRestrictionStatus = async () => {
   try {
     locationRestriction.value.loading = true
-    
+
     const projectId = projectStore.selectedProject?.id
     const locationCheckService = (await import('../../services/locationCheckService')).default
-    
+
     // Pass current project ID to check ONLY this project
     const status = await locationCheckService.getLocationRestrictionStatus(projectId)
-    
+
     locationRestriction.value = {
       active: status.active,
       projectCount: status.projectCount,
       projects: status.projects,
       loading: false,
     }
-    
+
     console.log('📍 Location restriction status for current project:', locationRestriction.value)
   } catch (error) {
     console.error('Error checking location restriction status:', error)
@@ -1850,10 +2113,10 @@ const switchToPassesTab = async () => {
 
 const generatePass = async () => {
   if (isGeneratingPass.value) return // Prevent double-clicks
-  
+
   try {
     isGeneratingPass.value = true
-    
+
     // Check if user is authenticated first
     const user = await optimizedAuthService.getCurrentUser()
     if (!user) {
@@ -1915,53 +2178,53 @@ const generatePass = async () => {
 
     // Double-check eligibility via API before creating pass
     console.log('🔍 Checking eligibility via API before generating pass...')
-    
+
     // Get Cognito sub (user ID)
     const userId = getPrimaryUserIdentifier(user)
-    
+
     if (!userId) {
       notificationStore.showError('Unable to get user ID. Please log out and log back in.')
       isGeneratingPass.value = false
       return
     }
-    
+
     const { result: eligibilityResult, resolvedUserId } = await checkEligibilityWithAndroidFallback(projectId, user)
-    
+
     if (!eligibilityResult.success || !eligibilityResult.data?.canGenerate) {
       console.error('❌ User not eligible:', eligibilityResult)
       notificationStore.showWarning(
         eligibilityResult.message || 'You are not eligible to generate passes at this time.'
       )
-      
+
       // Refresh limits from server
       await loadPassesFromAWS()
       isGeneratingPass.value = false
       return
     }
-    
+
     console.log('✅ Eligibility check passed:', eligibilityResult.data)
 
     // Check location restriction before creating pass
     console.log('🔍 Validating location for guest pass generation...')
     isValidatingLocation.value = true
-    
+
     try {
       const locationCheckService = (await import('../../services/locationCheckService')).default
       // Pass current project ID so it only checks location if THIS project has restrictions
       const locationValidation = await locationCheckService.validateGuestPassLocation(projectId)
-      
+
       if (!locationValidation.allowed) {
         console.error('❌ Location validation failed:', locationValidation)
-        
+
         let errorMessage = locationValidation.message || 'Location check failed'
-        
+
         // Add distance info if available
         if (locationValidation.nearestProject) {
           const locationService = (await import('../../services/locationService')).default
           const distanceText = locationService.formatDistance(locationValidation.nearestProject.distance)
           errorMessage += `\n\nNearest project: ${locationValidation.nearestProject.project.name} (${distanceText} away)`
         }
-        
+
         // Add permission guidance for permission errors (platform-specific)
         if (locationValidation.reason === 'location_unavailable') {
           const isIOS = window.location.protocol === 'capacitor:' || window.webkit?.messageHandlers !== undefined
@@ -1971,13 +2234,13 @@ const generatePass = async () => {
             errorMessage += '\n\nTo enable location:\nSettings → Apps → PRE Group → Permissions → Location'
           }
         }
-        
+
         isValidatingLocation.value = false
         isGeneratingPass.value = false
         notificationStore.showWarning(errorMessage)
         return
       }
-      
+
       console.log('✅ Location validation passed:', locationValidation.message)
       isValidatingLocation.value = false
     } catch (error) {
@@ -1993,7 +2256,7 @@ const generatePass = async () => {
     await hydrateCurrentUserDisplayName(user, canonicalUserId)
     const userName = currentUserDisplayName.value || 'User'
     currentUserDisplayName.value = userName
-    
+
     // userId is already declared above (line 1543), reuse it
     const result = await createGuestPass(
       projectId,
@@ -2025,12 +2288,12 @@ const generatePass = async () => {
       used: false,
       usedAt: null,
     }
-    
+
     console.log('✅ Pass object created:', { id: pass.id, projectId: pass.projectId })
 
     // Add pass to beginning for immediate UI feedback
     passes.value.unshift(pass)
-    
+
     // Reset displayed count to show the new pass (ensure at least 5 are shown)
     displayedPassesCount.value = Math.max(5, Math.min(displayedPassesCount.value, passes.value.length))
 
@@ -2068,7 +2331,7 @@ const generatePass = async () => {
     generatedPassPreviewImage.value = composedPassImage || pass.qrCodeUrl || ''
     showGeneratedPassPreview.value = true
     notificationStore.showSuccess('Pass generated successfully!')
-    
+
     isGeneratingPass.value = false
   } catch (error) {
     console.error('Error generating pass:', error?.message || JSON.stringify(error) || error)
@@ -2424,9 +2687,9 @@ const deletePass = async (passId) => {
     // Remove from UI only (soft delete means it still counts toward limit)
   passes.value = passes.value.filter((p) => p.id !== passId)
   qrRefs.delete(passId)
-  
+
     // DON'T decrease the count - soft deleted passes still count toward monthly limit
-    
+
     notificationStore.showSuccess('Pass deleted successfully')
   } catch (error) {
     console.error('Error deleting pass:', error)
@@ -2442,7 +2705,7 @@ const sharePass = async (pass) => {
     sharingPassId.value = pass.id
     console.log('🖼️ Sharing guest pass image:', pass.id)
     const renderedImage = getCachedPassImage(pass) || await generateQRCode(pass)
-    
+
     const result = await sharingService.sharePassWithImage({
       ...pass,
       projectName: projectStore.selectedProject?.name || pass.projectName || '',
@@ -2451,7 +2714,7 @@ const sharePass = async (pass) => {
 
     if (result.success) {
       notificationStore.showSuccess(result.message || 'Pass shared successfully!')
-      
+
       // Mark pass as sent if it has a Firebase reference
       if (pass.firebaseRef) {
         const projectId = projectStore.selectedProject?.id
@@ -2511,27 +2774,27 @@ const shareGeneratedPass = async () => {
 
 const formatCreationDate = (dateString) => {
   if (!dateString) return 'Unknown date'
-  
+
   try {
     const date = new Date(dateString)
-    
+
     // Check if date is valid
     if (isNaN(date.getTime())) {
       console.error('Invalid date:', dateString)
       return 'Invalid date'
     }
-    
+
   const now = new Date()
   const diffMs = now - date
   const diffMins = Math.floor(diffMs / 60000)
   const diffHours = Math.floor(diffMs / 3600000)
   const diffDays = Math.floor(diffMs / 86400000)
-  
+
   if (diffMins < 1) return 'Just now'
   if (diffMins < 60) return `${diffMins}m ago`
   if (diffHours < 24) return `${diffHours}h ago`
   if (diffDays < 7) return `${diffDays}d ago`
-  
+
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -2544,17 +2807,17 @@ const formatCreationDate = (dateString) => {
 
 const isPassExpired = (pass) => {
   if (!pass || !pass.validUntil) return false
-  
+
   try {
   const now = new Date()
   const expiryDate = new Date(pass.validUntil)
-    
+
     // Check if date is valid
     if (isNaN(expiryDate.getTime())) {
       console.error('Invalid expiry date:', pass.validUntil)
       return false
     }
-    
+
   return now > expiryDate
   } catch (error) {
     console.error('Error checking expiration:', error)
@@ -2564,16 +2827,16 @@ const isPassExpired = (pass) => {
 
 const isPassExpiringSoon = (pass) => {
   if (!pass || !pass.validUntil || isPassExpired(pass)) return false
-  
+
   try {
   const now = new Date()
   const expiryDate = new Date(pass.validUntil)
-    
+
     // Check if date is valid
     if (isNaN(expiryDate.getTime())) {
       return false
     }
-    
+
   const remainingMs = expiryDate - now
   const remainingMins = Math.floor(remainingMs / 60000)
   return remainingMins < 30 && remainingMins > 0
@@ -2587,25 +2850,25 @@ const getRemainingTime = (pass) => {
   if (!pass) return 'Unknown'
   if (pass.used) return 'Used'
   if (!pass.validUntil) return 'No expiry'
-  
+
   try {
   const now = new Date()
   const expiryDate = new Date(pass.validUntil)
-    
+
     // Check if date is valid
     if (isNaN(expiryDate.getTime())) {
       console.error('Invalid validUntil date:', pass.validUntil)
       return 'Invalid date'
     }
-    
+
   const remainingMs = expiryDate - now
-  
+
   if (remainingMs < 0) return 'Expired'
-  
+
   const remainingMins = Math.floor(remainingMs / 60000)
   const remainingHours = Math.floor(remainingMs / 3600000)
   const remainingDays = Math.floor(remainingMs / 86400000)
-  
+
   if (remainingDays > 0) return `${remainingDays}d ${remainingHours % 24}h left`
   if (remainingHours > 0) return `${remainingHours}h ${remainingMins % 60}m left`
   if (remainingMins > 0) return `${remainingMins}m left`
@@ -2687,7 +2950,7 @@ onMounted(async () => {
     lastConnectedDevice.value = null
   }
 
-  // Load passes and check blocking status  
+  // Load passes and check blocking status
   try {
     await Promise.all([
       loadPassesFromAWS(), // This also sets passLimits
@@ -2706,7 +2969,8 @@ onMounted(async () => {
   min-height: calc(100vh - 200px);
   background: #fafafa;
   padding-bottom: 100px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   line-height: 1.6;
   color: #333;
 }
@@ -2853,7 +3117,7 @@ onMounted(async () => {
 }
 
 .action-button.primary-action {
-  background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
+  background: linear-gradient(135deg, #af1e23 0%, #d42028 100%);
   color: white;
   box-shadow: 0 4px 16px rgba(175, 30, 35, 0.3);
 }
@@ -2913,7 +3177,10 @@ onMounted(async () => {
   align-items: center;
   gap: 20px;
   border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
   cursor: pointer;
 }
 
@@ -3004,7 +3271,7 @@ onMounted(async () => {
 }
 
 .device-info svg {
-  color: #AF1E23;
+  color: #af1e23;
 }
 
 /* Last Device */
@@ -3347,7 +3614,7 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 12px;
   padding: 16px 24px;
-  background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
+  background: linear-gradient(135deg, #af1e23 0%, #d42028 100%);
   color: white;
   border: none;
   border-radius: 16px;
@@ -3423,8 +3690,8 @@ onMounted(async () => {
 
 .load-more-btn:hover {
   background: #f9fafb;
-  border-color: #AF1E23;
-  color: #AF1E23;
+  border-color: #af1e23;
+  color: #af1e23;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(175, 30, 35, 0.15);
 }
@@ -3517,7 +3784,6 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-
 /* Guest Pass Card - Professional Design */
 .pass-card {
   background: white;
@@ -3544,7 +3810,7 @@ onMounted(async () => {
 
 /* Pass Card Header */
 .pass-card-header {
-  background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
+  background: linear-gradient(135deg, #af1e23 0%, #d42028 100%);
   padding: 24px 20px;
   display: flex;
   align-items: center;
@@ -3559,7 +3825,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #F6F6F6;
+  color: #f6f6f6;
   flex-shrink: 0;
 }
 
@@ -3567,7 +3833,7 @@ onMounted(async () => {
   margin: 0;
   font-size: 1.375rem;
   font-weight: 700;
-  color: #F6F6F6;
+  color: #f6f6f6;
   letter-spacing: -0.01em;
   flex: 1;
 }
@@ -3598,7 +3864,7 @@ onMounted(async () => {
 }
 
 .pass-info-label svg {
-  color: #AF1E23;
+  color: #af1e23;
 }
 
 .pass-info-value {
@@ -3623,7 +3889,7 @@ onMounted(async () => {
   justify-content: center;
   gap: 8px;
   padding: 14px 20px;
-  background: #AF1E23;
+  background: #af1e23;
   color: white;
   border: none;
   border-radius: 12px;
@@ -3636,7 +3902,7 @@ onMounted(async () => {
 
 .pass-share-button:active {
   transform: scale(0.98);
-  background: #8A1820;
+  background: #8a1820;
 }
 
 .pass-delete-button {
@@ -3697,7 +3963,7 @@ onMounted(async () => {
 .pass-icon-compact {
   width: 44px;
   height: 44px;
-  background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
+  background: linear-gradient(135deg, #af1e23 0%, #d42028 100%);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -3804,13 +4070,13 @@ onMounted(async () => {
 }
 
 .pass-share-compact {
-  background: #AF1E23;
+  background: #af1e23;
   color: white;
 }
 
 .pass-share-compact:active:not(:disabled) {
   transform: scale(0.97);
-  background: #8A1820;
+  background: #8a1820;
 }
 
 .pass-share-compact:disabled {
@@ -3929,7 +4195,7 @@ onMounted(async () => {
 }
 
 .modal-header-pro {
-  background: linear-gradient(135deg, #AF1E23 0%, #d42028 100%);
+  background: linear-gradient(135deg, #af1e23 0%, #d42028 100%);
   color: white;
   padding: 24px;
   display: flex;
@@ -4016,7 +4282,7 @@ onMounted(async () => {
 }
 
 .form-label-pro svg {
-  color: #AF1E23;
+  color: #af1e23;
   flex-shrink: 0;
 }
 
@@ -4038,7 +4304,7 @@ onMounted(async () => {
 
 .form-input-pro:focus {
   outline: none;
-  border-color: #AF1E23;
+  border-color: #af1e23;
   background: white;
   box-shadow: 0 0 0 4px rgba(175, 30, 35, 0.1);
 }
@@ -4101,7 +4367,7 @@ onMounted(async () => {
   justify-content: center;
   gap: 10px;
   padding: 14px 24px;
-  background: #AF1E23;
+  background: #af1e23;
   color: white;
   border: none;
   border-radius: 12px;
@@ -4114,7 +4380,7 @@ onMounted(async () => {
 
 .modal-btn-generate:active {
   transform: scale(0.98);
-  background: #8A1820;
+  background: #8a1820;
 }
 
 .modal-btn-generate:disabled {
@@ -4592,124 +4858,124 @@ onMounted(async () => {
 }
 
 /* RTL Support for Arabic */
-[dir="rtl"] .access-page {
+[dir='rtl'] .access-page {
   direction: rtl;
 }
 
-[dir="rtl"] .tabs-container {
+[dir='rtl'] .tabs-container {
   direction: ltr;
 }
 
-[dir="rtl"] .tabs-wrapper {
+[dir='rtl'] .tabs-wrapper {
   direction: ltr;
   flex-direction: row;
 }
 
-[dir="rtl"] .tab-button {
+[dir='rtl'] .tab-button {
   flex-direction: row-reverse;
   direction: rtl;
 }
 
-[dir="rtl"] .tab-icon {
+[dir='rtl'] .tab-icon {
   transform: scaleX(1) !important;
 }
 
-[dir="rtl"] .tab-button.active .tab-icon {
+[dir='rtl'] .tab-button.active .tab-icon {
   transform: scale(1.1) !important;
 }
 
-[dir="rtl"] .tab-label {
+[dir='rtl'] .tab-label {
   direction: rtl;
   text-align: right;
 }
 
-[dir="rtl"] .modal-header-content {
+[dir='rtl'] .modal-header-content {
   flex-direction: row-reverse;
 }
 
-[dir="rtl"] .modal-close-pro {
+[dir='rtl'] .modal-close-pro {
   margin-right: auto;
   margin-left: 0;
 }
 
-[dir="rtl"] .form-label-pro {
+[dir='rtl'] .form-label-pro {
   flex-direction: row-reverse;
   text-align: right;
 }
 
-[dir="rtl"] .required-star {
+[dir='rtl'] .required-star {
   margin-left: 0;
   margin-right: auto;
 }
 
-[dir="rtl"] .form-input-pro {
+[dir='rtl'] .form-input-pro {
   text-align: right;
   direction: rtl;
 }
 
-[dir="rtl"] .info-box-pro {
+[dir='rtl'] .info-box-pro {
   text-align: right;
   direction: rtl;
 }
 
-[dir="rtl"] .info-box-pro svg {
+[dir='rtl'] .info-box-pro svg {
   margin-left: 12px;
   margin-right: 0;
 }
 
-[dir="rtl"] .modal-footer-pro {
+[dir='rtl'] .modal-footer-pro {
   flex-direction: row-reverse;
 }
 
-[dir="rtl"] .modal-btn-generate {
+[dir='rtl'] .modal-btn-generate {
   flex-direction: row-reverse;
 }
 
-[dir="rtl"] .pass-compact-header {
+[dir='rtl'] .pass-compact-header {
   flex-direction: row-reverse;
 }
 
-[dir="rtl"] .pass-info-compact {
+[dir='rtl'] .pass-info-compact {
   text-align: right;
 }
 
-[dir="rtl"] .pass-meta-compact {
+[dir='rtl'] .pass-meta-compact {
   direction: rtl;
 }
 
-[dir="rtl"] .pass-actions-compact {
+[dir='rtl'] .pass-actions-compact {
   flex-direction: row-reverse;
 }
 
-[dir="rtl"] .ble-panel {
+[dir='rtl'] .ble-panel {
   direction: rtl;
 }
 
-[dir="rtl"] .status-card {
+[dir='rtl'] .status-card {
   text-align: center;
 }
 
-[dir="rtl"] .control-buttons {
+[dir='rtl'] .control-buttons {
   direction: rtl;
 }
 
-[dir="rtl"] .action-button {
+[dir='rtl'] .action-button {
   flex-direction: row-reverse;
 }
 
-[dir="rtl"] .status-message {
-  direction: rtl;
-  text-align: right;
-  flex-direction: row-reverse;
-}
-
-[dir="rtl"] .warning-banner {
+[dir='rtl'] .status-message {
   direction: rtl;
   text-align: right;
   flex-direction: row-reverse;
 }
 
-[dir="rtl"] .warning-content {
+[dir='rtl'] .warning-banner {
+  direction: rtl;
+  text-align: right;
+  flex-direction: row-reverse;
+}
+
+[dir='rtl'] .warning-content {
   text-align: right;
 }
 </style>

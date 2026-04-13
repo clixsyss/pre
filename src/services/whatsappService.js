@@ -255,7 +255,7 @@ class SharingService {
     const hostName = sanitizeString(pass.userName || pass.ownerName || pass.inviterName || '', 120)
     const unit = sanitizeString(pass.unit || '', 50)
     const passCode = sanitizeString(pass.code || pass.id || '', 100)
-    
+
     return `🏘️ *PRE Group - Guest Pass*
 
 Dear ${guestName},
@@ -284,27 +284,27 @@ This is an automated message from PRE Group Management System.`
    */
   generatePassUrl(pass) {
     console.log('🔗 Generating URL for pass:', { id: pass.id, code: pass.code, projectId: pass.projectId })
-    
+
     // Use the pass ID (which could be in different fields)
     const passId = pass.id || pass.code || pass.passId
     const projectId = pass.projectId
-    
+
     if (!passId || !projectId) {
       console.error('❌ Missing pass ID or project ID:', { passId, projectId, pass })
       throw new Error('Invalid pass data - missing ID or project ID')
     }
-    
+
     // Get base URL from environment variable (AWS hosting)
     // Falls back to Firebase for backward compatibility during migration
-    const baseUrl = 
-      import.meta.env.VITE_GUEST_PASS_BASE_URL || 
+    const baseUrl =
+      import.meta.env.VITE_GUEST_PASS_BASE_URL ||
       import.meta.env.VITE_PUBLIC_URL ||
       process.env.VITE_GUEST_PASS_BASE_URL ||
       process.env.VITE_PUBLIC_URL ||
       'https://pre-group.firebaseapp.com' // Fallback to Firebase during migration
-    
+
     console.log('🌐 Using base URL for guest pass:', baseUrl)
-    
+
     const url = `${baseUrl}/#/guest-pass/${projectId}/${passId}`
     console.log('🔗 Generated URL:', url)
     return url
@@ -354,19 +354,19 @@ This is an automated message from PRE Group Management System.`
       const platform = this.getRuntimePlatform()
       const isAndroid = platform === 'android'
       const isNative = this.isNativeRuntime(platform) || protocol === 'capacitor:' || hasIOSBridge
-      
+
       console.log('📱 Platform detection:', JSON.stringify({ protocol, isNative, platform }))
 
       if (isNative) {
         // For native platforms, resolve plugins from bridge globals first, then direct plugin imports.
         console.log('📱 Resolving native share plugins...')
         const { Share, Filesystem } = await this.getNativePlugins()
-        
+
         if (!Share) {
           console.error('❌ Share not found in Capacitor.Plugins')
           throw new Error('Share plugin not available')
         }
-        
+
         try {
           if (typeof Share.canShare === 'function') {
             try {
@@ -431,7 +431,7 @@ This is an automated message from PRE Group Management System.`
             }
           }
           console.error('❌ Share failed:', shareError)
-            
+
           // If sharing failed, user might have cancelled
           throw shareError
         }
@@ -512,11 +512,11 @@ This is an automated message from PRE Group Management System.`
 
       if (isNative) {
         const { Share } = await this.getNativePlugins()
-        
+
         if (!Share) {
           throw new Error('Share plugin not available')
         }
-        
+
         await Share.share({
           title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
           text: message,
