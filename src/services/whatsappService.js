@@ -41,6 +41,75 @@ const validatePass = (pass) => {
  * Handles sharing gate passes with QR codes using native share functionality
  */
 class SharingService {
+  getRuntimePlatform() {
+    const bridgePlatform =
+      window.Capacitor?.getPlatform?.() ||
+      window.Capacitor?.platform ||
+      ''
+    const corePlatform = Capacitor?.getPlatform?.() || ''
+    const userAgent = navigator?.userAgent || ''
+    const isAndroidUa = /android/i.test(userAgent)
+
+    if (String(bridgePlatform).toLowerCase() === 'android') return 'android'
+    if (String(bridgePlatform).toLowerCase() === 'ios') return 'ios'
+    if (String(corePlatform).toLowerCase() === 'android') return 'android'
+    if (String(corePlatform).toLowerCase() === 'ios') return 'ios'
+    if (isAndroidUa && window.Capacitor) return 'android'
+    return 'web'
+  }
+
+  isNativeRuntime(platform = this.getRuntimePlatform()) {
+    if (platform === 'android' || platform === 'ios') return true
+    if (window.Capacitor?.Plugins?.Share || window.Capacitor?.Plugins?.Filesystem) return true
+    const bridgeNative = window.Capacitor?.isNativePlatform?.()
+    if (bridgeNative === true) return true
+    return false
+  }
+
+  async getNativePlugins() {
+    const globalPlugins = window.Capacitor?.Plugins || {}
+    let Share = globalPlugins.Share
+    let Filesystem = globalPlugins.Filesystem
+
+    if (!Share) {
+      try {
+        const shareModule = await import('@capacitor/share')
+        Share = shareModule?.Share || null
+      } catch (error) {
+        console.warn('⚠️ Could not import @capacitor/share:', error)
+      }
+    }
+
+    if (!Filesystem) {
+      try {
+        const filesystemModule = await import('@capacitor/filesystem')
+        Filesystem = filesystemModule?.Filesystem || null
+      } catch (error) {
+        console.warn('⚠️ Could not import @capacitor/filesystem:', error)
+      }
+    }
+
+    return { Share, Filesystem }
+  }
+
+  async withTimeout(promise, timeoutMs, timeoutMessage) {
+    let timeoutId
+    try {
+      return await Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error(timeoutMessage || 'Operation timed out'))
+          }, timeoutMs)
+        }),
+      ])
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+    }
+  }
+
   getErrorText(error) {
     if (!error) return ''
     if (typeof error === 'string') return error
@@ -94,7 +163,7 @@ class SharingService {
     })
   }
 
-  async tryShareNativeImageFile({ Filesystem, Share, base64Data, fileName, message, validatedPass }) {
+  async tryShareNativeImageFile({ Filesystem, Share, base64Data, fileName, message, validatedPass, isAndroid = false }) {
     const directories = ['CACHE', 'DOCUMENTS']
     for (const directory of directories) {
       try {
@@ -124,22 +193,32 @@ class SharingService {
 
         for (const uri of candidateUris) {
           try {
-            await Share.share({
+            const shareFilePromise = Share.share({
               title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
               text: message,
               files: [uri],
               dialogTitle: 'Share PRE Group Guest Pass',
             })
+            if (isAndroid) {
+              await this.withTimeout(shareFilePromise, 15000, 'Android share timed out')
+            } else {
+              await shareFilePromise
+            }
             return true
           } catch (shareUriError) {
             // Fallback: some Android share targets accept file URI in `url` better than `files`
             try {
-              await Share.share({
+              const shareUrlPromise = Share.share({
                 title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
                 text: message,
                 url: uri,
                 dialogTitle: 'Share PRE Group Guest Pass',
               })
+              if (isAndroid) {
+                await this.withTimeout(shareUrlPromise, 15000, 'Android share timed out')
+              } else {
+                await shareUrlPromise
+              }
               return true
             } catch (shareUrlError) {
               console.warn(`⚠️ Share image failed for URI ${uri}:`, { shareUriError, shareUrlError })
@@ -264,21 +343,24 @@ This is an automated message from PRE Group Management System.`
       const message = this.createGatePassMessage(validatedPass)
       const passImageUrl = this.getPassShareImageUrl(validatedPass)
 
-      console.log('🖼️ Sharing pass with image URL:', passImageUrl)
+      const imageMeta = String(passImageUrl || '').startsWith('data:image/')
+        ? `data:image (len=${String(passImageUrl).length})`
+        : passImageUrl
+      console.log('🖼️ Sharing pass with image URL:', imageMeta)
 
-      // Enhanced iOS/Android detection
+      // Runtime detection must prefer bridge data because @capacitor/core is stubbed in this codebase.
       const protocol = window.location.protocol
       const hasIOSBridge = window.webkit?.messageHandlers !== undefined
-      const isNative = protocol === 'capacitor:' || hasIOSBridge || Capacitor.getPlatform() === 'android'
+      const platform = this.getRuntimePlatform()
+      const isAndroid = platform === 'android'
+      const isNative = this.isNativeRuntime(platform) || protocol === 'capacitor:' || hasIOSBridge
       
-      console.log('📱 Platform detection:', { protocol, isNative, platform: Capacitor.getPlatform() })
+      console.log('📱 Platform detection:', JSON.stringify({ protocol, isNative, platform }))
 
       if (isNative) {
-        // For native platforms, use Share plugin from Capacitor.Plugins
-        console.log('📱 Accessing Share from Capacitor.Plugins...')
-        const plugins = window.Capacitor?.Plugins || Capacitor?.Plugins || {}
-        const Share = plugins.Share
-        const Filesystem = plugins.Filesystem
+        // For native platforms, resolve plugins from bridge globals first, then direct plugin imports.
+        console.log('📱 Resolving native share plugins...')
+        const { Share, Filesystem } = await this.getNativePlugins()
         
         if (!Share) {
           console.error('❌ Share not found in Capacitor.Plugins')
@@ -288,7 +370,10 @@ This is an automated message from PRE Group Management System.`
         try {
           if (typeof Share.canShare === 'function') {
             try {
-              const canShareResult = await Share.canShare()
+              const canSharePromise = Share.canShare()
+              const canShareResult = isAndroid
+                ? await this.withTimeout(canSharePromise, 4000, 'Android canShare timed out')
+                : await canSharePromise
               if (canShareResult?.value === false) {
                 throw new Error('Native share is not available on this device')
               }
@@ -311,6 +396,7 @@ This is an automated message from PRE Group Management System.`
                 fileName,
                 message,
                 validatedPass,
+                isAndroid,
               })
             } catch (fileShareError) {
               console.warn('⚠️ File share failed, falling back to URL share:', fileShareError)
@@ -318,7 +404,18 @@ This is an automated message from PRE Group Management System.`
           }
 
           if (!sharedAsFile) {
-            throw new Error('Could not attach QR image to native share')
+            if (isAndroid) {
+              // Android-only fallback to avoid an endless loading state when file intents hang.
+              const fallbackSharePromise = Share.share({
+                title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
+                text: message,
+                url: passImageUrl,
+                dialogTitle: 'Share PRE Group Guest Pass',
+              })
+              await this.withTimeout(fallbackSharePromise, 12000, 'Android fallback share timed out')
+            } else {
+              throw new Error('Could not attach QR image to native share')
+            }
           }
           console.log('✅ Share dialog completed')
 
@@ -410,11 +507,11 @@ This is an automated message from PRE Group Management System.`
       // Enhanced iOS/Android detection
       const protocol = window.location.protocol
       const hasIOSBridge = window.webkit?.messageHandlers !== undefined
-      const isNative = protocol === 'capacitor:' || hasIOSBridge || Capacitor.getPlatform() === 'android'
+      const platform = this.getRuntimePlatform()
+      const isNative = this.isNativeRuntime(platform) || protocol === 'capacitor:' || hasIOSBridge
 
       if (isNative) {
-        // For native platforms, use the Share plugin from Capacitor.Plugins
-        const Share = window.Capacitor?.Plugins?.Share
+        const { Share } = await this.getNativePlugins()
         
         if (!Share) {
           throw new Error('Share plugin not available')

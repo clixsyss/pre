@@ -809,7 +809,38 @@ const userUnitInfo = ref('')
 
 // QR refs
 const qrRefs = new Map()
+const qrImageCache = new Map()
 let logoImagePromise = null
+
+const buildPassRenderKey = (pass) => {
+  const payload = {
+    id: pass?.id || pass?.code || '',
+    code: pass?.code || pass?.id || '',
+    projectId: pass?.projectId || projectStore.selectedProject?.id || '',
+    verificationToken: pass?.verificationToken || '',
+    cardId: pass?.cardId || '',
+    guestName: pass?.guestName || '',
+    validUntil: pass?.validUntil || '',
+    createdAt: pass?.createdAt || '',
+    unit: pass?.unit || '',
+    purpose: pass?.purpose || '',
+    owner: pass?.userName || pass?.ownerName || pass?.inviterName || '',
+  }
+  return JSON.stringify(payload)
+}
+
+const getCachedPassImage = (pass) => {
+  const renderKey = buildPassRenderKey(pass)
+  const fromMap = qrImageCache.get(renderKey)
+  if (fromMap) return fromMap
+
+  const inline = typeof pass?.qrImageDataUrl === 'string' ? pass.qrImageDataUrl.trim() : ''
+  if (inline.startsWith('data:image/')) {
+    qrImageCache.set(renderKey, inline)
+    return inline
+  }
+  return ''
+}
 
 const loadImage = (src) =>
   new Promise((resolve, reject) => {
@@ -829,6 +860,119 @@ const getDisplayNameFromEmail = (email) => {
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/\b\w/g, (ch) => ch.toUpperCase())
+}
+
+const getNativePlatform = () => {
+  try {
+    return window.Capacitor?.getPlatform?.() || ''
+  } catch {
+    return ''
+  }
+}
+
+const isAndroidNativeApp = () => {
+  if (getNativePlatform() === 'android') return true
+  return /android/i.test(navigator?.userAgent || '')
+}
+
+const getUserIdentifierCandidates = (user) => {
+  const candidates = [
+    user?.attributes?.sub,
+    user?.cognitoAttributes?.sub,
+    user?.userSub,
+    user?.uid,
+    user?.id,
+    user?.username,
+    user?.attributes?.email,
+    user?.cognitoAttributes?.email,
+    user?.email,
+  ]
+
+  return [...new Set(candidates.map((v) => String(v || '').trim()).filter(Boolean))]
+}
+
+const isUserNotFoundError = (errorLike) => {
+  const text = String(errorLike?.message || errorLike?.error || '').toLowerCase()
+  return text.includes('user not found')
+}
+
+const isUserNotFoundResult = (result) => {
+  const reason = String(result?.data?.reason || '').toLowerCase()
+  const message = String(result?.message || '').toLowerCase()
+  return reason === 'user_not_found' || message.includes('user not found')
+}
+
+const getPrimaryUserIdentifier = (user) => {
+  const candidates = getUserIdentifierCandidates(user)
+  return candidates[0] || ''
+}
+
+const getUserStatusWithAndroidFallback = async (user, projectId) => {
+  const ids = getUserIdentifierCandidates(user)
+  if (ids.length === 0) {
+    throw new Error('Unable to get user ID. Please log out and log back in.')
+  }
+
+  const androidOnlyFallback = isAndroidNativeApp()
+  let lastError = null
+
+  for (let i = 0; i < ids.length; i += 1) {
+    const candidateId = ids[i]
+    try {
+      const status = await getUserStatus(candidateId, projectId)
+      return {
+        status,
+        resolvedUserId: status?.data?.userId || candidateId,
+      }
+    } catch (error) {
+      lastError = error
+      const canRetry = androidOnlyFallback && isUserNotFoundError(error) && i < ids.length - 1
+      if (!canRetry) {
+        throw error
+      }
+      console.warn('⚠️ Android fallback: getUserStatus retrying with alternate identifier')
+    }
+  }
+
+  throw lastError || new Error('User status lookup failed')
+}
+
+const checkEligibilityWithAndroidFallback = async (projectId, user) => {
+  const ids = getUserIdentifierCandidates(user)
+  if (ids.length === 0) {
+    throw new Error('Unable to get user ID. Please log out and log back in.')
+  }
+
+  const androidOnlyFallback = isAndroidNativeApp()
+  let lastResult = null
+
+  for (let i = 0; i < ids.length; i += 1) {
+    const candidateId = ids[i]
+    const result = await checkUserEligibility(projectId, candidateId)
+    lastResult = result
+
+    if (result?.success && result?.data?.canGenerate) {
+      return {
+        result,
+        resolvedUserId: result?.data?.user?.id || candidateId,
+      }
+    }
+
+    const canRetry = androidOnlyFallback && isUserNotFoundResult(result) && i < ids.length - 1
+    if (!canRetry) {
+      return {
+        result,
+        resolvedUserId: candidateId,
+      }
+    }
+
+    console.warn('⚠️ Android fallback: checkUserEligibility retrying with alternate identifier')
+  }
+
+  return {
+    result: lastResult,
+    resolvedUserId: ids[0],
+  }
 }
 
 const isLikelyEmail = (value) => {
@@ -1483,16 +1627,16 @@ const loadPassesFromAWS = async () => {
     }
 
     // Get user ID (Cognito sub)
-    const userId = user.attributes?.sub || user.cognitoAttributes?.sub || user.userSub || user.uid
-    await hydrateCurrentUserDisplayName(user, userId)
+    const primaryUserId = getPrimaryUserIdentifier(user)
+    await hydrateCurrentUserDisplayName(user, primaryUserId)
     if (!currentUserDisplayName.value) {
       currentUserDisplayName.value = 'User'
     }
     console.log('📥 Loading passes from AWS for project:', projectId)
-    console.log('👤 User ID:', userId)
+    console.log('👤 User ID:', primaryUserId)
 
     // Get user status (includes unit info and limits)
-    const userStatus = await getUserStatus(userId, projectId)
+    const { status: userStatus, resolvedUserId } = await getUserStatusWithAndroidFallback(user, projectId)
     const userUnit = userStatus.data?.unit || ''
     
     console.log('🏠 User unit:', userUnit)
@@ -1521,7 +1665,7 @@ const loadPassesFromAWS = async () => {
 
     // Load passes for this unit (or user if no unit)
     // This function already sorts by newest first
-    const loadedPasses = await getGuestPassesForUnit(projectId, userId, userUnit || null)
+    const loadedPasses = await getGuestPassesForUnit(projectId, resolvedUserId, userUnit || null)
     
     console.log(`✅ Loaded ${loadedPasses.length} passes from AWS (sorted newest first)`)
 
@@ -1773,10 +1917,7 @@ const generatePass = async () => {
     console.log('🔍 Checking eligibility via API before generating pass...')
     
     // Get Cognito sub (user ID)
-    const userId = user.attributes?.sub || 
-                   user.cognitoAttributes?.sub || 
-                   user.userSub || 
-                   user.uid
+    const userId = getPrimaryUserIdentifier(user)
     
     if (!userId) {
       notificationStore.showError('Unable to get user ID. Please log out and log back in.')
@@ -1784,7 +1925,7 @@ const generatePass = async () => {
       return
     }
     
-    const eligibilityResult = await checkUserEligibility(projectId, userId)
+    const { result: eligibilityResult, resolvedUserId } = await checkEligibilityWithAndroidFallback(projectId, user)
     
     if (!eligibilityResult.success || !eligibilityResult.data?.canGenerate) {
       console.error('❌ User not eligible:', eligibilityResult)
@@ -1848,14 +1989,15 @@ const generatePass = async () => {
     }
 
     // Get user name from Cognito/profile attributes with robust fallback
-    await hydrateCurrentUserDisplayName(user, userId)
+    const canonicalUserId = eligibilityResult?.data?.user?.id || resolvedUserId || userId
+    await hydrateCurrentUserDisplayName(user, canonicalUserId)
     const userName = currentUserDisplayName.value || 'User'
     currentUserDisplayName.value = userName
     
     // userId is already declared above (line 1543), reuse it
     const result = await createGuestPass(
       projectId,
-      userId,
+      canonicalUserId,
       userName,
       sanitizedGuestName,
       sanitizedPurpose,
@@ -1935,15 +2077,23 @@ const generatePass = async () => {
   }
 }
 
-const generateQRCode = async (pass) => {
+const generateQRCode = async (pass, options = {}) => {
   try {
+    const { force = false } = options
+    if (!force) {
+      const cached = getCachedPassImage(pass)
+      if (cached) {
+        return cached
+      }
+    }
+
     // Use in-DOM canvas when available; otherwise create an offscreen canvas
     const canvas = qrRefs.get(pass.id) || document.createElement('canvas')
 
     // Render at higher resolution for crisp sharing quality
     const baseCanvasWidth = 420
     const baseCanvasHeight = 800
-    const qualityScale = 3
+    const qualityScale = isAndroidNativeApp() ? 2 : 3
     const canvasWidth = baseCanvasWidth * qualityScale
     const canvasHeight = baseCanvasHeight * qualityScale
     canvas.width = canvasWidth
@@ -1994,7 +2144,11 @@ const generateQRCode = async (pass) => {
       // Draw the complete gate pass design
       drawGatePass(ctx, qrCanvas, pass, baseCanvasWidth, baseCanvasHeight, logoImg)
       console.log('✅ Gate pass drawn successfully')
-      return canvas.toDataURL('image/png')
+      const rendered = canvas.toDataURL('image/png')
+      const renderKey = buildPassRenderKey(pass)
+      qrImageCache.set(renderKey, rendered)
+      pass.qrImageDataUrl = rendered
+      return rendered
     } catch (toCanvasError) {
       console.warn('⚠️ toCanvas failed, trying dataURL method:', toCanvasError)
 
@@ -2019,7 +2173,11 @@ const generateQRCode = async (pass) => {
       })
       drawGatePass(ctx, img, pass, baseCanvasWidth, baseCanvasHeight, null)
       console.log('✅ Gate pass drawn successfully')
-      return canvas.toDataURL('image/png')
+      const rendered = canvas.toDataURL('image/png')
+      const renderKey = buildPassRenderKey(pass)
+      qrImageCache.set(renderKey, rendered)
+      pass.qrImageDataUrl = rendered
+      return rendered
     }
   } catch (error) {
     console.error('❌ Error generating QR code:', error)
@@ -2283,7 +2441,7 @@ const sharePass = async (pass) => {
   try {
     sharingPassId.value = pass.id
     console.log('🖼️ Sharing guest pass image:', pass.id)
-    const renderedImage = await generateQRCode(pass)
+    const renderedImage = getCachedPassImage(pass) || await generateQRCode(pass)
     
     const result = await sharingService.sharePassWithImage({
       ...pass,
