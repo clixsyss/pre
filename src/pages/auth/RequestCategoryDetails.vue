@@ -3,8 +3,9 @@
 
     <PageHeader
       :title="category?.englishTitle || $t('requestCategory')"
-      :subtitle="category?.description || $t('submitYourRequest')"
     />
+<!-- Request description -->
+    <p class="request-description">{{ category?.description }}</p>
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
@@ -1212,6 +1213,14 @@ const submitRequest = async () => {
 .submit-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.request-description {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #666;
+  margin: 24px 10px;
+  text-align: left;
 }
 
 /* Responsive */
