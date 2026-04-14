@@ -23,6 +23,23 @@
                   stroke-linejoin="round" />
               </svg>
             </div>
+            <button
+              @click="openAccountQrModal"
+              class="account-qr-trigger-btn"
+              :title="$t('accountQrButton')"
+              :aria-label="$t('accountQrButton')"
+              type="button"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" />
+                <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" />
+                <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2" />
+                <rect x="14" y="14" width="3" height="3" fill="currentColor" />
+                <rect x="18" y="14" width="3" height="3" fill="currentColor" />
+                <rect x="14" y="18" width="3" height="3" fill="currentColor" />
+                <rect x="18" y="18" width="3" height="3" fill="currentColor" />
+              </svg>
+            </button>
             <!-- Upload Documents Button -->
             <button @click="showUploadDocumentsModal = true" class="upload-documents-btn" title="Upload Profile Picture & ID Documents">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1270,6 +1287,41 @@
     <ViolationsModal :is-open="showViolationsModal" :user-id="userProfile?.id || ''"
       @close="showViolationsModal = false" @start-chat="handleViolationChat" />
 
+    <Teleport to="body">
+      <transition name="account-qr-fade">
+        <div
+          v-if="showAccountQrModal"
+          class="account-qr-overlay"
+          @click.self="closeAccountQrModal"
+        >
+          <div class="account-qr-dialog" @click.stop>
+            <div class="account-qr-header">
+              <h3>{{ $t('accountQrTitle') }}</h3>
+              <button
+                type="button"
+                class="account-qr-close"
+                :aria-label="$t('accountQrClose')"
+                @click="closeAccountQrModal"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+              </button>
+            </div>
+            <p v-if="accountQrError" class="account-qr-error" role="alert">{{ accountQrError }}</p>
+            <div class="account-qr-image-wrap">
+              <img v-if="accountQrDataUrl" :src="accountQrDataUrl" alt="" class="account-qr-img" />
+              <div v-else class="account-qr-placeholder">…</div>
+            </div>
+            <p v-if="!accountQrError" class="account-qr-timer">{{ accountQrRefreshCountdownText }}</p>
+            <button type="button" class="account-qr-done" @click="closeAccountQrModal">
+              {{ $t('accountQrClose') }}
+            </button>
+          </div>
+        </div>
+      </transition>
+    </Teleport>
+
 
     <!-- Logout Confirmation Modal (Teleport: correct centering / safe-area on iOS WKWebView) -->
     <Teleport to="body">
@@ -1839,6 +1891,7 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import QRCode from 'qrcode'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
 import { smartMirrorService } from '../../services/smartMirrorService'
@@ -1858,6 +1911,10 @@ import { getUserFines } from '../../services/finesService'
 import { getUserWarnings } from '../../services/warningsService'
 import complaintService from '../../services/complaintService'
 import deviceKeyResetService from '../../services/deviceKeyResetService'
+import {
+  buildAccountQrPayload,
+  ACCOUNT_QR_ROTATION_MS,
+} from '../../services/accountQrService'
 
 // Component name for ESLint
 defineOptions({
@@ -1913,6 +1970,15 @@ const profilePicturePreview = ref(null)
 const frontIdPreview = ref(null)
 const backIdPreview = ref(null)
 const propertyContractPreview = ref(null)
+
+// Rotating account QR (same 30s behavior as JDAR)
+const showAccountQrModal = ref(false)
+const accountQrDataUrl = ref('')
+const accountQrError = ref('')
+const accountQrRefreshSeconds = ref(30)
+const lastRenderedAccountQrPayload = ref(null)
+let accountQrIntervalId = null
+let lastAccountQrWindowStart = -1
 
 // Delete account state (Apple App Store Requirement)
 const showDeleteAccountConfirm = ref(false)
@@ -2007,6 +2073,104 @@ const familyMembers = ref([])
 // Computed properties
 const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => projectStore.selectedProject?.id)
+
+const currentAccountQrWindowStart = () =>
+  Math.floor(Date.now() / ACCOUNT_QR_ROTATION_MS) * ACCOUNT_QR_ROTATION_MS
+
+const updateAccountQrCountdown = () => {
+  const payload = lastRenderedAccountQrPayload.value
+  if (payload?.v === 2 && payload?.exp != null) {
+    const msLeft = payload.exp - Date.now()
+    accountQrRefreshSeconds.value = Math.max(1, Math.ceil(msLeft / 1000))
+    return
+  }
+  const windowStart = currentAccountQrWindowStart()
+  const msLeft = windowStart + ACCOUNT_QR_ROTATION_MS - Date.now()
+  accountQrRefreshSeconds.value = Math.max(1, Math.ceil(msLeft / 1000))
+}
+
+const renderAccountQr = async () => {
+  accountQrError.value = ''
+  const currentUser = await optimizedAuthService.getCurrentUser()
+  if (!currentUser) {
+    accountQrError.value = t('accountQrUserMissing')
+    accountQrDataUrl.value = ''
+    lastRenderedAccountQrPayload.value = null
+    return
+  }
+
+  try {
+    const { payload } = await buildAccountQrPayload(currentUser, projectStore.selectedProject?.id)
+    lastRenderedAccountQrPayload.value = payload
+    const payloadJson = JSON.stringify(payload)
+    accountQrDataUrl.value = await QRCode.toDataURL(payloadJson, {
+      width: 280,
+      margin: 2,
+      color: { dark: '#7f1d1d', light: '#ffffff' },
+    })
+  } catch (error) {
+    accountQrError.value = error?.message || String(error)
+    accountQrDataUrl.value = ''
+    lastRenderedAccountQrPayload.value = null
+  }
+}
+
+const tickAccountQr = async () => {
+  updateAccountQrCountdown()
+  const payload = lastRenderedAccountQrPayload.value
+  if (payload?.v === 2 && payload?.exp != null) {
+    if (Date.now() >= payload.exp - 2000) {
+      await renderAccountQr()
+    }
+    return
+  }
+
+  const windowStart = currentAccountQrWindowStart()
+  if (windowStart !== lastAccountQrWindowStart) {
+    lastAccountQrWindowStart = windowStart
+    await renderAccountQr()
+  }
+}
+
+const startAccountQrRotation = async () => {
+  lastAccountQrWindowStart = currentAccountQrWindowStart()
+  await renderAccountQr()
+  updateAccountQrCountdown()
+  if (accountQrIntervalId) {
+    clearInterval(accountQrIntervalId)
+  }
+  accountQrIntervalId = setInterval(() => {
+    void tickAccountQr()
+  }, 1000)
+}
+
+const stopAccountQrRotation = () => {
+  if (accountQrIntervalId) {
+    clearInterval(accountQrIntervalId)
+    accountQrIntervalId = null
+  }
+  accountQrDataUrl.value = ''
+  accountQrError.value = ''
+  lastRenderedAccountQrPayload.value = null
+}
+
+const openAccountQrModal = () => {
+  showAccountQrModal.value = true
+}
+
+const closeAccountQrModal = () => {
+  showAccountQrModal.value = false
+}
+
+const accountQrRefreshCountdownText = computed(() => {
+  const totalSeconds = accountQrRefreshSeconds.value
+  if (totalSeconds >= 60) {
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return t('accountQrRefreshInMs', { minutes, seconds })
+  }
+  return t('accountQrRefreshIn', { seconds: totalSeconds })
+})
 
 // Total devices count
 const totalDevices = computed(() => {
@@ -4552,6 +4716,18 @@ watch(showDeviceManagementModal, (isOpen) => {
   }
 })
 
+watch(showAccountQrModal, (isOpen) => {
+  if (isOpen) {
+    openModal()
+    document.body.classList.add('hide-bottom-nav')
+    void startAccountQrRotation()
+  } else {
+    closeModal()
+    document.body.classList.remove('hide-bottom-nav')
+    stopAccountQrRotation()
+  }
+})
+
 watch(showUploadDocumentsModal, (isOpen) => {
   if (isOpen) {
     openModal()
@@ -4568,6 +4744,7 @@ watch(showUploadDocumentsModal, (isOpen) => {
       !showAddUnitModal.value &&
       !showLoginModalFlag.value &&
       !showDeviceManagementModal.value &&
+      !showAccountQrModal.value &&
       !showUploadDocumentsModal.value &&
       !showDeleteAccountConfirm.value
     ) {
@@ -4579,6 +4756,7 @@ watch(showUploadDocumentsModal, (isOpen) => {
 })
 
 onBeforeUnmount(() => {
+  stopAccountQrRotation()
   document.body.classList.remove('hide-bottom-nav')
   document.body.classList.remove('modal-open')
   document.body.classList.remove('keyboard-open')
@@ -4748,6 +4926,151 @@ onBeforeUnmount(() => {
 .upload-documents-btn svg {
   width: 18px;
   height: 18px;
+}
+
+.account-qr-trigger-btn {
+  position: absolute;
+  bottom: -5px;
+  left: -5px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+  color: #AF1E23;
+  border: 3px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(127, 29, 29, 0.25);
+  transition: all 0.2s ease;
+  z-index: 10;
+  padding: 0;
+}
+
+.account-qr-trigger-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(127, 29, 29, 0.3);
+}
+
+.account-qr-trigger-btn:active {
+  transform: scale(0.95);
+}
+
+.account-qr-trigger-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.account-qr-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(17, 24, 39, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  backdrop-filter: blur(4px);
+}
+
+.account-qr-dialog {
+  width: min(92vw, 360px);
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px 16px 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  border: 1px solid #f1f5f9;
+}
+
+.account-qr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.account-qr-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.account-qr-close {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.account-qr-image-wrap {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 288px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.account-qr-img {
+  width: 280px;
+  height: 280px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.account-qr-placeholder {
+  font-size: 2rem;
+  color: #94a3b8;
+}
+
+.account-qr-error {
+  margin-top: 12px;
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+
+.account-qr-timer {
+  margin: 12px 0 0;
+  text-align: center;
+  color: #AF1E23;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.account-qr-done {
+  margin-top: 12px;
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #AF1E23;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.account-qr-fade-enter-active,
+.account-qr-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.account-qr-fade-enter-from,
+.account-qr-fade-leave-to {
+  opacity: 0;
 }
 
 .hero-text {
