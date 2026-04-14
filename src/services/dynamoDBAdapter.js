@@ -256,7 +256,6 @@ function convertQueryConstraints(constraints = [], projectId = null) {
       const valuePlaceholder = `:${field.replace(/[^a-zA-Z0-9]/g, '_')}`
 
       expressionAttributeNames[fieldPlaceholder] = field
-      expressionAttributeValues[valuePlaceholder] = value
 
       // If querying project table and field is projectId or parentId, use as key condition
       // DynamoDB project tables use 'parentId' as partition key
@@ -275,7 +274,19 @@ function convertQueryConstraints(constraints = [], projectId = null) {
         if (op === '==') op = '='
         if (op === '!=') op = '<>'
 
-        filterParts.push(`${fieldPlaceholder} ${op} ${valuePlaceholder}`)
+        if (op.toLowerCase() === 'in' && Array.isArray(value)) {
+          const inPlaceholders = value.map((entry, index) => {
+            const placeholder = `${valuePlaceholder}_${index}`
+            expressionAttributeValues[placeholder] = entry
+            return placeholder
+          })
+          if (inPlaceholders.length > 0) {
+            filterParts.push(`${fieldPlaceholder} IN (${inPlaceholders.join(', ')})`)
+          }
+        } else {
+          expressionAttributeValues[valuePlaceholder] = value
+          filterParts.push(`${fieldPlaceholder} ${op} ${valuePlaceholder}`)
+        }
       }
     }
 
@@ -394,7 +405,17 @@ class DynamoDBAdapter {
       // Handle both constraints array and filters object
       let constraints = queryOptions.constraints || []
 
-      // Convert filters object to constraints format if filters is provided
+      // Convert filters array/object to constraints format if filters is provided
+      if (Array.isArray(queryOptions.filters)) {
+        constraints = queryOptions.filters
+          .filter((filterItem) => filterItem && typeof filterItem === 'object' && filterItem.field)
+          .map((filterItem) => ({
+            _type: 'where',
+            field: filterItem.field,
+            op: filterItem.operator || '==',
+            value: filterItem.value,
+          }))
+      } else
       if (
         queryOptions.filters &&
         typeof queryOptions.filters === 'object' &&

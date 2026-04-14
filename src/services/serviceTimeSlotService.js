@@ -7,6 +7,44 @@ class ServiceTimeSlotService {
     // No need for db reference - using firestoreService
   }
 
+  toLocalDateKey(dateObj) {
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  normalizeDateKey(rawDate) {
+    if (!rawDate) return '';
+    if (rawDate instanceof Date && !Number.isNaN(rawDate.getTime())) {
+      return this.toLocalDateKey(rawDate);
+    }
+
+    const text = String(rawDate).trim();
+    const directMatch = text.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (directMatch) return directMatch[1];
+
+    const parsed = new Date(text);
+    if (!Number.isNaN(parsed.getTime())) {
+      return this.toLocalDateKey(parsed);
+    }
+    return '';
+  }
+
+  normalizeTimeKey(rawTime) {
+    if (!rawTime) return '';
+    const text = String(rawTime).trim();
+    const match = text.match(/^(\d{1,2}):(\d{2})/);
+    if (!match) return text;
+
+    let hour = Number(match[1]);
+    const minute = match[2];
+    const lower = text.toLowerCase();
+    if (lower.includes('pm') && hour < 12) hour += 12;
+    if (lower.includes('am') && hour === 12) hour = 0;
+    return `${String(hour).padStart(2, '0')}:${minute}`;
+  }
+
   // Generate available time slots for a given day
   generateTimeSlots(startHour = 9, endHour = 17, intervalMinutes = 30, selectedDate = null) {
     const slots = [];
@@ -77,20 +115,35 @@ class ServiceTimeSlotService {
         const queryOptions = {
           filters: [
             { field: "serviceId", operator: "==", value: serviceId },
+            // Keep selectedDate in query for efficiency, but we still re-check client-side.
             { field: "selectedDate", operator: "==", value: date },
-            { field: "status", operator: "in", value: ["open", "processing"] }
+            { field: "status", operator: "in", value: ["open", "processing", "pending"] }
           ],
           timeoutMs: 6000
         };
         
         const queryResult = await firestoreService.getDocs(collectionPath, queryOptions);
-        const bookedSlots = [];
+        const bookedSlots = new Set();
+        const targetDateKey = this.normalizeDateKey(date);
+        const activeStatuses = new Set(['open', 'processing', 'pending']);
         
         if (queryResult.docs && queryResult.docs.length > 0) {
           queryResult.docs.forEach((doc) => {
             const booking = doc.data();
-            if (booking.selectedTime) {
-              bookedSlots.push(booking.selectedTime);
+            const bookingServiceId = String(booking.serviceId || '');
+            const bookingStatus = String(booking.status || '').toLowerCase();
+            const bookingDateKey = this.normalizeDateKey(booking.selectedDate);
+            const bookingTimeKey = this.normalizeTimeKey(booking.selectedTime);
+
+            // Defensive filtering: only block slots for same service, same date, active status.
+            if (
+              bookingServiceId === String(serviceId) &&
+              activeStatuses.has(bookingStatus) &&
+              bookingDateKey &&
+              bookingDateKey === targetDateKey &&
+              bookingTimeKey
+            ) {
+              bookedSlots.add(bookingTimeKey);
             }
           });
         }
@@ -98,7 +151,7 @@ class ServiceTimeSlotService {
         // Filter out booked slots
         const availableSlots = baseSlots.map(slot => ({
           ...slot,
-          isReserved: bookedSlots.includes(slot.time)
+          isReserved: bookedSlots.has(this.normalizeTimeKey(slot.time))
         }));
         
         console.log('🚀 ServiceTimeSlotService: Generated', availableSlots.length, 'time slots')
