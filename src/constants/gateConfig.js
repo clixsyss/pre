@@ -28,6 +28,7 @@ export const STONE_RESIDENCE_GATE_SYSTEM = {
   veryCloseRssiMin: -55,
   scanDurationMs: 2200,
   deviceNames: ['GATE_LEFT', 'GATE_RIGHT'],
+  // Gate_right is Gate 2, Gate_left is Gate 1 (PHYSICALLY)
   gates: [
     {
       key: 'main',
