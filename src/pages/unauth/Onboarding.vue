@@ -1,12 +1,52 @@
 <template>
   <div class="onboarding-container" ref="containerRef">
     <!-- Skip Button -->
-    <button v-if="currentSlide < slides.length - 1" @click="skipToEnd" class="skip-btn">
+    <button v-if="currentSlide > 0 && currentSlide < slides.length - 1" @click="skipToEnd" class="skip-btn">
       {{ $t('skip') }}
     </button>
 
     <!-- Slides Container -->
-    <div class="slides-wrapper" :style="{ transform: `translateX(-${currentSlide * 100}%)` }">
+    <div class="slides-wrapper" :style="{ transform: slidesTransform }">
+      <!-- Slide 0: Language Selection -->
+      <div class="slide slide-language">
+        <div class="slide-content language-slide-content">
+          <div class="final-logo" data-aos="zoom-in">
+            <img src="../../assets/logo.png" alt="PRE Group Logo" class="logo-image" />
+          </div>
+          <h1 class="welcome-title language-title" data-aos="fade-up" data-aos-delay="120">
+            {{ $t('choosePreferredLanguage') }}
+          </h1>
+          <p class="welcome-subtitle language-subtitle" data-aos="fade-up" data-aos-delay="220">
+            {{ $t('languageSelectionSubtitle') }}
+          </p>
+          <div class="language-options" data-aos="fade-up" data-aos-delay="320">
+            <button
+              type="button"
+              class="language-option-btn"
+              :class="{ active: selectedLanguage === 'en-US' }"
+              @click="selectLanguage('en-US')"
+            >
+              <span class="language-name">{{ $t('languageEnglish') }}</span>
+            </button>
+            <button
+              type="button"
+              class="language-option-btn"
+              :class="{ active: selectedLanguage === 'ar-SA' }"
+              @click="selectLanguage('ar-SA')"
+            >
+              <span class="language-name">{{ $t('languageArabic') }}</span>
+            </button>
+          </div>
+          <button type="button" class="primary-btn language-continue-btn" @click="continueFromLanguage">
+            <span>{{ $t('continue') }}</span>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
+              <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
       <!-- Slide 1: Welcome -->
       <div class="slide slide-1">
         <div class="slide-background">
@@ -278,11 +318,11 @@
 
     <!-- Swipe Indicator (shows on all slides except last) -->
     <div v-if="currentSlide < slides.length - 1" class="swipe-indicator">
-      <svg viewBox="0 0 100 50" class="swipe-animation">
+      <svg viewBox="0 0 100 50" class="swipe-animation" :class="{ 'swipe-animation-rtl': isRTL }">
         <path d="M10 25 L50 25 L40 15 M50 25 L40 35" stroke="white" stroke-width="3" fill="none" stroke-linecap="round"
           stroke-linejoin="round" opacity="0.6" />
       </svg>
-      <span>Swipe to explore</span>
+      <span>{{ $t('swipeToExplore') }}</span>
     </div>
 
     <!-- Contact Modal -->
@@ -295,14 +335,14 @@
                 stroke-linejoin="round" />
             </svg>
           </button>
-          <h3>Contact Us</h3>
+          <h3>{{ $t('contactUs') }}</h3>
           <div></div>
         </div>
 
         <div class="contact-modal-content">
           <div class="contact-intro">
             <img src="../../assets/logo.png" alt="PRE Group" class="contact-logo" />
-            <p>We're here to help! Reach out to us through any of the channels below.</p>
+            <p>{{ $t('contactIntro') }}</p>
           </div>
 
           <div class="contact-cards">
@@ -315,7 +355,7 @@
                 </svg>
               </div>
               <div class="contact-info">
-                <h4>Call Center</h4>
+                <h4>{{ $t('phoneSupport') }}</h4>
                 <p>19956</p>
               </div>
               <svg class="arrow-icon" viewBox="0 0 24 24" width="20" height="20" fill="none">
@@ -334,7 +374,7 @@
                 </svg>
               </div>
               <div class="contact-info">
-                <h4>Website</h4>
+                <h4>{{ $t('websiteLabel') }}</h4>
                 <p>www.predevelopments.com</p>
               </div>
               <svg class="arrow-icon" viewBox="0 0 24 24" width="20" height="20" fill="none">
@@ -345,7 +385,7 @@
           </div>
 
           <div class="contact-footer">
-            <p>Available 24/7 to assist you</p>
+            <p>{{ $t('available247') }}</p>
           </div>
         </div>
       </div>
@@ -354,14 +394,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useSettingsStore } from '../../stores/settingsStore'
 
 defineOptions({
   name: 'OnboardingPage'
 })
 
 const router = useRouter()
+const settingsStore = useSettingsStore()
 const containerRef = ref(null)
 const currentSlide = ref(0)
 const touchStartX = ref(0)
@@ -369,13 +411,33 @@ const touchEndX = ref(0)
 const isDragging = ref(false)
 const hasInteracted = ref(false)
 const showContactModal = ref(false)
+const selectedLanguage = ref(settingsStore.currentLanguage || 'en-US')
+const isRTL = computed(() =>
+  settingsStore.currentLanguage === 'ar-SA' || String(settingsStore.currentLanguage || '').startsWith('ar'),
+)
 
 const slides = [
+  { id: 'language' },
   { id: 'welcome' },
   { id: 'smart-living' },
   { id: 'activities' },
   { id: 'final' }
 ]
+
+const slidesTransform = computed(() => {
+  const offset = currentSlide.value * 100
+  return `translateX(-${offset}%)`
+})
+
+const selectLanguage = (language) => {
+  selectedLanguage.value = language
+  settingsStore.setLanguage(language, true)
+  initAOS()
+}
+
+const continueFromLanguage = () => {
+  goToSlide(1)
+}
 
 const nextSlide = () => {
   if (currentSlide.value < slides.length - 1) {
@@ -455,11 +517,19 @@ const handleTouchEnd = () => {
 
   if (swipeVelocity > minSwipeDistance) {
     if (swipeDistance > 0) {
-      // Swiped left - go to next slide
-      nextSlide()
+      // Swiped left
+      if (isRTL.value) {
+        previousSlide()
+      } else {
+        nextSlide()
+      }
     } else {
-      // Swiped right - go to previous slide
-      previousSlide()
+      // Swiped right
+      if (isRTL.value) {
+        nextSlide()
+      } else {
+        previousSlide()
+      }
     }
   }
 
@@ -470,6 +540,17 @@ const handleTouchEnd = () => {
 
 // Keyboard navigation
 const handleKeydown = (e) => {
+  if (isRTL.value) {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      e.preventDefault()
+      nextSlide()
+    } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      previousSlide()
+    }
+    return
+  }
+
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
     e.preventDefault()
     nextSlide()
@@ -485,9 +566,17 @@ const handleWheel = (e) => {
     // Horizontal scroll
     e.preventDefault()
     if (e.deltaX > 30) {
-      nextSlide()
+      if (isRTL.value) {
+        previousSlide()
+      } else {
+        nextSlide()
+      }
     } else if (e.deltaX < -30) {
-      previousSlide()
+      if (isRTL.value) {
+        nextSlide()
+      } else {
+        previousSlide()
+      }
     }
   }
 }
@@ -605,6 +694,54 @@ onUnmounted(() => {
   justify-content: center;
   padding: 70px 24px 110px;
   position: relative;
+}
+
+.language-slide-content {
+  width: 100%;
+  max-width: 360px;
+}
+
+.language-title {
+  font-size: 1.7rem;
+}
+
+.language-subtitle {
+  margin-bottom: 22px;
+}
+
+.language-options {
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.language-option-btn {
+  width: 100%;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  padding: 14px 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(10px);
+}
+
+.language-option-btn.active {
+  border-color: #AF1E23;
+  background: rgba(175, 30, 35, 0.2);
+  box-shadow: 0 8px 20px rgba(175, 30, 35, 0.28);
+}
+
+.language-name {
+  letter-spacing: 0.2px;
+}
+
+.language-continue-btn {
+  margin-top: 4px;
 }
 
 .slide-background,
@@ -1192,6 +1329,21 @@ onUnmounted(() => {
   }
 }
 
+.swipe-animation-rtl {
+  animation-name: swipeAnimRtl;
+}
+
+@keyframes swipeAnimRtl {
+  0%,
+  100% {
+    transform: translateX(0) scaleX(-1);
+  }
+
+  50% {
+    transform: translateX(-12px) scaleX(-1);
+  }
+}
+
 .swipe-indicator span {
   color: rgba(255, 255, 255, 0.6);
   font-size: 0.75rem;
@@ -1502,4 +1654,40 @@ onUnmounted(() => {
   line-height: normal;
   font-size: 1rem;
 }
+
+/* RTL hardening for Arabic onboarding */
+[dir='rtl'] .skip-btn {
+  right: auto;
+  left: 20px;
+}
+
+[dir='rtl'] .feature-card,
+[dir='rtl'] .service-category,
+[dir='rtl'] .contact-card {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+[dir='rtl'] .feature-card-content,
+[dir='rtl'] .service-category-content,
+[dir='rtl'] .contact-info {
+  text-align: right;
+}
+
+[dir='rtl'] .contact-modal-header {
+  direction: rtl;
+}
+
+[dir='rtl'] .arrow-icon {
+  transform: rotate(180deg);
+}
+
+[dir='rtl'] .progress-dots {
+  flex-direction: row-reverse;
+}
+
+[dir='rtl'] .progress-fill {
+  margin-left: auto;
+}
+
 </style>

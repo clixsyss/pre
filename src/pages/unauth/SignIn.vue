@@ -1888,6 +1888,11 @@ const handleDeviceKeyResetSubmit = async () => {
   margin-left: 5px;
 }
 
+[dir='rtl'] .signup-link {
+  margin-left: 0;
+  margin-right: 5px;
+}
+
 .device-key-reset-link {
   text-align: center;
   margin-top: 20px;
@@ -1947,6 +1952,28 @@ const handleDeviceKeyResetSubmit = async () => {
   margin: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease-out;
+}
+
+/* Arabic RTL layout hardening */
+[dir='rtl'] .signin-page {
+  direction: rtl;
+}
+
+[dir='rtl'] .form-label,
+[dir='rtl'] .forgot-link,
+[dir='rtl'] .reset-link,
+[dir='rtl'] .modal-header h3,
+[dir='rtl'] .modal-body p {
+  text-align: right;
+}
+
+[dir='rtl'] .form-input {
+  text-align: right;
+}
+
+[dir='rtl'] .form-options,
+[dir='rtl'] .checkbox-wrapper {
+  flex-direction: row-reverse;
 }
 
 .modal-header {

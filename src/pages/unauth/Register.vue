@@ -14,9 +14,9 @@
             stroke-linejoin="round" />
         </svg>
       </button>
-      <h1 class="page-title">Registration</h1>
+      <h1 class="page-title">{{ $t('registration') }}</h1>
       <div class="header-actions">
-        <button @click="goToSignIn" class="signin-header-btn">Sign In</button>
+        <button @click="goToSignIn" class="signin-header-btn">{{ $t('signInButton') }}</button>
       </div>
     </div>
 
@@ -44,7 +44,7 @@
               stroke-linejoin="round" />
           </svg>
         </div>
-        <span class="step-label">Personal</span>
+        <span class="step-label">{{ $t('personal') }}</span>
       </div>
 
       <!-- Property Step -->
@@ -67,7 +67,7 @@
               stroke-linejoin="round" />
           </svg>
         </div>
-        <span class="step-label">Property</span>
+        <span class="step-label">{{ $t('property') }}</span>
       </div>
     </div>
 
@@ -78,16 +78,16 @@
 
         <form @submit.prevent="handlePersonalSubmit" class="form">
           <div class="form-group">
-            <label for="email" class="form-label">E-mail</label>
+            <label for="email" class="form-label">{{ $t('emailField') }}</label>
             <input id="email" v-model="personalForm.email" type="email" class="form-input"
-              placeholder="Example@gmail.com" required />
+              :placeholder="$t('emailPlaceholderReg')" required />
           </div>
 
           <div class="form-group">
-            <label for="password" class="form-label">Password</label>
+            <label for="password" class="form-label">{{ $t('passwordField') }}</label>
             <div class="password-input-wrapper">
               <input id="password" v-model="personalForm.password" :type="showPassword ? 'text' : 'password'" class="form-input"
-                placeholder="Create a strong password" required minlength="8" />
+                :placeholder="$t('passwordPlaceholder')" required minlength="8" />
               <button type="button" @click="togglePassword" class="password-toggle">
                 <svg
                   v-if="showPassword"
@@ -158,7 +158,7 @@
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
                   </svg>
                   </span>
-                  <span class="requirement-text">At least 8 characters</span>
+                  <span class="requirement-text">{{ $t('passwordReqMinLength') }}</span>
                 </li>
                 <li :class="{ valid: passwordRequirements.hasUppercase }">
                   <span class="requirement-icon">
@@ -169,7 +169,7 @@
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
                   </svg>
                   </span>
-                  <span class="requirement-text">One uppercase letter</span>
+                  <span class="requirement-text">{{ $t('passwordReqUpper') }}</span>
                 </li>
                 <li :class="{ valid: passwordRequirements.hasLowercase }">
                   <span class="requirement-icon">
@@ -180,7 +180,7 @@
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
                   </svg>
                   </span>
-                  <span class="requirement-text">One lowercase letter</span>
+                  <span class="requirement-text">{{ $t('passwordReqLower') }}</span>
                 </li>
                 <li :class="{ valid: passwordRequirements.hasNumber }">
                   <span class="requirement-icon">
@@ -191,7 +191,7 @@
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
                   </svg>
                   </span>
-                  <span class="requirement-text">One number</span>
+                  <span class="requirement-text">{{ $t('passwordReqNumber') }}</span>
                 </li>
                 <li :class="{ valid: passwordRequirements.hasSpecialChar }">
                   <span class="requirement-icon">
@@ -202,17 +202,17 @@
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
                   </svg>
                   </span>
-                  <span class="requirement-text">One special character (!@#$%^&*)</span>
+                  <span class="requirement-text">{{ $t('passwordReqSpecial') }}</span>
                 </li>
               </ul>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="confirmPassword" class="form-label">Confirm Password</label>
+            <label for="confirmPassword" class="form-label">{{ $t('confirmPasswordField') }}</label>
             <div class="password-input-wrapper">
               <input id="confirmPassword" v-model="personalForm.confirmPassword" :type="showConfirmPassword ? 'text' : 'password'" class="form-input"
-                placeholder="Confirm your password" required />
+                :placeholder="$t('confirmPasswordPlaceholder')" required />
               <button type="button" @click="toggleConfirmPassword" class="password-toggle">
                 <svg
                   v-if="showConfirmPassword"
@@ -274,8 +274,8 @@
           </div>
 
           <button type="submit" class="proceed-btn" :disabled="loading || !canProceed">
-            <span v-if="loading">Processing...</span>
-            <span v-else>Proceed</span>
+            <span v-if="loading">{{ $t('processing') }}</span>
+            <span v-else>{{ $t('proceed') }}</span>
           </button>
         </form>
 
@@ -284,14 +284,14 @@
         <!-- Navigation Options -->
         <div class="step-navigation">
           <div class="nav-divider">
-            <span>or</span>
+            <span>{{ $t('orDivider') }}</span>
           </div>
           <div class="nav-options">
             <a @click="goToSignIn" class="nav-link">
-              Already have an account? Sign In
+              {{ $t('alreadyHaveAccount') }}
             </a>
             <a @click="goToOnboarding" class="nav-link">
-              Back to Onboarding
+              {{ $t('backToOnboarding') }}
             </a>
           </div>
         </div>
@@ -332,8 +332,8 @@
         <!-- Project Selection Form -->
         <form @submit.prevent="handlePropertySubmit" class="form">
           <div class="step-header">
-            <h3 class="step-title">Property Selection</h3>
-            <p class="step-description">Select your primary property and optionally add additional properties.</p>
+            <h3 class="step-title">{{ $t('propertySelection') }}</h3>
+            <p class="step-description">{{ $t('propertySelectionDesc') }}</p>
           </div>
 
           <!-- Primary Property Section -->
@@ -345,12 +345,12 @@
                     stroke-linejoin="round" />
                 </svg>
               </div>
-              <h4 class="section-title">Primary Property</h4>
+              <h4 class="section-title">{{ $t('primaryProperty') }}</h4>
             </div>
 
             <!-- Project Selection -->
             <div class="form-group">
-              <label for="project" class="form-label">Project *</label>
+              <label for="project" class="form-label">{{ $t('projectLabel') }}</label>
               <div class="select-wrapper">
                 <select 
                   id="project" 
@@ -360,23 +360,23 @@
                   :disabled="loading || availableProjectsSorted.length === 0"
                   @change="onProjectChange"
                 >
-                  <option value="" disabled>Select Project</option>
+                  <option value="" disabled>{{ $t('selectProjectForReset') }}</option>
                   <option 
                     v-for="project in availableProjectsSorted" 
                     :key="project.id || project.projectId || project._id || project.name" 
                     :value="project.id || project.projectId || project._id"
                   >
-                    {{ project.name || 'Unnamed Project' }} - {{ project.type || 'N/A' }} ({{ project.location || 'N/A' }})
+                    {{ project.name || $t('unnamedProject') }} - {{ project.type || $t('notAvailable') }} ({{ project.location || $t('notAvailable') }})
                   </option>
                 </select>
                 <!-- Debug: Show project count -->
                 <div v-if="availableProjectsSorted.length === 0" style="color: red; margin-top: 5px;">
-                  ⚠️ No projects loaded. Check console for errors.
+                  {{ $t('noProjectsLoadedDebug') }}
                 </div>
                 <div class="select-arrow"></div>
               </div>
               <p v-if="availableProjectsSorted.length === 0 && !loading" class="form-help-text" style="color: #666; font-size: 0.85rem; margin-top: 5px;">
-                Loading projects...
+                {{ $t('loadingProjects') }}
               </p>
             </div>
 
@@ -430,7 +430,7 @@
                   <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round" />
                 </svg>
-                Add This Property
+                {{ $t('addThisProperty') }}
               </button>
             </div>
           </div>
@@ -445,8 +445,8 @@
                     stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
-              <h4 class="section-title">Additional Properties (Optional)</h4>
-              <p class="section-subtitle">You can add more properties if you own or have access to multiple units</p>
+              <h4 class="section-title">{{ $t('additionalProperties') }}</h4>
+              <p class="section-subtitle">{{ $t('additionalPropertiesDesc') }}</p>
             </div>
 
             <div class="projects-list">
@@ -474,7 +474,7 @@
                     </span>
                   </div>
                 </div>
-                <button type="button" @click="removeProject(index)" class="remove-project-btn" title="Remove property">
+                <button type="button" @click="removeProject(index)" class="remove-project-btn" :title="$t('removeProperty')">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                       stroke-linejoin="round" />
@@ -491,13 +491,13 @@
                   <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round" />
                 </svg>
-                Add Another Property
+                {{ $t('addAnotherProperty') }}
               </button>
 
               <!-- Additional Property Form -->
               <div v-if="showAddAnotherForm" class="additional-property-form">
                 <div class="form-group">
-                  <label for="additional-project" class="form-label">Project</label>
+                  <label for="additional-project" class="form-label">{{ $t('projectLabel') }}</label>
                   <div class="select-wrapper">
                     <select 
                       id="additional-project" 
@@ -506,13 +506,13 @@
                       :disabled="loading || availableProjectsSorted.length === 0"
                       @change="onAdditionalProjectChange"
                     >
-                      <option value="" disabled>Select Project</option>
+                      <option value="" disabled>{{ $t('selectProjectForReset') }}</option>
                       <option 
                         v-for="project in availableProjectsSorted" 
                         :key="project.id || project.projectId || project._id || project.name" 
                         :value="project.id || project.projectId || project._id"
                       >
-                        {{ project.name || 'Unnamed Project' }} {{ project.location || 'N/A' }}
+                        {{ project.name || $t('unnamedProject') }} {{ project.location || $t('notAvailable') }}
                       </option>
                     </select>
                     <div class="select-arrow"></div>
@@ -567,10 +567,10 @@
                       <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round" />
                     </svg>
-                    Add Property
+                    {{ $t('addProperty') }}
                   </button>
                   <button type="button" @click="cancelAdditionalProperty" class="cancel-btn">
-                    Cancel
+                    {{ $t('cancel') }}
                   </button>
                 </div>
               </div>
@@ -579,11 +579,11 @@
 
           <div class="form-actions">
             <button type="button" @click="goToPreviousStep" class="back-action-btn">
-              Back
+              {{ $t('backButton') }}
             </button>
             <button type="submit" class="verify-btn" :disabled="loading || !canProceedToNext">
-              <span v-if="loading">Saving...</span>
-              <span v-else>Complete Registration</span>
+              <span v-if="loading">{{ $t('saving') }}</span>
+              <span v-else>{{ $t('completeRegistration') }}</span>
             </button>
           </div>
         </form>
@@ -595,6 +595,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
@@ -620,6 +621,7 @@ defineOptions({
 })
 
 const router = useRouter()
+const { t } = useI18n()
 const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
 const currentStep = ref('personal')
@@ -746,14 +748,14 @@ const fetchAvailableProjects = async () => {
     console.error('❌ [Register] CRITICAL ERROR fetching projects:', error)
     console.error('❌ [Register] Error message:', error.message)
     console.error('❌ [Register] Error stack:', error.stack)
-    notificationStore.showError('Failed to load projects. Please try again later.')
+    notificationStore.showError(t('regFailedLoadProjects'))
   }
 }
 
 // Function to get project name by ID
 const getProjectName = (projectId) => {
   const project = availableProjects.value.find(p => p.id === projectId)
-  return project ? `${project.name} - ${project.type}` : 'N/A'
+  return project ? `${project.name} - ${project.type}` : t('notAvailable')
 }
 
 // Function to add a project to the selected projects list
@@ -767,16 +769,16 @@ const addProjectToSelection = () => {
     propertyForm.selectedProject = ''
     propertyForm.unit = ''
     propertyForm.role = ''
-    notificationStore.showSuccess('Project added to selection!')
+    notificationStore.showSuccess(t('regProjectAdded'))
   } else {
-    notificationStore.showError('Please select a project and enter a unit number/name.')
+    notificationStore.showError(t('regProjectUnitRequired'))
   }
 }
 
 // Function to remove a project from the selected projects list
 const removeProject = (index) => {
   selectedProjects.value.splice(index, 1)
-  notificationStore.showSuccess('Project removed from selection!')
+  notificationStore.showSuccess(t('regProjectRemoved'))
 }
 
 // Function to handle project selection change
@@ -812,9 +814,9 @@ const addAdditionalProperty = () => {
     additionalPropertyForm.role = ''
     showAddAnotherForm.value = false
 
-    notificationStore.showSuccess('Additional property added!')
+    notificationStore.showSuccess(t('regAdditionalPropertyAdded'))
   } else {
-    notificationStore.showError('Please fill in all fields for the additional property.')
+    notificationStore.showError(t('regAdditionalPropertyFieldsRequired'))
   }
 }
 
@@ -852,7 +854,7 @@ onMounted(() => {
     if (draft.step === 'property' || draft.step === 'details') {
       currentStep.value = 'property'
       if (draft.step === 'property') {
-        notificationStore.showInfo('Welcome back! Please select your property to finish registration.')
+        notificationStore.showInfo(t('regWelcomeBackFinishProperty'))
       }
     }
   } else {
@@ -930,19 +932,19 @@ const handlePersonalSubmit = async () => {
   if (loading.value) return
 
   if (!personalForm.email) {
-    notificationStore.showError('Please enter your email address')
+    notificationStore.showError(t('regEnterEmail'))
     return
   }
   if (!personalForm.password) {
-    notificationStore.showError('Please enter a password')
+    notificationStore.showError(t('regEnterPassword'))
     return
   }
   if (personalForm.password.length < 8) {
-    notificationStore.showError('Password must be at least 8 characters long')
+    notificationStore.showError(t('regPasswordMinLength'))
     return
   }
   if (personalForm.password !== personalForm.confirmPassword) {
-    notificationStore.showError('Passwords do not match')
+    notificationStore.showError(t('passwordMismatch'))
     return
   }
 
@@ -959,7 +961,7 @@ const handlePersonalSubmit = async () => {
     const dynamoUser = await getUserByEmail(normalizedEmail)
 
     if (dynamoUser) {
-      notificationStore.showError('An account with this email already exists. Please sign in instead.')
+      notificationStore.showError(t('regEmailExistsSignInInstead'))
       loading.value = false
       return
     }
@@ -980,11 +982,11 @@ const handlePersonalSubmit = async () => {
     router.push('/register/personal-details')
   } catch (error) {
     console.error('[Register] ❌ Error in handlePersonalSubmit:', error)
-    let errorMessage = 'Registration failed. Please try again.'
+    let errorMessage = t('regFailedTryAgain')
     if (error?.code === 'auth/invalid-email' || error?.code === 'InvalidParameterException') {
-      errorMessage = 'Invalid email address'
+      errorMessage = t('invalidEmail')
     } else if (error?.code === 'auth/network-request-failed' || error?.code === 'NetworkError') {
-      errorMessage = 'Network error. Please check your connection'
+      errorMessage = t('regNetworkError')
     } else if (error?.message) {
       errorMessage = error.message
     }
@@ -998,7 +1000,7 @@ const handlePropertySubmit = async () => {
   if (loading.value) return
 
   if (selectedProjects.value.length === 0) {
-    notificationStore.showError('Please select at least one project.')
+    notificationStore.showError(t('regSelectAtLeastOneProject'))
     return
   }
 
@@ -1014,7 +1016,7 @@ const handlePropertySubmit = async () => {
     const password = signupDraftService.getPassword()
 
     if (!email || !password) {
-      throw new Error('Registration session expired. Please start over.')
+      throw new Error(t('regSessionExpired'))
     }
 
     console.log('[Register] STEP A: Creating Cognito account...')
@@ -1032,7 +1034,7 @@ const handlePropertySubmit = async () => {
         console.warn('[Register] ⚠️ Cognito UsernameExistsException — recovering orphaned account')
         const recovered = await optimizedAuthService.recoverOrphanedCognitoUser(email, password)
         if (!recovered) {
-          notificationStore.showError('An account with this email already exists. Please sign in.')
+          notificationStore.showError(t('regEmailExistsSignIn'))
           return
         }
         userSub = recovered.userSub
@@ -1120,7 +1122,7 @@ const handlePropertySubmit = async () => {
     }
 
     if (dynamoResult.status === 'rejected') {
-      throw new Error('Failed to save your registration. Please try again.')
+      throw new Error(t('regFailedSaveRegistration'))
     }
 
     console.log('[Register] ✅ Registration saved to DynamoDB')
@@ -1129,11 +1131,11 @@ const handlePropertySubmit = async () => {
     signupDraftService.clear()
     registrationStore.setUserDetails({ password: '', authToken: '', refreshToken: '' })
 
-    notificationStore.showSuccess('Registration completed!')
+    notificationStore.showSuccess(t('regCompleted'))
     showPendingModal.value = true
   } catch (error) {
     console.error('[Register] ❌ Property submit error:', error)
-    notificationStore.showError(error?.message || 'Something went wrong saving your registration. Please try again.')
+    notificationStore.showError(error?.message || t('regSomethingWentWrong'))
   } finally {
     loading.value = false
   }
@@ -1906,6 +1908,58 @@ select.form-input:disabled {
   max-height: 300px;
   overflow-y: auto;
   padding-right: 10px;
+}
+
+/* Arabic RTL layout hardening */
+[dir='rtl'] .register-page {
+  direction: rtl;
+}
+
+[dir='rtl'] .step-title,
+[dir='rtl'] .step-description,
+[dir='rtl'] .form-label,
+[dir='rtl'] .section-title,
+[dir='rtl'] .section-subtitle,
+[dir='rtl'] .project-item-info {
+  text-align: right;
+}
+
+[dir='rtl'] .form-input,
+[dir='rtl'] .custom-select {
+  text-align: right;
+}
+
+[dir='rtl'] .custom-select {
+  padding-right: 15px;
+  padding-left: 45px;
+}
+
+[dir='rtl'] .select-arrow {
+  right: auto;
+  left: 15px;
+}
+
+[dir='rtl'] .primary-property,
+[dir='rtl'] .additional-properties,
+[dir='rtl'] .primary-property-summary {
+  border-left: none;
+}
+
+[dir='rtl'] .primary-property {
+  border-right: 4px solid #AF1E23;
+}
+
+[dir='rtl'] .additional-properties {
+  border-right: 4px solid #AF1E23;
+}
+
+[dir='rtl'] .primary-property-summary {
+  border-right: 4px solid #4CAF50;
+}
+
+[dir='rtl'] .projects-list {
+  padding-right: 0;
+  padding-left: 10px;
 }
 
 .project-item {

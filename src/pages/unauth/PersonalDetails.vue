@@ -8,9 +8,9 @@
             stroke-linejoin="round" />
         </svg>
       </button>
-      <h1 class="page-title">Registration</h1>
+      <h1 class="page-title">{{ $t('registration') }}</h1>
       <div class="header-actions">
-        <button @click="goToSignIn" class="signin-header-btn">Sign In</button>
+        <button @click="goToSignIn" class="signin-header-btn">{{ $t('signInButton') }}</button>
       </div>
     </div>
 
@@ -28,7 +28,7 @@
             <path d="M20 6L9 17L4 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
-        <span class="step-label">Personal</span>
+        <span class="step-label">{{ $t('personal') }}</span>
       </div>
 
       <!-- Property Step -->
@@ -42,7 +42,7 @@
               stroke-linejoin="round" />
           </svg>
         </div>
-        <span class="step-label">Property</span>
+        <span class="step-label">{{ $t('property') }}</span>
       </div>
     </div>
 
@@ -51,33 +51,33 @@
 
       <form @submit.prevent="handleSubmit" class="personal-form">
         <div class="form-group">
-          <label for="email" class="form-label">E-mail</label>
-          <input id="email" v-model="formData.email" type="email" class="form-input" placeholder="Example@gmail.com"
+          <label for="email" class="form-label">{{ $t('emailField') }}</label>
+          <input id="email" v-model="formData.email" type="email" class="form-input" :placeholder="$t('emailPlaceholderReg')"
             readonly />
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label for="firstName" class="form-label">First Name</label>
-            <input id="firstName" v-model="formData.firstName" type="text" class="form-input" placeholder="John"
+            <label for="firstName" class="form-label">{{ $t('firstNameLabel') }}</label>
+            <input id="firstName" v-model="formData.firstName" type="text" class="form-input" :placeholder="$t('firstNamePlaceholder')"
               required @input="saveToStore" />
           </div>
 
           <div class="form-group">
-            <label for="lastName" class="form-label">Last Name</label>
-            <input id="lastName" v-model="formData.lastName" type="text" class="form-input" placeholder="Doe" required
+            <label for="lastName" class="form-label">{{ $t('lastNameLabel') }}</label>
+            <input id="lastName" v-model="formData.lastName" type="text" class="form-input" :placeholder="$t('lastNamePlaceholder')" required
               @input="saveToStore" />
           </div>
         </div>
 
         <div class="form-group">
-          <label for="mobile" class="form-label">Mobile Number</label>
-          <input id="mobile" v-model="formData.mobile" type="tel" class="form-input" placeholder="+20 123 456 7890"
+          <label for="mobile" class="form-label">{{ $t('mobileNumberLabel') }}</label>
+          <input id="mobile" v-model="formData.mobile" type="tel" class="form-input" :placeholder="$t('mobileNumberPlaceholder')"
             required @input="saveToStore" />
         </div>
 
         <div class="form-group">
-          <label for="dateOfBirth" class="form-label">Date of Birth</label>
+          <label for="dateOfBirth" class="form-label">{{ $t('dateOfBirth') }}</label>
           <div class="date-input-wrapper">
             <input id="dateOfBirth" v-model="formData.dateOfBirth" type="date" class="form-input" required
               @change="saveToStore" />
@@ -92,27 +92,27 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Gender</label>
+          <label class="form-label">{{ $t('gender') }}</label>
           <div class="gender-buttons">
             <button type="button" @click="() => { formData.gender = 'male'; saveToStore(); }"
               :class="['gender-btn', { active: formData.gender === 'male' }]">
-              Male
+              {{ $t('male') }}
             </button>
             <button type="button" @click="() => { formData.gender = 'female'; saveToStore(); }"
               :class="['gender-btn', { active: formData.gender === 'female' }]">
-              Female
+              {{ $t('female') }}
             </button>
           </div>
         </div>
 
         <div class="form-group">
-          <label for="nationalId" class="form-label">National ID</label>
+          <label for="nationalId" class="form-label">{{ $t('nationalId') }}</label>
           <input id="nationalId" v-model="formData.nationalId" type="text" class="form-input"
             placeholder="29912345678901" required @input="saveToStore" />
         </div>
 
         <div class="form-group">
-          <label class="form-label">Profile Picture <span class="required">*</span></label>
+          <label class="form-label">{{ $t('profilePictureLabel') }} <span class="required">*</span></label>
           <div class="media-upload-options">
             <button type="button" @click="selectProfilePicture" class="upload-option-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -121,20 +121,20 @@
                 <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                   stroke-linejoin="round" />
               </svg>
-              Upload Image
+              {{ $t('uploadImage') }}
             </button>
           </div>
           <input ref="profilePictureInput" type="file" accept="image/*" @change="handleProfilePictureUpload"
             style="display: none" />
           <div v-if="profilePictureFile" class="file-preview">
-            <img :src="profilePicturePreview" alt="Profile Picture Preview" class="preview-image" />
-            <button type="button" @click="removeProfilePicture" class="remove-file-btn">✕ Remove</button>
+            <img :src="profilePicturePreview" :alt="$t('profilePicturePreviewAlt')" class="preview-image" />
+            <button type="button" @click="removeProfilePicture" class="remove-file-btn">✕ {{ $t('remove') }}</button>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Front National ID Picture <span class="required">*</span></label>
+            <label class="form-label">{{ $t('frontNationalIdPictureLabel') }} <span class="required">*</span></label>
             <div class="media-upload-options">
               <button type="button" @click="selectFrontIdFromGallery" class="upload-option-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -143,20 +143,20 @@
                   <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round" />
                 </svg>
-                Upload Image
+                {{ $t('uploadImage') }}
               </button>
             </div>
             <input ref="frontIdInput" type="file" accept="image/*,.pdf,application/pdf" @change="handleFrontIdUpload"
               style="display: none" />
             <div v-if="frontIdFile" class="file-preview">
-              <img v-if="frontIdPreview" :src="frontIdPreview" alt="Front ID Preview" class="preview-image" />
+              <img v-if="frontIdPreview" :src="frontIdPreview" :alt="$t('frontIdPreviewAlt')" class="preview-image" />
               <div v-else class="text-sm text-gray-700 font-medium">{{ frontIdFile.name }}</div>
-              <button type="button" @click="removeFrontId" class="remove-file-btn">✕ Remove</button>
+              <button type="button" @click="removeFrontId" class="remove-file-btn">✕ {{ $t('remove') }}</button>
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Back National ID Picture <span class="required">*</span></label>
+            <label class="form-label">{{ $t('backNationalIdPictureLabel') }} <span class="required">*</span></label>
             <div class="media-upload-options">
               <button type="button" @click="selectBackIdFromGallery" class="upload-option-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -165,20 +165,20 @@
                   <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round" />
                 </svg>
-                Upload Image
+                {{ $t('uploadImage') }}
               </button>
             </div>
             <input ref="backIdInput" type="file" accept="image/*,.pdf,application/pdf" @change="handleBackIdUpload" style="display: none" />
             <div v-if="backIdFile" class="file-preview">
-              <img v-if="backIdPreview" :src="backIdPreview" alt="Back ID Preview" class="preview-image" />
+              <img v-if="backIdPreview" :src="backIdPreview" :alt="$t('backIdPreviewAlt')" class="preview-image" />
               <div v-else class="text-sm text-gray-700 font-medium">{{ backIdFile.name }}</div>
-              <button type="button" @click="removeBackId" class="remove-file-btn">✕ Remove</button>
+              <button type="button" @click="removeBackId" class="remove-file-btn">✕ {{ $t('remove') }}</button>
             </div>
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Property Contract / Deed <span class="required">*</span></label>
+          <label class="form-label">{{ $t('propertyDeedContractLabel') }} <span class="required">*</span></label>
           <div class="media-upload-options">
             <button type="button" @click="selectPropertyContract" class="upload-option-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -187,7 +187,7 @@
                 <path d="M7 16H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                 <path d="M8 8H8.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
               </svg>
-              Upload Contract/Deed
+              {{ $t('uploadContractDeed') }}
             </button>
           </div>
           <input
@@ -201,19 +201,19 @@
             <img
               v-if="propertyContractPreview && propertyContractIsImage"
               :src="propertyContractPreview"
-              alt="Property Contract Preview"
+              :alt="$t('propertyContractPreviewAlt')"
               class="preview-image"
             />
             <div v-else class="text-sm text-gray-700 font-medium">
               {{ propertyContractFile.name }}
             </div>
-            <button type="button" @click="removePropertyContract" class="remove-file-btn">✕ Remove</button>
+            <button type="button" @click="removePropertyContract" class="remove-file-btn">✕ {{ $t('remove') }}</button>
           </div>
         </div>
 
         <button type="submit" class="continue-btn" :disabled="loading">
-          <span v-if="loading">Creating Account...</span>
-          <span v-else>Continue</span>
+          <span v-if="loading">{{ $t('creatingAccount') }}</span>
+          <span v-else>{{ $t('continue') }}</span>
         </button>
       </form>
     </div>
@@ -223,6 +223,7 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
@@ -235,6 +236,7 @@ defineOptions({
 })
 
 const router = useRouter()
+const { t } = useI18n()
 const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
 const loading = ref(false)
@@ -452,7 +454,7 @@ const handleFrontIdUpload = async (event) => {
   } catch (e) {
     frontIdFile.value = null
     frontIdPreview.value = null
-    notificationStore.showError(e?.message || 'Could not load image')
+    notificationStore.showError(e?.message || t('pdCouldNotLoadImage'))
   }
 }
 
@@ -469,7 +471,7 @@ const handleBackIdUpload = async (event) => {
   } catch (e) {
     backIdFile.value = null
     backIdPreview.value = null
-    notificationStore.showError(e?.message || 'Could not load image')
+    notificationStore.showError(e?.message || t('pdCouldNotLoadImage'))
   }
 }
 
@@ -486,7 +488,7 @@ const handleProfilePictureUpload = async (event) => {
   } catch (e) {
     profilePictureFile.value = null
     profilePicturePreview.value = null
-    notificationStore.showError(e?.message || 'Could not load image')
+    notificationStore.showError(e?.message || t('pdCouldNotLoadImage'))
   }
 }
 
@@ -528,7 +530,7 @@ const handlePropertyContractUpload = async (event) => {
   input.value = ''
   if (!raw) return
   try {
-    const file = await snapshotDocumentFileForUpload(raw, 'Property contract/deed')
+    const file = await snapshotDocumentFileForUpload(raw, t('propertyDeedContractLabel'))
     revokePreview(propertyContractPreview.value)
     propertyContractFile.value = file
     propertyContractIsImage.value = file.type.startsWith('image/')
@@ -537,7 +539,7 @@ const handlePropertyContractUpload = async (event) => {
     propertyContractFile.value = null
     propertyContractPreview.value = null
     propertyContractIsImage.value = false
-    notificationStore.showError(e?.message || 'Could not load contract/deed file')
+    notificationStore.showError(e?.message || t('pdCouldNotLoadContractFile'))
   }
 }
 
@@ -557,19 +559,19 @@ const handleSubmit = async () => {
 
   if (!formData.firstName || !formData.lastName || !formData.mobile ||
     !formData.dateOfBirth || !formData.nationalId) {
-    notificationStore.showError('Please fill in all required fields')
+    notificationStore.showError(t('pdFillRequiredFields'))
     return
   }
   if (!frontIdFile.value || !backIdFile.value) {
-    notificationStore.showError('Please upload both front and back National ID pictures')
+    notificationStore.showError(t('pdUploadFrontBackId'))
     return
   }
   if (!profilePictureFile.value) {
-    notificationStore.showError('Please upload a profile picture')
+    notificationStore.showError(t('pdUploadProfilePicture'))
     return
   }
   if (!propertyContractFile.value) {
-    notificationStore.showError('Please upload your property contract/deed')
+    notificationStore.showError(t('pdUploadPropertyContract'))
     return
   }
 
@@ -616,15 +618,15 @@ const handleSubmit = async () => {
     console.log('[PersonalDetails] ✅ Draft updated — navigating to property step')
 
     if (SKIP_FACE_VERIFICATION_DURING_SIGNUP) {
-      notificationStore.showSuccess('Details saved! Continue with your property information.')
+      notificationStore.showSuccess(t('pdDetailsSavedContinueProperty'))
       router.push('/register')
     } else {
-      notificationStore.showSuccess('Details saved! Now let\'s verify your face.')
+      notificationStore.showSuccess(t('pdDetailsSavedVerifyFace'))
       router.push('/register/face-verification')
     }
   } catch (error) {
     console.error('[PersonalDetails] ❌ Save error:', error)
-    notificationStore.showError('Failed to save: ' + (error?.message || 'Unknown error'))
+    notificationStore.showError(`${t('pdFailedToSave')}: ${error?.message || t('unknownError')}`)
   } finally {
     loading.value = false
   }
