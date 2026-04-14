@@ -84,10 +84,6 @@
     <!-- Bluetooth feature declaration -->
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
     
-    <!-- Microphone (matches iOS NSMicrophoneUsageDescription - video recording) -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-feature android:name="android.hardware.microphone" android:required="false" />
-    
     <!-- Photo library read (matches iOS NSPhotoLibraryUsageDescription) -->
     <!-- Android 13+ (API 33+) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />

@@ -82,8 +82,6 @@
 	<string>This app needs access to your location to verify you are within the project premises when generating guest passes. You can choose "While Using the App" for better privacy.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>This app needs access to your location to verify you are within the project premises when generating guest passes.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>This app needs access to the microphone for video recording features.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>This app uses motion detection to provide quick access to gate access by shaking your device.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
