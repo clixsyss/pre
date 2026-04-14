@@ -237,10 +237,8 @@ class FastCollectionService {
         // Apply client-side filtering for status
         let categories = allCategories
         if (availableOnly) {
-          // For now, show all categories regardless of status to ensure visibility
-          // TODO: Update DynamoDB records to have status='available' for categories that should be shown
-          // For now, we'll show all categories to debug the issue
-          console.log(`🚀 FastCollection: Showing all ${categories.length} categories (status filter disabled for debugging)`)
+          categories = categories.filter((cat) => cat.status === 'available')
+          console.log(`🚀 FastCollection: Filtered to ${categories.length} available categories`)
         }
         
         // Sort by englishTitle
@@ -319,6 +317,10 @@ class FastCollectionService {
           limit: 100,
           status: statusFilter
         })
+
+        if (availableOnly) {
+          services = services.filter((service) => service.status === 'available')
+        }
         
         // Sort by englishTitle (or name if available)
         services.sort((a, b) => {
@@ -352,11 +354,9 @@ class FastCollectionService {
           ...doc.data()
         }))
         
-        // Apply client-side filtering (missing status = treat as available; matches dashboard create flow)
+        // Apply client-side filtering
         if (availableOnly) {
-          services = services.filter(
-            (service) => !service.status || service.status === 'available'
-          )
+          services = services.filter((service) => service.status === 'available')
         }
 
         services.sort((a, b) =>
