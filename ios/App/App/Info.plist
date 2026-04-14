@@ -78,6 +78,8 @@
 	<string>This app needs Bluetooth to connect to your gate device and control access.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs access to the camera to let you take and upload photos for your service requests and chat messages.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone access when recording videos so you can attach video messages and media safely.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>This app needs access to your location to verify you are within the project premises when generating guest passes. You can choose "While Using the App" for better privacy.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
