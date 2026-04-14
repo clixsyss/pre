@@ -484,6 +484,12 @@
               </button>
             </div>
 
+            <!-- Loading State -->
+            <div v-else-if="isLoadingPasses" class="empty-state">
+              <q-spinner-dots color="primary" size="48px" />
+              <p style="margin-top:12px;opacity:0.6">Loading passes...</p>
+            </div>
+
             <!-- Empty State -->
             <div v-else-if="currentProjectPasses.length === 0" class="empty-state">
               <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
@@ -972,6 +978,7 @@ const currentGateVeryCloseRssiMin = computed(() => currentGateSystem.value.veryC
 
 // Passes state
 const passes = ref([])
+const isLoadingPasses = ref(false)
 const showGenerateDialog = ref(false)
 const showGeneratedPassPreview = ref(false)
 const generatedPassPreview = ref(null)
@@ -1871,6 +1878,7 @@ const loadPassesFromFirebase = async () => {
  * Loads passes for the current user's unit, sorted by newest first
  */
 const loadPassesFromAWS = async () => {
+  isLoadingPasses.value = true
   try {
     const user = await optimizedAuthService.getCurrentUser()
     const projectId = projectStore.selectedProject?.id
@@ -1886,6 +1894,7 @@ const loadPassesFromAWS = async () => {
         usedToday: 0,
         dailyRemainingQuota: null,
       }
+      isLoadingPasses.value = false
       return
     }
 
@@ -1965,6 +1974,7 @@ const loadPassesFromAWS = async () => {
         }
       }, 200)
     }
+    isLoadingPasses.value = false
   } catch (error) {
     console.error('❌ Error loading passes from AWS:', error)
     passes.value = []
@@ -1976,6 +1986,7 @@ const loadPassesFromAWS = async () => {
       usedToday: 0,
       dailyRemainingQuota: null,
     }
+    isLoadingPasses.value = false
   }
 }
 
@@ -2314,25 +2325,26 @@ const generatePass = async () => {
 
     showGenerateDialog.value = false
 
-    // Generate composed pass image (layout + QR) for preview/share
-    await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    const composedPassImage = await generateQRCode(pass)
-
-    // Persist generated image in local state so re-share works without regeneration
-    if (composedPassImage) {
-      passes.value = passes.value.map((p) =>
-        p.id === pass.id ? { ...p, qrImageDataUrl: composedPassImage } : p
-      )
-    }
-
-    // Show generated pass preview modal (share is explicit action)
+    // Show preview immediately using the inline data URL (no network wait)
     generatedPassPreview.value = pass
-    generatedPassPreviewImage.value = composedPassImage || pass.qrCodeUrl || ''
+    generatedPassPreviewImage.value = pass.qrImageDataUrl || pass.qrCodeUrl || ''
     showGeneratedPassPreview.value = true
     notificationStore.showSuccess('Pass generated successfully!')
-
     isGeneratingPass.value = false
+
+    // Generate the styled gate-pass card in the background and swap in when ready
+    nextTick().then(() =>
+      generateQRCode(pass).then((composedPassImage) => {
+        if (composedPassImage) {
+          passes.value = passes.value.map((p) =>
+            p.id === pass.id ? { ...p, qrImageDataUrl: composedPassImage } : p
+          )
+          if (generatedPassPreview.value?.id === pass.id) {
+            generatedPassPreviewImage.value = composedPassImage
+          }
+        }
+      }).catch(() => {/* silent — plain QR is already visible */})
+    )
   } catch (error) {
     console.error('Error generating pass:', error?.message || JSON.stringify(error) || error)
     notificationStore.showError(error.message || 'Failed to generate pass')
@@ -2926,6 +2938,11 @@ watch(
 
 // Initialize
 onMounted(async () => {
+  // Pre-load logo so it's ready when the first QR card is generated
+  if (!logoImagePromise) {
+    logoImagePromise = loadImage(appLogo).catch(() => null)
+  }
+
   try {
     await checkBLESupport()
     bleChecked.value = true

@@ -18,6 +18,15 @@ const GUEST_PASSES_TABLE = 'projects__guestPasses'
 const GUEST_PASS_SETTINGS_TABLE = 'guestPassSettings'
 const USERS_TABLE = 'users'
 
+// Mirrors fileUploadService.getS3Url — computes the deterministic S3 URL without uploading.
+const _S3_BUCKET = 'pre-app-user-images'
+const _S3_REGION =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AWS_REGION) ||
+  (typeof process !== 'undefined' && process.env?.AWS_REGION) ||
+  (typeof process !== 'undefined' && process.env?.VITE_AWS_REGION) ||
+  'us-east-1'
+const _getS3Url = (key) => `https://${_S3_BUCKET}.s3.${_S3_REGION}.amazonaws.com/${key}`
+
 const getDaysRemainingInMonthIncludingToday = (date = new Date()) => {
   const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
   return Math.max(1, daysInMonth - date.getDate() + 1)
@@ -94,8 +103,7 @@ const _queryUserPassCounts = async (projectId, canonicalUserId, dailyResetAt = n
     ? dailyResetAt
     : startOfTodayTimestamp
 
-  // Push userId + month filter server-side so DynamoDB skips irrelevant items.
-  // (DynamoDB FilterExpression doesn't reduce RCUs but does reduce data transfer.)
+  // Fetch only the two fields needed for counting — reduces network payload significantly.
   const passes = await queryAll(GUEST_PASSES_TABLE, {
     KeyConditionExpression: 'parentId = :parentId',
     FilterExpression: 'userId = :userId AND createdAt >= :monthStart AND (attribute_not_exists(deleted) OR deleted = :false)',
@@ -105,6 +113,7 @@ const _queryUserPassCounts = async (projectId, canonicalUserId, dailyResetAt = n
       ':monthStart': firstDayTimestamp,
       ':false': false,
     },
+    ProjectionExpression: 'createdAt',
     pageSize: 100,
     maxPages: 20,
   })
@@ -438,23 +447,20 @@ export const createGuestPass = async (
   phoneNumber = null,
 ) => {
   try {
-    // First check eligibility
-    const eligibility = await checkUserEligibility(projectId, userId)
+    // Run eligibility check, settings fetch, and user record fetch all in parallel.
+    // eligibility internally calls findUserRecord — the second call hits the session cache.
+    const [eligibility, settingsResult, user] = await Promise.all([
+      checkUserEligibility(projectId, userId),
+      getItem(GUEST_PASS_SETTINGS_TABLE, { id: projectId }).catch(() => null),
+      findUserRecord(userId),
+    ])
 
     if (!eligibility.success || !eligibility.data.canGenerate) {
       throw new Error(eligibility.message)
     }
 
-    // Get global settings to determine validity duration
-    let validityDurationHours = 2 // Default: 2 hours
-    try {
-      // guestPassSettings table uses 'id' as the partition key
-      const globalSettings = await getItem(GUEST_PASS_SETTINGS_TABLE, { id: projectId })
-      validityDurationHours = globalSettings?.validityDurationHours || 2
-      console.log(`📋 Using validity duration: ${validityDurationHours} hours`)
-    } catch {
-      console.log('ℹ️ No global settings found, using default validity duration: 2 hours')
-    }
+    const validityDurationHours = settingsResult?.validityDurationHours || 2
+    console.log(`📋 Using validity duration: ${validityDurationHours} hours`)
 
     // Calculate validUntil based on current time + validity duration
     const createdAt = new Date()
@@ -467,26 +473,22 @@ export const createGuestPass = async (
     // Generate verification token for one-time use
     const verificationToken = `${passId}-${Math.random().toString(36).substr(2, 16)}`.toUpperCase()
 
-    // Look up the user's registered card ID for QR code content
-    const user = await findUserRecord(userId)
     const userCardId = user?.documents?.cardId || null
 
     // QR code data MUST be unique per generated pass.
-    // Keep cardId in payload (if present) but always include pass-specific identifiers.
-    const qrPayload = {
+    const qrData = JSON.stringify({
       type: 'guest_pass',
       version: 1,
-      passId: passId,
-      projectId: projectId,
-      verificationToken: verificationToken,
+      passId,
+      projectId,
+      verificationToken,
       cardId: userCardId || null,
-      guestName: guestName,
+      guestName,
       validUntil: validUntil.toISOString(),
       createdAt: createdAt.toISOString(),
-    }
-    const qrData = JSON.stringify(qrPayload)
+    })
 
-    // Generate QR code as data URL
+    // Generate QR code as data URL (fast — no network)
     console.log('🎨 Generating QR code...')
     const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
       errorCorrectionLevel: 'H',
@@ -495,108 +497,89 @@ export const createGuestPass = async (
       margin: 2
     })
 
-    // Convert data URL to blob
-    const response = await fetch(qrCodeDataUrl)
-    const blob = await response.blob()
+    // Compute deterministic S3 URL immediately (no upload needed yet)
+    const s3Key = `guestPasses/${projectId}/${passId}.png`
+    const qrCodeUrl = _getS3Url(s3Key)
+    console.log('🔗 Pre-computed S3 URL:', qrCodeUrl)
 
-    // Convert blob to File for S3 upload
-    const qrCodeFile = new File([blob], `${passId}.png`, { type: 'image/png' })
-
-    // Upload QR code to S3 (AWS, NOT Firebase)
-    console.log('☁️ Uploading QR code to S3 (AWS)...')
-    const qrCodeUrl = await fileUploadService.uploadFile(
-      qrCodeFile,
-      `guestPasses/${projectId}/`,
-      `${passId}.png`
-    )
-    console.log('✅ QR code uploaded successfully to S3:', qrCodeUrl)
-    console.log('🔍 QR code URL type check:', {
-      isS3: qrCodeUrl.includes('s3.amazonaws.com') || qrCodeUrl.includes('.s3.'),
-      isFirebase: qrCodeUrl.includes('firebasestorage.googleapis.com') || qrCodeUrl.includes('firebase'),
-      url: qrCodeUrl
-    })
-    
-    // Verify it's an S3 URL, not Firebase
-    if (qrCodeUrl.includes('firebasestorage.googleapis.com') || qrCodeUrl.includes('firebase')) {
-      console.error('❌ ERROR: QR code URL is still pointing to Firebase! This should be an S3 URL.')
-      throw new Error('QR code upload failed - URL is pointing to Firebase instead of S3')
-    }
-
-    // Get user's unit info (user already fetched above for cardId lookup)
+    // Get user's unit info
     const userProjects = user?.projects || []
     const projectInfo = userProjects.find(p => p.projectId === projectId)
     const userUnit = projectInfo?.unit || user?.unit || ''
-    
     console.log(`🏠 Creating pass for unit: ${userUnit}`)
-    
+
     // Prepare pass data
     const passData = {
       id: passId,
-      projectId: projectId,
-      userId: userId,
-      userName: userName,
+      projectId,
+      userId,
+      userName,
       unit: userUnit,
-      guestName: guestName,
-      purpose: purpose,
+      guestName,
+      purpose,
       validFrom: createdAt.getTime(),
       validUntil: validUntil.getTime(),
-      phoneNumber: phoneNumber,
+      phoneNumber,
       createdAt: createdAt.getTime(),
       sentStatus: false,
       sentAt: null,
-      qrCodeUrl: qrCodeUrl,
+      qrCodeUrl,
       used: false,
       usedAt: null,
-      verificationToken: verificationToken,
+      verificationToken,
       cardId: userCardId || null,
       updatedAt: createdAt.getTime(),
       deleted: false
     }
-    
-    console.log('💾 Saving pass to DynamoDB:', {
-      passId,
-      projectId,
-      userId,
-      guestName,
-      purpose,
-      unit: userUnit,
-    })
-    
-    // Save pass to DynamoDB
-    // Note: DynamoDB requires a partition key and sort key
-    // Project tables use parentId as partition key and id as sort key
+
+    console.log('💾 Saving pass to DynamoDB:', { passId, projectId, userId, guestName, purpose, unit: userUnit })
+
+    // Save pass to DynamoDB (awaited — data integrity required)
     await putItem(GUEST_PASSES_TABLE, {
-      parentId: projectId, // Partition key (project tables use parentId)
-      id: passId, // Sort key
-      projectId: projectId, // Also store projectId for reference
+      parentId: projectId,
+      id: passId,
+      projectId,
       ...passData
     })
 
     // Bust the pass-count cache so the next eligibility/status check reflects the new pass.
-    _invalidatePassCountCache(projectId, passData.userId || userId)
+    _invalidatePassCountCache(projectId, userId)
 
     console.log('✅ Pass saved to DynamoDB with ID:', passId)
+
+    // Upload QR image to S3 in the background — URL already stored in DynamoDB.
+    // Parse base64 directly from data URL (avoids a second fetch() round-trip).
+    const base64Part = qrCodeDataUrl.split(',')[1]
+    const binaryStr = atob(base64Part)
+    const bytes = new Uint8Array(binaryStr.length)
+    for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
+    const qrCodeFile = new File([bytes], `${passId}.png`, { type: 'image/png' })
+
+    fileUploadService.uploadFile(qrCodeFile, `guestPasses/${projectId}/`, `${passId}.png`)
+      .then(() => console.log('☁️ QR code uploaded to S3 in background:', qrCodeUrl))
+      .catch(err => console.warn('⚠️ Background S3 upload failed (pass still valid):', err))
 
     console.log('✅ Guest pass created successfully:', passId)
 
     return {
       success: true,
-      passId: passId,
+      passId,
       passRef: passId,
-      qrCodeUrl: qrCodeUrl,
+      qrCodeUrl,
+      qrImageDataUrl: qrCodeDataUrl, // Inline data URL for instant preview — no network wait
       data: {
         id: passId,
-        projectId: projectId,
-        userId: userId,
-        userName: userName,
-        guestName: guestName,
-        purpose: purpose,
+        projectId,
+        userId,
+        userName,
+        guestName,
+        purpose,
         unit: userUnit,
-        validUntil: validUntil,
-        phoneNumber: phoneNumber,
-        createdAt: createdAt,
+        validUntil,
+        phoneNumber,
+        createdAt,
         cardId: userCardId || null,
-        verificationToken: verificationToken,
+        verificationToken,
       },
     }
   } catch (error) {
