@@ -9,7 +9,7 @@
  * Replaces Firebase/Firestore implementation with AWS-only solution
  */
 
-import { putItem, query, getItem, updateItem, scan } from '../aws/dynamodbClient'
+import { putItem, queryAll, getItem, updateItem, scan } from '../aws/dynamodbClient'
 import fileUploadService from '../services/fileUploadService'
 import { projectsUnitGuestPassSettingsService } from '../services/dynamoDBTableServices'
 import QRCode from 'qrcode'
@@ -48,17 +48,105 @@ const getNested = (obj, path) => {
   return path.split('.').reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), obj)
 }
 
+// Session-scoped cache: avoids redundant DynamoDB lookups within a single pass-generation flow.
+const _userRecordCache = new Map()
+
+// Short-lived pass-count cache (60s TTL) so getUserStatus and checkUserEligibility
+// share the same DynamoDB result when called back-to-back during pass generation.
+const _passCountCache = new Map()
+const _PASS_COUNT_TTL_MS = 60_000
+
+const _getCachedPassCounts = (cacheKey) => {
+  const entry = _passCountCache.get(cacheKey)
+  if (!entry) return null
+  if (Date.now() - entry.ts > _PASS_COUNT_TTL_MS) {
+    _passCountCache.delete(cacheKey)
+    return null
+  }
+  return entry.value
+}
+
+const _setCachedPassCounts = (cacheKey, value) => {
+  _passCountCache.set(cacheKey, { ts: Date.now(), value })
+}
+
+// Invalidate cached pass counts for a user/project after a new pass is created.
+const _invalidatePassCountCache = (projectId, userId) => {
+  const key = `${projectId}:${userId}`
+  _passCountCache.delete(key)
+}
+
+/**
+ * Query only this user's passes for the current month using a DynamoDB FilterExpression.
+ * Much cheaper than fetching all project passes and filtering in JS.
+ */
+const _queryUserPassCounts = async (projectId, canonicalUserId, dailyResetAt = null) => {
+  const cacheKey = `${projectId}:${canonicalUserId}`
+  const cached = _getCachedPassCounts(cacheKey)
+  if (cached) return cached
+
+  const now = new Date()
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const firstDayTimestamp = firstDayOfMonth.getTime()
+  const startOfTodayTimestamp = startOfToday.getTime()
+  const effectiveStartOfToday = dailyResetAt && dailyResetAt > startOfTodayTimestamp
+    ? dailyResetAt
+    : startOfTodayTimestamp
+
+  // Push userId + month filter server-side so DynamoDB skips irrelevant items.
+  // (DynamoDB FilterExpression doesn't reduce RCUs but does reduce data transfer.)
+  const passes = await queryAll(GUEST_PASSES_TABLE, {
+    KeyConditionExpression: 'parentId = :parentId',
+    FilterExpression: 'userId = :userId AND createdAt >= :monthStart AND (attribute_not_exists(deleted) OR deleted = :false)',
+    ExpressionAttributeValues: {
+      ':parentId': projectId,
+      ':userId': canonicalUserId,
+      ':monthStart': firstDayTimestamp,
+      ':false': false,
+    },
+    pageSize: 100,
+    maxPages: 20,
+  })
+
+  const usedThisMonth = passes.length
+  const usedToday = passes.filter(p => p.createdAt >= effectiveStartOfToday).length
+
+  const result = { usedThisMonth, usedToday }
+  _setCachedPassCounts(cacheKey, result)
+  return result
+}
+
 // Resolve users robustly across mixed legacy identifiers (id/authUid/email/uid).
+// Strategy: try direct GetItem by 'id' first (O(1)), then fall back to a bounded scan.
 const findUserRecord = async (userIdentifier) => {
   if (!userIdentifier) return null
 
   const target = String(userIdentifier).trim().toLowerCase()
+
+  // 1. Return cached result immediately (avoids repeated DynamoDB calls for same identifier).
+  if (_userRecordCache.has(target)) {
+    return _userRecordCache.get(target)
+  }
+
+  // 2. Try direct point-read: most users have their Cognito sub stored as 'id'.
+  try {
+    const direct = await getItem(USERS_TABLE, { id: userIdentifier.trim() })
+    if (direct) {
+      _userRecordCache.set(target, direct)
+      return direct
+    }
+  } catch {
+    // GetItem failed (e.g. wrong key type) — fall through to scan.
+  }
+
+  // 3. Bounded scan fallback for legacy identifiers that differ from 'id'.
   let lastEvaluatedKey = null
   let scannedCount = 0
-  const maxScanItems = 10000
+  const maxScanItems = 5000
 
   do {
-    const scanOptions = { Limit: 500 }
+    const scanOptions = { Limit: 100 }
     if (lastEvaluatedKey) {
       scanOptions.ExclusiveStartKey = lastEvaluatedKey
     }
@@ -82,16 +170,21 @@ const findUserRecord = async (userIdentifier) => {
       return candidates.includes(target)
     })
 
-    if (match) return match
+    if (match) {
+      _userRecordCache.set(target, match)
+      return match
+    }
 
     lastEvaluatedKey = scanResult?.LastEvaluatedKey || null
-    scannedCount += 500
+    scannedCount += 100
     if (scannedCount >= maxScanItems) {
       console.warn(`⚠️ findUserRecord reached scan cap (${maxScanItems}) for identifier: ${userIdentifier}`)
       break
     }
   } while (lastEvaluatedKey)
 
+  // Cache negative result to avoid repeat scans for the same unknown identifier.
+  _userRecordCache.set(target, null)
   return null
 }
 
@@ -241,38 +334,14 @@ export const checkUserEligibility = async (projectId, userId) => {
 
     monthlyLimit = enforceMonthlyFloor(monthlyLimit, dailyLimit)
 
-    // Count passes created this month/today for this user
+    // Count passes created this month/today for this user (server-side filtered, cached)
     let usedThisMonth = 0
     let usedToday = 0
     try {
-      const now = new Date()
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      
-      // Query passes for this project (partition key is parentId, not projectId)
-      // Then filter by userId and createdAt in application code
-      const passes = await query(GUEST_PASSES_TABLE, {
-        KeyConditionExpression: 'parentId = :parentId',
-        ExpressionAttributeValues: {
-          ':parentId': projectId
-        }
-      })
-      
-      // Filter in application code: userId, createdAt, and not deleted
-      const firstDayTimestamp = firstDayOfMonth.getTime()
-      const startOfTodayTimestamp = startOfToday.getTime()
-      const effectiveStartOfToday = dailyResetAt && dailyResetAt > startOfTodayTimestamp
-        ? dailyResetAt
-        : startOfTodayTimestamp
       const canonicalUserId = user?.id || userId
-      const userPasses = passes.filter(p => p.userId === canonicalUserId && !p.deleted)
-      usedThisMonth = passes.filter(p => 
-        p.userId === canonicalUserId &&
-        p.createdAt >= firstDayTimestamp && 
-        !p.deleted
-      ).length
-      usedToday = userPasses.filter(p => p.createdAt >= effectiveStartOfToday).length
-      
+      const counts = await _queryUserPassCounts(projectId, canonicalUserId, dailyResetAt)
+      usedThisMonth = counts.usedThisMonth
+      usedToday = counts.usedToday
       console.log(`📊 Counted ${usedThisMonth} active passes this month, ${usedToday} today for user ${canonicalUserId}`)
     } catch (error) {
       console.error('❌ Error counting monthly passes:', error)
@@ -502,7 +571,10 @@ export const createGuestPass = async (
       projectId: projectId, // Also store projectId for reference
       ...passData
     })
-    
+
+    // Bust the pass-count cache so the next eligibility/status check reflects the new pass.
+    _invalidatePassCountCache(projectId, passData.userId || userId)
+
     console.log('✅ Pass saved to DynamoDB with ID:', passId)
 
     console.log('✅ Guest pass created successfully:', passId)
@@ -826,33 +898,14 @@ export const getUserStatus = async (userId, projectId = null) => {
     
     monthlyLimit = enforceMonthlyFloor(monthlyLimit, dailyLimit)
 
-    // Get actual usage for this user this month/today
+    // Get actual usage for this user this month/today (server-side filtered, cached)
     let usedThisMonth = 0
     let usedToday = 0
     try {
-      const now = new Date()
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      
-      // Query passes for this project (partition key is parentId, not projectId)
-      // Then filter in application code
-      const passes = await query(GUEST_PASSES_TABLE, {
-        KeyConditionExpression: 'parentId = :parentId',
-        ExpressionAttributeValues: {
-          ':parentId': projectId
-        }
-      })
-      
-      // Filter in application code
-      const firstDayTimestamp = firstDayOfMonth.getTime()
-      const startOfTodayTimestamp = startOfToday.getTime()
-      const effectiveStartOfToday = dailyResetAt && dailyResetAt > startOfTodayTimestamp
-        ? dailyResetAt
-        : startOfTodayTimestamp
       const canonicalUserId = user?.id || userId
-      const userPasses = passes.filter(p => p.userId === canonicalUserId && !p.deleted)
-      usedThisMonth = userPasses.filter(p => p.createdAt >= firstDayTimestamp).length
-      usedToday = userPasses.filter(p => p.createdAt >= effectiveStartOfToday).length
+      const counts = await _queryUserPassCounts(projectId, canonicalUserId, dailyResetAt)
+      usedThisMonth = counts.usedThisMonth
+      usedToday = counts.usedToday
     } catch (error) {
       console.error('❌ Error counting passes:', error)
     }
@@ -889,39 +942,35 @@ export const getUserStatus = async (userId, projectId = null) => {
 export const getGuestPassesForUnit = async (projectId, userId, unit = null) => {
   try {
     console.log(`📥 Loading guest passes for project ${projectId}, unit: ${unit || 'NO UNIT (using userId)'}`)
-    
-    // Query all passes for this project (partition key is parentId)
-    const passes = await query(GUEST_PASSES_TABLE, {
+
+    // Push the unit/userId filter server-side so DynamoDB skips irrelevant items.
+    // Limit to the 50 most recent passes to keep response size bounded.
+    const filterField = unit ? 'unit' : 'userId'
+    const filterValue = unit || userId
+    const passes = await queryAll(GUEST_PASSES_TABLE, {
       KeyConditionExpression: 'parentId = :parentId',
+      FilterExpression: `#filterField = :filterValue AND (attribute_not_exists(deleted) OR deleted = :false)`,
+      ExpressionAttributeNames: { '#filterField': filterField },
       ExpressionAttributeValues: {
-        ':parentId': projectId
-      }
+        ':parentId': projectId,
+        ':filterValue': filterValue,
+        ':false': false,
+      },
+      pageSize: 100,
+      maxPages: 10,
     })
-    
-    console.log(`📊 Found ${passes.length} total passes for project`)
-    
-    // Filter passes:
-    // 1. Not deleted
-    // 2. Match unit (if unit provided) OR match userId (if no unit)
-    // 3. Sort by createdAt descending (newest first)
+
+    console.log(`📊 Found ${passes.length} passes for project (server-side filtered)`)
+
+    // Sort by createdAt descending (newest first) and cap at 50 for display.
     const filteredPasses = passes
-      .filter(p => {
-        // Filter out deleted passes
-        if (p.deleted === true) return false
-        
-        // Filter by unit or userId
-        if (unit) {
-          return p.unit === unit
-        } else {
-          return p.userId === userId
-        }
-      })
+      .filter(p => p.deleted !== true)
       .sort((a, b) => {
-        // Sort by createdAt descending (newest first)
         const aTime = a.createdAt || 0
         const bTime = b.createdAt || 0
         return bTime - aTime
       })
+      .slice(0, 50)
     
     console.log(`✅ Filtered to ${filteredPasses.length} passes for ${unit ? `unit ${unit}` : `user ${userId}`}`)
     

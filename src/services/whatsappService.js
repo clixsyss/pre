@@ -130,8 +130,7 @@ class SharingService {
     return (
       msg.includes('cancel') ||
       msg.includes('aborted') ||
-      msg.includes('share canceled') ||
-      msg.includes('share cancelled') ||
+      msg.includes('dismissed') ||
       name.includes('aborterror')
     )
   }
@@ -180,6 +179,8 @@ class SharingService {
           directory,
         })
 
+        // Deduplicate: prefer the explicit getUri result; only add the writeFile URI if distinct.
+        const seenUris = new Set()
         const candidateUris = [uriResult?.uri, writeResult?.uri]
           .filter(Boolean)
           .flatMap((uri) => {
@@ -190,42 +191,57 @@ class SharingService {
             }
             return variants
           })
+          .filter((uri) => {
+            if (seenUris.has(uri)) return false
+            seenUris.add(uri)
+            return true
+          })
 
-        for (const uri of candidateUris) {
+        // Try only the first valid URI. If the user cancels, stop immediately — do not
+        // iterate further URIs or fall through to the Android URL fallback, which would
+        // re-open the share sheet and create an infinite dismiss → reopen loop.
+        const uri = candidateUris[0]
+        if (!uri) continue
+
+        try {
+          const shareFilePromise = Share.share({
+            title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
+            text: message,
+            files: [uri],
+            dialogTitle: 'Share PRE Group Guest Pass',
+          })
+          if (isAndroid) {
+            await this.withTimeout(shareFilePromise, 15000, 'Android share timed out')
+          } else {
+            await shareFilePromise
+          }
+          return true
+        } catch (shareUriError) {
+          // If the user cancelled, propagate immediately — do not retry with another URI.
+          if (this.isShareCancelled(shareUriError)) throw shareUriError
+
+          // Non-cancel failure: try the url field as a last resort for this directory.
           try {
-            const shareFilePromise = Share.share({
+            const shareUrlPromise = Share.share({
               title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
               text: message,
-              files: [uri],
+              url: uri,
               dialogTitle: 'Share PRE Group Guest Pass',
             })
             if (isAndroid) {
-              await this.withTimeout(shareFilePromise, 15000, 'Android share timed out')
+              await this.withTimeout(shareUrlPromise, 15000, 'Android share timed out')
             } else {
-              await shareFilePromise
+              await shareUrlPromise
             }
             return true
-          } catch (shareUriError) {
-            // Fallback: some Android share targets accept file URI in `url` better than `files`
-            try {
-              const shareUrlPromise = Share.share({
-                title: `PRE Group - Guest Pass for ${validatedPass.guestName}`,
-                text: message,
-                url: uri,
-                dialogTitle: 'Share PRE Group Guest Pass',
-              })
-              if (isAndroid) {
-                await this.withTimeout(shareUrlPromise, 15000, 'Android share timed out')
-              } else {
-                await shareUrlPromise
-              }
-              return true
-            } catch (shareUrlError) {
-              console.warn(`⚠️ Share image failed for URI ${uri}:`, { shareUriError, shareUrlError })
-            }
+          } catch (shareUrlError) {
+            if (this.isShareCancelled(shareUrlError)) throw shareUrlError
+            console.warn(`⚠️ Share image failed for URI ${uri}:`, { shareUriError, shareUrlError })
           }
         }
       } catch (fileWriteError) {
+        // Re-throw cancellation so the caller stops trying.
+        if (this.isShareCancelled(fileWriteError)) throw fileWriteError
         console.warn(`⚠️ Failed writing share file in ${directory}:`, fileWriteError)
       }
     }
@@ -399,6 +415,9 @@ This is an automated message from PRE Group Management System.`
                 isAndroid,
               })
             } catch (fileShareError) {
+              // If the user cancelled inside tryShareNativeImageFile, surface it immediately
+              // so it reaches the isShareCancelled check — not the "failed to share" toast.
+              if (this.isShareCancelled(fileShareError)) throw fileShareError
               console.warn('⚠️ File share failed, falling back to URL share:', fileShareError)
             }
           }
