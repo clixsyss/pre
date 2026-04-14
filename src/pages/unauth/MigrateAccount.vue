@@ -294,6 +294,9 @@ const handleMigration = async () => {
   try {
     console.log('[MigrateAccount] Completing migration for:', formData.email)
     console.log('[MigrateAccount] Migration type:', migrationType)
+    const normalizedEmail = formData.email.trim().toLowerCase()
+    let migrationUserId = null
+    let resolvedCognitoSub = null
 
     if (migrationType === 'NEW_PASSWORD_REQUIRED') {
       // Existing flow: User exists in Cognito but needs to set password
@@ -301,7 +304,7 @@ const handleMigration = async () => {
         challenge.cognitoUser,
         formData.password,
       )
-      const migrationUserId = await resolveMigrationUserId()
+      migrationUserId = await resolveMigrationUserId()
       let cognitoSub =
         signedInAfterPw?.attributes?.sub ||
         signedInAfterPw?.signInUserSession?.idToken?.payload?.sub
@@ -314,6 +317,7 @@ const handleMigration = async () => {
           /* ignore */
         }
       }
+      resolvedCognitoSub = cognitoSub || null
       // Same guarantees as MIGRATION_REQUIRED: set authUid to Cognito sub, clear device binding, bust cache.
       // Without this, Dynamo can still hold a legacy deviceKey while localStorage was cleared → next login
       // looks like a "new" phone against an "old" registered device and prompts device-key reset (often called "passkey").
@@ -327,11 +331,6 @@ const handleMigration = async () => {
         })
         cacheService.delete(`users/${migrationUserId}`)
       }
-      await deviceKeyService.resetDeviceBindingAfterMigration({
-        cognitoSub,
-        email: formData.email.trim(),
-        dynamoUserId: migrationUserId,
-      })
       await optimizedAuthService.signOutAfterMigration()
     } else if (migrationType === 'MIGRATION_REQUIRED') {
       // Migration flow: Instantly confirm user without email verification
@@ -346,8 +345,9 @@ const handleMigration = async () => {
       
       // Always update DynamoDB with Cognito sub — never store email as authUid (breaks device-key lookup)
       const cognitoUserId = migrationResult.cognitoUserId
-      const migrationUserId = await resolveMigrationUserId()
+      migrationUserId = await resolveMigrationUserId()
       const authUidIsCognitoSub = cognitoUserId && !String(cognitoUserId).includes('@')
+      resolvedCognitoSub = authUidIsCognitoSub ? cognitoUserId : null
       if (migrationUserId && authUidIsCognitoSub) {
         console.log('[MigrateAccount] Updating DynamoDB user with authUid...')
         const { updateUser } = await import('src/services/dynamoDBUsersService')
@@ -391,34 +391,44 @@ const handleMigration = async () => {
       console.log('[MigrateAccount] ✅ User migrated and confirmed successfully')
       console.log('[MigrateAccount] User will sign in manually with their new password')
 
-      if (!(registrationStore.firestoreUserId && authUidIsCognitoSub)) {
-        await deviceKeyService.resetDeviceBindingAfterMigration({
-          cognitoSub: authUidIsCognitoSub ? cognitoUserId : undefined,
-          email: formData.email.trim(),
-          dynamoUserId: migrationUserId,
-        })
-      }
     } else {
       throw new Error('Unknown migration type')
+    }
+
+    // Always clear legacy device binding after migration, then auto-login and register this device.
+    await deviceKeyService.resetDeviceBindingAfterMigration({
+      cognitoSub: resolvedCognitoSub || undefined,
+      email: normalizedEmail,
+      dynamoUserId: migrationUserId || undefined,
+    })
+
+    const signInResult = await optimizedAuthService.signInWithEmailAndPassword(
+      normalizedEmail,
+      formData.password,
+    )
+    if (signInResult.challenge === 'NEW_PASSWORD_REQUIRED') {
+      throw new Error('Migration finished but Cognito still requires a new password. Please sign in again.')
+    }
+
+    const signedUser = signInResult.user
+    const cognitoSubAfterLogin =
+      signedUser?.attributes?.sub ||
+      signedUser?.cognitoAttributes?.sub ||
+      signedUser?.username
+    const deviceCheck = await deviceKeyService.handleLoginDeviceCheck(cognitoSubAfterLogin, {
+      lookupEmail: normalizedEmail,
+    })
+    if (!deviceCheck.allowed) {
+      throw new Error(deviceCheck.message || 'Device registration failed after migration.')
     }
 
     // Clear migration challenge before redirecting
     registrationStore.clearMigrationChallenge()
     registrationStore.setPersonalData({ email: '' })
 
-    // Show success message and redirect to sign-in - user will sign in manually
-    notificationStore.showSuccess('Account migrated successfully! Please sign in with your new password.')
-
-    // Always redirect to sign-in - user will sign in manually
-    setTimeout(() => {
-      router.push({
-        path: '/signin',
-        query: {
-          message: 'Account migration completed! Please sign in with your new password.',
-          email: formData.email.trim()
-        }
-      })
-    }, 1500)
+    // Auto-login after successful migration and device registration.
+    notificationStore.showSuccess('Account migrated successfully. Welcome back!')
+    router.push('/home')
   } catch (error) {
     console.error('[MigrateAccount] ❌ Migration error:', error)
     console.error('[MigrateAccount] Error details:', {

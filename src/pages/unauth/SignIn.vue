@@ -559,7 +559,7 @@ const togglePassword = () => {
   showPassword.value = !showPassword.value
 }
 
-// Check if user needs migration (exists in DynamoDB with oldId but no authUid/password)
+// Check if user needs migration (exists in DynamoDB with legacy oldId)
 // This checks BEFORE attempting Cognito login
 const checkForMigration = async (email) => {
   try {
@@ -585,19 +585,17 @@ const checkForMigration = async (email) => {
         console.log('📋 User has oldId:', !!userData.oldId, userData.oldId ? '(value: ' + userData.oldId + ')' : '')
         console.log('📋 User has authUid:', !!userData.authUid, userData.authUid ? '(value: ' + userData.authUid + ')' : '')
         
-        // Check if user has oldId but no authUid (hasn't migrated to Cognito yet)
-        // This means they need to set up a password
-        if (userData.oldId && (!userData.authUid || userData.authUid === '')) {
-          console.log('✅ User needs migration! (has oldId but no authUid)')
+        // Product flow: if user exists and has oldId, always route through migration/reset.
+        // This avoids false "invalid credentials" for legacy records that are not fully normalized.
+        const hasLegacyOldId = Boolean(String(userData.oldId || '').trim())
+        if (hasLegacyOldId) {
+          console.log('✅ User needs migration! (legacy oldId detected)')
           console.log('📋 Storing user data for migration:', userData.id)
           return { needsMigration: true, userId: userData.id, userData }
-        } else if (userData.oldId && userData.authUid) {
-          console.log('ℹ️ User has oldId and authUid - already migrated, no migration needed')
-          return { needsMigration: false }
-        } else {
-          console.log('ℹ️ User has no oldId, no migration needed')
-          return { needsMigration: false }
         }
+
+        console.log('ℹ️ User has no oldId, no migration needed')
+        return { needsMigration: false }
       }
       
       console.log('❌ No user found with that email in DynamoDB')
@@ -1146,7 +1144,7 @@ const handleSignIn = async () => {
 
     // Check if user needs migration (legacy Firebase account)
     // Check for migration on ANY auth error (wrong password, user not found, etc.)
-    // Users with oldId but no authUid need migration regardless of the error type
+    // Legacy users with oldId need migration regardless of the auth error type
     if (errorCode === 'UserNotFoundException' || 
         errorCode === 'NotAuthorizedException' || 
         errorCode === 'auth/wrong-password' ||
