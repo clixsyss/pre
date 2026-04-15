@@ -886,6 +886,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import { useBluetooth } from '../../composables/useBluetooth'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useModalState } from '../../composables/useModalState'
@@ -915,6 +916,8 @@ useFormKeyboard({
 })
 
 const { t, locale } = useI18n()
+const route = useRoute()
+const router = useRouter()
 const notificationStore = useNotificationStore()
 const projectStore = useProjectStore()
 const { openModal, closeModal } = useModalState()
@@ -1436,6 +1439,12 @@ const startGateSession = async (gateKey = activeGateKey.value) => {
   }
 }
 
+const handleShakeOpen = () => {
+  if (!isSessionActive.value) {
+    void startGateSession()
+  }
+}
+
 const quickOpenGate = async (gateKey = activeGateKey.value) => {
   try {
     autoConnecting.value = true
@@ -1554,6 +1563,7 @@ const handleOpenGate = async () => {
 
 onUnmounted(() => {
   clearGateTimers()
+  window.removeEventListener('pre-shake-open-gate', handleShakeOpen)
 })
 
 /**
@@ -2977,6 +2987,16 @@ onMounted(async () => {
     console.error('❌ Error loading passes or checking status:', error)
     passes.value = []
   }
+
+  // Auto-start gate session when arriving from shake gesture
+  if (route.query.fromShake === '1') {
+    handleShakeOpen()
+    // Clean query to avoid re-triggering on next mount/back navigation.
+    void router.replace({ path: route.path, query: { ...route.query, fromShake: undefined } })
+  }
+
+  // Listen for in-place shake-open events while on Access.
+  window.addEventListener('pre-shake-open-gate', handleShakeOpen)
 })
 </script>
 

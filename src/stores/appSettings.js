@@ -2,9 +2,10 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useAppSettingsStore = defineStore('appSettings', () => {
-  // Shake detection settings (commented out for now - default off)
-  const shakeEnabled = ref(false)
-  const shakeSensitivity = ref(15) // Default: 15 (lower = more sensitive)
+  // Shake detection settings
+  // Default: enabled, with a less sensitive default threshold
+  const shakeEnabled = ref(true)
+  const shakeSensitivity = ref(20) // Higher number = requires stronger shake
   
   // Initialize settings from localStorage
   const initSettings = () => {

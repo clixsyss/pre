@@ -279,7 +279,7 @@ import { useAppSettingsStore } from '../stores/appSettings'
 import { useSwipeNavigation } from '../composables/useSwipeNavigation'
 import { useModalState } from '../composables/useModalState'
 import { useGlobalKeyboard } from '../composables/useGlobalKeyboard'
-// import { useShakeDetection } from '../composables/useShakeDetection'
+import { useShakeDetection } from '../composables/useShakeDetection'
 import ViolationNotificationPopup from '../components/ViolationNotificationPopup.vue'
 import SuspensionMessage from '../components/SuspensionMessage.vue'
 import NotificationCenter from '../components/NotificationCenter.vue'
@@ -318,25 +318,54 @@ const {
 // Initialize Android safe area handling
 const { initialize: initializeAndroidSafeArea, cleanup: cleanupAndroidSafeArea } = useAndroidSafeArea()
 
-// Shake detection commented out for now
-// const shakeFeedbackRef = ref(null)
-// const handleShake = () => {
-//   if (!appSettingsStore.shakeEnabled) return
-//   if (route.path !== '/access') {
-//     if (shakeFeedbackRef.value) shakeFeedbackRef.value.show()
-//     setTimeout(() => router.push('/access'), 300)
-//   }
-// }
-// const shakeDetection = ref(null)
-// watch(() => [appSettingsStore.shakeEnabled, appSettingsStore.shakeSensitivity], () => {
-//   if (shakeDetection.value) shakeDetection.value.stopShakeDetection()
-//   if (appSettingsStore.shakeEnabled) {
-//     shakeDetection.value = useShakeDetection(handleShake, {
-//       threshold: appSettingsStore.shakeSensitivity,
-//       timeout: 1000
-//     })
-//   }
-// }, { immediate: true })
+const shakeDetection = ref(null)
+const shakeNavigationInProgress = ref(false)
+
+const handleShake = async () => {
+  if (!appSettingsStore.shakeEnabled) return
+
+  // If already on Access, trigger in-place gate opening.
+  if (route.path === '/access') {
+    window.dispatchEvent(new CustomEvent('pre-shake-open-gate'))
+    return
+  }
+
+  // From anywhere else, navigate to Access and auto-start gate flow there.
+  if (shakeNavigationInProgress.value) return
+  shakeNavigationInProgress.value = true
+  try {
+    await router.push({
+      path: '/access',
+      query: { fromShake: '1' },
+    })
+  } catch (error) {
+    console.warn('Shake navigation failed:', error)
+  } finally {
+    window.setTimeout(() => {
+      shakeNavigationInProgress.value = false
+    }, 600)
+  }
+}
+
+watch(
+  () => [appSettingsStore.shakeEnabled, appSettingsStore.shakeSensitivity],
+  () => {
+    if (shakeDetection.value) {
+      shakeDetection.value.stopShakeDetection()
+      shakeDetection.value = null
+    }
+
+    if (appSettingsStore.shakeEnabled) {
+      // Higher threshold means stronger shake required.
+      const effectiveThreshold = (appSettingsStore.shakeSensitivity || 20) + 5
+      shakeDetection.value = useShakeDetection(handleShake, {
+        threshold: effectiveThreshold,
+        timeout: 1500,
+      })
+    }
+  },
+  { immediate: true },
+)
 
 // Reactive state
 const showProjectSwitcher = ref(false)
