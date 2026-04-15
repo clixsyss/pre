@@ -494,9 +494,29 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
 // Navigation guard
 router.beforeEach(async (to, from, next) => {
   logger.log('Navigation guard - to:', to.path, 'from:', from.path)
+
+  // Fast-path unauth onboarding transitions before any heavy platform/auth checks.
+  // This prevents native startup timing issues from blocking Get Started -> Register/SignIn.
+  if (
+    from.path === '/onboarding' &&
+    (to.path === '/register' || to.path === '/signin' || to.path.startsWith('/register/'))
+  ) {
+    logger.log('Navigation guard: fast-path onboarding transition to', to.path)
+    next()
+    return
+  }
   
-  // Check if running on web (not native app)
-  const isWeb = !window.Capacitor || window.Capacitor.getPlatform() === 'web'
+  // Robust platform detection: Capacitor iOS sometimes reports platform "web"
+  // even when the app is running natively with capacitor:// protocol.
+  const capacitorPlatform = window.Capacitor?.getPlatform?.() || 'unknown'
+  const hasIOSBridge = Boolean(window.webkit?.messageHandlers)
+  const isNativeCapacitor =
+    window.Capacitor?.isNativePlatform?.() === true ||
+    window.location.protocol === 'capacitor:' ||
+    hasIOSBridge ||
+    capacitorPlatform === 'ios' ||
+    capacitorPlatform === 'android'
+  const isWeb = !isNativeCapacitor
   
   // Allow web development mode (when running quasar dev)
   // Only block web in production builds, not during development
@@ -515,19 +535,10 @@ router.beforeEach(async (to, from, next) => {
     }, 5000) // 5 second timeout in development
   }
   
-  // WEB PLATFORM: ONLY allow guest pass pages, block everything else (but allow in development)
+  // WEB PLATFORM: never hard-block navigation here.
+  // A false "web" read during iOS startup can cause black screens after onboarding CTA.
   if (isWeb && !isDevelopment) {
-    if (to.path.startsWith('/guest-pass/')) {
-      logger.log('Navigation guard: Guest pass page on WEB - allowing')
-      next()
-      return
-    }
-    
-    // Block all other routes on web (production only)
-    logger.log('Navigation guard: Blocking non-guest-pass route on WEB')
-    logger.log('⛔ This app is only available on iOS/Android')
-    next(false) // Cancel navigation
-    return
+    logger.warn('Navigation guard: web platform detected in production, continuing without hard block')
   }
   
   // In development mode, allow all routes on web (continue to normal guard logic)

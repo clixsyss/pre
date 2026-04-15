@@ -153,6 +153,40 @@ export default defineBoot(async ({ app }) => {
   app.config.globalProperties.$googleProvider = googleProvider
   app.config.globalProperties.$isNative = isNative
   app.config.globalProperties.$platform = platform
+
+  // Global runtime diagnostics for native black-screen investigation.
+  // Keep logging-only to avoid changing behavior while surfacing root causes.
+  if (typeof window !== 'undefined' && !window.__preRuntimeErrorHooksInstalled) {
+    window.__preRuntimeErrorHooksInstalled = true
+    window.addEventListener('error', (event) => {
+      console.error('[RuntimeError][window.error]', {
+        message: event?.message,
+        source: event?.filename,
+        line: event?.lineno,
+        column: event?.colno,
+        stack: event?.error?.stack,
+      })
+    })
+    window.addEventListener('unhandledrejection', (event) => {
+      const reason = event?.reason
+      console.error('[RuntimeError][unhandledrejection]', {
+        message: reason?.message || String(reason),
+        stack: reason?.stack,
+        code: reason?.code,
+        name: reason?.name,
+      })
+    })
+  }
+
+  app.config.errorHandler = (err, instance, info) => {
+    console.error('[RuntimeError][vue]', {
+      info,
+      message: err?.message || String(err),
+      stack: err?.stack,
+      route: window?.location?.href,
+      component: instance?.type?.name || instance?.type?.__name || 'unknown',
+    })
+  }
   
   console.log('Firebase Boot: Complete ✅')
 })

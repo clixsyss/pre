@@ -14,10 +14,15 @@ export const setI18nInstance = (i18n) => {
 }
 
 export const useSettingsStore = defineStore('settings', () => {
+  const normalizeLanguage = (language) => {
+    const lang = String(language || '').toLowerCase()
+    return lang.startsWith('ar') ? 'ar' : 'en-US'
+  }
+
   // State - safely access localStorage
   const getStoredLanguage = () => {
     if (typeof window !== 'undefined' && localStorage) {
-      return localStorage.getItem('app-language') || 'en-US'
+      return normalizeLanguage(localStorage.getItem('app-language') || 'en-US')
     }
     return 'en-US'
   }
@@ -31,12 +36,12 @@ export const useSettingsStore = defineStore('settings', () => {
   
   const currentLanguage = ref(getStoredLanguage())
   const currentTheme = ref(getStoredTheme())
-  const isRTL = ref(currentLanguage.value === 'ar-SA')
+  const isRTL = ref(currentLanguage.value.startsWith('ar'))
 
   // Computed properties
   const languageOptions = computed(() => [
     { value: 'en-US', label: 'English', flag: '🇺🇸' },
-    { value: 'ar-SA', label: 'العربية', flag: '🇸🇦' }
+    { value: 'ar', label: 'العربية', flag: '🇸🇦' }
   ])
 
   const themeOptions = computed(() => [
@@ -46,32 +51,60 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Actions
   const setLanguage = (language, skipReload = false) => {
+    const resolvedLanguage = normalizeLanguage(language)
+    const isSameLanguage = currentLanguage.value === resolvedLanguage
+
+    // Prevent unnecessary work when language is unchanged.
+    // On some iOS builds, repeatedly re-applying locale packs can throw native tokenizer errors.
+    if (isSameLanguage && skipReload) {
+      isRTL.value = resolvedLanguage.startsWith('ar')
+      if (typeof document !== 'undefined') {
+        document.documentElement.setAttribute('dir', isRTL.value ? 'rtl' : 'ltr')
+        document.documentElement.setAttribute('lang', isRTL.value ? 'ar' : 'en')
+      }
+      return
+    }
+
     // Prevent infinite reload - check if language is actually changing
-    if (currentLanguage.value === language && !skipReload) {
+    if (isSameLanguage && !skipReload) {
       console.log('⏭️ Language already set to:', language)
       return
     }
     
-    console.log('🌍 Changing language from', currentLanguage.value, 'to', language)
+    console.log('🌍 Changing language from', currentLanguage.value, 'to', resolvedLanguage)
     
-    currentLanguage.value = language
-    isRTL.value = language === 'ar-SA'
+    currentLanguage.value = resolvedLanguage
+    isRTL.value = resolvedLanguage.startsWith('ar')
     
     // Save to localStorage
     if (typeof window !== 'undefined' && localStorage) {
-      localStorage.setItem('app-language', language)
+      try {
+        localStorage.setItem('app-language', resolvedLanguage)
+      } catch (error) {
+        console.warn('Failed to persist language to localStorage:', error)
+      }
     }
     
     // Update Vue I18n locale
     if (i18nInstance) {
-      i18nInstance.global.locale.value = language
+      try {
+        i18nInstance.global.locale.value = resolvedLanguage
+      } catch (error) {
+        if (!(error?.code === 10 && error?.domain === 'tokenizer')) {
+          console.warn('Failed to apply i18n locale:', error)
+        }
+      }
     }
     
-    // Update Quasar language pack
-    if (isRTL.value) {
-      Quasar.lang.set(langAr)
-    } else {
-      Quasar.lang.set(langEn)
+    // Update Quasar language pack (native-safe)
+    try {
+      if (isRTL.value) {
+        Quasar.lang.set(langAr)
+      } else {
+        Quasar.lang.set(langEn)
+      }
+    } catch (error) {
+      console.warn('Failed to apply Quasar language pack:', error)
     }
     
     // Update document direction and language
@@ -119,7 +152,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   const toggleLanguage = () => {
-    const newLanguage = currentLanguage.value === 'en-US' ? 'ar-SA' : 'en-US'
+    const newLanguage = currentLanguage.value === 'en-US' ? 'ar' : 'en-US'
     setLanguage(newLanguage)
   }
 

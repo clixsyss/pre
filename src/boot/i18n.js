@@ -9,9 +9,13 @@ import langEn from 'quasar/lang/en-US'
 import langAr from 'quasar/lang/ar'
 
 export default defineBoot(({ app }) => {
+  const normalizeLanguage = (language) => (String(language || '').toLowerCase().startsWith('ar') ? 'ar' : 'en-US')
+
   // Get saved language from localStorage or default to 'en-US'
   // Only access localStorage if we're in a browser environment
-  const savedLanguage = (typeof window !== 'undefined' && localStorage.getItem('app-language')) || 'en-US'
+  const savedLanguage = normalizeLanguage(
+    (typeof window !== 'undefined' && localStorage.getItem('app-language')) || 'en-US',
+  )
   
   const i18n = createI18n({
     locale: savedLanguage,
@@ -31,13 +35,17 @@ export default defineBoot(({ app }) => {
   setI18nInstance(i18n)
   
   // Set initial RTL direction based on saved language
-  const isRTL = savedLanguage === 'ar-SA' || savedLanguage.startsWith('ar')
+  const isRTL = savedLanguage.startsWith('ar')
   
-  // Set Quasar language pack
-  if (isRTL) {
-    Quasar.lang.set(langAr)
-  } else {
-    Quasar.lang.set(langEn)
+  // Set Quasar language pack (guard against native locale tokenizer issues)
+  try {
+    if (isRTL) {
+      Quasar.lang.set(langAr)
+    } else {
+      Quasar.lang.set(langEn)
+    }
+  } catch (error) {
+    console.warn('[i18n boot] Failed to apply Quasar language pack:', error)
   }
   
   // Set HTML dir attribute

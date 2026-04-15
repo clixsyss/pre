@@ -384,7 +384,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, onActivated, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import firestoreService from '../../services/firestoreService'
 import { smartMirrorService } from '../../services/smartMirrorService'
@@ -409,6 +409,7 @@ useFormKeyboard({
 })
 
 const router = useRouter()
+const route = useRoute()
 const notificationStore = useNotificationStore()
 const { t } = useI18n()
 const loading = ref(false)
@@ -468,8 +469,13 @@ const loadAvailableProjects = async () => {
     console.log('[SignIn] ✅ Fetched', fetchedProjects.length, 'projects from DynamoDB')
     
     // Sort projects by name (don't filter by status - show all projects like Register page)
-    availableProjects.value = fetchedProjects
-      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    availableProjects.value = fetchedProjects.sort((a, b) => {
+      const nameA = String(a.name || '').toLowerCase()
+      const nameB = String(b.name || '').toLowerCase()
+      if (nameA < nameB) return -1
+      if (nameA > nameB) return 1
+      return 0
+    })
     
     console.log('✅ Loaded', availableProjects.value.length, 'projects:', availableProjects.value.map(p => p.name))
   } catch (error) {
@@ -497,6 +503,11 @@ const openDeviceKeyResetModal = async () => {
 }
 
 onMounted(() => {
+  const emailFromQuery = route.query?.email
+  if (typeof emailFromQuery === 'string' && emailFromQuery.trim()) {
+    formData.email = emailFromQuery.trim().toLowerCase()
+  }
+
   // Check if we should show the device key error modal
   checkAndShowDeviceKeyError()
   
@@ -1888,11 +1899,6 @@ const handleDeviceKeyResetSubmit = async () => {
   margin-left: 5px;
 }
 
-[dir='rtl'] .signup-link {
-  margin-left: 0;
-  margin-right: 5px;
-}
-
 .device-key-reset-link {
   text-align: center;
   margin-top: 20px;
@@ -1952,28 +1958,6 @@ const handleDeviceKeyResetSubmit = async () => {
   margin: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease-out;
-}
-
-/* Arabic RTL layout hardening */
-[dir='rtl'] .signin-page {
-  direction: rtl;
-}
-
-[dir='rtl'] .form-label,
-[dir='rtl'] .forgot-link,
-[dir='rtl'] .reset-link,
-[dir='rtl'] .modal-header h3,
-[dir='rtl'] .modal-body p {
-  text-align: right;
-}
-
-[dir='rtl'] .form-input {
-  text-align: right;
-}
-
-[dir='rtl'] .form-options,
-[dir='rtl'] .checkbox-wrapper {
-  flex-direction: row-reverse;
 }
 
 .modal-header {

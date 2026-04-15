@@ -14,9 +14,9 @@
             stroke-linejoin="round" />
         </svg>
       </button>
-      <h1 class="page-title">{{ $t('registration') }}</h1>
+      <h1 class="page-title">Registration</h1>
       <div class="header-actions">
-        <button @click="goToSignIn" class="signin-header-btn">{{ $t('signInButton') }}</button>
+        <button @click="goToSignIn" class="signin-header-btn">Sign In</button>
       </div>
     </div>
 
@@ -44,7 +44,7 @@
               stroke-linejoin="round" />
           </svg>
         </div>
-        <span class="step-label">{{ $t('personal') }}</span>
+        <span class="step-label">Personal</span>
       </div>
 
       <!-- Property Step -->
@@ -67,7 +67,7 @@
               stroke-linejoin="round" />
           </svg>
         </div>
-        <span class="step-label">{{ $t('property') }}</span>
+        <span class="step-label">Property</span>
       </div>
     </div>
 
@@ -78,16 +78,16 @@
 
         <form @submit.prevent="handlePersonalSubmit" class="form">
           <div class="form-group">
-            <label for="email" class="form-label">{{ $t('emailField') }}</label>
+            <label for="email" class="form-label">E-mail</label>
             <input id="email" v-model="personalForm.email" type="email" class="form-input"
-              :placeholder="$t('emailPlaceholderReg')" required />
+              placeholder="Example@gmail.com" required />
           </div>
 
           <div class="form-group">
-            <label for="password" class="form-label">{{ $t('passwordField') }}</label>
+            <label for="password" class="form-label">Password</label>
             <div class="password-input-wrapper">
               <input id="password" v-model="personalForm.password" :type="showPassword ? 'text' : 'password'" class="form-input"
-                :placeholder="$t('passwordPlaceholder')" required minlength="8" />
+                placeholder="Create a strong password" required minlength="8" />
               <button type="button" @click="togglePassword" class="password-toggle">
                 <svg
                   v-if="showPassword"
@@ -158,7 +158,7 @@
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
                   </svg>
                   </span>
-                  <span class="requirement-text">{{ $t('passwordReqMinLength') }}</span>
+                  <span class="requirement-text">At least 8 characters</span>
                 </li>
                 <li :class="{ valid: passwordRequirements.hasUppercase }">
                   <span class="requirement-icon">
@@ -169,7 +169,7 @@
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
                   </svg>
                   </span>
-                  <span class="requirement-text">{{ $t('passwordReqUpper') }}</span>
+                  <span class="requirement-text">One uppercase letter</span>
                 </li>
                 <li :class="{ valid: passwordRequirements.hasLowercase }">
                   <span class="requirement-icon">
@@ -180,7 +180,7 @@
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
                   </svg>
                   </span>
-                  <span class="requirement-text">{{ $t('passwordReqLower') }}</span>
+                  <span class="requirement-text">One lowercase letter</span>
                 </li>
                 <li :class="{ valid: passwordRequirements.hasNumber }">
                   <span class="requirement-icon">
@@ -191,7 +191,7 @@
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
                   </svg>
                   </span>
-                  <span class="requirement-text">{{ $t('passwordReqNumber') }}</span>
+                  <span class="requirement-text">One number</span>
                 </li>
                 <li :class="{ valid: passwordRequirements.hasSpecialChar }">
                   <span class="requirement-icon">
@@ -202,17 +202,17 @@
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
                   </svg>
                   </span>
-                  <span class="requirement-text">{{ $t('passwordReqSpecial') }}</span>
+                  <span class="requirement-text">One special character (!@#$%^&*)</span>
                 </li>
               </ul>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="confirmPassword" class="form-label">{{ $t('confirmPasswordField') }}</label>
+            <label for="confirmPassword" class="form-label">Confirm Password</label>
             <div class="password-input-wrapper">
               <input id="confirmPassword" v-model="personalForm.confirmPassword" :type="showConfirmPassword ? 'text' : 'password'" class="form-input"
-                :placeholder="$t('confirmPasswordPlaceholder')" required />
+                placeholder="Confirm your password" required />
               <button type="button" @click="toggleConfirmPassword" class="password-toggle">
                 <svg
                   v-if="showConfirmPassword"
@@ -274,8 +274,8 @@
           </div>
 
           <button type="submit" class="proceed-btn" :disabled="loading || !canProceed">
-            <span v-if="loading">{{ $t('processing') }}</span>
-            <span v-else>{{ $t('proceed') }}</span>
+            <span v-if="loading">Processing...</span>
+            <span v-else>Proceed</span>
           </button>
         </form>
 
@@ -284,14 +284,14 @@
         <!-- Navigation Options -->
         <div class="step-navigation">
           <div class="nav-divider">
-            <span>{{ $t('orDivider') }}</span>
+            <span>or</span>
           </div>
           <div class="nav-options">
             <a @click="goToSignIn" class="nav-link">
-              {{ $t('alreadyHaveAccount') }}
+              Already have an account? Sign In
             </a>
             <a @click="goToOnboarding" class="nav-link">
-              {{ $t('backToOnboarding') }}
+              Back to Onboarding
             </a>
           </div>
         </div>
@@ -332,8 +332,8 @@
         <!-- Project Selection Form -->
         <form @submit.prevent="handlePropertySubmit" class="form">
           <div class="step-header">
-            <h3 class="step-title">{{ $t('propertySelection') }}</h3>
-            <p class="step-description">{{ $t('propertySelectionDesc') }}</p>
+            <h3 class="step-title">Property Selection</h3>
+            <p class="step-description">Select your primary property and optionally add additional properties.</p>
           </div>
 
           <!-- Primary Property Section -->
@@ -345,12 +345,12 @@
                     stroke-linejoin="round" />
                 </svg>
               </div>
-              <h4 class="section-title">{{ $t('primaryProperty') }}</h4>
+              <h4 class="section-title">Primary Property</h4>
             </div>
 
             <!-- Project Selection -->
             <div class="form-group">
-              <label for="project" class="form-label">{{ $t('projectLabel') }}</label>
+              <label for="project" class="form-label">Project *</label>
               <div class="select-wrapper">
                 <select 
                   id="project" 
@@ -360,23 +360,23 @@
                   :disabled="loading || availableProjectsSorted.length === 0"
                   @change="onProjectChange"
                 >
-                  <option value="" disabled>{{ $t('selectProjectForReset') }}</option>
+                  <option value="" disabled>Select Project</option>
                   <option 
                     v-for="project in availableProjectsSorted" 
                     :key="project.id || project.projectId || project._id || project.name" 
                     :value="project.id || project.projectId || project._id"
                   >
-                    {{ project.name || $t('unnamedProject') }} - {{ project.type || $t('notAvailable') }} ({{ project.location || $t('notAvailable') }})
+                    {{ project.name || 'Unnamed Project' }} - {{ project.type || 'N/A' }} ({{ project.location || 'N/A' }})
                   </option>
                 </select>
                 <!-- Debug: Show project count -->
                 <div v-if="availableProjectsSorted.length === 0" style="color: red; margin-top: 5px;">
-                  {{ $t('noProjectsLoadedDebug') }}
+                  ⚠️ No projects loaded. Check console for errors.
                 </div>
                 <div class="select-arrow"></div>
               </div>
               <p v-if="availableProjectsSorted.length === 0 && !loading" class="form-help-text" style="color: #666; font-size: 0.85rem; margin-top: 5px;">
-                {{ $t('loadingProjects') }}
+                Loading projects...
               </p>
             </div>
 
@@ -430,7 +430,7 @@
                   <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round" />
                 </svg>
-                {{ $t('addThisProperty') }}
+                Add This Property
               </button>
             </div>
           </div>
@@ -445,8 +445,8 @@
                     stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
-              <h4 class="section-title">{{ $t('additionalProperties') }}</h4>
-              <p class="section-subtitle">{{ $t('additionalPropertiesDesc') }}</p>
+              <h4 class="section-title">Additional Properties (Optional)</h4>
+              <p class="section-subtitle">You can add more properties if you own or have access to multiple units</p>
             </div>
 
             <div class="projects-list">
@@ -474,7 +474,7 @@
                     </span>
                   </div>
                 </div>
-                <button type="button" @click="removeProject(index)" class="remove-project-btn" :title="$t('removeProperty')">
+                <button type="button" @click="removeProject(index)" class="remove-project-btn" title="Remove property">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                       stroke-linejoin="round" />
@@ -491,13 +491,13 @@
                   <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round" />
                 </svg>
-                {{ $t('addAnotherProperty') }}
+                Add Another Property
               </button>
 
               <!-- Additional Property Form -->
               <div v-if="showAddAnotherForm" class="additional-property-form">
                 <div class="form-group">
-                  <label for="additional-project" class="form-label">{{ $t('projectLabel') }}</label>
+                  <label for="additional-project" class="form-label">Project</label>
                   <div class="select-wrapper">
                     <select 
                       id="additional-project" 
@@ -506,13 +506,13 @@
                       :disabled="loading || availableProjectsSorted.length === 0"
                       @change="onAdditionalProjectChange"
                     >
-                      <option value="" disabled>{{ $t('selectProjectForReset') }}</option>
+                      <option value="" disabled>Select Project</option>
                       <option 
                         v-for="project in availableProjectsSorted" 
                         :key="project.id || project.projectId || project._id || project.name" 
                         :value="project.id || project.projectId || project._id"
                       >
-                        {{ project.name || $t('unnamedProject') }} {{ project.location || $t('notAvailable') }}
+                        {{ project.name || 'Unnamed Project' }} {{ project.location || 'N/A' }}
                       </option>
                     </select>
                     <div class="select-arrow"></div>
@@ -567,10 +567,10 @@
                       <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round" />
                     </svg>
-                    {{ $t('addProperty') }}
+                    Add Property
                   </button>
                   <button type="button" @click="cancelAdditionalProperty" class="cancel-btn">
-                    {{ $t('cancel') }}
+                    Cancel
                   </button>
                 </div>
               </div>
@@ -579,11 +579,11 @@
 
           <div class="form-actions">
             <button type="button" @click="goToPreviousStep" class="back-action-btn">
-              {{ $t('backButton') }}
+              Back
             </button>
             <button type="submit" class="verify-btn" :disabled="loading || !canProceedToNext">
-              <span v-if="loading">{{ $t('saving') }}</span>
-              <span v-else>{{ $t('completeRegistration') }}</span>
+              <span v-if="loading">Saving...</span>
+              <span v-else>Complete Registration</span>
             </button>
           </div>
         </form>
@@ -593,15 +593,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 import { fetchProjects } from '../../services/dynamoDBProjectsService'
-import { getUnitsByProject } from '../../services/dynamoDBUnitsService'
-import { projectsUnitsService } from '../../services/dynamoDBTableServices'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import { signupDraftService } from '../../services/signupDraftService'
 import {
@@ -621,7 +618,6 @@ defineOptions({
 })
 
 const router = useRouter()
-const { t } = useI18n()
 const registrationStore = useRegistrationStore()
 const notificationStore = useNotificationStore()
 const currentStep = ref('personal')
@@ -651,6 +647,7 @@ const propertyForm = reactive({
 
 const availableProjects = ref([])
 const availableProjectsSorted = ref([]) // Sorted with zero-unit projects at bottom
+const hasLoadedProjects = ref(false)
 const selectedProjects = ref([])
 const showAddAnotherForm = ref(false)
 
@@ -663,6 +660,7 @@ const additionalPropertyForm = reactive({
 // Function to fetch available projects from DynamoDB with units count
 const fetchAvailableProjects = async () => {
   try {
+    if (hasLoadedProjects.value) return
     console.log('🚀 [Register] START: Fetching projects from DynamoDB...')
     
     // Fetch all projects from DynamoDB - THIS IS THE CRITICAL PART
@@ -685,77 +683,35 @@ const fetchAvailableProjects = async () => {
     // Set projects immediately so they show up right away
     availableProjects.value = projectsWithUnits
     availableProjectsSorted.value = [...projectsWithUnits].sort((a, b) => {
-      return (a.name || '').localeCompare(b.name || '')
+      const nameA = String(a.name || '').toLowerCase()
+      const nameB = String(b.name || '').toLowerCase()
+      if (nameA < nameB) return -1
+      if (nameA > nameB) return 1
+      return 0
     })
     
     console.log(`✅ [Register] Set ${availableProjectsSorted.value.length} projects in dropdown`)
     console.log('📋 [Register] Available projects:', availableProjectsSorted.value.map(p => p.name))
     
-    // Now fetch units count in background (non-blocking)
-    // This doesn't prevent projects from showing
-    projects.forEach(async (project) => {
-      try {
-        const projectId = project.id || project.projectId || project._id || project.ID
-        if (!projectId) return
-        
-        // Try to get units count (silently fail if it doesn't work)
-        try {
-          const units = await getUnitsByProject(projectId, { limit: 1000 })
-          const unitsCount = units?.length || 0
-          
-          // Update the project in the list
-          const projectIndex = availableProjects.value.findIndex(p => 
-            (p.id || p.projectId || p._id) === projectId
-          )
-          if (projectIndex >= 0) {
-            availableProjects.value[projectIndex].unitsCount = unitsCount
-            // Update sorted list too
-            const sortedIndex = availableProjectsSorted.value.findIndex(p => 
-              (p.id || p.projectId || p._id) === projectId
-            )
-            if (sortedIndex >= 0) {
-              availableProjectsSorted.value[sortedIndex].unitsCount = unitsCount
-            }
-          }
-        } catch {
-          // Try alternative method
-          try {
-            const alternativeUnits = await projectsUnitsService.getUnitsByProject(projectId, { limit: 1000 })
-            const unitsCount = alternativeUnits?.length || 0
-            
-            const projectIndex = availableProjects.value.findIndex(p => 
-              (p.id || p.projectId || p._id) === projectId
-            )
-            if (projectIndex >= 0) {
-              availableProjects.value[projectIndex].unitsCount = unitsCount
-              const sortedIndex = availableProjectsSorted.value.findIndex(p => 
-                (p.id || p.projectId || p._id) === projectId
-              )
-              if (sortedIndex >= 0) {
-                availableProjectsSorted.value[sortedIndex].unitsCount = unitsCount
-              }
-            }
-          } catch {
-            // Silently fail - units count stays 0
-          }
-        }
-      } catch {
-        // Silently fail - project still shows
-      }
-    })
+    hasLoadedProjects.value = true
+    
+    // IMPORTANT:
+    // Do not prefetch units for all projects here. Some projects have thousands of
+    // units, and parallel prefetching can freeze/crash mobile webviews.
+    // Units are fetched lazily only when a project is selected in the dropdown.
     
   } catch (error) {
     console.error('❌ [Register] CRITICAL ERROR fetching projects:', error)
     console.error('❌ [Register] Error message:', error.message)
     console.error('❌ [Register] Error stack:', error.stack)
-    notificationStore.showError(t('regFailedLoadProjects'))
+    notificationStore.showError('Failed to load projects. Please try again later.')
   }
 }
 
 // Function to get project name by ID
 const getProjectName = (projectId) => {
   const project = availableProjects.value.find(p => p.id === projectId)
-  return project ? `${project.name} - ${project.type}` : t('notAvailable')
+  return project ? `${project.name} - ${project.type}` : 'N/A'
 }
 
 // Function to add a project to the selected projects list
@@ -769,16 +725,16 @@ const addProjectToSelection = () => {
     propertyForm.selectedProject = ''
     propertyForm.unit = ''
     propertyForm.role = ''
-    notificationStore.showSuccess(t('regProjectAdded'))
+    notificationStore.showSuccess('Project added to selection!')
   } else {
-    notificationStore.showError(t('regProjectUnitRequired'))
+    notificationStore.showError('Please select a project and enter a unit number/name.')
   }
 }
 
 // Function to remove a project from the selected projects list
 const removeProject = (index) => {
   selectedProjects.value.splice(index, 1)
-  notificationStore.showSuccess(t('regProjectRemoved'))
+  notificationStore.showSuccess('Project removed from selection!')
 }
 
 // Function to handle project selection change
@@ -814,9 +770,9 @@ const addAdditionalProperty = () => {
     additionalPropertyForm.role = ''
     showAddAnotherForm.value = false
 
-    notificationStore.showSuccess(t('regAdditionalPropertyAdded'))
+    notificationStore.showSuccess('Additional property added!')
   } else {
-    notificationStore.showError(t('regAdditionalPropertyFieldsRequired'))
+    notificationStore.showError('Please fill in all fields for the additional property.')
   }
 }
 
@@ -854,7 +810,7 @@ onMounted(() => {
     if (draft.step === 'property' || draft.step === 'details') {
       currentStep.value = 'property'
       if (draft.step === 'property') {
-        notificationStore.showInfo(t('regWelcomeBackFinishProperty'))
+        notificationStore.showInfo('Welcome back! Please select your property to finish registration.')
       }
     }
   } else {
@@ -872,8 +828,19 @@ onMounted(() => {
     currentStep.value = 'property'
   }
 
-  fetchAvailableProjects()
+  if (currentStep.value === 'property') {
+    fetchAvailableProjects()
+  }
 })
+
+watch(
+  () => currentStep.value,
+  (step) => {
+    if (step === 'property' && !hasLoadedProjects.value) {
+      fetchAvailableProjects()
+    }
+  },
+)
 
 const goToPreviousStep = () => {
   if (currentStep.value === 'property') {
@@ -932,19 +899,19 @@ const handlePersonalSubmit = async () => {
   if (loading.value) return
 
   if (!personalForm.email) {
-    notificationStore.showError(t('regEnterEmail'))
+    notificationStore.showError('Please enter your email address')
     return
   }
   if (!personalForm.password) {
-    notificationStore.showError(t('regEnterPassword'))
+    notificationStore.showError('Please enter a password')
     return
   }
   if (personalForm.password.length < 8) {
-    notificationStore.showError(t('regPasswordMinLength'))
+    notificationStore.showError('Password must be at least 8 characters long')
     return
   }
   if (personalForm.password !== personalForm.confirmPassword) {
-    notificationStore.showError(t('passwordMismatch'))
+    notificationStore.showError('Passwords do not match')
     return
   }
 
@@ -961,8 +928,12 @@ const handlePersonalSubmit = async () => {
     const dynamoUser = await getUserByEmail(normalizedEmail)
 
     if (dynamoUser) {
-      notificationStore.showError(t('regEmailExistsSignInInstead'))
+      notificationStore.showInfo('An account with this email already exists. Please sign in instead.')
       loading.value = false
+      router.push({
+        path: '/signin',
+        query: { email: normalizedEmail }
+      })
       return
     }
 
@@ -982,11 +953,11 @@ const handlePersonalSubmit = async () => {
     router.push('/register/personal-details')
   } catch (error) {
     console.error('[Register] ❌ Error in handlePersonalSubmit:', error)
-    let errorMessage = t('regFailedTryAgain')
+    let errorMessage = 'Registration failed. Please try again.'
     if (error?.code === 'auth/invalid-email' || error?.code === 'InvalidParameterException') {
-      errorMessage = t('invalidEmail')
+      errorMessage = 'Invalid email address'
     } else if (error?.code === 'auth/network-request-failed' || error?.code === 'NetworkError') {
-      errorMessage = t('regNetworkError')
+      errorMessage = 'Network error. Please check your connection'
     } else if (error?.message) {
       errorMessage = error.message
     }
@@ -1000,7 +971,7 @@ const handlePropertySubmit = async () => {
   if (loading.value) return
 
   if (selectedProjects.value.length === 0) {
-    notificationStore.showError(t('regSelectAtLeastOneProject'))
+    notificationStore.showError('Please select at least one project.')
     return
   }
 
@@ -1016,7 +987,7 @@ const handlePropertySubmit = async () => {
     const password = signupDraftService.getPassword()
 
     if (!email || !password) {
-      throw new Error(t('regSessionExpired'))
+      throw new Error('Registration session expired. Please start over.')
     }
 
     console.log('[Register] STEP A: Creating Cognito account...')
@@ -1034,7 +1005,11 @@ const handlePropertySubmit = async () => {
         console.warn('[Register] ⚠️ Cognito UsernameExistsException — recovering orphaned account')
         const recovered = await optimizedAuthService.recoverOrphanedCognitoUser(email, password)
         if (!recovered) {
-          notificationStore.showError(t('regEmailExistsSignIn'))
+          notificationStore.showInfo('An account with this email already exists. Please sign in.')
+          router.push({
+            path: '/signin',
+            query: { email }
+          })
           return
         }
         userSub = recovered.userSub
@@ -1122,7 +1097,7 @@ const handlePropertySubmit = async () => {
     }
 
     if (dynamoResult.status === 'rejected') {
-      throw new Error(t('regFailedSaveRegistration'))
+      throw new Error('Failed to save your registration. Please try again.')
     }
 
     console.log('[Register] ✅ Registration saved to DynamoDB')
@@ -1131,11 +1106,11 @@ const handlePropertySubmit = async () => {
     signupDraftService.clear()
     registrationStore.setUserDetails({ password: '', authToken: '', refreshToken: '' })
 
-    notificationStore.showSuccess(t('regCompleted'))
+    notificationStore.showSuccess('Registration completed!')
     showPendingModal.value = true
   } catch (error) {
     console.error('[Register] ❌ Property submit error:', error)
-    notificationStore.showError(error?.message || t('regSomethingWentWrong'))
+    notificationStore.showError(error?.message || 'Something went wrong saving your registration. Please try again.')
   } finally {
     loading.value = false
   }
@@ -1908,58 +1883,6 @@ select.form-input:disabled {
   max-height: 300px;
   overflow-y: auto;
   padding-right: 10px;
-}
-
-/* Arabic RTL layout hardening */
-[dir='rtl'] .register-page {
-  direction: rtl;
-}
-
-[dir='rtl'] .step-title,
-[dir='rtl'] .step-description,
-[dir='rtl'] .form-label,
-[dir='rtl'] .section-title,
-[dir='rtl'] .section-subtitle,
-[dir='rtl'] .project-item-info {
-  text-align: right;
-}
-
-[dir='rtl'] .form-input,
-[dir='rtl'] .custom-select {
-  text-align: right;
-}
-
-[dir='rtl'] .custom-select {
-  padding-right: 15px;
-  padding-left: 45px;
-}
-
-[dir='rtl'] .select-arrow {
-  right: auto;
-  left: 15px;
-}
-
-[dir='rtl'] .primary-property,
-[dir='rtl'] .additional-properties,
-[dir='rtl'] .primary-property-summary {
-  border-left: none;
-}
-
-[dir='rtl'] .primary-property {
-  border-right: 4px solid #AF1E23;
-}
-
-[dir='rtl'] .additional-properties {
-  border-right: 4px solid #AF1E23;
-}
-
-[dir='rtl'] .primary-property-summary {
-  border-right: 4px solid #4CAF50;
-}
-
-[dir='rtl'] .projects-list {
-  padding-right: 0;
-  padding-left: 10px;
 }
 
 .project-item {

@@ -13,24 +13,27 @@ import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb'
 // In Vite, env vars must be prefixed with VITE_ to be accessible in browser
 // IMPORTANT: Never hardcode credentials. Always use environment variables.
 
-const AWS_REGION = 
-  process.env.AWS_REGION || 
-  process.env.VITE_AWS_REGION || 
-  import.meta.env.AWS_REGION || 
-  import.meta.env.VITE_AWS_REGION || 
+const nodeEnv = typeof process !== 'undefined' && process?.env ? process.env : {}
+const viteEnv = typeof import.meta !== 'undefined' && import.meta?.env ? import.meta.env : {}
+
+const AWS_REGION =
+  nodeEnv.AWS_REGION ||
+  nodeEnv.VITE_AWS_REGION ||
+  viteEnv.AWS_REGION ||
+  viteEnv.VITE_AWS_REGION ||
   'us-east-1'
 
-const AWS_ACCESS_KEY_ID = 
-  process.env.AWS_ACCESS_KEY_ID || 
-  process.env.VITE_AWS_ACCESS_KEY_ID || 
-  import.meta.env.AWS_ACCESS_KEY_ID || 
-  import.meta.env.VITE_AWS_ACCESS_KEY_ID
+const AWS_ACCESS_KEY_ID =
+  nodeEnv.AWS_ACCESS_KEY_ID ||
+  nodeEnv.VITE_AWS_ACCESS_KEY_ID ||
+  viteEnv.AWS_ACCESS_KEY_ID ||
+  viteEnv.VITE_AWS_ACCESS_KEY_ID
 
-const AWS_SECRET_ACCESS_KEY = 
-  process.env.AWS_SECRET_ACCESS_KEY || 
-  process.env.VITE_AWS_SECRET_ACCESS_KEY || 
-  import.meta.env.AWS_SECRET_ACCESS_KEY || 
-  import.meta.env.VITE_AWS_SECRET_ACCESS_KEY
+const AWS_SECRET_ACCESS_KEY =
+  nodeEnv.AWS_SECRET_ACCESS_KEY ||
+  nodeEnv.VITE_AWS_SECRET_ACCESS_KEY ||
+  viteEnv.AWS_SECRET_ACCESS_KEY ||
+  viteEnv.VITE_AWS_SECRET_ACCESS_KEY
 
 // DynamoDB client instances (singleton pattern)
 let dynamoDBClient = null
