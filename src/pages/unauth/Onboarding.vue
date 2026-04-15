@@ -239,7 +239,7 @@
             </div>
           </div>
           <div class="final-actions" data-aos="fade-up" data-aos-delay="600">
-            <button @click="goToRegister" class="primary-btn">
+            <button @click="goToSignIn" class="primary-btn">
               <span>{{ $t('getStarted') }}</span>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
                 <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -247,8 +247,8 @@
               </svg>
             </button>
             <div class="signin-section">
-              <span class="signin-text">{{ $t('alreadyHaveAccount') }}</span>
-              <button @click="goToSignIn" class="signin-link">{{ $t('signInButton') }}</button>
+              <span class="signin-text">New to community?</span>
+              <button @click="goToRegister" class="signin-link">Register now!</button>
             </div>
             <button @click="goToSupport" class="support-link">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
