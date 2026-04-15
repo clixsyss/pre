@@ -15,6 +15,8 @@ export function useDocumentVerification() {
   let checkInterval = null
   let currentUserId = null
 
+  const normalizeRole = (value) => String(value || '').trim().toLowerCase()
+
   /**
    * Check if user has all required documents from DynamoDB
    */
@@ -35,6 +37,22 @@ export function useDocumentVerification() {
       
       if (!user) {
         console.log('[DocumentVerification] User document does not exist')
+        isChecking.value = false
+        return
+      }
+
+      const userRole = normalizeRole(user.role)
+      const isOwner = userRole === 'owner'
+      if (!isOwner) {
+        // Family members (and any non-owner roles) should never see this modal.
+        showDocumentModal.value = false
+        missingDocuments.value = {
+          profilePicture: false,
+          frontId: false,
+          backId: false,
+          propertyContract: false,
+        }
+        console.log('[DocumentVerification] Non-owner user, skipping modal:', { userRole })
         isChecking.value = false
         return
       }
