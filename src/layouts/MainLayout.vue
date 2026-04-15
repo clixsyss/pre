@@ -237,6 +237,29 @@
       <!-- Shake Feedback (commented out for now) -->
       <!-- <ShakeFeedback ref="shakeFeedbackRef" /> -->
 
+      <!-- Auto-open gate widget -->
+      <div v-if="isNativePlatform" class="auto-gate-widget">
+        <label class="auto-gate-toggle">
+          <input
+            type="checkbox"
+            :checked="appSettingsStore.autoOpenGateEnabled"
+            @change="setAutoOpenGateEnabled($event.target.checked)"
+          />
+          <span>Auto Open Gate</span>
+        </label>
+        <p class="auto-gate-state">State: {{ proximityState }}</p>
+        <p v-if="nearestGateRssi !== null" class="auto-gate-rssi">RSSI: {{ nearestGateRssi }} dBm</p>
+      </div>
+
+      <button
+        v-if="isNativePlatform && showProximityOpenButton"
+        class="floating-open-gate-btn"
+        :disabled="proximityState === 'OPENING' || proximityState === 'COOLDOWN'"
+        @click="triggerOpenGateFromProximity('manual')"
+      >
+        {{ proximityState === 'COOLDOWN' ? 'Cooldown' : 'Open Gate' }}
+      </button>
+
       <!-- Quick Menu Backdrop (must be before dropdown to ensure proper stacking) -->
       <transition name="quick-menu-backdrop">
         <div 
@@ -280,6 +303,7 @@ import { useSwipeNavigation } from '../composables/useSwipeNavigation'
 import { useModalState } from '../composables/useModalState'
 import { useGlobalKeyboard } from '../composables/useGlobalKeyboard'
 import { useShakeDetection } from '../composables/useShakeDetection'
+import { useBluetooth } from '../composables/useBluetooth'
 import ViolationNotificationPopup from '../components/ViolationNotificationPopup.vue'
 import SuspensionMessage from '../components/SuspensionMessage.vue'
 import NotificationCenter from '../components/NotificationCenter.vue'
@@ -291,6 +315,7 @@ import { useDataPreloader } from '../services/dataPreloader'
 import permissionsService from '../services/permissionsService'
 import { Capacitor } from '@capacitor/core'
 import { useAndroidSafeArea } from '../composables/useAndroidSafeArea'
+import { getGateByKey, getGateSystemForProject } from '../constants/gateConfig'
 
 // Component name for ESLint
 defineOptions({
@@ -320,6 +345,8 @@ const { initialize: initializeAndroidSafeArea, cleanup: cleanupAndroidSafeArea }
 
 const shakeDetection = ref(null)
 const shakeNavigationInProgress = ref(false)
+const QUICK_OPEN_STORAGE_KEY = 'pendingQuickOpenGate'
+const quickOpenRequestInProgress = ref(false)
 
 const handleShake = async () => {
   if (!appSettingsStore.shakeEnabled) return
@@ -362,6 +389,380 @@ watch(
         threshold: effectiveThreshold,
         timeout: 1500,
       })
+    }
+  },
+  { immediate: true },
+)
+
+const triggerQuickOpenFromExternal = async (source = 'external') => {
+  if (quickOpenRequestInProgress.value) return
+  quickOpenRequestInProgress.value = true
+
+  try {
+    const currentUser = await optimizedAuthService.getCurrentUser()
+    if (!currentUser) {
+      console.warn('Quick open ignored: user is not authenticated')
+      return
+    }
+
+    if (route.path === '/access') {
+      window.dispatchEvent(new CustomEvent('pre-shake-open-gate'))
+      return
+    }
+
+    // Fastest path for native quick-open sources (widget/deep-link):
+    // trigger the existing gate flow directly without waiting for page navigation.
+    if (isNativePlatform.value) {
+      await triggerOpenGateFromProximity('widget')
+      return
+    }
+
+    await router.push({
+      path: '/access',
+      query: { fromShake: '1', source },
+    })
+  } catch (error) {
+    console.warn('Quick open navigation failed:', error)
+  } finally {
+    window.setTimeout(() => {
+      quickOpenRequestInProgress.value = false
+    }, 800)
+  }
+}
+
+const consumePendingQuickOpenRequest = () => {
+  try {
+    const pendingValue = localStorage.getItem(QUICK_OPEN_STORAGE_KEY)
+    if (!pendingValue) return
+    localStorage.removeItem(QUICK_OPEN_STORAGE_KEY)
+
+    let source = 'shortcut'
+    try {
+      const parsed = JSON.parse(pendingValue)
+      if (parsed?.source) {
+        source = String(parsed.source)
+      }
+    } catch {
+      // Keep fallback source when pending value is malformed.
+    }
+
+    void triggerQuickOpenFromExternal(source)
+  } catch (error) {
+    console.warn('Failed to consume pending quick-open request:', error)
+  }
+}
+
+const handleQuickOpenGateRequest = (event) => {
+  const source = event?.detail?.source || 'external'
+  void triggerQuickOpenFromExternal(source)
+}
+
+// -------------------------------
+// Proximity-based auto-open state
+// -------------------------------
+const {
+  checkBLESupport,
+  connect,
+  scanAndConnectNearest,
+  write,
+  read,
+  disconnect,
+} = useBluetooth()
+
+const ACCESS_GRANTED = 'ACCESS_GRANTED'
+const isNativePlatform = computed(() => Capacitor.isNativePlatform())
+const activeGateKey = ref('main')
+const proximityState = ref('IDLE') // IDLE | SCANNING | NEAR_GATE | OPENING | COOLDOWN
+const nearestGateRssi = ref(null)
+const showProximityOpenButton = computed(() => proximityState.value === 'NEAR_GATE')
+
+const currentProjectIdForGate = computed(() => projectStore.selectedProject?.id || null)
+const gateSystem = computed(() => getGateSystemForProject(currentProjectIdForGate.value))
+const activeGate = computed(() => getGateByKey(currentProjectIdForGate.value, activeGateKey.value))
+const currentServiceUUID = computed(() => gateSystem.value.serviceUUID)
+const currentCharacteristicUUID = computed(() => gateSystem.value.characteristicUUID)
+const currentGatePassword = computed(() => gateSystem.value.password)
+const currentGateBleName = computed(() => activeGate.value?.bleName || null)
+const currentGateDeviceNames = computed(() => gateSystem.value.deviceNames || [])
+const currentGateScanDurationMs = computed(() => gateSystem.value.scanDurationMs || 3000)
+const currentGateVeryCloseRssiMin = computed(() => gateSystem.value.veryCloseRssiMin ?? -55)
+
+const SCAN_INTERVAL_MS = 1500
+const SCAN_WINDOW_MS = 1000
+const OPEN_COOLDOWN_MS = 8000
+const REQUIRED_NEAR_STREAK = 2
+const BLE_NAME_PREFIX = (import.meta.env.VITE_GATE_BLE_NAME_PREFIX || 'GATE').trim()
+const BLE_NAME_LIST = (import.meta.env.VITE_GATE_BLE_NAMES || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean)
+
+let scanIntervalId = null
+let scanInProgress = false
+let openInProgress = false
+let nearStreak = 0
+let cooldownTimeoutId = null
+let cooldownUntil = 0
+let bleClient = null
+let bleInitialized = false
+
+const setProximityState = (nextState) => {
+  // Keep state transitions explicit and predictable.
+  proximityState.value = nextState
+}
+
+const stopCooldownTimer = () => {
+  if (cooldownTimeoutId) {
+    clearTimeout(cooldownTimeoutId)
+    cooldownTimeoutId = null
+  }
+}
+
+const normalizeBleError = (error) => {
+  if (error?.message) return error.message
+  if (typeof error === 'string') return error
+  try {
+    const serialized = JSON.stringify(error)
+    return serialized === '{}' ? 'Unknown BLE error' : serialized
+  } catch {
+    return 'Unknown BLE error'
+  }
+}
+
+const matchesGateDevice = (result) => {
+  const candidate = result?.device || result
+  const candidateName = String(candidate?.name || result?.localName || '').trim()
+  if (!candidateName) return false
+  if (currentGateDeviceNames.value.length > 0) {
+    return currentGateDeviceNames.value.includes(candidateName)
+  }
+  if (BLE_NAME_LIST.length > 0) {
+    return BLE_NAME_LIST.includes(candidateName)
+  }
+  if (BLE_NAME_PREFIX) {
+    return candidateName.toLowerCase().includes(BLE_NAME_PREFIX.toLowerCase())
+  }
+  return true
+}
+
+const resolveBleClient = (bleModule) => {
+  const candidates = [
+    bleModule?.BleClient,
+    bleModule?.default?.BleClient,
+    bleModule?.default,
+    bleModule,
+  ]
+  const requiredMethods = ['initialize', 'requestLEScan', 'stopLEScan']
+  return (
+    candidates.find((candidate) =>
+      candidate && requiredMethods.every((method) => typeof candidate[method] === 'function'),
+    ) || null
+  )
+}
+
+const ensureBleReady = async () => {
+  if (!bleClient) {
+    const bleModule = await import('@capacitor-community/bluetooth-le')
+    bleClient = resolveBleClient(bleModule)
+  }
+  if (!bleClient) {
+    throw new Error('BLE client unavailable')
+  }
+  if (!bleInitialized) {
+    await bleClient.initialize({ androidNeverForLocation: true })
+    bleInitialized = true
+  }
+  return bleClient
+}
+
+const stopActiveScan = async () => {
+  if (!bleClient) return
+  try {
+    await bleClient.stopLEScan()
+  } catch {
+    // Ignore stop scan failures when no active scan exists.
+  }
+}
+
+const sendOpenCommand = async () => {
+  const writeSuccess = await write(
+    currentServiceUUID.value,
+    currentCharacteristicUUID.value,
+    currentGatePassword.value,
+  )
+
+  if (!writeSuccess) {
+    return { ok: false, response: '' }
+  }
+
+  await new Promise((resolve) => {
+    window.setTimeout(resolve, 250)
+  })
+
+  const response = (
+    await read(currentServiceUUID.value, currentCharacteristicUUID.value)
+  ).trim()
+
+  return {
+    ok: response === ACCESS_GRANTED || response === 'OK',
+    response,
+  }
+}
+
+const openGateWithExistingBleFlow = async () => {
+  const connected = gateSystem.value.fastMode
+    ? (
+        await scanAndConnectNearest(currentServiceUUID.value, {
+          deviceNames: currentGateDeviceNames.value,
+          timeoutMs: currentGateScanDurationMs.value,
+          minRssi: currentGateVeryCloseRssiMin.value,
+          scanMode: 2,
+        })
+      ).success
+    : await connect(currentServiceUUID.value, {
+        name: currentGateBleName.value,
+      })
+
+  if (!connected) {
+    throw new Error('Failed to connect to gate')
+  }
+
+  const { ok } = await sendOpenCommand()
+  if (!ok) {
+    throw new Error('Failed to open gate')
+  }
+
+  // Mirror Access page behavior and avoid keeping the BLE link open.
+  await disconnect()
+}
+
+const triggerOpenGateFromProximity = async (source = 'manual') => {
+  if (openInProgress) return
+  const now = Date.now()
+  if (source === 'auto' && now < cooldownUntil) {
+    setProximityState('COOLDOWN')
+    return
+  }
+
+  openInProgress = true
+  setProximityState('OPENING')
+
+  try {
+    if (route.path === '/access') {
+      // Reuse existing in-page gate opening flow when Access page is active.
+      window.dispatchEvent(new CustomEvent('pre-shake-open-gate'))
+    } else {
+      await openGateWithExistingBleFlow()
+    }
+  } catch (error) {
+    console.warn('Proximity open gate failed:', normalizeBleError(error))
+  } finally {
+    cooldownUntil = Date.now() + OPEN_COOLDOWN_MS
+    setProximityState('COOLDOWN')
+    stopCooldownTimer()
+    cooldownTimeoutId = setTimeout(() => {
+      setProximityState(nearStreak >= REQUIRED_NEAR_STREAK ? 'NEAR_GATE' : 'IDLE')
+    }, OPEN_COOLDOWN_MS)
+    openInProgress = false
+  }
+}
+
+const runProximityScan = async () => {
+  if (!isNativePlatform.value || !appSettingsStore.autoOpenGateEnabled) return
+  if (scanInProgress || openInProgress) return
+
+  const now = Date.now()
+  if (now < cooldownUntil) {
+    setProximityState('COOLDOWN')
+    return
+  }
+
+  scanInProgress = true
+  setProximityState('SCANNING')
+
+  let strongestRssi = null
+
+  try {
+    await checkBLESupport()
+    const client = await ensureBleReady()
+    const requestOptions = {
+      allowDuplicates: true,
+      services: [currentServiceUUID.value],
+    }
+
+    await client.requestLEScan(requestOptions, (result) => {
+      if (!matchesGateDevice(result)) return
+      if (typeof result?.rssi !== 'number') return
+      if (strongestRssi === null || result.rssi > strongestRssi) {
+        strongestRssi = result.rssi
+      }
+    })
+
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, SCAN_WINDOW_MS)
+    })
+  } catch (error) {
+    console.warn('Proximity scan error:', normalizeBleError(error))
+  } finally {
+    await stopActiveScan()
+    scanInProgress = false
+  }
+
+  nearestGateRssi.value = strongestRssi
+  const threshold = appSettingsStore.autoOpenRssiThreshold || -65
+  const nearGateNow = typeof strongestRssi === 'number' && strongestRssi > threshold
+
+  if (!nearGateNow) {
+    nearStreak = 0
+    setProximityState('IDLE')
+    return
+  }
+
+  nearStreak += 1
+  if (nearStreak < REQUIRED_NEAR_STREAK) {
+    setProximityState('SCANNING')
+    return
+  }
+
+  setProximityState('NEAR_GATE')
+  await triggerOpenGateFromProximity('auto')
+}
+
+const stopProximityScanner = async () => {
+  if (scanIntervalId) {
+    clearInterval(scanIntervalId)
+    scanIntervalId = null
+  }
+  await stopActiveScan()
+  stopCooldownTimer()
+  scanInProgress = false
+  nearStreak = 0
+  nearestGateRssi.value = null
+  if (!openInProgress) {
+    setProximityState('IDLE')
+  }
+}
+
+const startProximityScanner = () => {
+  if (!isNativePlatform.value || !appSettingsStore.autoOpenGateEnabled) return
+  if (scanIntervalId) return
+  void runProximityScan()
+  scanIntervalId = setInterval(() => {
+    void runProximityScan()
+  }, SCAN_INTERVAL_MS)
+}
+
+const setAutoOpenGateEnabled = (enabled) => {
+  appSettingsStore.setAutoOpenGateEnabled(enabled)
+}
+
+watch(
+  () => appSettingsStore.autoOpenGateEnabled,
+  (enabled) => {
+    if (enabled) {
+      startProximityScanner()
+    } else {
+      void stopProximityScanner()
     }
   },
   { immediate: true },
@@ -674,6 +1075,15 @@ const checkUserSuspensionStatus = async () => {
 
 // Handle visibility change for permission checking (defined outside onMounted so it can be removed in onUnmounted)
 const handleVisibilityChange = async () => {
+  if (document.visibilityState !== 'visible') {
+    await stopProximityScanner()
+    return
+  }
+
+  if (appSettingsStore.autoOpenGateEnabled) {
+    startProximityScanner()
+  }
+
   if (document.visibilityState === 'visible') {
     try {
       const protocol = window.location.protocol
@@ -941,6 +1351,8 @@ onMounted(async () => {
   
   // Initialize app settings
   appSettingsStore.initSettings()
+  consumePendingQuickOpenRequest()
+  window.addEventListener('quick-open-gate-request', handleQuickOpenGateRequest)
   
   // Reset violation notifications when app starts
   resetViolationNotifications()
@@ -1071,6 +1483,8 @@ onMounted(async () => {
 
 // Cleanup event listeners on unmount
 onUnmounted(() => {
+  window.removeEventListener('quick-open-gate-request', handleQuickOpenGateRequest)
+  void stopProximityScanner()
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   window.removeEventListener('showSuspensionMessage', handleSuspensionMessage)
   window.removeEventListener('projectStoreReady', handleProjectStoreReady)
@@ -3044,5 +3458,52 @@ body.hide-bottom-nav .bottom-navigation {
 
 .main-content > * {
   width: 100%;
+}
+
+.auto-gate-widget {
+  position: fixed;
+  right: 14px;
+  bottom: 116px;
+  z-index: 1100;
+  min-width: 170px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  backdrop-filter: blur(6px);
+}
+
+.auto-gate-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.auto-gate-state,
+.auto-gate-rssi {
+  margin: 6px 0 0;
+  font-size: 0.72rem;
+  opacity: 0.9;
+}
+
+.floating-open-gate-btn {
+  position: fixed;
+  right: 14px;
+  bottom: 56px;
+  z-index: 1101;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: #00a86b;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.86rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.floating-open-gate-btn:disabled {
+  opacity: 0.7;
 }
 </style>

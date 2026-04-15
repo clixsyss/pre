@@ -40,6 +40,7 @@ import logger from 'src/utils/logger'
 
 logger.log('🚀🚀🚀 JavaScript is executing! App.vue script setup started!')
 import { useRoute } from 'vue-router'
+import { App as CapacitorApp } from '@capacitor/app'
 import SplashScreen from './components/SplashScreen.vue'
 import NotificationPopup from './components/NotificationPopup.vue'
 import NetworkStatusBanner from './components/NetworkStatusBanner.vue'
@@ -58,6 +59,28 @@ defineOptions({
 const route = useRoute()
 const isRouterLoading = ref(true)
 const splashStore = useSplashStore()
+const QUICK_OPEN_STORAGE_KEY = 'pendingQuickOpenGate'
+let appUrlOpenListener = null
+
+const queueQuickOpenGateRequest = (source = 'unknown') => {
+  try {
+    localStorage.setItem(
+      QUICK_OPEN_STORAGE_KEY,
+      JSON.stringify({ source, timestamp: Date.now() }),
+    )
+  } catch (error) {
+    logger.warn('⚠️ Failed to persist quick-open request:', error)
+  }
+  window.dispatchEvent(new CustomEvent('quick-open-gate-request', { detail: { source } }))
+}
+
+const parseQuickOpenUrl = (urlValue) => {
+  const value = String(urlValue || '').trim()
+  if (!value) return null
+  const normalized = value.toLowerCase()
+  if (!normalized.includes('open-gate')) return null
+  return value.includes('source=') ? value.split('source=')[1].split('&')[0] : 'deep-link'
+}
 
 // Safety timeout: Always show content after 2 seconds, even if initialization fails
 // This prevents black screen on Android if initialization is slow
@@ -111,6 +134,22 @@ try {
 
 onMounted(async () => {
   try {
+    try {
+      const launchUrl = await CapacitorApp.getLaunchUrl()
+      const source = parseQuickOpenUrl(launchUrl?.url)
+      if (source) {
+        queueQuickOpenGateRequest(source)
+      }
+      appUrlOpenListener = await CapacitorApp.addListener('appUrlOpen', ({ url }) => {
+        const incomingSource = parseQuickOpenUrl(url)
+        if (incomingSource) {
+          queueQuickOpenGateRequest(incomingSource)
+        }
+      })
+    } catch (error) {
+      logger.warn('⚠️ Capacitor App URL listener unavailable:', error)
+    }
+
     logger.log('🚀 App.vue: Starting app initialization...')
     
     // Platform detection - do this early for CSS classes
@@ -217,6 +256,13 @@ onMounted(async () => {
 // Cleanup network monitoring and document verification on unmount
 onUnmounted(async () => {
   logger.log('🛑 App.vue: Cleaning up...')
+  if (appUrlOpenListener?.remove) {
+    try {
+      await appUrlOpenListener.remove()
+    } catch {
+      // Ignore listener cleanup failures.
+    }
+  }
   await stopNetworkMonitoring()
   cleanupDocumentVerification()
 })

@@ -6,11 +6,15 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
   // Default: enabled, with a less sensitive default threshold
   const shakeEnabled = ref(true)
   const shakeSensitivity = ref(20) // Higher number = requires stronger shake
+  const autoOpenGateEnabled = ref(false)
+  const autoOpenRssiThreshold = ref(-65)
   
   // Initialize settings from localStorage
   const initSettings = () => {
     const savedShakeEnabled = localStorage.getItem('shakeEnabled')
     const savedShakeSensitivity = localStorage.getItem('shakeSensitivity')
+    const savedAutoOpenGateEnabled = localStorage.getItem('autoOpenGateEnabled')
+    const savedAutoOpenRssiThreshold = localStorage.getItem('autoOpenRssiThreshold')
     
     if (savedShakeEnabled !== null) {
       shakeEnabled.value = savedShakeEnabled === 'true'
@@ -18,6 +22,17 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
     
     if (savedShakeSensitivity !== null) {
       shakeSensitivity.value = parseInt(savedShakeSensitivity)
+    }
+
+    if (savedAutoOpenGateEnabled !== null) {
+      autoOpenGateEnabled.value = savedAutoOpenGateEnabled === 'true'
+    }
+
+    if (savedAutoOpenRssiThreshold !== null) {
+      const parsed = parseInt(savedAutoOpenRssiThreshold, 10)
+      if (!Number.isNaN(parsed)) {
+        autoOpenRssiThreshold.value = parsed
+      }
     }
   }
   
@@ -32,6 +47,16 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
     shakeSensitivity.value = sensitivity
     localStorage.setItem('shakeSensitivity', String(sensitivity))
   }
+
+  const setAutoOpenGateEnabled = (enabled) => {
+    autoOpenGateEnabled.value = enabled
+    localStorage.setItem('autoOpenGateEnabled', String(enabled))
+  }
+
+  const setAutoOpenRssiThreshold = (threshold) => {
+    autoOpenRssiThreshold.value = threshold
+    localStorage.setItem('autoOpenRssiThreshold', String(threshold))
+  }
   
   // Get sensitivity label
   const getSensitivityLabel = (value) => {
@@ -44,9 +69,13 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
   return {
     shakeEnabled,
     shakeSensitivity,
+    autoOpenGateEnabled,
+    autoOpenRssiThreshold,
     initSettings,
     setShakeEnabled,
     setShakeSensitivity,
+    setAutoOpenGateEnabled,
+    setAutoOpenRssiThreshold,
     getSensitivityLabel
   }
 })

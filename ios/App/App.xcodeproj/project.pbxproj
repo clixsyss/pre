@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1B000001111111111111101 /* OpenGatePREWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F000001111111111111112 /* OpenGatePREWidget.swift */; };
+		A1B000001111111111111102 /* OpenGatePREWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F000001111111111111113 /* OpenGatePREWidgetBundle.swift */; };
+		A1B000001111111111111103 /* OpenGatePREWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A1F000001111111111111111 /* OpenGatePREWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0723C5152E8C6EBB000BD6E5 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 0723C5142E8C6EBB000BD6E5 /* GoogleService-Info.plist */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
@@ -18,7 +21,25 @@
 		FE48A53FC406B7FE537AC87B /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1184EC9FEE839CD08BAB15EA /* Pods_App.framework */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		A1P000001111111111111204 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A1B000001111111111111103 /* OpenGatePREWidget.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		A1F000001111111111111111 /* OpenGatePREWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OpenGatePREWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1F000001111111111111112 /* OpenGatePREWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenGatePREWidget.swift; sourceTree = "<group>"; };
+		A1F000001111111111111113 /* OpenGatePREWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenGatePREWidgetBundle.swift; sourceTree = "<group>"; };
+		A1F000001111111111111114 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0723C5142E8C6EBB000BD6E5 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		07C430C42E9EDC8000AD8554 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1184EC9FEE839CD08BAB15EA /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -36,6 +57,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		A1P000001111111111111202 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3011FED79650016851F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -61,6 +89,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				A1F000001111111111111111 /* OpenGatePREWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -68,6 +97,7 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				A1F000001111111111111120 /* OpenGatePREWidget */,
 				07C430C42E9EDC8000AD8554 /* App.entitlements */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
@@ -80,6 +110,16 @@
 				50B271D01FEDC1A000F3C39B /* public */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		A1F000001111111111111120 /* OpenGatePREWidget */ = {
+			isa = PBXGroup;
+			children = (
+				A1F000001111111111111112 /* OpenGatePREWidget.swift */,
+				A1F000001111111111111113 /* OpenGatePREWidgetBundle.swift */,
+				A1F000001111111111111114 /* Info.plist */,
+			);
+			path = OpenGatePREWidget;
 			sourceTree = "<group>";
 		};
 		86399CFC156033D974DC55F8 /* Frameworks */ = {
@@ -102,6 +142,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A1T000001111111111111301 /* OpenGatePREWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1C000001111111111111401 /* Build configuration list for PBXNativeTarget "OpenGatePREWidget" */;
+			buildPhases = (
+				A1P000001111111111111201 /* Sources */,
+				A1P000001111111111111202 /* Frameworks */,
+				A1P000001111111111111203 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OpenGatePREWidget;
+			productName = OpenGatePREWidget;
+			productReference = A1F000001111111111111111 /* OpenGatePREWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		504EC3031FED79650016851F /* App */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
@@ -111,6 +168,7 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				3A436C251095B6B819168304 /* [CP] Embed Pods Frameworks */,
+				A1P000001111111111111204 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
@@ -130,6 +188,10 @@
 				LastSwiftUpdateCheck = 0920;
 				LastUpgradeCheck = 0920;
 				TargetAttributes = {
+					A1T000001111111111111301 = {
+						CreatedOnToolsVersion = 15.0;
+						ProvisioningStyle = Automatic;
+					};
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
 						LastSwiftMigration = 1100;
@@ -151,11 +213,19 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				A1T000001111111111111301 /* OpenGatePREWidget */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		A1P000001111111111111203 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3021FED79650016851F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -298,6 +368,15 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		A1P000001111111111111201 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1B000001111111111111101 /* OpenGatePREWidget.swift in Sources */,
+				A1B000001111111111111102 /* OpenGatePREWidgetBundle.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3001FED79650016851F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -328,6 +407,55 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		A1C000001111111111111402 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 85289CPB6W;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/OpenGatePREWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.pre-group.app.opengatewidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A1C000001111111111111403 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 85289CPB6W;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/OpenGatePREWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.pre-group.app.opengatewidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		504EC3141FED79650016851F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -488,6 +616,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A1C000001111111111111401 /* Build configuration list for PBXNativeTarget "OpenGatePREWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1C000001111111111111402 /* Debug */,
+				A1C000001111111111111403 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		504EC2FF1FED79650016851F /* Build configuration list for PBXProject "App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

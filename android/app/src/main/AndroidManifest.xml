@@ -22,8 +22,26 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="pregroupapp" android:host="open-gate" />
+            </intent-filter>
 
         </activity>
+
+        <receiver
+            android:name=".OpenGateWidgetProvider"
+            android:exported="true"
+            android:label="@string/open_gate_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/open_gate_widget_info" />
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"

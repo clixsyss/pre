@@ -20,7 +20,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         // Clear badge when app opens
         UIApplication.shared.applicationIconBadgeNumber = 0
-        
+
         return true
     }
 

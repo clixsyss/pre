@@ -5,4 +5,6 @@
     <string name="package_name">com.pregroup.app</string>
     <string name="custom_url_scheme">com.pregroup.app</string>
     <string name="default_notification_channel_id">fcm_default_channel</string>
+    <string name="open_gate_widget_name">Open Gate</string>
+    <string name="open_gate_widget_description">Tap to open gate quickly</string>
 </resources>
