@@ -120,6 +120,7 @@
             </svg>
             <span class="gate-access-text">{{ $t('access') }}</span>
           </router-link>
+
         </div>
       </div>
     </header>
@@ -171,6 +172,31 @@
       </div>
     </div>
 
+    <div v-if="showGateFeedbackDialog" class="gate-feedback-overlay" @click="closeGateFeedbackDialog">
+      <div class="gate-feedback-dialog" @click.stop>
+        <div
+          class="gate-feedback-icon"
+          :class="{
+            'is-loading': gateFeedbackState === 'loading',
+            'is-success': gateFeedbackState === 'success',
+            'is-error': gateFeedbackState === 'error'
+          }"
+        >
+          <svg v-if="gateFeedbackState === 'success'" viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+            <path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <svg v-else-if="gateFeedbackState === 'error'" viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h4 class="gate-feedback-title">{{ $t('quickOpen') }}</h4>
+        <p class="gate-feedback-message">{{ gateFeedbackMessage }}</p>
+        <button v-if="gateFeedbackState !== 'loading'" class="gate-feedback-close-btn" @click="closeGateFeedbackDialog">
+          {{ $t('close') }}
+        </button>
+      </div>
+    </div>
+
     <!-- Main Content with Page Transitions -->
     <main
       class="main-content"
@@ -197,6 +223,8 @@
         <span class="nav-label">{{ $t('services') }}</span>
       </router-link>
 
+      <div class="nav-center-gap" aria-hidden="true"></div>
+
       <router-link to="/requests" class="nav-item" :class="{ active: isActiveTab('requests') }">
         <div class="nav-icon">
           <img src="../assets/request.svg" alt="Requests" width="24" height="24" />
@@ -212,6 +240,20 @@
         <span class="nav-label">{{ $t('profile') }}</span>
       </router-link>
     </nav>
+
+    <button
+      v-if="!isChatPage"
+      class="quick-open-gate-fab quick-open-gate-fab--center"
+      type="button"
+      :title="$t('quickOpen')"
+      :disabled="isGateFeedbackLoading || (isNativePlatform && (proximityState === 'OPENING' || proximityState === 'COOLDOWN'))"
+      @click.stop.prevent="handleGlassGatePrimaryAction"
+    >
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+        <rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="2" />
+        <path d="M4 8h16M9 21V8m6 13V8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </svg>
+    </button>
 
     <!-- Violation Notification Popup -->
     <ViolationNotificationPopup
@@ -250,15 +292,6 @@
         <p class="auto-gate-state">State: {{ proximityState }}</p>
         <p v-if="nearestGateRssi !== null" class="auto-gate-rssi">RSSI: {{ nearestGateRssi }} dBm</p>
       </div>
-
-      <button
-        v-if="isNativePlatform && showProximityOpenButton"
-        class="floating-open-gate-btn"
-        :disabled="proximityState === 'OPENING' || proximityState === 'COOLDOWN'"
-        @click="triggerOpenGateFromProximity('manual')"
-      >
-        {{ proximityState === 'COOLDOWN' ? 'Cooldown' : 'Open Gate' }}
-      </button>
 
       <!-- Quick Menu Backdrop (must be before dropdown to ensure proper stacking) -->
       <transition name="quick-menu-backdrop">
@@ -344,34 +377,12 @@ const {
 const { initialize: initializeAndroidSafeArea, cleanup: cleanupAndroidSafeArea } = useAndroidSafeArea()
 
 const shakeDetection = ref(null)
-const shakeNavigationInProgress = ref(false)
 const QUICK_OPEN_STORAGE_KEY = 'pendingQuickOpenGate'
 const quickOpenRequestInProgress = ref(false)
 
 const handleShake = async () => {
   if (!appSettingsStore.shakeEnabled) return
-
-  // If already on Access, trigger in-place gate opening.
-  if (route.path === '/access') {
-    window.dispatchEvent(new CustomEvent('pre-shake-open-gate'))
-    return
-  }
-
-  // From anywhere else, navigate to Access and auto-start gate flow there.
-  if (shakeNavigationInProgress.value) return
-  shakeNavigationInProgress.value = true
-  try {
-    await router.push({
-      path: '/access',
-      query: { fromShake: '1' },
-    })
-  } catch (error) {
-    console.warn('Shake navigation failed:', error)
-  } finally {
-    window.setTimeout(() => {
-      shakeNavigationInProgress.value = false
-    }, 600)
-  }
+  await triggerOpenGateFromProximity('shake')
 }
 
 watch(
@@ -405,24 +416,10 @@ const triggerQuickOpenFromExternal = async (source = 'external') => {
       return
     }
 
-    if (route.path === '/access') {
-      window.dispatchEvent(new CustomEvent('pre-shake-open-gate'))
-      return
-    }
-
-    // Fastest path for native quick-open sources (widget/deep-link):
-    // trigger the existing gate flow directly without waiting for page navigation.
-    if (isNativePlatform.value) {
-      await triggerOpenGateFromProximity('widget')
-      return
-    }
-
-    await router.push({
-      path: '/access',
-      query: { fromShake: '1', source },
-    })
+    // BLE-only quick open path (no route fallback).
+    await triggerOpenGateFromProximity(source)
   } catch (error) {
-    console.warn('Quick open navigation failed:', error)
+    console.warn('Quick open failed:', error)
   } finally {
     window.setTimeout(() => {
       quickOpenRequestInProgress.value = false
@@ -474,7 +471,6 @@ const isNativePlatform = computed(() => Capacitor.isNativePlatform())
 const activeGateKey = ref('main')
 const proximityState = ref('IDLE') // IDLE | SCANNING | NEAR_GATE | OPENING | COOLDOWN
 const nearestGateRssi = ref(null)
-const showProximityOpenButton = computed(() => proximityState.value === 'NEAR_GATE')
 
 const currentProjectIdForGate = computed(() => projectStore.selectedProject?.id || null)
 const gateSystem = computed(() => getGateSystemForProject(currentProjectIdForGate.value))
@@ -637,23 +633,20 @@ const openGateWithExistingBleFlow = async () => {
 }
 
 const triggerOpenGateFromProximity = async (source = 'manual') => {
-  if (openInProgress) return
+  if (openInProgress) return false
   const now = Date.now()
   if (source === 'auto' && now < cooldownUntil) {
     setProximityState('COOLDOWN')
-    return
+    return false
   }
 
   openInProgress = true
   setProximityState('OPENING')
+  let openedSuccessfully = false
 
   try {
-    if (route.path === '/access') {
-      // Reuse existing in-page gate opening flow when Access page is active.
-      window.dispatchEvent(new CustomEvent('pre-shake-open-gate'))
-    } else {
-      await openGateWithExistingBleFlow()
-    }
+    await openGateWithExistingBleFlow()
+    openedSuccessfully = true
   } catch (error) {
     console.warn('Proximity open gate failed:', normalizeBleError(error))
   } finally {
@@ -665,6 +658,8 @@ const triggerOpenGateFromProximity = async (source = 'manual') => {
     }, OPEN_COOLDOWN_MS)
     openInProgress = false
   }
+
+  return openedSuccessfully
 }
 
 const runProximityScan = async () => {
@@ -801,6 +796,52 @@ const notificationUnreadCount = computed(() => notificationCenterStore.unreadCou
 const shouldHideBottomNav = computed(() => {
   return isKeyboardVisible.value || isAnyModalOpen.value
 })
+
+const showGateFeedbackDialog = ref(false)
+const gateFeedbackState = ref('loading') // loading | success | error
+const gateFeedbackMessage = ref('')
+const isGateFeedbackLoading = computed(() => showGateFeedbackDialog.value && gateFeedbackState.value === 'loading')
+let gateFeedbackHideTimer = null
+
+const closeGateFeedbackDialog = () => {
+  showGateFeedbackDialog.value = false
+  if (gateFeedbackHideTimer) {
+    clearTimeout(gateFeedbackHideTimer)
+    gateFeedbackHideTimer = null
+  }
+}
+
+const showGateFeedback = (state, message, autoCloseMs = 0) => {
+  gateFeedbackState.value = state
+  gateFeedbackMessage.value = message
+  showGateFeedbackDialog.value = true
+
+  if (gateFeedbackHideTimer) {
+    clearTimeout(gateFeedbackHideTimer)
+    gateFeedbackHideTimer = null
+  }
+
+  if (autoCloseMs > 0) {
+    gateFeedbackHideTimer = setTimeout(() => {
+      showGateFeedbackDialog.value = false
+      gateFeedbackHideTimer = null
+    }, autoCloseMs)
+  }
+}
+
+const handleGlassGatePrimaryAction = async () => {
+  if (isGateFeedbackLoading.value) return
+
+  showGateFeedback('loading', t('openingGate'))
+  const gateOpened = await triggerOpenGateFromProximity('manual')
+
+  if (gateOpened) {
+    showGateFeedback('success', t('gateOpenedSuccessfully'), 1600)
+    return
+  }
+
+  showGateFeedback('error', t('failedToOpenGate'), 2400)
+}
 
 // Android platform detection is now handled via body.platform-android class in App.vue
 
@@ -1494,6 +1535,11 @@ onUnmounted(() => {
   
   // Clean up notification center
   notificationCenterStore.clearNotifications()
+
+  if (gateFeedbackHideTimer) {
+    clearTimeout(gateFeedbackHideTimer)
+    gateFeedbackHideTimer = null
+  }
 })
 </script>
 
@@ -2209,6 +2255,11 @@ body.hide-bottom-nav .bottom-navigation {
   max-width: 80px;
 }
 
+.nav-center-gap {
+  flex: 0 0 72px;
+  pointer-events: none;
+}
+
 /* Mobile app - hover effects disabled */
 /* .nav-item:hover {
   color: #ccc;
@@ -2241,7 +2292,7 @@ body.hide-bottom-nav .bottom-navigation {
 .nav-item.active .nav-icon {
   background-color: #AF1E23;
   color: #F6F6F6;
-  transform: translateY(-40px);
+  transform: translateY(-34px);
   border: 5px solid white;
   width: 64px;
   height: 64px;
@@ -2645,13 +2696,17 @@ body.hide-bottom-nav .bottom-navigation {
   }
   
   .nav-item.active .nav-icon {
-    transform: translateY(-32px);
+    transform: translateY(-28px);
     width: 56px;
     height: 56px;
   }
   
   .nav-item {
     max-width: 70px;
+  }
+
+  .nav-center-gap {
+    flex-basis: 64px;
   }
   
   .project-switcher-modal {
@@ -2688,13 +2743,17 @@ body.hide-bottom-nav .bottom-navigation {
   }
   
   .nav-item.active .nav-icon {
-    transform: translateY(-28px);
+    transform: translateY(-24px);
     width: 52px;
     height: 52px;
   }
   
   .nav-item {
     max-width: 65px;
+  }
+
+  .nav-center-gap {
+    flex-basis: 56px;
   }
   
   .nav-item .nav-label {
@@ -3488,22 +3547,141 @@ body.hide-bottom-nav .bottom-navigation {
   opacity: 0.9;
 }
 
-.floating-open-gate-btn {
+.quick-open-gate-fab {
   position: fixed;
-  right: 14px;
-  bottom: 56px;
-  z-index: 1101;
-  border: none;
-  border-radius: 999px;
-  padding: 12px 18px;
-  background: #00a86b;
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.86rem;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  z-index: 1102;
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  border: 1px solid rgba(175, 30, 35, 0.9);
+  background: linear-gradient(145deg, #AF1E23 0%, #c9272d 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.24),
+    0 2px 8px rgba(175, 30, 35, 0.45);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.2s ease;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
-.floating-open-gate-btn:disabled {
-  opacity: 0.7;
+.quick-open-gate-fab::before {
+  content: none;
+}
+
+.quick-open-gate-fab svg {
+  width: 25px;
+  height: 25px;
+  color: currentColor;
+  filter: drop-shadow(0 0 4px rgba(175, 30, 35, 0.45));
+}
+
+.quick-open-gate-fab--center {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.quick-open-gate-fab:active {
+  transform: translateX(-50%) scale(0.94);
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.2);
+}
+
+.quick-open-gate-fab:disabled {
+  opacity: 0.55;
+  filter: saturate(0.75);
+}
+
+@media (max-width: 480px) {
+  .quick-open-gate-fab {
+    width: 60px;
+    height: 60px;
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.gate-feedback-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.gate-feedback-dialog {
+  width: min(360px, 100%);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(145deg, rgba(35, 31, 32, 0.95), rgba(27, 27, 27, 0.95));
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.36);
+  padding: 18px 18px 16px;
+  color: #F6F6F6;
+  text-align: center;
+}
+
+.gate-feedback-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  margin: 2px auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gate-feedback-icon.is-loading {
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  border-top-color: #AF1E23;
+  animation: gate-feedback-spin 0.9s linear infinite;
+}
+
+.gate-feedback-icon.is-success {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+}
+
+.gate-feedback-icon.is-error {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+
+.gate-feedback-title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.gate-feedback-message {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: rgba(246, 246, 246, 0.9);
+}
+
+.gate-feedback-close-btn {
+  margin-top: 14px;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 14px;
+  background: rgba(175, 30, 35, 0.2);
+  color: #F6F6F6;
+  font-weight: 700;
+}
+
+[dir="rtl"] .gate-feedback-dialog {
+  text-align: right;
+}
+
+@keyframes gate-feedback-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
