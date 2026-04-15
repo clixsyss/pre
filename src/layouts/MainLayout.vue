@@ -410,6 +410,11 @@ const triggerQuickOpenFromExternal = async (source = 'external') => {
   quickOpenRequestInProgress.value = true
 
   try {
+    if (!isNativePlatform.value) {
+      console.warn('Quick open ignored: BLE requires native platform')
+      return
+    }
+
     const currentUser = await optimizedAuthService.getCurrentUser()
     if (!currentUser) {
       console.warn('Quick open ignored: user is not authenticated')
@@ -633,6 +638,7 @@ const openGateWithExistingBleFlow = async () => {
 }
 
 const triggerOpenGateFromProximity = async (source = 'manual') => {
+  if (!isNativePlatform.value) return false
   if (openInProgress) return false
   const now = Date.now()
   if (source === 'auto' && now < cooldownUntil) {
@@ -831,6 +837,12 @@ const showGateFeedback = (state, message, autoCloseMs = 0) => {
 
 const handleGlassGatePrimaryAction = async () => {
   if (isGateFeedbackLoading.value) return
+
+  // BLE quick-open is native-only (no web fallback in any locale).
+  if (!isNativePlatform.value) {
+    showGateFeedback('error', t('bleNotSupported'))
+    return
+  }
 
   showGateFeedback('loading', t('openingGate'))
   const gateOpened = await triggerOpenGateFromProximity('manual')
