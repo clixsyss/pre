@@ -14,9 +14,10 @@
             </div>
             <span>{{ $t('loadingProjects') }}</span>
           </div>
-          
+
           <!-- Restoring Project State -->
-          <div v-else-if="!projectStore.loading && !currentProject && projectStore.userProjects.length > 0" class="restoring-project">
+          <div v-else-if="!projectStore.loading && !currentProject && projectStore.userProjects.length > 0"
+            class="restoring-project">
             <div class="loading-dots">
               <div class="dot"></div>
               <div class="dot"></div>
@@ -24,99 +25,111 @@
             </div>
             <span>{{ $t('restoringProject') }}</span>
           </div>
-          
+
           <!-- Current Project Display -->
-          <button v-else-if="currentProject" @click="showProjectSwitcher = true" class="current-project" :title="$t('switchProject')">
+          <button v-else-if="currentProject" @click="showProjectSwitcher = true" class="current-project"
+            :title="$t('switchProject')">
             <span class="project-name">{{ currentProject.name }}</span>
-            <svg class="project-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg class="project-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none"
+              xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </button>
         </div>
-        
+
         <!-- Logo Section (Center) -->
         <div class="header-center">
-          <button @click="toggleQuickMenu" class="logo-button" :class="{ 'menu-open': showQuickMenu, 'first-time': !hasSeenLogoHint }">
+          <button @click="toggleQuickMenu" class="logo-button"
+            :class="{ 'menu-open': showQuickMenu, 'first-time': !hasSeenLogoHint }">
             <div class="logo-wrapper">
               <img src="../assets/logo.png" alt="PRE Logo" class="logo-image" />
               <!-- Enhanced arrow with shimmer effect -->
-              <svg class="logo-arrow" :class="{ 'pulse': !hasSeenLogoHint && !showQuickMenu }" width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <svg class="logo-arrow" :class="{ 'pulse': !hasSeenLogoHint && !showQuickMenu }" width="12" height="12"
+                viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                  stroke-linejoin="round" />
               </svg>
             </div>
             <!-- Always-visible subtle label -->
             <span class="quick-actions-label">{{ $t('quickActions') }}</span>
           </button>
-          
+
           <!-- Enhanced first-time hint with pointer -->
           <transition name="hint-fade">
             <div v-if="showLogoHint" class="logo-hint">
               <div class="hint-content">
-                <svg class="hint-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor"/>
+                <svg class="hint-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" fill="currentColor" />
                 </svg>
                 <span>{{ $t('tapHereQuickNav') }}</span>
               </div>
             </div>
           </transition>
         </div>
-        
+
         <!-- Gate Access Section (Right) -->
         <div class="header-right">
           <!-- Notification Bell -->
           <button @click="openNotificationCenter" class="notification-bell-btn" :title="$t('notifications')">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path
+                d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path
+                d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
             <span v-if="notificationUnreadCount > 0" class="notification-badge">{{ notificationUnreadCount }}</span>
           </button>
-          
+
           <router-link to="/access" class="gate-access-btn" :title="$t('gateAccess')">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <!-- QR Code outer border -->
-              <rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="1.5" fill="none"/>
-              
+              <rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="1.5" fill="none" />
+
               <!-- Top-left finder pattern -->
-              <rect x="4" y="4" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none"/>
-              <rect x="5" y="5" width="4" height="4" fill="currentColor"/>
-              <rect x="6" y="6" width="2" height="2" fill="white"/>
-              
+              <rect x="4" y="4" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none" />
+              <rect x="5" y="5" width="4" height="4" fill="currentColor" />
+              <rect x="6" y="6" width="2" height="2" fill="white" />
+
               <!-- Top-right finder pattern -->
-              <rect x="14" y="4" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none"/>
-              <rect x="15" y="5" width="4" height="4" fill="currentColor"/>
-              <rect x="16" y="6" width="2" height="2" fill="white"/>
-              
+              <rect x="14" y="4" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none" />
+              <rect x="15" y="5" width="4" height="4" fill="currentColor" />
+              <rect x="16" y="6" width="2" height="2" fill="white" />
+
               <!-- Bottom-left finder pattern -->
-              <rect x="4" y="14" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none"/>
-              <rect x="5" y="15" width="4" height="4" fill="currentColor"/>
-              <rect x="6" y="16" width="2" height="2" fill="white"/>
-              
+              <rect x="4" y="14" width="6" height="6" stroke="currentColor" stroke-width="1" fill="none" />
+              <rect x="5" y="15" width="4" height="4" fill="currentColor" />
+              <rect x="6" y="16" width="2" height="2" fill="white" />
+
               <!-- Data pattern (random-looking squares) -->
-              <rect x="11" y="5" width="1" height="1" fill="currentColor"/>
-              <rect x="12" y="6" width="1" height="1" fill="currentColor"/>
-              <rect x="11" y="7" width="1" height="1" fill="currentColor"/>
-              <rect x="13" y="7" width="1" height="1" fill="currentColor"/>
-              <rect x="5" y="11" width="1" height="1" fill="currentColor"/>
-              <rect x="7" y="11" width="1" height="1" fill="currentColor"/>
-              <rect x="9" y="11" width="1" height="1" fill="currentColor"/>
-              <rect x="6" y="12" width="1" height="1" fill="currentColor"/>
-              <rect x="8" y="12" width="1" height="1" fill="currentColor"/>
-              <rect x="11" y="12" width="1" height="1" fill="currentColor"/>
-              <rect x="13" y="12" width="1" height="1" fill="currentColor"/>
-              <rect x="15" y="11" width="1" height="1" fill="currentColor"/>
-              <rect x="17" y="11" width="1" height="1" fill="currentColor"/>
-              <rect x="19" y="11" width="1" height="1" fill="currentColor"/>
-              <rect x="16" y="12" width="1" height="1" fill="currentColor"/>
-              <rect x="18" y="12" width="1" height="1" fill="currentColor"/>
-              <rect x="11" y="15" width="1" height="1" fill="currentColor"/>
-              <rect x="13" y="15" width="1" height="1" fill="currentColor"/>
-              <rect x="15" y="15" width="1" height="1" fill="currentColor"/>
-              <rect x="17" y="15" width="1" height="1" fill="currentColor"/>
-              <rect x="19" y="15" width="1" height="1" fill="currentColor"/>
-              <rect x="12" y="16" width="1" height="1" fill="currentColor"/>
-              <rect x="14" y="16" width="1" height="1" fill="currentColor"/>
-              <rect x="18" y="16" width="1" height="1" fill="currentColor"/>
+              <rect x="11" y="5" width="1" height="1" fill="currentColor" />
+              <rect x="12" y="6" width="1" height="1" fill="currentColor" />
+              <rect x="11" y="7" width="1" height="1" fill="currentColor" />
+              <rect x="13" y="7" width="1" height="1" fill="currentColor" />
+              <rect x="5" y="11" width="1" height="1" fill="currentColor" />
+              <rect x="7" y="11" width="1" height="1" fill="currentColor" />
+              <rect x="9" y="11" width="1" height="1" fill="currentColor" />
+              <rect x="6" y="12" width="1" height="1" fill="currentColor" />
+              <rect x="8" y="12" width="1" height="1" fill="currentColor" />
+              <rect x="11" y="12" width="1" height="1" fill="currentColor" />
+              <rect x="13" y="12" width="1" height="1" fill="currentColor" />
+              <rect x="15" y="11" width="1" height="1" fill="currentColor" />
+              <rect x="17" y="11" width="1" height="1" fill="currentColor" />
+              <rect x="19" y="11" width="1" height="1" fill="currentColor" />
+              <rect x="16" y="12" width="1" height="1" fill="currentColor" />
+              <rect x="18" y="12" width="1" height="1" fill="currentColor" />
+              <rect x="11" y="15" width="1" height="1" fill="currentColor" />
+              <rect x="13" y="15" width="1" height="1" fill="currentColor" />
+              <rect x="15" y="15" width="1" height="1" fill="currentColor" />
+              <rect x="17" y="15" width="1" height="1" fill="currentColor" />
+              <rect x="19" y="15" width="1" height="1" fill="currentColor" />
+              <rect x="12" y="16" width="1" height="1" fill="currentColor" />
+              <rect x="14" y="16" width="1" height="1" fill="currentColor" />
+              <rect x="18" y="16" width="1" height="1" fill="currentColor" />
             </svg>
             <span class="gate-access-text">{{ $t('access') }}</span>
           </router-link>
@@ -132,25 +145,22 @@
           <h3>{{ $t('switchProject') }}</h3>
           <button @click="showProjectSwitcher = false" class="close-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </button>
         </div>
-        
+
         <div class="modal-body">
           <div class="projects-list">
-            <div 
-              v-for="project in userProjects" 
-              :key="project.id" 
-              class="project-option"
+            <div v-for="project in userProjects" :key="project.id" class="project-option"
               :class="{ 'current': project.id === currentProjectId, 'clickable': project.id !== currentProjectId }"
-              @click="project.id !== currentProjectId && !projectStore.loading && switchToProject(project)"
-            >
+              @click="project.id !== currentProjectId && !projectStore.loading && switchToProject(project)">
               <div class="project-info">
                 <h4>{{ project.name }}</h4>
                 <span class="project-role">{{ project.location }} • Unit {{ project.userUnit }}</span>
               </div>
-              
+
               <div class="project-actions">
                 <span v-if="project.id === currentProjectId" class="current-badge">{{ $t('currentBadge') }}</span>
                 <div v-else class="switch-indicator">
@@ -164,7 +174,8 @@
         <div class="modal-footer">
           <button @click="goToProjectSelection" class="secondary-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
             {{ $t('addNewProject') }}
           </button>
@@ -174,18 +185,18 @@
 
     <div v-if="showGateFeedbackDialog" class="gate-feedback-overlay" @click="closeGateFeedbackDialog">
       <div class="gate-feedback-dialog" @click.stop>
-        <div
-          class="gate-feedback-icon"
-          :class="{
-            'is-loading': gateFeedbackState === 'loading',
-            'is-success': gateFeedbackState === 'success',
-            'is-error': gateFeedbackState === 'error'
-          }"
-        >
-          <svg v-if="gateFeedbackState === 'success'" viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
-            <path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+        <div class="gate-feedback-icon" :class="{
+          'is-loading': gateFeedbackState === 'loading',
+          'is-success': gateFeedbackState === 'success',
+          'is-error': gateFeedbackState === 'error'
+        }">
+          <svg v-if="gateFeedbackState === 'success'" viewBox="0 0 24 24" width="22" height="22" fill="none"
+            aria-hidden="true">
+            <path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+              stroke-linejoin="round" />
           </svg>
-          <svg v-else-if="gateFeedbackState === 'error'" viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+          <svg v-else-if="gateFeedbackState === 'error'" viewBox="0 0 24 24" width="22" height="22" fill="none"
+            aria-hidden="true">
             <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" />
           </svg>
         </div>
@@ -198,10 +209,7 @@
     </div>
 
     <!-- Main Content with Page Transitions -->
-    <main
-      class="main-content"
-      :class="{ 'keyboard-visible': isKeyboardVisible, 'chat-route': isChatPage }"
-    >
+    <main class="main-content" :class="{ 'keyboard-visible': isKeyboardVisible, 'chat-route': isChatPage }">
       <!-- Disable transitions for instant navigation -->
       <slot />
     </main>
@@ -241,86 +249,58 @@
       </router-link>
     </nav>
 
-    <button
-      v-if="!isChatPage"
-      class="quick-open-gate-fab quick-open-gate-fab--center"
-      type="button"
+    <button v-if="!isChatPage" class="quick-open-gate-fab quick-open-gate-fab--center" type="button"
       :title="$t('quickOpen')"
       :disabled="isGateFeedbackLoading || (isNativePlatform && (proximityState === 'OPENING' || proximityState === 'COOLDOWN'))"
-      @click.stop.prevent="handleGlassGatePrimaryAction"
-    >
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
-        <rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="2" />
-        <path d="M4 8h16M9 21V8m6 13V8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-      </svg>
+      @click.stop.prevent="handleGlassGatePrimaryAction">
+      <!-- barrier icon from assets -->
+      <img :src="barrierIcon" alt="Barrier" width="40" height="40" />
     </button>
 
     <!-- Violation Notification Popup -->
-    <ViolationNotificationPopup
-      v-if="showViolationNotification"
-      :is-visible="showViolationNotification"
-      :violation-count="violationCount"
-      @close="closeViolationNotification"
-      @view-violations="viewViolations"
-    />
+    <ViolationNotificationPopup v-if="showViolationNotification" :is-visible="showViolationNotification"
+      :violation-count="violationCount" @close="closeViolationNotification" @view-violations="viewViolations" />
 
-      <!-- Suspension Message -->
-      <SuspensionMessage
-        v-if="showSuspensionMessage"
-        :show="showSuspensionMessage"
-        :message="suspensionMessage"
-        @dismiss="handleSuspensionDismiss"
-        @contactSupport="handleContactSupport"
-      />
+    <!-- Suspension Message -->
+    <SuspensionMessage v-if="showSuspensionMessage" :show="showSuspensionMessage" :message="suspensionMessage"
+      @dismiss="handleSuspensionDismiss" @contactSupport="handleContactSupport" />
 
-      <!-- Notification Center -->
-      <NotificationCenter />
-      
-      <!-- Shake Feedback (commented out for now) -->
-      <!-- <ShakeFeedback ref="shakeFeedbackRef" /> -->
+    <!-- Notification Center -->
+    <NotificationCenter />
 
-      <!-- Auto-open gate widget -->
-      <div v-if="isNativePlatform" class="auto-gate-widget">
-        <label class="auto-gate-toggle">
-          <input
-            type="checkbox"
-            :checked="appSettingsStore.autoOpenGateEnabled"
-            @change="setAutoOpenGateEnabled($event.target.checked)"
-          />
-          <span>Auto Open Gate</span>
-        </label>
-        <p class="auto-gate-state">State: {{ proximityState }}</p>
-        <p v-if="nearestGateRssi !== null" class="auto-gate-rssi">RSSI: {{ nearestGateRssi }} dBm</p>
-      </div>
+    <!-- Shake Feedback (commented out for now) -->
+    <!-- <ShakeFeedback ref="shakeFeedbackRef" /> -->
 
-      <!-- Quick Menu Backdrop (must be before dropdown to ensure proper stacking) -->
-      <transition name="quick-menu-backdrop">
-        <div 
-          v-if="showQuickMenu" 
-          class="quick-menu-backdrop" 
-          @click.stop="showQuickMenu = false"
-        ></div>
-      </transition>
+    <!-- Auto-open gate widget -->
+    <div v-if="isNativePlatform" class="auto-gate-widget">
+      <label class="auto-gate-toggle">
+        <input type="checkbox" :checked="appSettingsStore.autoOpenGateEnabled"
+          @change="setAutoOpenGateEnabled($event.target.checked)" />
+        <span>Auto Open Gate</span>
+      </label>
+      <p class="auto-gate-state">State: {{ proximityState }}</p>
+      <p v-if="nearestGateRssi !== null" class="auto-gate-rssi">RSSI: {{ nearestGateRssi }} dBm</p>
+    </div>
 
-      <!-- Quick Menu Dropdown -->
-      <transition name="quick-menu">
-        <div v-if="showQuickMenu" class="quick-menu-dropdown" :data-open="showQuickMenu" @click.stop>
-          <div class="quick-menu-content">
-            <div class="quick-menu-grid">
-              <button 
-                v-for="item in quickMenuItems" 
-                :key="item.path"
-                @click="navigateToPage(item.path)"
-                class="quick-menu-item"
-                :class="{ 'active': isActivePage(item.path) }"
-              >
-                <div class="quick-menu-icon" v-html="item.icon"></div>
-                <span class="quick-menu-label">{{ item.label }}</span>
-              </button>
-            </div>
+    <!-- Quick Menu Backdrop (must be before dropdown to ensure proper stacking) -->
+    <transition name="quick-menu-backdrop">
+      <div v-if="showQuickMenu" class="quick-menu-backdrop" @click.stop="showQuickMenu = false"></div>
+    </transition>
+
+    <!-- Quick Menu Dropdown -->
+    <transition name="quick-menu">
+      <div v-if="showQuickMenu" class="quick-menu-dropdown" :data-open="showQuickMenu" @click.stop>
+        <div class="quick-menu-content">
+          <div class="quick-menu-grid">
+            <button v-for="item in quickMenuItems" :key="item.path" @click="navigateToPage(item.path)"
+              class="quick-menu-item" :class="{ 'active': isActivePage(item.path) }">
+              <div class="quick-menu-icon" v-html="item.icon"></div>
+              <span class="quick-menu-label">{{ item.label }}</span>
+            </button>
           </div>
         </div>
-      </transition>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -349,6 +329,7 @@ import permissionsService from '../services/permissionsService'
 import { Capacitor } from '@capacitor/core'
 import { useAndroidSafeArea } from '../composables/useAndroidSafeArea'
 import { getGateByKey, getGateSystemForProject } from '../constants/gateConfig'
+import barrierIcon from '../assets/barrier.png'
 
 // Component name for ESLint
 defineOptions({
@@ -613,16 +594,16 @@ const sendOpenCommand = async () => {
 const openGateWithExistingBleFlow = async () => {
   const connected = gateSystem.value.fastMode
     ? (
-        await scanAndConnectNearest(currentServiceUUID.value, {
-          deviceNames: currentGateDeviceNames.value,
-          timeoutMs: currentGateScanDurationMs.value,
-          minRssi: currentGateVeryCloseRssiMin.value,
-          scanMode: 2,
-        })
-      ).success
-    : await connect(currentServiceUUID.value, {
-        name: currentGateBleName.value,
+      await scanAndConnectNearest(currentServiceUUID.value, {
+        deviceNames: currentGateDeviceNames.value,
+        timeoutMs: currentGateScanDurationMs.value,
+        minRssi: currentGateVeryCloseRssiMin.value,
+        scanMode: 2,
       })
+    ).success
+    : await connect(currentServiceUUID.value, {
+      name: currentGateBleName.value,
+    })
 
   if (!connected) {
     throw new Error('Failed to connect to gate')
@@ -929,7 +910,7 @@ const quickMenuItems = computed(() => [
 // Methods
 const toggleQuickMenu = () => {
   showQuickMenu.value = !showQuickMenu.value
-  
+
   // Hide hint and mark as seen when user interacts
   if (showLogoHint.value) {
     showLogoHint.value = false
@@ -957,7 +938,7 @@ const checkIfChatPage = () => {
     '/service-booking-chat/',
     '/request-chat/'
   ]
-  
+
   isChatPage.value = chatRoutes.some(chatRoute => route.path.includes(chatRoute))
 }
 
@@ -965,16 +946,16 @@ const switchToProject = async (project) => {
   try {
     // Show loading state
     projectStore.setLoading(true)
-    
+
     // Switch project in store
     projectStore.selectProject(project)
-    
+
     // Switch Smart Mirror data to the new project
     await smartMirrorStore.switchToProject(project.id)
-    
+
     showProjectSwitcher.value = false
     projectStore.setLoading(false)
-    
+
     // No redirect - stay on current page and let reactive data update
     console.log('Project switched successfully to:', project.name)
   } catch (err) {
@@ -996,7 +977,7 @@ const openNotificationCenter = () => {
 const initializeNotificationCenter = async () => {
   try {
     const currentUser = await optimizedAuthService.getCurrentUser()
-    
+
     if (!currentUser || !currentProject.value) {
       console.log('NotificationCenter: Cannot initialize without user and project')
       return
@@ -1020,46 +1001,46 @@ const checkForViolations = async (forceShow = false) => {
   console.log('🔍 checkForViolations called, forceShow:', forceShow)
   console.log('🔍 Current project:', currentProject.value)
   console.log('🔍 Has shown in session:', hasShownViolationInSession.value)
-  
+
   // Skip if already shown in this session and not forced
   if (hasShownViolationInSession.value && !forceShow) {
     console.log('⏭️ Violation notification already shown in this session, skipping')
     return
   }
-  
+
   try {
     const currentUser = await optimizedAuthService.getCurrentUser()
     console.log('🔍 Current user:', currentUser?.uid)
     console.log('🔍 Auth object:', currentUser ? 'initialized' : 'not initialized')
-    
+
     if (!currentProject.value || !currentUser) {
       console.warn('⚠️ Cannot check violations: missing project or user')
       return
     }
-    
+
     // Get Cognito sub (the actual user ID stored in fines) instead of uid (which might be email)
     const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.id || currentUser.userSub || currentUser.uid
     const userEmail = currentUser.email || currentUser.attributes?.email || currentUser.cognitoAttributes?.email || currentUser.uid
-    
-    console.log('🔍 User identifiers for violation check:', { 
-      uid: currentUser.uid, 
-      cognitoSub, 
-      userEmail 
+
+    console.log('🔍 User identifiers for violation check:', {
+      uid: currentUser.uid,
+      cognitoSub,
+      userEmail
     })
-    
+
     console.log('🔍 Checking for active violations...')
     // Check for any active violations (issued or disputed) that need attention
     // Use Cognito sub (primary) or email (fallback) - getUserFines handles both
     const result = await hasActiveViolations(currentProject.value.id, cognitoSub || userEmail)
-    
+
     console.log('✅ Violation check result:', result)
-    
+
     if (result.hasActiveViolations) {
       console.log('⚠️ Active violations found:', result.violationCount)
       violationCount.value = result.violationCount
       showViolationNotification.value = true
       hasShownViolationInSession.value = true
-      
+
       // Mark violations as shown to prevent repeated notifications in same session
       const violationIds = result.violations.map(v => v.id)
       markViolationsAsShown(violationIds)
@@ -1095,18 +1076,18 @@ const checkUserSuspensionStatus = async () => {
       console.warn('⚠️ MainLayout: No current user for suspension check')
       return
     }
-    
+
     // Use Cognito sub (which is the DynamoDB user ID) instead of uid which might be email
     const userId = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.uid
     console.log('🔍 MainLayout: Checking suspension for user ID:', userId)
-    
+
     const suspensionStatus = await checkUserSuspension(userId)
-    
+
     console.log('🔍 MainLayout: Suspension status:', {
       isSuspended: suspensionStatus.isSuspended,
       hasDetails: !!suspensionStatus.suspensionDetails
     })
-    
+
     if (suspensionStatus.isSuspended) {
       isUserSuspended.value = true
       suspensionMessage.value = getSuspensionMessage(suspensionStatus.suspensionDetails)
@@ -1122,9 +1103,9 @@ const checkUserSuspensionStatus = async () => {
   }
 }
 
-  const handleSuspensionDismiss = () => {
-    showSuspensionMessage.value = false
-  }
+const handleSuspensionDismiss = () => {
+  showSuspensionMessage.value = false
+}
 
 // Handle visibility change for permission checking (defined outside onMounted so it can be removed in onUnmounted)
 const handleVisibilityChange = async () => {
@@ -1143,7 +1124,7 @@ const handleVisibilityChange = async () => {
       const hasIOSBridge = window.webkit?.messageHandlers !== undefined
       const platform = Capacitor.getPlatform()
       const isNative = platform === 'ios' || platform === 'android' || protocol === 'capacitor:' || hasIOSBridge
-      
+
       // Only check if permissions were requested, don't force request again
       // This is just for logging/debugging
       if (isNative && !permissionsService.permissionsRequested) {
@@ -1154,13 +1135,13 @@ const handleVisibilityChange = async () => {
       console.error('❌ MainLayout: Error checking permissions on visibility change:', error)
     }
   }
-  }
+}
 
-  const handleContactSupport = () => {
-    // Navigate to support page
-    router.push('/support')
-    showSuspensionMessage.value = false
-  }
+const handleContactSupport = () => {
+  // Navigate to support page
+  router.push('/support')
+  showSuspensionMessage.value = false
+}
 
 // Removed unused canAccessCurrentRoute function
 
@@ -1175,55 +1156,55 @@ const resetViolationNotifications = () => {
 // Method to determine which tab should be active
 const isActiveTab = (tabName) => {
   const currentPath = route.path
-  
+
   switch (tabName) {
     case 'home':
       return currentPath === '/home'
-    
+
     case 'profile':
-      return currentPath === '/profile' || 
-             currentPath === '/complaints' || 
-             currentPath.startsWith('/complaints/') ||
-             currentPath === '/violations' ||
-             currentPath.startsWith('/violation-chat/') ||
-             currentPath === '/support' ||
-             currentPath.startsWith('/support-chat/') ||
-             currentPath === '/face-verification' ||  
-             currentPath.startsWith('/face-verification/') ||
-             currentPath.startsWith('/face-verification-chat/') ||
-             currentPath.startsWith('/face-verification-category/') ||
-             currentPath.startsWith('/face-verification-request/') ||
-             currentPath.startsWith('/face-verification-request-chat/') ||
-             currentPath.startsWith('/face-verification-request-category/') ||
-             currentPath.startsWith('/face-verification-request-chat/')
+      return currentPath === '/profile' ||
+        currentPath === '/complaints' ||
+        currentPath.startsWith('/complaints/') ||
+        currentPath === '/violations' ||
+        currentPath.startsWith('/violation-chat/') ||
+        currentPath === '/support' ||
+        currentPath.startsWith('/support-chat/') ||
+        currentPath === '/face-verification' ||
+        currentPath.startsWith('/face-verification/') ||
+        currentPath.startsWith('/face-verification-chat/') ||
+        currentPath.startsWith('/face-verification-category/') ||
+        currentPath.startsWith('/face-verification-request/') ||
+        currentPath.startsWith('/face-verification-request-chat/') ||
+        currentPath.startsWith('/face-verification-request-category/') ||
+        currentPath.startsWith('/face-verification-request-chat/')
     case 'services':
       // Services tab is active for smart devices and other service pages
-      return currentPath === '/services' || 
-             currentPath === '/smart-devices' ||
-             currentPath === '/service-category' ||
-             currentPath === '/my-bookings' || 
-             currentPath === '/calendar' ||
-             currentPath === '/analytics' ||
-             currentPath === '/news' ||
-             currentPath.startsWith('/service-category/') ||
-             currentPath.startsWith('/service-booking-chat/') ||
-             currentPath === '/court-booking' ||
-             currentPath === '/academy-programs' ||
-             currentPath === '/academy-details' ||
-             currentPath === '/academy-registration' ||
-             currentPath === '/academy-booking' ||
-             currentPath === '/stores-shopping' ||
-             currentPath === '/store' ||
-             currentPath === '/shopping-cart' ||
-             currentPath.startsWith('/store/') ||
-             currentPath.startsWith('/academy-details/')
-    
+      return currentPath === '/services' ||
+        currentPath === '/smart-devices' ||
+        currentPath === '/service-category' ||
+        currentPath === '/my-bookings' ||
+        currentPath === '/calendar' ||
+        currentPath === '/analytics' ||
+        currentPath === '/news' ||
+        currentPath.startsWith('/service-category/') ||
+        currentPath.startsWith('/service-booking-chat/') ||
+        currentPath === '/court-booking' ||
+        currentPath === '/academy-programs' ||
+        currentPath === '/academy-details' ||
+        currentPath === '/academy-registration' ||
+        currentPath === '/academy-booking' ||
+        currentPath === '/stores-shopping' ||
+        currentPath === '/store' ||
+        currentPath === '/shopping-cart' ||
+        currentPath.startsWith('/store/') ||
+        currentPath.startsWith('/academy-details/')
+
     case 'requests':
       // Requests tab is active for request categories and submissions
       return currentPath === '/requests' ||
-             currentPath.startsWith('/request-chat/') ||
-             currentPath.startsWith('/request-category/')
-    
+        currentPath.startsWith('/request-chat/') ||
+        currentPath.startsWith('/request-category/')
+
     default:
       return false
   }
@@ -1263,13 +1244,13 @@ watch(
   async (newProject, oldProject) => {
     if (newProject && newProject.id !== oldProject?.id) {
       console.log('Project changed, triggering data refresh...')
-      
+
       // Reset violation notifications when switching projects
       resetViolationNotifications()
-      
+
       // Reset and restart data preloader for new project
       resetPreloader()
-      
+
       // Re-initialize notification center for new project
       setTimeout(async () => {
         try {
@@ -1278,7 +1259,7 @@ watch(
           console.error('❌ Error initializing notification center after project change:', error)
         }
       }, 500)
-      
+
       // Start background data preloading for new project immediately
       setTimeout(async () => {
         try {
@@ -1287,9 +1268,9 @@ watch(
             console.log('🚀 MainLayout: Preloading data for new project:', newProject.id)
             await preloadAppData(currentUser.uid, newProject.id)
           } else {
-            console.warn('⚠️ MainLayout: Cannot preload - missing user or project', { 
-              hasUser: !!currentUser, 
-              hasProject: !!newProject 
+            console.warn('⚠️ MainLayout: Cannot preload - missing user or project', {
+              hasUser: !!currentUser,
+              hasProject: !!newProject
             })
           }
         } catch (error) {
@@ -1298,7 +1279,7 @@ watch(
           // Don't block the UI if preload fails
         }
       }, 800) // Shorter delay for better perceived performance
-      
+
       // Check for violations when project is first selected (initial load)
       // Only check on initial selection (when oldProject is null/undefined)
       if (!oldProject) {
@@ -1311,15 +1292,15 @@ watch(
           }
         }, 1500) // Delay to ensure project and user are fully loaded
       }
-      
+
       // Emit a custom event that child components can listen to
       window.dispatchEvent(new CustomEvent('projectChanged', {
         detail: { newProject, oldProject }
       }))
-      
+
       // Emit app ready event for splash screen
       window.dispatchEvent(new CustomEvent('appReady'))
-      
+
       // Check user suspension status when switching projects
       setTimeout(() => {
         checkUserSuspensionStatus()
@@ -1361,7 +1342,7 @@ watch(
 const handleSuspensionMessage = (event) => {
   const { suspensionDetails, attemptedRoute } = event.detail
   console.log('Suspension message triggered for route:', attemptedRoute)
-  
+
   if (suspensionDetails) {
     isUserSuspended.value = true
     suspensionMessage.value = getSuspensionMessage(suspensionDetails)
@@ -1385,10 +1366,10 @@ const handleProjectStoreReady = async () => {
 // Watch for route changes - simplified for instant navigation
 watch(() => route.path, (newPath, oldPath) => {
   if (!oldPath || !newPath) return
-  
+
   // Close quick menu on route change (instant, no delay)
   showQuickMenu.value = false
-  
+
   // Store previous route (no transition logic needed since transitions are disabled)
   previousRoute.value = oldPath
 })
@@ -1401,17 +1382,17 @@ onMounted(async () => {
 
   // Initialize Android safe area handling (must be early)
   await initializeAndroidSafeArea()
-  
+
   // Initialize app settings
   appSettingsStore.initSettings()
   consumePendingQuickOpenRequest()
   window.addEventListener('quick-open-gate-request', handleQuickOpenGateRequest)
-  
+
   // Reset violation notifications when app starts
   resetViolationNotifications()
-  
+
   window.addEventListener('projectStoreReady', handleProjectStoreReady)
-  
+
   // Initialize notification center
   if (projectStore.hasSelectedProject) {
     setTimeout(async () => {
@@ -1421,7 +1402,7 @@ onMounted(async () => {
         console.error('❌ Error initializing notification center during mount:', error)
       }
     }, 500)
-    
+
     // Start background data preloading immediately (async, non-blocking)
     // This runs in parallel with page loads
     setTimeout(async () => {
@@ -1439,7 +1420,7 @@ onMounted(async () => {
       }
     }, 1000) // Start after 1 second
   }
-  
+
   // Check for violations once when app first loads (will only show once due to session flag)
   if (projectStore.hasSelectedProject) {
     setTimeout(async () => {
@@ -1452,17 +1433,17 @@ onMounted(async () => {
       }
     }, 1000) // 1 second delay to ensure UI loads first
   }
-  
+
   // Check user suspension status
   setTimeout(() => {
     checkUserSuspensionStatus()
   }, 1500) // Check after violations check
-  
+
   // Emit app ready event after initial load
   setTimeout(() => {
     window.dispatchEvent(new CustomEvent('appReady'))
   }, 2000) // Give time for app to fully initialize
-  
+
   // Fallback: Request permissions if they weren't requested yet (in case boot file missed it)
   setTimeout(async () => {
     try {
@@ -1470,7 +1451,7 @@ onMounted(async () => {
       const hasIOSBridge = window.webkit?.messageHandlers !== undefined
       const platform = Capacitor.getPlatform()
       const isNative = platform === 'ios' || platform === 'android' || protocol === 'capacitor:' || hasIOSBridge
-      
+
       if (isNative && !permissionsService.permissionsRequested) {
         console.log('🔐 MainLayout: Permissions not requested yet, requesting now as fallback...')
         const results = await permissionsService.requestAllPermissions()
@@ -1480,21 +1461,21 @@ onMounted(async () => {
       console.error('❌ MainLayout: Error in fallback permission request:', error)
     }
   }, 3000) // Wait 3 seconds after mount
-  
+
   // Register visibility change listener
   document.addEventListener('visibilitychange', handleVisibilityChange)
-  
+
   window.addEventListener('showSuspensionMessage', handleSuspensionMessage)
-  
+
   // Keyboard detection is now handled globally
-  
+
   // Add dead zones for areas where swipe should be disabled
   // Bottom navigation area (prevent accidental swipes when tapping nav items)
   const navHeight = 80 // Smaller dead zone
   addDeadZone(0, window.innerHeight - navHeight, window.innerWidth, navHeight)
-  
+
   // Touch listener is handled by backdrop click now - removed redundant listener
-  
+
   // Show swipe hint for first-time users
   const hasSeenSwipeHint = localStorage.getItem('hasSeenSwipeHint')
   if (!hasSeenSwipeHint) {
@@ -1508,7 +1489,7 @@ onMounted(async () => {
       }, 4000)
     }, 2000)
   }
-  
+
   // Show logo hint for first-time users
   const seenLogoHint = localStorage.getItem('hasSeenLogoHint')
   if (!seenLogoHint) {
@@ -1528,7 +1509,7 @@ onMounted(async () => {
   } else {
     hasSeenLogoHint.value = true
   }
-  
+
   return () => {
     // Keyboard cleanup is handled globally
   }
@@ -1541,10 +1522,10 @@ onUnmounted(() => {
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   window.removeEventListener('showSuspensionMessage', handleSuspensionMessage)
   window.removeEventListener('projectStoreReady', handleProjectStoreReady)
-  
+
   // Clean up Android safe area listeners
   cleanupAndroidSafeArea()
-  
+
   // Clean up notification center
   notificationCenterStore.clearNotifications()
 
@@ -1557,19 +1538,22 @@ onUnmounted(() => {
 
 <style scoped>
 .main-layout {
-  min-height: 100vh; 
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background-color: #F6F6F6;
   width: 100%;
-  overflow-x: hidden; /* Prevent horizontal overflow */
-  padding-top: 40px; /* Base padding for fixed header */
+  overflow-x: hidden;
+  /* Prevent horizontal overflow */
+  padding-top: 40px;
+  /* Base padding for fixed header */
 }
 
 /* Android safe area - simple padding approach */
 body.platform-android .main-layout {
   /* Account for header height + status bar */
-  padding-top: calc(40px + 24px); /* 40px header + 24px status bar */
+  padding-top: calc(40px + 24px);
+  /* 40px header + 24px status bar */
 }
 
 /* Android performance optimizations */
@@ -1618,7 +1602,8 @@ body.platform-ios .bottom-navigation {
 /* Android safe area - simple padding approach */
 body.platform-android .app-header {
   /* Simple padding for Android status bar */
-  padding-top: calc(16px + 24px); /* 16px base + 24px for status bar */
+  padding-top: calc(16px + 24px);
+  /* 16px base + 24px for status bar */
   padding-left: 20px;
   padding-right: 20px;
   /* Ensure fixed positioning works - Android WebView fix */
@@ -1663,7 +1648,8 @@ body.platform-android .app-header {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  min-width: 0; /* Allow flex item to shrink */
+  min-width: 0;
+  /* Allow flex item to shrink */
 }
 
 .header-center {
@@ -1683,16 +1669,19 @@ body.platform-android .app-header {
 /* RTL Support for Header - DISABLED to keep header always LTR */
 /* Header will always maintain LTR layout regardless of app language */
 [dir="rtl"] .header-left {
-  justify-content: flex-start !important; /* Keep left aligned */
+  justify-content: flex-start !important;
+  /* Keep left aligned */
 }
 
 [dir="rtl"] .header-right {
-  justify-content: flex-end !important; /* Keep right aligned */
+  justify-content: flex-end !important;
+  /* Keep right aligned */
 }
 
 [dir="rtl"] .header-content {
   grid-template-columns: 1fr auto 1fr;
-  direction: ltr !important; /* Force LTR */
+  direction: ltr !important;
+  /* Force LTR */
 }
 
 /* Logo Button Styles */
@@ -1716,10 +1705,10 @@ body.platform-android .app-header {
   position: absolute;
   inset: -2px;
   border-radius: 14px;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    rgba(175, 30, 35, 0.2) 50%, 
-    transparent 100%);
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(175, 30, 35, 0.2) 50%,
+      transparent 100%);
   background-size: 200% 100%;
   animation: shimmer 2.5s ease-in-out infinite;
   pointer-events: none;
@@ -1727,9 +1716,12 @@ body.platform-android .app-header {
 }
 
 @keyframes shimmer {
-  0%, 100% {
+
+  0%,
+  100% {
     background-position: 200% 0;
   }
+
   50% {
     background-position: -200% 0;
   }
@@ -1795,11 +1787,14 @@ body.platform-android .app-header {
 }
 
 @keyframes arrowPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0) scale(1);
     opacity: 0.8;
     filter: drop-shadow(0 2px 6px rgba(175, 30, 35, 0.4));
   }
+
   50% {
     transform: translateY(3px) scale(1.2);
     opacity: 1;
@@ -1830,7 +1825,7 @@ body.platform-android .app-header {
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
-  box-shadow: 
+  box-shadow:
     0 8px 24px rgba(175, 30, 35, 0.5),
     0 0 0 3px rgba(175, 30, 35, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -1856,9 +1851,12 @@ body.platform-android .app-header {
 }
 
 @keyframes iconPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.15) rotate(5deg);
   }
@@ -1882,10 +1880,12 @@ body.platform-android .app-header {
     opacity: 0;
     transform: translateX(-50%) translateY(-15px) scale(0.85);
   }
+
   60% {
     opacity: 1;
     transform: translateX(-50%) translateY(3px) scale(1.05);
   }
+
   100% {
     opacity: 1;
     transform: translateX(-50%) translateY(0) scale(1);
@@ -1893,14 +1893,17 @@ body.platform-android .app-header {
 }
 
 @keyframes hintGlow {
-  0%, 100% {
-    box-shadow: 
+
+  0%,
+  100% {
+    box-shadow:
       0 8px 24px rgba(175, 30, 35, 0.5),
       0 0 0 3px rgba(175, 30, 35, 0.2),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
+
   50% {
-    box-shadow: 
+    box-shadow:
       0 8px 32px rgba(175, 30, 35, 0.7),
       0 0 0 3px rgba(175, 30, 35, 0.35),
       inset 0 1px 0 rgba(255, 255, 255, 0.3);
@@ -1920,6 +1923,7 @@ body.platform-android .app-header {
     opacity: 1;
     transform: translateX(-50%) translateY(0) scale(1);
   }
+
   to {
     opacity: 0;
     transform: translateX(-50%) translateY(-5px) scale(0.95);
@@ -1975,10 +1979,13 @@ body.platform-android .app-header {
 }
 
 @keyframes badge-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     box-shadow: 0 2px 6px rgba(175, 30, 35, 0.4);
   }
+
   50% {
     transform: scale(1.1);
     box-shadow: 0 2px 8px rgba(175, 30, 35, 0.6);
@@ -2067,15 +2074,27 @@ body.platform-android .app-header {
   animation: dot-bounce 1.4s ease-in-out infinite both;
 }
 
-.dot:nth-child(1) { animation-delay: -0.32s; }
-.dot:nth-child(2) { animation-delay: -0.16s; }
-.dot:nth-child(3) { animation-delay: 0s; }
+.dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0s;
+}
 
 @keyframes dot-bounce {
-  0%, 80%, 100% {
+
+  0%,
+  80%,
+  100% {
     transform: scale(0);
     opacity: 0.5;
   }
+
   40% {
     transform: scale(1);
     opacity: 1;
@@ -2163,8 +2182,10 @@ body.platform-android .app-header {
   /* padding-top: 100px; */
   width: 100%;
   box-sizing: border-box;
-  overflow-x: hidden; /* Prevent horizontal overflow */
-  min-width: 0; /* Allow flex item to shrink below content size */
+  overflow-x: hidden;
+  /* Prevent horizontal overflow */
+  min-width: 0;
+  /* Allow flex item to shrink below content size */
   margin-bottom: 80px;
   transition: margin-bottom 0.3s ease-in-out;
 }
@@ -2204,7 +2225,8 @@ body.platform-android .app-header {
 /* Android safe area - simple padding approach */
 body.platform-android .bottom-navigation {
   /* Simple padding for Android navigation bar */
-  padding-bottom: calc(32px + 24px); /* 32px base + 24px for navigation bar */
+  padding-bottom: calc(32px + 24px);
+  /* 32px base + 24px for navigation bar */
   /* Ensure fixed positioning works - Android WebView fix */
   position: fixed !important;
   bottom: 0 !important;
@@ -2297,7 +2319,8 @@ body.hide-bottom-nav .bottom-navigation {
   width: 24px;
   height: 24px;
   object-fit: contain;
-  filter: brightness(0) invert(1); /* Makes the icons white */
+  filter: brightness(0) invert(1);
+  /* Makes the icons white */
   transition: all 0.3s ease;
 }
 
@@ -2311,7 +2334,8 @@ body.hide-bottom-nav .bottom-navigation {
 }
 
 .nav-item.active .nav-icon img {
-  filter: brightness(0) invert(1); /* Keep icons white when active */
+  filter: brightness(0) invert(1);
+  /* Keep icons white when active */
   width: 28px;
   height: 28px;
 }
@@ -2321,7 +2345,8 @@ body.hide-bottom-nav .bottom-navigation {
 }
 
 .nav-item:not(.active) .nav-icon img {
-  filter: brightness(0) invert(1); /* Keep icons white when inactive */
+  filter: brightness(0) invert(1);
+  /* Keep icons white when inactive */
 }
 
 .nav-item .nav-label {
@@ -2365,7 +2390,7 @@ body.hide-bottom-nav .bottom-navigation {
   background: rgba(35, 31, 32, 0.98);
   border: 2px solid rgba(175, 30, 35, 0.3);
   border-radius: 20px;
-  box-shadow: 
+  box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.4),
     0 0 0 1px rgba(175, 30, 35, 0.1);
   max-width: 90vw;
@@ -2382,10 +2407,12 @@ body.hide-bottom-nav .bottom-navigation {
     transform: translateY(30px) scale(0.9);
     filter: blur(4px);
   }
+
   50% {
     opacity: 0.8;
     filter: blur(1px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -2479,7 +2506,7 @@ body.hide-bottom-nav .bottom-navigation {
 .project-option.current {
   background: rgba(175, 30, 35, 0.2);
   border-color: #AF1E23;
-  box-shadow: 
+  box-shadow:
     0 4px 16px rgba(175, 30, 35, 0.3),
     0 0 0 2px rgba(175, 30, 35, 0.15);
   transform: scale(1.02);
@@ -2575,8 +2602,13 @@ body.hide-bottom-nav .bottom-navigation {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .modal-footer {
@@ -2615,30 +2647,31 @@ body.hide-bottom-nav .bottom-navigation {
     padding: 12px 16px;
     padding-bottom: 5px;
   }
-  
+
   .header-content {
     gap: 8px;
   }
-  
+
   .main-content {
-    padding-top: 50px; /* Adjust for smaller header */
+    padding-top: 50px;
+    /* Adjust for smaller header */
     padding-bottom: 40px;
   }
-  
+
   .header-left {
     flex: 1;
     min-width: 0;
   }
-  
+
   .header-center {
     flex: 0 0 auto;
   }
-  
+
   .header-right {
     flex: 0 0 auto;
     gap: 8px;
   }
-  
+
   .notification-bell-btn {
     padding: 8px;
     border-radius: 10px;
@@ -2666,53 +2699,54 @@ body.hide-bottom-nav .bottom-navigation {
     min-width: 44px;
     justify-content: center;
   }
-  
+
   .gate-access-text {
-    display: none; /* Hide text on mobile, show only icon */
+    display: none;
+    /* Hide text on mobile, show only icon */
   }
-  
+
   .logo-image {
     height: 32px;
   }
-  
+
   /* Make project info more compact on mobile */
   .current-project {
     padding: 6px 10px;
     font-size: 0.8rem;
     height: 36px;
   }
-  
+
   .project-name {
     max-width: 100px;
     font-size: 0.8rem;
   }
-  
+
   .project-unit {
     max-width: 70px;
     font-size: 0.7rem;
   }
-  
+
   .project-label {
     font-size: 0.7rem;
   }
-  
+
   /* Removed main-content padding adjustment since we removed the main padding */
-  
+
   .bottom-navigation {
     padding: 12px 16px 24px;
   }
-  
+
   .nav-icon {
     width: 48px;
     height: 48px;
   }
-  
+
   .nav-item.active .nav-icon {
     transform: translateY(-28px);
     width: 56px;
     height: 56px;
   }
-  
+
   .nav-item {
     max-width: 70px;
   }
@@ -2720,20 +2754,20 @@ body.hide-bottom-nav .bottom-navigation {
   .nav-center-gap {
     flex-basis: 64px;
   }
-  
+
   .project-switcher-modal {
     width: 90vw;
     max-height: 80vh;
   }
-  
+
   .modal-header {
     padding: 20px 20px 16px;
   }
-  
+
   .modal-body {
     padding: 16px 20px;
   }
-  
+
   .modal-footer {
     padding: 16px 20px;
   }
@@ -2744,22 +2778,22 @@ body.hide-bottom-nav .bottom-navigation {
     padding: 10px 12px;
     padding-bottom: 5px;
   }
-  
+
   .bottom-navigation {
     padding: 10px 12px 20px;
   }
-  
+
   .nav-icon {
     width: 44px;
     height: 44px;
   }
-  
+
   .nav-item.active .nav-icon {
     transform: translateY(-24px);
     width: 52px;
     height: 52px;
   }
-  
+
   .nav-item {
     max-width: 65px;
   }
@@ -2767,22 +2801,22 @@ body.hide-bottom-nav .bottom-navigation {
   .nav-center-gap {
     flex-basis: 56px;
   }
-  
+
   .nav-item .nav-label {
     font-size: 0.7rem;
   }
-  
+
   .project-switcher-modal {
     width: 95vw;
     max-height: 85vh;
   }
-  
+
   .project-option {
     flex-direction: row;
     align-items: flex-start;
     gap: 12px;
   }
-  
+
   .project-actions {
     justify-content: flex-end;
   }
@@ -2909,6 +2943,7 @@ body.hide-bottom-nav .bottom-navigation {
     opacity: 0;
     transform: translateX(-50%) translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
@@ -2951,12 +2986,19 @@ body.hide-bottom-nav .bottom-navigation {
 }
 
 @keyframes swipe-bounce {
-  0%, 20%, 50%, 80%, 100% {
+
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
     transform: translateX(0);
   }
+
   40% {
     transform: translateX(-3px);
   }
+
   60% {
     transform: translateX(3px);
   }
@@ -2968,21 +3010,22 @@ body.hide-bottom-nav .bottom-navigation {
     padding: 10px 12px;
     padding-bottom: 5px;
   }
-  
+
   .header-content {
     gap: 6px;
   }
-  
+
   .main-content {
     padding: 16px;
-    padding-top: 50px; /* Adjust for smallest header */
+    padding-top: 50px;
+    /* Adjust for smallest header */
     padding-bottom: 40px;
   }
-  
+
   .logo-image {
     height: 28px;
   }
-  
+
   .notification-bell-btn {
     padding: 6px;
     min-width: 36px;
@@ -3006,44 +3049,44 @@ body.hide-bottom-nav .bottom-navigation {
     padding: 6px;
     min-width: 40px;
   }
-  
+
   .project-name {
     max-width: 70px;
     font-size: 0.75rem;
   }
-  
+
   .project-unit {
     max-width: 50px;
     font-size: 0.65rem;
   }
-  
+
   .project-label {
     font-size: 0.65rem;
   }
-  
+
   .current-project {
     padding: 4px 8px;
     gap: 4px;
   }
-  
+
   .bottom-navigation {
     padding: 12px 16px 24px;
   }
-  
+
   .nav-label {
     font-size: 0.75rem;
   }
-  
+
   /* Responsive swipe indicator */
   .swipe-indicator {
     min-width: 180px;
     padding: 16px;
   }
-  
+
   .swipe-tabs-preview {
     gap: 8px;
   }
-  
+
   .tab-name {
     font-size: 0.65rem;
   }
@@ -3083,7 +3126,7 @@ body.hide-bottom-nav .bottom-navigation {
 .quick-menu-content {
   background: #ffffff;
   border-radius: 20px;
-  box-shadow: 
+  box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.2),
     0 0 1px rgba(0, 0, 0, 0.1);
   padding: 20px;
@@ -3156,7 +3199,7 @@ body.hide-bottom-nav .bottom-navigation {
 .quick-menu-item.active {
   background: linear-gradient(135deg, #fff5f4 0%, #ffe8e8 100%);
   border-color: #AF1E23;
-  box-shadow: 
+  box-shadow:
     0 4px 16px rgba(175, 30, 35, 0.25),
     0 0 0 2px rgba(175, 30, 35, 0.1);
   transform: scale(1.05);
@@ -3196,7 +3239,7 @@ body.hide-bottom-nav .bottom-navigation {
 
 .quick-menu-item.active .quick-menu-icon {
   background: linear-gradient(135deg, #d42028 0%, #AF1E23 100%);
-  box-shadow: 
+  box-shadow:
     0 6px 20px rgba(175, 30, 35, 0.4),
     0 0 0 3px rgba(175, 30, 35, 0.1);
   transform: scale(1.15) rotate(5deg);
@@ -3247,12 +3290,14 @@ body.hide-bottom-nav .bottom-navigation {
 /* Backdrop - Smooth fade with blur */
 .quick-menu-backdrop-enter-active {
   transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1),
-              backdrop-filter 400ms cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .quick-menu-backdrop-leave-active {
   transition: opacity 300ms cubic-bezier(0.4, 0, 1, 1),
-              backdrop-filter 300ms cubic-bezier(0.4, 0, 1, 1);
+    backdrop-filter 300ms cubic-bezier(0.4, 0, 1, 1);
 }
+
 .quick-menu-backdrop-enter-from,
 .quick-menu-backdrop-leave-to {
   opacity: 0;
@@ -3263,6 +3308,7 @@ body.hide-bottom-nav .bottom-navigation {
 .quick-menu-enter-active {
   animation: quick-menu-enter 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+
 .quick-menu-leave-active {
   animation: quick-menu-leave 300ms cubic-bezier(0.6, 0, 0.9, 0.4);
 }
@@ -3273,10 +3319,12 @@ body.hide-bottom-nav .bottom-navigation {
     transform: translate3d(0, -60px, 0) scale(0.85) rotateX(10deg);
     filter: blur(8px);
   }
+
   50% {
     opacity: 0.8;
     filter: blur(2px);
   }
+
   100% {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1) rotateX(0deg);
@@ -3290,6 +3338,7 @@ body.hide-bottom-nav .bottom-navigation {
     transform: translate3d(0, 0, 0) scale(1);
     filter: blur(0);
   }
+
   100% {
     opacity: 0;
     transform: translate3d(0, -40px, 0) scale(0.9);
@@ -3302,7 +3351,7 @@ body.hide-bottom-nav .bottom-navigation {
   opacity: 0;
   transform: translate3d(0, 30px, 0) scale(0.85) rotateZ(-3deg);
   filter: blur(4px);
-  transition: 
+  transition:
     opacity 450ms cubic-bezier(0.34, 1.56, 0.64, 1),
     transform 450ms cubic-bezier(0.34, 1.56, 0.64, 1),
     filter 450ms cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -3319,34 +3368,43 @@ body.hide-bottom-nav .bottom-navigation {
 }
 
 /* Cascading delays with perfect rhythm */
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(1) { 
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(1) {
   transition-delay: 50ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(2) { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(2) {
   transition-delay: 100ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(3) { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(3) {
   transition-delay: 150ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(4) { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(4) {
   transition-delay: 200ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(5) { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(5) {
   transition-delay: 250ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(6) { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(6) {
   transition-delay: 300ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(7) { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(7) {
   transition-delay: 350ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(8) { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(8) {
   transition-delay: 400ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(9) { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(9) {
   transition-delay: 450ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(10) { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(10) {
   transition-delay: 500ms;
 }
 
@@ -3356,34 +3414,43 @@ body.hide-bottom-nav .bottom-navigation {
   animation-fill-mode: both;
 }
 
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(1) .quick-menu-icon { 
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(1) .quick-menu-icon {
   animation-delay: 50ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(2) .quick-menu-icon { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(2) .quick-menu-icon {
   animation-delay: 100ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(3) .quick-menu-icon { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(3) .quick-menu-icon {
   animation-delay: 150ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(4) .quick-menu-icon { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(4) .quick-menu-icon {
   animation-delay: 200ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(5) .quick-menu-icon { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(5) .quick-menu-icon {
   animation-delay: 250ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(6) .quick-menu-icon { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(6) .quick-menu-icon {
   animation-delay: 300ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(7) .quick-menu-icon { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(7) .quick-menu-icon {
   animation-delay: 350ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(8) .quick-menu-icon { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(8) .quick-menu-icon {
   animation-delay: 400ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(9) .quick-menu-icon { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(9) .quick-menu-icon {
   animation-delay: 450ms;
 }
-.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(10) .quick-menu-icon { 
+
+.quick-menu-dropdown[data-open="true"] .quick-menu-item:nth-child(10) .quick-menu-icon {
   animation-delay: 500ms;
 }
 
@@ -3392,9 +3459,11 @@ body.hide-bottom-nav .bottom-navigation {
     transform: scale(0.6) rotate(-180deg);
     opacity: 0;
   }
+
   60% {
     transform: scale(1.15) rotate(10deg);
   }
+
   100% {
     transform: scale(1) rotate(0deg);
     opacity: 1;
@@ -3405,14 +3474,14 @@ body.hide-bottom-nav .bottom-navigation {
 .quick-menu-item:active {
   transform: translateY(-2px) scale(0.96);
   transition: all 80ms cubic-bezier(0.4, 0, 0.6, 1);
-  box-shadow: 
+  box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.12),
     0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .quick-menu-item:active .quick-menu-icon {
   transform: scale(0.92) rotate(-2deg);
-  box-shadow: 
+  box-shadow:
     0 2px 6px rgba(175, 30, 35, 0.3),
     inset 0 1px 2px rgba(0, 0, 0, 0.15);
   transition: all 80ms cubic-bezier(0.4, 0, 0.6, 1);
@@ -3432,12 +3501,14 @@ body.hide-bottom-nav .bottom-navigation {
 
 /* Accessibility: respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
+
   .quick-menu-enter-active,
   .quick-menu-leave-active,
   .quick-menu-backdrop-enter-active,
   .quick-menu-backdrop-leave-active {
     transition-duration: 1ms !important;
   }
+
   .quick-menu-item {
     transition-duration: 1ms !important;
   }
@@ -3527,7 +3598,7 @@ body.hide-bottom-nav .bottom-navigation {
   height: 100%;
 }
 
-.main-content > * {
+.main-content>* {
   width: 100%;
 }
 
@@ -3561,13 +3632,18 @@ body.hide-bottom-nav .bottom-navigation {
 
 .quick-open-gate-fab {
   position: fixed;
-  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(52px + env(safe-area-inset-bottom, 0px));
   z-index: 1102;
   width: 66px;
   height: 66px;
   border-radius: 50%;
-  border: 1px solid rgba(175, 30, 35, 0.9);
-  background: linear-gradient(145deg, #AF1E23 0%, #c9272d 100%);
+  /* border: 1px solid rgba(175, 30, 35, 0.9); */
+  background: rgba(175, 30, 35, 0.77);
+  border-radius: 50%;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(9.1px);
+  -webkit-backdrop-filter: blur(9.1px);
+  border: 1px solid rgba(175, 30, 35, 1);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -3611,7 +3687,7 @@ body.hide-bottom-nav .bottom-navigation {
   .quick-open-gate-fab {
     width: 60px;
     height: 60px;
-    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(52px + env(safe-area-inset-bottom, 0px));
   }
 }
 

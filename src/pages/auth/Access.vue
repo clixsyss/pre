@@ -1180,6 +1180,35 @@ const getPrimaryUserIdentifier = (user) => {
   return candidates[0] || ''
 }
 
+const normalizePassIdentifier = (value) => String(value || '').trim().toLowerCase()
+
+const buildCurrentUserIdentifierSet = (user, resolvedUserId = '') => {
+  const set = new Set()
+  for (const candidate of getUserIdentifierCandidates(user)) {
+    const normalized = normalizePassIdentifier(candidate)
+    if (normalized) set.add(normalized)
+  }
+  const resolved = normalizePassIdentifier(resolvedUserId)
+  if (resolved) set.add(resolved)
+  return set
+}
+
+const doesPassBelongToCurrentUser = (passData, currentUserIdentifierSet) => {
+  if (!(currentUserIdentifierSet instanceof Set) || currentUserIdentifierSet.size === 0) return false
+  const passIdentifiers = [
+    passData?.userId,
+    passData?.uid,
+    passData?.authUid,
+    passData?.createdBy,
+    passData?.createdByUserId,
+    passData?.ownerId,
+  ]
+    .map(normalizePassIdentifier)
+    .filter(Boolean)
+
+  return passIdentifiers.some((identifier) => currentUserIdentifierSet.has(identifier))
+}
+
 const getUserStatusWithAndroidFallback = async (user, projectId) => {
   const ids = getUserIdentifierCandidates(user)
   if (ids.length === 0) {
@@ -1816,9 +1845,18 @@ const loadPassesFromFirebase = async () => {
 
     console.log('✅ Pass limits set:', passLimits.value)
 
-    // Map ACTIVE passes for display (excluding soft-deleted)
+    const currentUserIdentifierSet = buildCurrentUserIdentifierSet(user)
+    const userOwnedActivePasses = activePasses.filter((docSnapshot) => {
+      const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
+      return doesPassBelongToCurrentUser(docData, currentUserIdentifierSet)
+    })
+    console.log(
+      `👤 User-owned passes: ${userOwnedActivePasses.length}/${activePasses.length} (showing current account only)`,
+    )
+
+    // Map ACTIVE passes for display (excluding soft-deleted and excluding other family/unit users)
     // Note: docs from firestoreService already have their data as direct properties
-    passes.value = activePasses.map(docSnapshot => {
+    passes.value = userOwnedActivePasses.map(docSnapshot => {
       // Extract data from Firestore document - handle both formats
       const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
       const docId = docSnapshot.id || docData.id
@@ -1948,11 +1986,17 @@ const loadPassesFromAWS = async () => {
     // Load passes for this unit (or user if no unit)
     // This function already sorts by newest first
     const loadedPasses = await getGuestPassesForUnit(projectId, resolvedUserId, userUnit || null)
+    const currentUserIdentifierSet = buildCurrentUserIdentifierSet(user, resolvedUserId)
+    const userOwnedPasses = loadedPasses.filter((pass) =>
+      doesPassBelongToCurrentUser(pass, currentUserIdentifierSet),
+    )
 
-    console.log(`✅ Loaded ${loadedPasses.length} passes from AWS (sorted newest first)`)
+    console.log(
+      `✅ Loaded ${loadedPasses.length} passes from AWS, user-owned: ${userOwnedPasses.length} (showing current account only)`,
+    )
 
     // Map passes to the format expected by the component
-    passes.value = loadedPasses.map(pass => ({
+    passes.value = userOwnedPasses.map(pass => ({
       id: pass.id,
       projectId: pass.projectId,
       userName: normalizeOwnerName(pass.userName),
@@ -4961,7 +5005,7 @@ onMounted(async () => {
 }
 
 [dir='rtl'] .modal-footer-pro {
-  flex-direction: row-reverse;
+  flex-direction: column-reverse;
 }
 
 [dir='rtl'] .modal-btn-generate {
