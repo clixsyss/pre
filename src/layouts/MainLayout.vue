@@ -271,17 +271,6 @@
     <!-- Shake Feedback (commented out for now) -->
     <!-- <ShakeFeedback ref="shakeFeedbackRef" /> -->
 
-    <!-- Auto-open gate widget -->
-    <div v-if="isNativePlatform" class="auto-gate-widget">
-      <label class="auto-gate-toggle">
-        <input type="checkbox" :checked="appSettingsStore.autoOpenGateEnabled"
-          @change="setAutoOpenGateEnabled($event.target.checked)" />
-        <span>Auto Open Gate</span>
-      </label>
-      <p class="auto-gate-state">State: {{ proximityState }}</p>
-      <p v-if="nearestGateRssi !== null" class="auto-gate-rssi">RSSI: {{ nearestGateRssi }} dBm</p>
-    </div>
-
     <!-- Quick Menu Backdrop (must be before dropdown to ensure proper stacking) -->
     <transition name="quick-menu-backdrop">
       <div v-if="showQuickMenu" class="quick-menu-backdrop" @click.stop="showQuickMenu = false"></div>
@@ -392,8 +381,7 @@ const triggerQuickOpenFromExternal = async (source = 'external') => {
 
   try {
     if (!isNativePlatform.value) {
-      console.warn('Quick open ignored: BLE requires native platform')
-      return
+      console.warn('Native platform not detected, attempting BLE quick open anyway')
     }
 
     const currentUser = await optimizedAuthService.getCurrentUser()
@@ -403,7 +391,13 @@ const triggerQuickOpenFromExternal = async (source = 'external') => {
     }
 
     // BLE-only quick open path (no route fallback).
-    await triggerOpenGateFromProximity(source)
+    const gateOpened = await triggerOpenGateFromProximity(source)
+    if (!gateOpened && route.path !== '/access') {
+      await router.push({
+        path: '/access',
+        query: { fromShake: '1', source: `${source}-fallback` },
+      })
+    }
   } catch (error) {
     console.warn('Quick open failed:', error)
   } finally {
@@ -453,7 +447,40 @@ const {
 } = useBluetooth()
 
 const ACCESS_GRANTED = 'ACCESS_GRANTED'
-const isNativePlatform = computed(() => Capacitor.isNativePlatform())
+const detectNativePlatform = () => {
+  try {
+    if (typeof Capacitor?.isNativePlatform === 'function' && Capacitor.isNativePlatform()) {
+      return true
+    }
+  } catch {
+    // Continue with fallback checks.
+  }
+
+  try {
+    const platform = typeof Capacitor?.getPlatform === 'function' ? Capacitor.getPlatform() : ''
+    if (platform === 'ios' || platform === 'android') {
+      return true
+    }
+  } catch {
+    // Continue with fallback checks.
+  }
+
+  try {
+    const windowPlatform =
+      typeof window !== 'undefined' && typeof window.Capacitor?.getPlatform === 'function'
+        ? window.Capacitor.getPlatform()
+        : ''
+    if (windowPlatform === 'ios' || windowPlatform === 'android') {
+      return true
+    }
+  } catch {
+    // Continue with fallback checks.
+  }
+
+  const protocol = typeof window !== 'undefined' ? String(window.location?.protocol || '').toLowerCase() : ''
+  return protocol === 'capacitor:' || protocol === 'ionic:'
+}
+const isNativePlatform = computed(() => detectNativePlatform())
 const activeGateKey = ref('main')
 const proximityState = ref('IDLE') // IDLE | SCANNING | NEAR_GATE | OPENING | COOLDOWN
 const nearestGateRssi = ref(null)
@@ -621,7 +648,6 @@ const openGateWithExistingBleFlow = async () => {
 }
 
 const triggerOpenGateFromProximity = async (source = 'manual') => {
-  if (!isNativePlatform.value) return false
   if (openInProgress) return false
 
   // Manual/quick-open should not compete with an active background LE scan.
@@ -743,10 +769,6 @@ const startProximityScanner = () => {
   }, SCAN_INTERVAL_MS)
 }
 
-const setAutoOpenGateEnabled = (enabled) => {
-  appSettingsStore.setAutoOpenGateEnabled(enabled)
-}
-
 watch(
   () => appSettingsStore.autoOpenGateEnabled,
   (enabled) => {
@@ -828,10 +850,8 @@ const showGateFeedback = (state, message, autoCloseMs = 0) => {
 const handleGlassGatePrimaryAction = async () => {
   if (isGateFeedbackLoading.value) return
 
-  // BLE quick-open is native-only (no web fallback in any locale).
   if (!isNativePlatform.value) {
-    showGateFeedback('error', t('bleNotSupported'))
-    return
+    console.warn('Native platform not detected, attempting BLE quick open anyway')
   }
 
   showGateFeedback('loading', t('openingGate'))
@@ -840,6 +860,18 @@ const handleGlassGatePrimaryAction = async () => {
   if (gateOpened) {
     showGateFeedback('success', t('gateOpenedSuccessfully'), 1600)
     return
+  }
+
+  if (route.path !== '/access') {
+    try {
+      await router.push({
+        path: '/access',
+        query: { fromShake: '1', source: 'fab-fallback' },
+      })
+      return
+    } catch (error) {
+      console.warn('FAB fallback navigation failed:', error)
+    }
   }
 
   showGateFeedback('error', t('failedToOpenGate'), 2400)
