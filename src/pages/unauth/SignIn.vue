@@ -404,7 +404,7 @@ defineOptions({
 // Setup keyboard handling for better mobile UX
 useFormKeyboard({
   scrollToInput: true,
-  hideOnBackdropClick: true,
+  hideOnBackdropClick: false,
   scrollOffset: 150
 })
 
@@ -629,6 +629,27 @@ const checkForMigration = async (email) => {
   } catch (error) {
     console.error('❌ Error in checkForMigration:', error)
     return { needsMigration: false }
+  }
+}
+
+const checkEmailExistsForLoginMessage = async (email) => {
+  const normalizedEmail = String(email || '').trim().toLowerCase()
+  if (!normalizedEmail) return false
+
+  try {
+    const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
+    const withTimeout = (promise, timeoutMs = 5000) =>
+      Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          window.setTimeout(() => reject(new Error('email lookup timeout')), timeoutMs)
+        }),
+      ])
+    const user = await withTimeout(getUserByEmail(normalizedEmail))
+    return !!user
+  } catch (error) {
+    console.warn('[SignIn] Email existence check failed:', error?.message || error)
+    return false
   }
 }
 
@@ -1208,8 +1229,15 @@ const handleSignIn = async () => {
       errorMessage = 'No account found with this email.'
     } else if (errorCode === 'UserNotConfirmedException' || errorCode === 'auth/email-not-verified') {
       errorMessage = 'This account has not been confirmed yet. Please check your email for the verification link.'
-    } else if (errorCode === 'NotAuthorizedException' || errorCode === 'auth/wrong-password') {
-      errorMessage = 'Invalid email or password. Please check your credentials and try again.'
+    } else if (
+      errorCode === 'NotAuthorizedException' ||
+      errorCode === 'auth/wrong-password' ||
+      errorCode === 'auth/invalid-credential'
+    ) {
+      const emailExists = await checkEmailExistsForLoginMessage(formData.email)
+      errorMessage = emailExists
+        ? 'This email is registered, but the password is incorrect.'
+        : 'No account found with this email.'
     } else if (errorCode === 'NetworkError' || errorCode === 'auth/network-request-failed') {
       errorMessage = 'Network error. Please check your internet connection.'
     } else if (errorCode === 'TooManyRequestsException' || errorCode === 'auth/too-many-requests') {

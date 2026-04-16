@@ -6,11 +6,12 @@ import { Auth } from 'aws-amplify'
 
 // S3 Configuration
 const S3_BUCKET = 'pre-app-user-images'
-const AWS_REGION = 
-  process.env.AWS_REGION || 
-  process.env.VITE_AWS_REGION || 
-  import.meta.env.AWS_REGION || 
-  import.meta.env.VITE_AWS_REGION || 
+const processEnv = typeof process !== 'undefined' ? process.env || {} : {}
+const AWS_REGION =
+  processEnv.AWS_REGION ||
+  processEnv.VITE_AWS_REGION ||
+  import.meta.env.AWS_REGION ||
+  import.meta.env.VITE_AWS_REGION ||
   'us-east-1'
 
 // Read AWS credentials from environment variables
@@ -18,14 +19,14 @@ const AWS_REGION =
 const AWS_ACCESS_KEY_ID = 
   import.meta.env.VITE_AWS_ACCESS_KEY_ID || 
   import.meta.env.AWS_ACCESS_KEY_ID ||
-  process.env.VITE_AWS_ACCESS_KEY_ID || 
-  process.env.AWS_ACCESS_KEY_ID
+  processEnv.VITE_AWS_ACCESS_KEY_ID || 
+  processEnv.AWS_ACCESS_KEY_ID
 
 const AWS_SECRET_ACCESS_KEY = 
   import.meta.env.VITE_AWS_SECRET_ACCESS_KEY || 
   import.meta.env.AWS_SECRET_ACCESS_KEY ||
-  process.env.VITE_AWS_SECRET_ACCESS_KEY || 
-  process.env.AWS_SECRET_ACCESS_KEY
+  processEnv.VITE_AWS_SECRET_ACCESS_KEY || 
+  processEnv.AWS_SECRET_ACCESS_KEY
 
 // S3 Client instance (singleton)
 let s3Client = null
@@ -109,8 +110,8 @@ async function getS3Client() {
           'import.meta.env.VITE_AWS_SECRET_ACCESS_KEY': !!import.meta.env.VITE_AWS_SECRET_ACCESS_KEY,
           'import.meta.env.AWS_ACCESS_KEY_ID': !!import.meta.env.AWS_ACCESS_KEY_ID,
           'import.meta.env.AWS_SECRET_ACCESS_KEY': !!import.meta.env.AWS_SECRET_ACCESS_KEY,
-          'process.env.VITE_AWS_ACCESS_KEY_ID': !!process.env.VITE_AWS_ACCESS_KEY_ID,
-          'process.env.VITE_AWS_SECRET_ACCESS_KEY': !!process.env.VITE_AWS_SECRET_ACCESS_KEY
+          'process.env.VITE_AWS_ACCESS_KEY_ID': !!processEnv.VITE_AWS_ACCESS_KEY_ID,
+          'process.env.VITE_AWS_SECRET_ACCESS_KEY': !!processEnv.VITE_AWS_SECRET_ACCESS_KEY
         })
         throw new Error('AWS credentials not found. Please set VITE_AWS_ACCESS_KEY_ID and VITE_AWS_SECRET_ACCESS_KEY in .env file and restart the dev server.')
       }

@@ -593,12 +593,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useRegistrationStore } from '../../stores/registration'
 import { useNotificationStore } from '../../stores/notifications'
 import { fetchProjects } from '../../services/dynamoDBProjectsService'
+import { getUnitsByProject } from '../../services/dynamoDBUnitsService'
+import { projectsUnitsService } from '../../services/dynamoDBTableServices'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import { signupDraftService } from '../../services/signupDraftService'
 import {
@@ -647,7 +649,6 @@ const propertyForm = reactive({
 
 const availableProjects = ref([])
 const availableProjectsSorted = ref([]) // Sorted with zero-unit projects at bottom
-const hasLoadedProjects = ref(false)
 const selectedProjects = ref([])
 const showAddAnotherForm = ref(false)
 
@@ -660,7 +661,6 @@ const additionalPropertyForm = reactive({
 // Function to fetch available projects from DynamoDB with units count
 const fetchAvailableProjects = async () => {
   try {
-    if (hasLoadedProjects.value) return
     console.log('🚀 [Register] START: Fetching projects from DynamoDB...')
     
     // Fetch all projects from DynamoDB - THIS IS THE CRITICAL PART
@@ -683,22 +683,64 @@ const fetchAvailableProjects = async () => {
     // Set projects immediately so they show up right away
     availableProjects.value = projectsWithUnits
     availableProjectsSorted.value = [...projectsWithUnits].sort((a, b) => {
-      const nameA = String(a.name || '').toLowerCase()
-      const nameB = String(b.name || '').toLowerCase()
-      if (nameA < nameB) return -1
-      if (nameA > nameB) return 1
-      return 0
+      return (a.name || '').localeCompare(b.name || '')
     })
     
     console.log(`✅ [Register] Set ${availableProjectsSorted.value.length} projects in dropdown`)
     console.log('📋 [Register] Available projects:', availableProjectsSorted.value.map(p => p.name))
     
-    hasLoadedProjects.value = true
-    
-    // IMPORTANT:
-    // Do not prefetch units for all projects here. Some projects have thousands of
-    // units, and parallel prefetching can freeze/crash mobile webviews.
-    // Units are fetched lazily only when a project is selected in the dropdown.
+    // Now fetch units count in background (non-blocking)
+    // This doesn't prevent projects from showing
+    projects.forEach(async (project) => {
+      try {
+        const projectId = project.id || project.projectId || project._id || project.ID
+        if (!projectId) return
+        
+        // Try to get units count (silently fail if it doesn't work)
+        try {
+          const units = await getUnitsByProject(projectId, { limit: 1000 })
+          const unitsCount = units?.length || 0
+          
+          // Update the project in the list
+          const projectIndex = availableProjects.value.findIndex(p => 
+            (p.id || p.projectId || p._id) === projectId
+          )
+          if (projectIndex >= 0) {
+            availableProjects.value[projectIndex].unitsCount = unitsCount
+            // Update sorted list too
+            const sortedIndex = availableProjectsSorted.value.findIndex(p => 
+              (p.id || p.projectId || p._id) === projectId
+            )
+            if (sortedIndex >= 0) {
+              availableProjectsSorted.value[sortedIndex].unitsCount = unitsCount
+            }
+          }
+        } catch {
+          // Try alternative method
+          try {
+            const alternativeUnits = await projectsUnitsService.getUnitsByProject(projectId, { limit: 1000 })
+            const unitsCount = alternativeUnits?.length || 0
+            
+            const projectIndex = availableProjects.value.findIndex(p => 
+              (p.id || p.projectId || p._id) === projectId
+            )
+            if (projectIndex >= 0) {
+              availableProjects.value[projectIndex].unitsCount = unitsCount
+              const sortedIndex = availableProjectsSorted.value.findIndex(p => 
+                (p.id || p.projectId || p._id) === projectId
+              )
+              if (sortedIndex >= 0) {
+                availableProjectsSorted.value[sortedIndex].unitsCount = unitsCount
+              }
+            }
+          } catch {
+            // Silently fail - units count stays 0
+          }
+        }
+      } catch {
+        // Silently fail - project still shows
+      }
+    })
     
   } catch (error) {
     console.error('❌ [Register] CRITICAL ERROR fetching projects:', error)
@@ -828,19 +870,8 @@ onMounted(() => {
     currentStep.value = 'property'
   }
 
-  if (currentStep.value === 'property') {
-    fetchAvailableProjects()
-  }
+  fetchAvailableProjects()
 })
-
-watch(
-  () => currentStep.value,
-  (step) => {
-    if (step === 'property' && !hasLoadedProjects.value) {
-      fetchAvailableProjects()
-    }
-  },
-)
 
 const goToPreviousStep = () => {
   if (currentStep.value === 'property') {
@@ -928,12 +959,8 @@ const handlePersonalSubmit = async () => {
     const dynamoUser = await getUserByEmail(normalizedEmail)
 
     if (dynamoUser) {
-      notificationStore.showInfo('An account with this email already exists. Please sign in instead.')
+      notificationStore.showError('An account with this email already exists. Please sign in instead.')
       loading.value = false
-      router.push({
-        path: '/signin',
-        query: { email: normalizedEmail }
-      })
       return
     }
 
@@ -1005,11 +1032,7 @@ const handlePropertySubmit = async () => {
         console.warn('[Register] ⚠️ Cognito UsernameExistsException — recovering orphaned account')
         const recovered = await optimizedAuthService.recoverOrphanedCognitoUser(email, password)
         if (!recovered) {
-          notificationStore.showInfo('An account with this email already exists. Please sign in.')
-          router.push({
-            path: '/signin',
-            query: { email }
-          })
+          notificationStore.showError('An account with this email already exists. Please sign in.')
           return
         }
         userSub = recovered.userSub
