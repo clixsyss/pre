@@ -592,6 +592,8 @@ const sendOpenCommand = async () => {
 }
 
 const openGateWithExistingBleFlow = async () => {
+  await checkBLESupport()
+
   const connected = gateSystem.value.fastMode
     ? (
       await scanAndConnectNearest(currentServiceUUID.value, {
@@ -621,6 +623,13 @@ const openGateWithExistingBleFlow = async () => {
 const triggerOpenGateFromProximity = async (source = 'manual') => {
   if (!isNativePlatform.value) return false
   if (openInProgress) return false
+
+  // Manual/quick-open should not compete with an active background LE scan.
+  if (scanInProgress) {
+    await stopActiveScan()
+    scanInProgress = false
+  }
+
   const now = Date.now()
   if (source === 'auto' && now < cooldownUntil) {
     setProximityState('COOLDOWN')
