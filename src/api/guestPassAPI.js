@@ -18,6 +18,30 @@ const GUEST_PASSES_TABLE = 'projects__guestPasses'
 const GUEST_PASS_SETTINGS_TABLE = 'guestPassSettings'
 const USERS_TABLE = 'users'
 
+// ─── Scanner QR encoding (must stay in sync with scanner/qr-decryptor.js) ────
+// Chars match qr-decryptor.js CHARS — do not reorder.
+const _SCANNER_CHARS = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_abcdefghijklmnopqrstuvwxyz{|}~"
+const _SCANNER_BASE = BigInt(_SCANNER_CHARS.length)
+
+async function _buildScannerQrString(payload) {
+  const secretKey = (import.meta.env.VITE_PI_SECRET_KEY || '').trim()
+  const enc = new TextEncoder()
+  // SHA-256 → first 16 bytes as XOR key (matches scanner's .subarray(0,16))
+  const keyBuf = await crypto.subtle.digest('SHA-256', enc.encode(secretKey))
+  const key = new Uint8Array(keyBuf, 0, 16)
+  const jsonBytes = enc.encode(JSON.stringify(payload))
+  const xored = new Uint8Array(jsonBytes.length)
+  for (let i = 0; i < jsonBytes.length; i++) xored[i] = jsonBytes[i] ^ key[i % 16]
+  // Base-94 encode
+  let n = 0n
+  for (const b of xored) n = n * 256n + BigInt(b)
+  if (n === 0n) return _SCANNER_CHARS[0]
+  const out = []
+  while (n > 0n) { out.push(_SCANNER_CHARS[Number(n % _SCANNER_BASE)]); n /= _SCANNER_BASE }
+  return out.reverse().join('')
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Mirrors fileUploadService.getS3Url — computes the deterministic S3 URL without uploading.
 const _S3_BUCKET = 'pre-app-user-images'
 const _S3_REGION =
@@ -475,17 +499,24 @@ export const createGuestPass = async (
 
     const userCardId = user?.documents?.cardId || null
 
-    // QR code data MUST be unique per generated pass.
-    const qrData = JSON.stringify({
-      type: 'guest_pass',
-      version: 1,
-      passId,
-      projectId,
-      verificationToken,
-      cardId: userCardId || null,
-      guestName,
-      validUntil: validUntil.toISOString(),
-      createdAt: createdAt.toISOString(),
+    // Resolve unit before QR generation (needed in the compact payload)
+    const userProjects = user?.projects || []
+    const projectInfo = userProjects.find(p => p.projectId === projectId)
+    const userUnit = projectInfo?.unit || user?.unit || ''
+    console.log(`🏠 Creating pass for unit: ${userUnit}`)
+
+    // Build compact payload matching the gate scanner's expected format.
+    // Encrypted with SHA-256(SECRET_KEY) XOR + Base-94 (matches qr-decryptor.js).
+    const qrData = await _buildScannerQrString({
+      f: userName.trim().split(/\s+/)[0] || '',
+      l: userName.trim().split(/\s+/).slice(1).join(' ') || '',
+      u: userUnit,
+      usr: userId,
+      i: userUnit,
+      p: projectId,
+      g: (import.meta.env.VITE_GATE_ID || 'main').trim(),
+      t: Math.floor(createdAt.getTime() / 1000),
+      ...((import.meta.env.VITE_ZONE || '').trim() ? { z: import.meta.env.VITE_ZONE.trim() } : {}),
     })
 
     // Generate QR code as data URL (fast — no network)
@@ -501,12 +532,6 @@ export const createGuestPass = async (
     const s3Key = `guestPasses/${projectId}/${passId}.png`
     const qrCodeUrl = _getS3Url(s3Key)
     console.log('🔗 Pre-computed S3 URL:', qrCodeUrl)
-
-    // Get user's unit info
-    const userProjects = user?.projects || []
-    const projectInfo = userProjects.find(p => p.projectId === projectId)
-    const userUnit = projectInfo?.unit || user?.unit || ''
-    console.log(`🏠 Creating pass for unit: ${userUnit}`)
 
     // Prepare pass data
     const passData = {
