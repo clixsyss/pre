@@ -326,6 +326,7 @@ const handleMigration = async () => {
         const { updateUser } = await import('src/services/dynamoDBUsersService')
         await updateUser(migrationUserId, {
           authUid: cognitoSub,
+          oldId: '',
           deviceKey: '',
           deviceKeyUpdatedAt: new Date().toISOString(),
         })
@@ -353,6 +354,7 @@ const handleMigration = async () => {
         const { updateUser } = await import('src/services/dynamoDBUsersService')
         await updateUser(migrationUserId, {
           authUid: cognitoUserId,
+          oldId: '',
           emailVerified: migrationResult.confirmed || false,
           deviceKey: '',
           deviceKeyUpdatedAt: new Date().toISOString(),

@@ -1090,22 +1090,6 @@ const handleSignIn = async () => {
     console.log('[SignIn] Email verified:', emailVerified)
     console.log('[SignIn] Approval status approved:', approvalCheckPassed)
 
-    // If user has oldId but is successfully logging into Cognito, they've already migrated.
-    // Clear oldId so they don't get routed through migration on future logins.
-    if (dynamoUser?.oldId && cognitoSubForLookup) {
-      ;(async () => {
-        try {
-          const { updateUser } = await import('src/services/dynamoDBUsersService')
-          await updateUser(dynamoUser.id, {
-            oldId: '',
-            authUid: cognitoSubForLookup,
-          })
-        } catch (e) {
-          console.warn('[SignIn] Could not clear oldId after successful login:', e.message)
-        }
-      })()
-    }
-
     // Load user projects and profile immediately after successful sign-in
     console.log('[SignIn] 🚀 Loading user projects and profile...')
     
