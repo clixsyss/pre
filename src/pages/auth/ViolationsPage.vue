@@ -736,7 +736,6 @@ onUnmounted(() => {
   }
   
   .summary-stats {
-    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
   
