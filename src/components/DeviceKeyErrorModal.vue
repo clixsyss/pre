@@ -170,7 +170,7 @@
         </div>
 
         <!-- Support Information -->
-        <div class="support-info">
+        <!-- <div class="support-info">
           <h3 class="support-title">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
@@ -190,7 +190,7 @@
               Email: <a href="mailto:support@pre-group.com" class="support-link">support@pre-group.com</a>
             </span>
           </div>
-        </div>
+        </div> -->
       </div>
     </div>
   </div>
@@ -408,7 +408,6 @@ onMounted(() => {
 .device-key-modal-header {
   background-color: #222222;
   color: white;
-  padding: 30px;
   border-radius: 8px 8px 0 0;
   text-align: center;
 }
@@ -433,7 +432,7 @@ onMounted(() => {
 .status-icon {
   width: 60px;
   height: 60px;
-  margin: 0 auto 20px;
+  margin: 0 auto;
   background-color: #ffebee;
   border: 2px solid #ef9a9a;
   border-radius: 50%;
@@ -447,12 +446,12 @@ onMounted(() => {
   font-size: 1.5rem;
   font-weight: 700;
   color: #333;
-  margin: 0 0 10px 0;
+  margin: 0 0 0 0;
 }
 
 
 .status-description {
-  font-size: 1.05rem;
+  font-size: 14px !important;
   color: #555;
   line-height: 1.6;
   margin: 0;
@@ -463,7 +462,7 @@ onMounted(() => {
   background-color: #f0f7ff;
   border-left: 4px solid #2196F3;
   border-radius: 6px;
-  padding: 18px 20px;
+  padding: 4px 20px;
   margin-bottom: 25px;
 }
 
@@ -499,7 +498,7 @@ onMounted(() => {
 .step-item {
   display: flex;
   gap: 15px;
-  margin-bottom: 18px;
+  margin-bottom: 8px;
   padding: 16px;
   background-color: #fafafa;
   border: 1px solid #e0e0e0;
@@ -772,12 +771,7 @@ onMounted(() => {
 /* Responsive Design */
 @media (max-width: 480px) {
   .device-key-modal-container {
-    margin: 10px;
     border-radius: 8px;
-  }
-  
-  .device-key-modal-header {
-    padding: 25px 20px;
   }
   
   .device-key-modal-title {

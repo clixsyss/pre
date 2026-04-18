@@ -5821,8 +5821,6 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
 
   .hero-content {
-    flex-direction: column;
-    text-align: center;
     gap: 16px;
   }
 
