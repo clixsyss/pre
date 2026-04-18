@@ -229,6 +229,48 @@ export async function queryAll(tableName, options = {}) {
     if (!exclusiveStartKey) break
   }
 
+    return all
+  }
+
+/**
+ * Scan all pages until LastEvaluatedKey is absent (same pattern as queryAll).
+ * Use when a single Scan with Limit only returns one page (e.g. full users table for family matching).
+ * @param {string} tableName
+ * @param {Object} options - Same as scan(); optional pageSize (default 500), maxPages (default 400)
+ */
+export async function scanAll(tableName, options = {}) {
+  const { ScanCommand } = await import('@aws-sdk/lib-dynamodb')
+  const pageSize = Math.min(Math.max(Number(options.pageSize) || 500, 1), 1000)
+  const maxPages = Math.min(Math.max(Number(options.maxPages) || 400, 1), 500)
+
+  const rest = { ...options }
+  delete rest.pageSize
+  delete rest.maxPages
+  delete rest.Limit
+  delete rest.limit
+  delete rest.ExclusiveStartKey
+
+  const all = []
+  let exclusiveStartKey = undefined
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const scanParams = {
+      TableName: tableName,
+      Limit: pageSize,
+      ...rest
+    }
+    if (exclusiveStartKey) {
+      scanParams.ExclusiveStartKey = exclusiveStartKey
+    }
+
+    const command = new ScanCommand(scanParams)
+    const response = await docClient.send(command)
+    const batch = response.Items || []
+    all.push(...batch)
+    exclusiveStartKey = response.LastEvaluatedKey
+    if (!exclusiveStartKey) break
+  }
+
   return all
 }
 
@@ -335,5 +377,5 @@ export async function deleteItem(tableName, key) {
 
 // Export the document client for advanced usage
 export { docClient }
-export default { getItem, putItem, query, scan, updateItem, deleteItem }
+export default { getItem, putItem, query, queryAll, scan, scanAll, updateItem, deleteItem }
 

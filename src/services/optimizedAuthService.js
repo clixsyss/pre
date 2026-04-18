@@ -16,27 +16,10 @@ class OptimizedAuthService {
     this._fetchPromiseTimestamp = null
     // Cache auth state in localStorage for faster startup
     this.AUTH_CACHE_KEY = 'pre_auth_state_cache'
-    this.AUTH_CACHE_DURATION = 15 * 60 * 1000 // 15 minutes
+    this.AUTH_CACHE_DURATION = 60 * 60 * 1000 // 60 minutes — Cognito refresh tokens are long-lived; 15 min was causing unnecessary logouts
   }
 
-  /**
-   * Get cache duration (iOS-optimized: longer for iOS)
-   */
   _getCacheDuration() {
-    if (this.AUTH_CACHE_DURATION) {
-      return this.AUTH_CACHE_DURATION
-    }
-    
-    // Detect iOS platform
-    const isIOS = typeof window !== 'undefined' && (
-      window.location.protocol === 'capacitor:' ||
-      window.webkit?.messageHandlers !== undefined ||
-      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
-    )
-    
-    // iOS-optimized: Longer cache duration for iOS (20 minutes) since sessions are more stable
-    this.AUTH_CACHE_DURATION = isIOS ? 20 * 60 * 1000 : 15 * 60 * 1000
     return this.AUTH_CACHE_DURATION
   }
 

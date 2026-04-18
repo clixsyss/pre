@@ -18,7 +18,7 @@
  *           validityStartDate, validityEndDate (temporary accounts)
  */
 
-import { getItem, scan, putItem, updateItem } from '../aws/dynamodbClient'
+import { getItem, scan, scanAll, putItem, updateItem } from '../aws/dynamodbClient'
 
 const TABLE_NAME = 'users'
 
@@ -351,27 +351,36 @@ export async function getUserByEmail(email) {
 }
 
 /**
- * Get all users (with optional limit)
- * @param {Object} options - Options
- * @param {number} options.limit - Maximum number of users to return
+ * Get all users. Single-page scan when `limit` is set; otherwise paginates until the table is exhausted
+ * (required for same-unit family matching — a plain Limit only returns the first scan page).
+ * @param {Object} options
+ * @param {number} [options.limit] - If set, one scan page only (max items scanned per page, not total matches)
+ * @param {number} [options.pageSize] - Page size when paginating (default 500)
+ * @param {number} [options.maxPages] - Safety cap on pages when paginating (default 400 → up to 200k rows)
  * @returns {Promise<Array>} Array of user objects
  */
 export async function getAllUsers(options = {}) {
   try {
-    console.log('[DynamoDBUsersService] Fetching all users from DynamoDB...')
-    
-    const scanOptions = {}
-    if (options.limit) {
-      scanOptions.Limit = options.limit
+    const hasSinglePageLimit = options.limit != null && options.limit !== ''
+
+    if (hasSinglePageLimit) {
+      console.log('[DynamoDBUsersService] Fetching users (single scan page, limit)...')
+      const scanOptions = { Limit: options.limit }
+      const items = await scan(TABLE_NAME, scanOptions)
+      const batch = Array.isArray(items) ? items : []
+      const users = batch.map(convertUserFromDynamoDB)
+      console.log(`[DynamoDBUsersService] ✅ Fetched ${users.length} users (single page)`)
+      return users
     }
-    
-    const items = await scan(TABLE_NAME, scanOptions)
-    
-    // Convert DynamoDB format to JavaScript objects
-    const users = items.map(convertUserFromDynamoDB)
-    
-    console.log(`[DynamoDBUsersService] ✅ Fetched ${users.length} users from DynamoDB`)
-    
+
+    const pageSize = Math.min(Math.max(Number(options.pageSize) || 500, 1), 1000)
+    const maxPages = Math.min(Math.max(Number(options.maxPages) || 400, 1), 500)
+
+    console.log('[DynamoDBUsersService] Fetching all users (paginated scan)...', { pageSize, maxPages })
+    const raw = await scanAll(TABLE_NAME, { pageSize, maxPages })
+    const users = raw.map(convertUserFromDynamoDB)
+    console.log(`[DynamoDBUsersService] ✅ Fetched ${users.length} users (full paginated scan)`)
+
     return users
   } catch (error) {
     console.error('[DynamoDBUsersService] ❌ Error fetching users:', error)

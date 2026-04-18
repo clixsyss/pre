@@ -1,6 +1,6 @@
 <template>
   <div class="profile-page">
-    <!-- Loading State -->
+    <!-- Loading State (profile fetch only; family loads in background or from device cache) -->
     <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
       <p>{{ $t('loadingProfile') }}</p>
@@ -180,7 +180,11 @@
       </div>
 
       <!-- Family Members Accordion -->
-      <div v-if="familyMembers.length > 0" class="accordion-section">
+      <div
+        v-if="showFamilySection"
+        class="accordion-section"
+        :aria-busy="loadingFamilyMembers ? 'true' : 'false'"
+      >
         <button @click="toggleAccordion('family')" class="accordion-header"
           :class="{ active: activeAccordion === 'family' }">
           <div class="accordion-title">
@@ -193,8 +197,13 @@
             </div>
             <div class="section-text">
               <h3>{{ $t('familyMembers') }}</h3>
-              <p>{{ familyMembers.length }} {{ familyMembers.length === 1 ? $t('member') : $t('members') }}</p>
+              <p v-if="loadingFamilyMembers">{{ $t('loadingFamilyMembers') }}</p>
+              <p v-else-if="familyMembers.length > 0">{{ familyMembers.length }} {{ familyMembers.length === 1 ? $t('member') : $t('members') }}</p>
+              <p v-else>{{ $t('noFamilyMembersInUnit') }}</p>
             </div>
+          </div>
+          <div v-if="loadingFamilyMembers" class="family-loading-badge" :title="$t('loadingFamilyMembers')">
+            <span class="family-loading-spinner" aria-hidden="true"></span>
           </div>
           <div class="accordion-arrow">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -204,7 +213,11 @@
           </div>
         </button>
         <div class="accordion-content" :class="{ active: activeAccordion === 'family' }">
-          <div class="family-members-grid">
+          <div v-if="loadingFamilyMembers" class="family-members-loading-row">
+            <span class="family-loading-spinner" aria-hidden="true"></span>
+            <span>{{ $t('loadingFamilyMembers') }}</span>
+          </div>
+          <div v-else class="family-members-grid">
             <div v-for="member in familyMembers" :key="member.id" class="family-member-card">
               <div class="member-avatar">
                 <img v-if="member.documents?.profilePictureUrl" :src="member.documents.profilePictureUrl"
@@ -1890,7 +1903,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, watch, onActivated } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch, onActivated, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import QRCode from 'qrcode'
@@ -2070,9 +2083,12 @@ const complaintStats = ref({
 
 // Family members state
 const familyMembers = ref([])
-
+const loadingFamilyMembers = ref(false)
 
 // Computed properties
+const showFamilySection = computed(
+  () => !!(userProfile.value?.id && projectStore.selectedProject?.id)
+)
 const userProjects = computed(() => projectStore.userProjects)
 const currentProjectId = computed(() => projectStore.selectedProject?.id)
 
@@ -2282,7 +2298,7 @@ const loadProfile = async (forceReload = false) => {
       } catch (e) {
         console.warn('ProfilePage: refresh projects (fast path) failed', e?.message)
       }
-      loading.value = false
+      void loadFamilyMembers()
       return
     }
 
@@ -2309,6 +2325,7 @@ const loadProfile = async (forceReload = false) => {
             console.warn('ProfilePage: refresh projects (session cache) failed', e?.message)
           }
         }
+        void loadFamilyMembers()
         return // Exit early - no need to fetch
       }
     }
@@ -2363,6 +2380,7 @@ const loadProfile = async (forceReload = false) => {
             console.warn('ProfilePage: refresh projects (preload cache) failed', e?.message)
           }
         }
+        void loadFamilyMembers()
         return
       }
     }
@@ -2377,7 +2395,7 @@ const loadProfile = async (forceReload = false) => {
     if (!forceReload && isCacheValid) {
       console.log('ProfilePage: Using cached profile data (cached', Math.round((now - profileCache.timestamp) / 1000), 'seconds ago)')
       userProfile.value = profileCache.data
-      loading.value = false // Set to false immediately when using cache
+      loading.value = false
       error.value = null
       const cachedId = profileCache.data?.id
       if (cachedId) {
@@ -2387,6 +2405,7 @@ const loadProfile = async (forceReload = false) => {
           console.warn('ProfilePage: refresh projects (profile cache) failed', e?.message)
         }
       }
+      void loadFamilyMembers()
       return
     }
 
@@ -2808,9 +2827,10 @@ const loadProfile = async (forceReload = false) => {
       await projectStore.fetchUserProjects(userIdToUse, { force: true })
       await fetchAvailableProjects()
 
-      // Load family members
-      await loadFamilyMembers()
-      
+      // Show profile immediately; family list loads in background (or from device cache)
+      loading.value = false
+      void loadFamilyMembers()
+
       // Final verification that data is still there
       console.log('✅ ProfilePage: Final check - userProfile.value still has data:', {
         hasEmail: !!userProfile.value?.email,
@@ -2919,6 +2939,15 @@ const loadProfile = async (forceReload = false) => {
         birthdateFormatted: userProfile.value.dateOfBirth ? formatBirthDate(userProfile.value.dateOfBirth) : null,
         cognitoBirthdate: cognitoAttrs.birthdate
       })
+
+      try {
+        await projectStore.fetchUserProjects(userProfile.value.id, { force: true })
+        await fetchAvailableProjects()
+      } catch (e) {
+        console.warn('ProfilePage: refresh projects (Cognito-only profile) failed', e?.message)
+      }
+      loading.value = false
+      void loadFamilyMembers()
     }
   } catch (err) {
     console.error('ProfilePage: Error loading profile:', err)
@@ -3035,172 +3064,174 @@ const loadComplaintStats = async (forceReload = false) => {
   }
 }
 
-// Helper function to check if parentAccountId system is being used in the app
-const checkIfParentAccountIdSystemExists = async () => {
+/** Normalize unit/building strings for stable matching (aligned with SearchableUnitDropdown / dashboard) */
+function normalizeUnitKeyFam(s) {
+  return String(s ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/_/g, '-')
+}
+
+/** All comparable keys for a user.projects[] row (composite unit, building+unitNum, etc.) */
+function projectAddressKeys(project) {
+  const keys = new Set()
+  if (!project) return keys
+  if (project.unit) keys.add(normalizeUnitKeyFam(project.unit))
+  const b = String(project.buildingNum ?? project.building ?? '').trim()
+  const u = String(project.unitNum ?? '').trim()
+  if (b && u) keys.add(normalizeUnitKeyFam(`${b}-${u}`))
+  return keys
+}
+
+/** Same project and same physical unit (building + unit), matching dashboard "shared unit" logic */
+function samePropertyUnit(projectA, projectB) {
+  if (!projectA || !projectB) return false
+  const pidA = projectA.projectId || projectA.id
+  const pidB = projectB.projectId || projectB.id
+  if (pidA !== pidB) return false
+  const ka = projectAddressKeys(projectA)
+  const kb = projectAddressKeys(projectB)
+  for (const k of ka) {
+    if (k && kb.has(k)) return true
+  }
+  // Fallback: both rows only store composite `unit` (possibly different spacing/case)
+  const ua = normalizeUnitKeyFam(projectA.unit || '')
+  const ub = normalizeUnitKeyFam(projectB.unit || '')
+  if (ua && ub && ua === ub) return true
+  return false
+}
+
+// Persist same-unit neighbors per logged-in account + project (localStorage survives tab close until logout)
+const FAMILY_MEMBERS_CACHE_PREFIX = 'profile_family_members_v1'
+
+function familyMembersCacheKey(authUid, projectId) {
+  return `${FAMILY_MEMBERS_CACHE_PREFIX}:${authUid}:${projectId}`
+}
+
+function readFamilyMembersFromDeviceCache(authUid, projectId) {
   try {
-    // Quick check: sample a few users to see if any have parentAccountId
-    const sampleSnapshot = await firestoreService.getDocs('users', {
-      limit: 10,
-      timeoutMs: 3000
-    })
-    
-    const hasParentAccountId = sampleSnapshot.docs.some(doc => {
-      const data = doc.data()
-      return data.parentAccountId !== undefined && data.parentAccountId !== null
-    })
-    
-    console.log('👨‍👩‍👧‍👦 ParentAccountId system exists:', hasParentAccountId)
-    return hasParentAccountId
-  } catch (error) {
-    console.error('Error checking parentAccountId system:', error)
-    return false // Default to unit-based fallback
+    const raw = localStorage.getItem(familyMembersCacheKey(authUid, projectId))
+    if (!raw) return null
+    const o = JSON.parse(raw)
+    if (o?.authUid !== authUid || o?.projectId !== projectId) return null
+    return Array.isArray(o.members) ? o.members : null
+  } catch {
+    return null
   }
 }
 
-// Load family members
+function writeFamilyMembersToDeviceCache(authUid, projectId, members) {
+  try {
+    localStorage.setItem(
+      familyMembersCacheKey(authUid, projectId),
+      JSON.stringify({
+        authUid,
+        projectId,
+        members,
+        savedAt: Date.now()
+      })
+    )
+  } catch (e) {
+    console.warn('ProfilePage: could not save family members cache', e?.message || e)
+  }
+}
+
+/** Remove all cached family lists for this Cognito user (call on logout / account switch) */
+function clearFamilyMembersCacheForAccount(authUid) {
+  if (!authUid) return
+  const prefix = `${FAMILY_MEMBERS_CACHE_PREFIX}:${authUid}:`
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(prefix))
+      .forEach((k) => localStorage.removeItem(k))
+  } catch {
+    // ignore
+  }
+}
+
+// Load family members: primary = same project + same building/unit as dashboard; optional merge parentAccountId tree
 const loadFamilyMembers = async () => {
   const currentUser = await optimizedAuthService.getCurrentUser()
-  if (!currentUser || !projectStore.selectedProject || !userProfile.value) return
+  if (!currentUser || !projectStore.selectedProject || !userProfile.value) {
+    familyMembers.value = []
+    return
+  }
+
+  const authUid = currentUser.uid
+  const selectedProjectId = projectStore.selectedProject.id
+  const cached = readFamilyMembersFromDeviceCache(authUid, selectedProjectId)
+  if (cached !== null) {
+    familyMembers.value = cached
+  }
+
+  const currentUserId = userProfile.value.id || currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.uid
+  console.log('👨‍👩‍👧‍👦 Loading family members for user:', currentUserId)
+
+  let currentUserProject = userProfile.value.projects?.find((p) => p.projectId === selectedProjectId)
+  if (!currentUserProject && userProjects.value?.length) {
+    const fromStore = userProjects.value.find((p) => p.id === selectedProjectId)
+    if (fromStore) {
+      currentUserProject = {
+        projectId: fromStore.id,
+        unit: fromStore.userUnit && fromStore.userUnit !== 'N/A' ? fromStore.userUnit : '',
+        role: fromStore.userRole
+      }
+    }
+  }
+
+  if (!currentUserProject) {
+    console.log('👨‍👩‍👧‍👦 No project membership for selected project')
+    familyMembers.value = []
+    writeFamilyMembersToDeviceCache(authUid, selectedProjectId, [])
+    loadingFamilyMembers.value = false
+    return
+  }
+
+  const addrKeys = projectAddressKeys(currentUserProject)
+  const hasAddress =
+    addrKeys.size > 0 || (currentUserProject.unit && String(currentUserProject.unit).trim() !== '')
+  if (!hasAddress) {
+    console.log('👨‍👩‍👧‍👦 No unit/building on profile for this project — cannot match neighbors')
+    familyMembers.value = []
+    writeFamilyMembersToDeviceCache(authUid, selectedProjectId, [])
+    loadingFamilyMembers.value = false
+    return
+  }
+
+  const hasCachedSnapshot = cached !== null
+  // Always show loading while the Dynamo scan runs (including refresh when device cache exists)
+  loadingFamilyMembers.value = true
+  await nextTick()
 
   try {
-    // Use DynamoDB user ID (Cognito sub) instead of currentUser.uid (which might be email)
-    const currentUserId = userProfile.value.id || currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.uid
-    console.log('👨‍👩‍👧‍👦 Loading family members for user:', currentUserId)
-    console.log('👨‍👩‍👧‍👦 Current user profile ID:', userProfile.value.id)
-    console.log('👨‍👩‍👧‍👦 Current user Cognito UID:', currentUser.uid)
+    // Same project + same building/unit as admin dashboard (shared unit for this project)
+    // Use paginated DynamoDB scan — a single getDocs/limit only returned the first scan page (~1000 rows), so neighbors were missed.
+    console.log('👨‍👩‍👧‍👦 Matching users on same unit + building for project', selectedProjectId)
+    const { getAllUsers } = await import('src/services/dynamoDBUsersService')
+    const allUsers = await getAllUsers({ pageSize: 500, maxPages: 400 })
+    console.log(`✅ ProfilePage: Loaded ${allUsers.length} users for same-unit matching`)
 
-    // Get current user's unit from their projects
-    const currentUserProject = userProfile.value.projects?.find(
-      p => p.projectId === projectStore.selectedProject.id
-    )
-    const currentUserUnit = currentUserProject?.unit
-
-    if (!currentUserUnit) {
-      console.log('👨‍👩‍👧‍👦 No unit found for current user in this project')
-      familyMembers.value = []
-      return
-    }
-
-    // Check if parentAccountId system is being used
-    const hasParentAccountId = userProfile.value.parentAccountId !== undefined && userProfile.value.parentAccountId !== null
-    
-    let allPotentialMembers = []
-    
-    if (hasParentAccountId || await checkIfParentAccountIdSystemExists()) {
-      // Use parentAccountId-based system
-      console.log('👨‍👩‍👧‍👦 Using parentAccountId system')
-      const parentId = userProfile.value.parentAccountId || currentUserId
-
-      // Query users who have this parent ID
-      const usersSnapshot = await firestoreService.getDocs('users', {
-        filters: [
-          { field: 'parentAccountId', operator: '==', value: parentId }
-        ],
-        timeoutMs: 6000
-      })
-
-      const potentialFamilyMembers = usersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
-
-      // Also get users who have current user as parent (if different from parentId)
-      let childrenOfCurrentUser = []
-      if (parentId !== currentUserId) {
-        const childrenSnapshot = await firestoreService.getDocs('users', {
-          filters: [
-            { field: 'parentAccountId', operator: '==', value: currentUserId }
-          ],
-          timeoutMs: 6000
-        })
-        childrenOfCurrentUser = childrenSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-      }
-
-      // If current user is a family member (has a parent), also fetch the parent user
-      let parentUser = null
-      if (parentId !== currentUserId) {
-        try {
-          const parentDoc = await firestoreService.getDoc('users', parentId)
-          if (parentDoc.exists()) {
-            parentUser = {
-              id: parentDoc.id,
-              ...parentDoc.data()
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching parent user:', error)
-        }
-      }
-
-      // Combine all arrays
-      allPotentialMembers = [...potentialFamilyMembers, ...childrenOfCurrentUser]
-      if (parentUser) {
-        allPotentialMembers.push(parentUser)
-      }
-    } else {
-      // FALLBACK: Find all users in the same unit (no parentAccountId system)
-      console.log('👨‍👩‍👧‍👦 Using unit-based fallback (no parentAccountId system)')
-      
-      // OPTIMIZATION: Query limited users, filter on client side
-      console.log('📊 ProfilePage: Fetching users with limit for family members...')
-      const { limit } = await import('firebase/firestore')
-      const allUsersSnapshot = await firestoreService.getDocs('users', {
-        timeoutMs: 8000,
-        constraints: [limit(1000)]
-      })
-      console.log(`✅ ProfilePage: Fetched ${allUsersSnapshot.docs.length} users (limited)`)
-      
-      allPotentialMembers = allUsersSnapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(user => {
-          // Don't include self - use DynamoDB ID for comparison
-          if (user.id === currentUserId) return false
-          
-          // Check if user has access to the same project and same unit
-          const userProjectData = user.projects?.find(p => p.projectId === projectStore.selectedProject.id)
-          if (!userProjectData) return false
-          
-          // Must be in the same unit
-          return userProjectData.unit === currentUserUnit
-        })
-    }
-    
-    // Remove duplicates
-    const uniqueMembers = allPotentialMembers.filter((user, index, self) =>
-      index === self.findIndex(u => u.id === user.id)
+    const uniqueMembers = allUsers.filter(
+      (user, index, self) => index === self.findIndex((u) => u.id === user.id)
     )
 
-    // Filter by same unit in the same project and exclude self
-    // Also ensure we have full user data (firstName, lastName, email)
     const members = await Promise.all(
       uniqueMembers
-        .filter(user => {
-          // Don't include self - use DynamoDB ID for comparison
+        .filter((user) => {
           if (user.id === currentUserId) return false
-
-          // Check if user has access to the same project and same unit
-          const userProjectData = user.projects?.find(p => p.projectId === projectStore.selectedProject.id)
+          const userProjectData = user.projects?.find((p) => p.projectId === selectedProjectId)
           if (!userProjectData) return false
-
-          // Must be in the same unit
-          if (userProjectData.unit !== currentUserUnit) return false
-
-          // Get the role from the project data
+          if (!samePropertyUnit(currentUserProject, userProjectData)) return false
           user.role = userProjectData.role
-
           return true
         })
         .map(async (user) => {
-          // If user is missing critical fields (firstName, lastName, email), fetch full user data
           if (!user.firstName || !user.lastName || !user.email) {
             try {
               const { getUserById } = await import('src/services/dynamoDBUsersService')
               const fullUserData = await getUserById(user.id)
               if (fullUserData) {
-                // Merge full user data with existing data (preserve role from project)
                 return {
                   ...fullUserData,
                   role: user.role || fullUserData.role
@@ -3215,6 +3246,7 @@ const loadFamilyMembers = async () => {
     )
 
     familyMembers.value = members
+    writeFamilyMembersToDeviceCache(authUid, selectedProjectId, members)
     console.log('👨‍👩‍👧‍👦 Loaded family members:', members.length, members.map(m => ({
       id: m.id,
       name: `${m.firstName || ''} ${m.lastName || ''}`.trim() || 'Unknown',
@@ -3223,7 +3255,11 @@ const loadFamilyMembers = async () => {
     })))
   } catch (error) {
     console.error('Error loading family members:', error)
-    familyMembers.value = []
+    if (!hasCachedSnapshot) {
+      familyMembers.value = []
+    }
+  } finally {
+    loadingFamilyMembers.value = false
   }
 }
 
@@ -3232,11 +3268,17 @@ const handleLogout = async () => {
   try {
     logoutLoading.value = true
 
+    const sessionUid = (await optimizedAuthService.getCurrentUser())?.uid
+
     console.log('[Logout] 🚪 Clearing Smart Mirror context before sign out')
     try {
       await smartMirrorService.clearPreUserId()
     } catch (mirrorErr) {
       console.warn('[Logout] Smart Mirror cleanup non-fatal:', mirrorErr?.message || mirrorErr)
+    }
+
+    if (sessionUid) {
+      clearFamilyMembersCacheForAccount(sessionUid)
     }
 
     await optimizedAuthService.signOut()
@@ -3310,6 +3352,7 @@ const handleDeleteAccount = async () => {
 
     // Sign out the user from Firebase Auth
     console.log('🚪 [ProfilePage] Signing out user...')
+    clearFamilyMembersCacheForAccount(currentUser.uid)
     await optimizedAuthService.signOut()
 
     // Show success message
@@ -4593,7 +4636,7 @@ const initializeFromCache = async () => {
                       (now - profileCache.timestamp) < profileCache.CACHE_DURATION
 
   if (isCacheValid) {
-    console.log('ProfilePage: Initializing from cache instantly (no loading, cached', Math.round((now - profileCache.timestamp) / 1000), 'seconds ago)')
+    console.log('ProfilePage: Initializing from cache (cached', Math.round((now - profileCache.timestamp) / 1000), 'seconds ago); family from device + refresh in background')
     userProfile.value = profileCache.data
     loading.value = false
     checkFaceVerificationStatus()
@@ -4605,6 +4648,7 @@ const initializeFromCache = async () => {
         console.warn('ProfilePage: refresh projects (init cache) failed', e?.message)
       }
     }
+    void loadFamilyMembers()
     return true // Cache was loaded
   }
   
@@ -4642,6 +4686,7 @@ onActivated(async () => {
     } catch (e) {
       console.warn('[ProfilePage] refresh projects on activate failed', e?.message)
     }
+    void loadFamilyMembers()
   }
   // Re-check face verification status in case it was updated
   if (userProfile.value?.documents) {
@@ -4658,6 +4703,7 @@ watch(() => projectStore.selectedProject?.id, (newProjectId, oldProjectId) => {
     console.log('🔄 ProfilePage: Project changed, reloading stats...')
     loadViolationStats(true) // Force reload
     loadComplaintStats(true) // Force reload
+    void loadFamilyMembers()
   }
 })
 
@@ -7697,6 +7743,40 @@ input:checked+.toggle-slider:before {
   font-weight: 700;
   margin-right: 8px;
   animation: pulse-badge 2s ease-in-out infinite;
+}
+
+.family-loading-badge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  min-width: 36px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 14px;
+  background: rgba(59, 130, 246, 0.14);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+}
+
+.family-loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #2563eb;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+.family-members-loading-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  color: #64748b;
+  font-size: 0.9rem;
 }
 
 @keyframes pulse-badge {

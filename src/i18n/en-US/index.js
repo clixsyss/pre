@@ -45,6 +45,8 @@ export default {
   myAccount: 'My Account',
   accountSettings: 'Account Settings',
   loadingProfile: 'Loading profile...',
+  loadingFamilyMembers: 'Loading family members...',
+  noFamilyMembersInUnit: 'No other members in your unit yet.',
   dateOfBirth: 'Date of Birth',
   nationalId: 'National ID',
   gender: 'Gender',

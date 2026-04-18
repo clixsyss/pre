@@ -671,124 +671,69 @@ router.beforeEach(async (to, from, next) => {
             return
           }
 
-          const { getUserByEmail, getUserById } = await import('../services/dynamoDBUsersService')
-          
-          // Use Cognito sub (primary key) first - this is the most reliable lookup
+          const { getUserByAuthUid, getUserByEmail, getUserById } = await import('../services/dynamoDBUsersService')
+
           const cognitoSub = currentUser?.attributes?.sub || currentUser?.cognitoAttributes?.sub || currentUser?.uid
           let dynamoUser = null
-          
-          // First, try by ID (Cognito sub) - this is the primary key and most reliable
+
+          // 1. Fastest: indexed authUid lookup
           if (cognitoSub) {
-            logger.log('[Router] 🔍 Checking DynamoDB users table by ID (Cognito sub):', cognitoSub)
-            dynamoUser = await getUserById(cognitoSub)
-            
-            if (dynamoUser) {
-              logger.log('[Router] ✅ User found by ID (Cognito sub) in DynamoDB')
-            }
+            logger.log('[Router] 🔍 Checking DynamoDB by authUid (Cognito sub):', cognitoSub)
+            try { dynamoUser = await getUserByAuthUid(cognitoSub) } catch { /* fallthrough */ }
+            if (dynamoUser) logger.log('[Router] ✅ User found by authUid')
           }
-          
-          // Fallback: If not found by ID, try by email
+
+          // 2. Fallback: email scan
           if (!dynamoUser && userEmail) {
-            logger.log('[Router] ⚠️ User not found by ID, trying email lookup:', userEmail)
-            dynamoUser = await getUserByEmail(userEmail)
-            
-            if (dynamoUser) {
-              logger.log('[Router] ✅ User found by email in DynamoDB')
-            }
+            logger.log('[Router] 🔍 Fallback: checking DynamoDB by email:', userEmail)
+            try { dynamoUser = await getUserByEmail(userEmail.trim().toLowerCase()) } catch { /* fallthrough */ }
+            if (dynamoUser) logger.log('[Router] ✅ User found by email')
           }
-          
+
+          // 3. Last resort: direct id lookup
+          if (!dynamoUser && cognitoSub) {
+            logger.log('[Router] 🔍 Last resort: checking DynamoDB by id:', cognitoSub)
+            try { dynamoUser = await getUserById(cognitoSub) } catch { /* fallthrough */ }
+            if (dynamoUser) logger.log('[Router] ✅ User found by id')
+          }
+
           if (!dynamoUser) {
-            logger.log('[Router] ⚠️ User not found in DynamoDB users table (tried email and ID)')
-            logger.log('[Router] ⚠️ This might be a new user or data sync issue. Allowing access but user may need to complete registration.')
-            // Don't sign out - allow user to proceed, they might need to complete registration
-            // The app should handle missing user data gracefully
+            // User not found — could be a network hiccup or a genuinely new account.
+            // Do NOT sign out: a valid Cognito session should never be destroyed by a
+            // failed DynamoDB lookup. Let the user through; protected pages will handle
+            // missing data gracefully.
+            logger.warn('[Router] ⚠️ User not found in DynamoDB — allowing access (network/sync issue)')
             next('/home')
             return
           }
 
           logger.log('[Router] 📋 User found in DynamoDB, approvalStatus:', dynamoUser.approvalStatus)
 
-          // Check if approvalStatus is "approved" (case-insensitive)
           const approvalStatus = String(dynamoUser.approvalStatus || '').trim().toLowerCase()
           const isApproved = approvalStatus === 'approved'
-          
-          logger.log('[Router] Approval status check:')
-          logger.log('[Router]   - Raw:', dynamoUser.approvalStatus)
-          logger.log('[Router]   - Normalized:', approvalStatus)
-          logger.log('[Router]   - Is approved?:', isApproved)
-          
+
+          logger.log('[Router] Approval status:', approvalStatus, '| approved?', isApproved)
+
           if (!isApproved) {
-            logger.log('[Router] ❌ User approval status is not approved, signing out')
+            // Only sign out when we KNOW the status is a rejection/pending — not on lookup failure.
+            logger.log('[Router] ❌ User not approved (status:', approvalStatus, ') — signing out')
             await optimizedAuthService.signOut()
             next('/signin')
             return
           }
 
-          logger.log('[Router] ✅ User approval status is approved in DynamoDB, allowing access')
+          logger.log('[Router] ✅ User approved, allowing access')
           next('/home')
           return
 
         } catch (dynamoError) {
-          logger.error('[Router] ❌ Error checking DynamoDB users table:', dynamoError)
-          
-          // Check if this might be a notification-triggered navigation (app opening from notification)
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                        (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
-          const mightBeNotificationNavigation = from.path === '/' || from.name === null || from.name === undefined
-          
-          // If this might be notification navigation on iOS, wait a bit more for auth to restore
-          if (isIOS && mightBeNotificationNavigation) {
-            logger.log('[Router] ⚠️ Possible notification navigation on iOS - waiting for auth state...')
-            try {
-              // Wait up to 3 more seconds for auth state to restore
-              const retryUser = await optimizedAuthService.waitForAuthState(3000)
-              if (retryUser) {
-                logger.log('[Router] ✅ Auth state restored after wait, retrying DynamoDB check...')
-                // Retry the DynamoDB check with the restored user
-                const userEmail = retryUser?.attributes?.email || retryUser?.cognitoAttributes?.email
-                if (userEmail) {
-                  const { getUserByEmail, getUserById } = await import('../services/dynamoDBUsersService')
-                  const cognitoSub = retryUser?.attributes?.sub || retryUser?.cognitoAttributes?.sub || retryUser?.uid
-                  let dynamoUser = null
-                  
-                  if (cognitoSub) {
-                    dynamoUser = await getUserById(cognitoSub)
-                  }
-                  if (!dynamoUser && userEmail) {
-                    dynamoUser = await getUserByEmail(userEmail)
-                  }
-                  
-                  if (dynamoUser) {
-                    const approvalStatus = String(dynamoUser.approvalStatus || '').trim().toLowerCase()
-                    if (approvalStatus === 'approved') {
-                      logger.log('[Router] ✅ User found and approved after retry, allowing access')
-                      next('/home')
-                      return
-                    }
-                  }
-                }
-              }
-            } catch (retryError) {
-              logger.warn('[Router] ⚠️ Retry after wait also failed:', retryError)
-            }
-          }
-          
-          // In development, allow access even if DynamoDB check fails
-          if (isDevelopment) {
-            logger.log('[Router] ⚠️ Development mode - allowing access despite DynamoDB error')
-            next('/home')
-            return
-          }
-          
-          // On error, sign out to be safe (production only)
-          // But only if we're sure this isn't a transient auth restoration issue
-          logger.log('[Router] ⚠️ DynamoDB check failed - signing out user')
-          try {
-            await optimizedAuthService.signOut()
-          } catch (signOutError) {
-            logger.warn('Error signing out:', signOutError)
-          }
-          next('/signin')
+          logger.error('[Router] ❌ Unexpected error during DynamoDB approval check:', dynamoError)
+
+          // IMPORTANT: Do NOT sign the user out on a DynamoDB/network error.
+          // The Cognito session is valid — destroying it because of a backend connectivity
+          // issue is the primary cause of unexpected logouts.
+          logger.warn('[Router] ⚠️ Allowing access despite DynamoDB error — Cognito session is valid')
+          next('/home')
           return
         }
       } else {

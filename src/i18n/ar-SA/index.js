@@ -80,6 +80,8 @@ export default {
   getSupportHelp: 'احصل على مساعدة في أي أسئلة أو مشاكل',
 
   familyMembers: 'أفراد العائلة',
+  loadingFamilyMembers: 'جاري تحميل أفراد العائلة...',
+  noFamilyMembersInUnit: 'لا يوجد أعضاء آخرون في وحدتك بعد.',
   member: 'عضو',
   members: 'أعضاء',
 
