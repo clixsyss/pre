@@ -446,6 +446,7 @@ export default {
   calendar: 'Calendar',
   support: 'Support',
   news: 'News',
+  warnings: 'Warnings',
 
   // Actions
   save: 'Save',

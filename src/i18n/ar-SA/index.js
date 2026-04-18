@@ -415,6 +415,7 @@ export default {
   calendar: 'التقويم',
   support: 'المساعدة',
   news: 'الأخبار',
+  warnings: 'التحذيرات',
 
   // Actions
   save: 'حفظ',

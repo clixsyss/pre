@@ -23,6 +23,23 @@
                   stroke-linejoin="round" />
               </svg>
             </div>
+            <!-- Upload Documents Button -->
+            <button @click="showUploadDocumentsModal = true" class="upload-documents-btn" title="Upload Profile Picture & ID Documents">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="hero-text">
+            <h1 class="hero-title">{{ getFullName(userProfile?.firstName, userProfile?.lastName) || $t('loadingProfile') }}</h1>
+            <p class="hero-subtitle">{{ userProfile?.email || $t('notProvided') }}</p>
+            <!-- <div class="profile-badges">
+          <span class="status-badge" :class="getStatusClass(userProfile.registrationStatus)">
+            {{ formatStatus(userProfile.registrationStatus) }}
+          </span>
+            </div> -->
+          </div>
+          <div class="hero-actions">
             <button
               @click="openAccountQrModal"
               class="account-qr-trigger-btn"
@@ -40,21 +57,6 @@
                 <rect x="18" y="18" width="3" height="3" fill="currentColor" />
               </svg>
             </button>
-            <!-- Upload Documents Button -->
-            <button @click="showUploadDocumentsModal = true" class="upload-documents-btn" title="Upload Profile Picture & ID Documents">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-          </div>
-          <div class="hero-text">
-            <h1 class="hero-title">{{ getFullName(userProfile?.firstName, userProfile?.lastName) || $t('loadingProfile') }}</h1>
-            <p class="hero-subtitle">{{ userProfile?.email || $t('notProvided') }}</p>
-            <!-- <div class="profile-badges">
-          <span class="status-badge" :class="getStatusClass(userProfile.registrationStatus)">
-            {{ formatStatus(userProfile.registrationStatus) }}
-          </span>
-            </div> -->
           </div>
         </div>
       </div>
@@ -4835,6 +4837,13 @@ onBeforeUnmount(() => {
   z-index: 1;
 }
 
+.hero-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .profile-avatar {
   position: relative;
   flex-shrink: 0;
@@ -4929,9 +4938,6 @@ onBeforeUnmount(() => {
 }
 
 .account-qr-trigger-btn {
-  position: absolute;
-  bottom: -5px;
-  left: -5px;
   width: 36px;
   height: 36px;
   border-radius: 50%;
