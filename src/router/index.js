@@ -572,40 +572,20 @@ router.beforeEach(async (to, from, next) => {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                     (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
       
-      // Detect if this might be notification-triggered navigation
-      // When app opens from notification, from.path is usually '/' or from.name is null
-      const mightBeNotificationNavigation = from.path === '/' || from.name === null || from.name === undefined
-      
-      // On iOS, wait for auth state to be restored (can take several seconds)
-      // On other platforms, use shorter wait
-      // CRITICAL: If this is notification navigation on iOS, wait MUCH longer (up to 10 seconds)
-      // because iOS cold starts from notifications can take 8-10 seconds to restore Cognito session
       let currentUser
       try {
         // iOS-optimized: Use faster timeout with localStorage cache
         // BUT: If this is notification navigation on iOS, wait much longer
-        if (isIOS && mightBeNotificationNavigation) {
-          logger.log('Navigation guard: iOS notification navigation detected, waiting for auth state (max 3000ms)...')
-          currentUser = await optimizedAuthService.waitForAuthState(3000) // 3 seconds for iOS notification navigation
+        // Always try cache first for instant navigation
+        const cachedUser = await optimizedAuthService.getCurrentUser()
+        if (cachedUser) {
+          logger.log('Navigation guard: Using cached user for instant navigation')
+          currentUser = cachedUser
         } else if (isIOS) {
-          // Try cached user first for instant navigation
-          const cachedUser = await optimizedAuthService.getCurrentUser()
-          if (cachedUser) {
-            logger.log('Navigation guard: iOS - using cached user for instant navigation')
-            currentUser = cachedUser
-          } else {
-            logger.log('Navigation guard: iOS detected, waiting for auth state (max 800ms, cache-optimized)...')
-            currentUser = await optimizedAuthService.waitForAuthState(800) // Reduced: 800ms for faster navigation
-          }
+          logger.log('Navigation guard: iOS - no cached user, waiting for auth state (max 1500ms)...')
+          currentUser = await optimizedAuthService.waitForAuthState(1500)
         } else {
-          // For non-iOS, use very short wait for instant navigation
-          // Only wait if we don't already have cached user
-          const cachedUser = await optimizedAuthService.getCurrentUser()
-          if (cachedUser) {
-            currentUser = cachedUser // Use cached user instantly
-          } else {
-            currentUser = await optimizedAuthService.waitForAuthState(300) // Very short wait: 300ms
-          }
+          currentUser = await optimizedAuthService.waitForAuthState(500)
         }
         logger.log(
           'Navigation guard: Current user check result:',
@@ -614,33 +594,10 @@ router.beforeEach(async (to, from, next) => {
       } catch (authError) {
         // If this is notification navigation on iOS, don't immediately redirect to onboarding
         // Auth state might still be restoring
-        if (isIOS && mightBeNotificationNavigation) {
-          logger.warn('Navigation guard: Error checking auth state on iOS notification navigation, waiting 3 more seconds before redirecting...')
-          try {
-            // Wait 3 more seconds and retry
-            await new Promise(resolve => setTimeout(resolve, 3000))
-            const retryUser = await optimizedAuthService.waitForAuthState(3000)
-            if (retryUser) {
-              logger.log('Navigation guard: Auth state restored after retry, user authenticated')
-              currentUser = retryUser
-            } else {
-              logger.warn('Navigation guard: Auth state still not ready after retry, redirecting to onboarding')
-              if (guardTimeout) clearTimeout(guardTimeout)
-              next('/onboarding')
-              return
-            }
-          } catch (retryError) {
-            logger.warn('Navigation guard: Retry also failed, redirecting to onboarding:', retryError)
-            if (guardTimeout) clearTimeout(guardTimeout)
-            next('/onboarding')
-            return
-          }
-        } else {
-          logger.warn('Navigation guard: Error checking auth state, redirecting to onboarding:', authError)
-          if (guardTimeout) clearTimeout(guardTimeout)
-          next('/onboarding')
-          return
-        }
+        logger.warn('Navigation guard: Error checking auth state, redirecting to onboarding:', authError)
+        if (guardTimeout) clearTimeout(guardTimeout)
+        next('/onboarding')
+        return
       }
 
       if (currentUser) {
@@ -782,14 +739,9 @@ router.beforeEach(async (to, from, next) => {
   return new Promise((resolve) => {
     let resolved = false
 
-    // Detect if this might be notification navigation
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
                   (window.Capacitor && window.Capacitor.getPlatform() === 'ios')
-    const mightBeNotificationNavigation = from.path === '/' || from.name === null || from.name === undefined
-    
-    // Wait longer for authentication state to be established, especially for iOS notification navigation
-    // iOS cold starts from notifications can take 5-10 seconds to restore Cognito session
-    const timeoutDuration = (isIOS && mightBeNotificationNavigation) ? 5000 : 3000
+    const timeoutDuration = isIOS ? 2000 : 1500
     const timeout = setTimeout(() => {
       if (!resolved) {
         logger.log(`Auth check timeout after ${timeoutDuration}ms, allowing navigation`)
@@ -814,7 +766,7 @@ router.beforeEach(async (to, from, next) => {
         if (isIOS) {
           // On iOS, use waitForAuthState to ensure auth is restored
           logger.log('Navigation guard: iOS detected, waiting for auth state...')
-          currentUser = await optimizedAuthService.waitForAuthState()
+          currentUser = await optimizedAuthService.waitForAuthState(1500)
         } else {
           // For non-iOS, use shorter wait
           const waitTime = isNotificationNavigation ? 1500 : 500

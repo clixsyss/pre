@@ -57,7 +57,7 @@ defineOptions({
 })
 
 const route = useRoute()
-const isRouterLoading = ref(true)
+const isRouterLoading = ref(false)
 const splashStore = useSplashStore()
 const QUICK_OPEN_STORAGE_KEY = 'pendingQuickOpenGate'
 let appUrlOpenListener = null
@@ -82,15 +82,9 @@ const parseQuickOpenUrl = (urlValue) => {
   return value.includes('source=') ? value.split('source=')[1].split('&')[0] : 'deep-link'
 }
 
-// Safety timeout: Always show content after 2 seconds, even if initialization fails
-// This prevents black screen on Android if initialization is slow
+// Safety timeout: Ensure splash knows app is initialized within 2 seconds
 setTimeout(() => {
-  if (isRouterLoading.value) {
-    logger.warn('⚠️ App.vue: Safety timeout reached, forcing isRouterLoading to false')
-    isRouterLoading.value = false
-    // Also ensure splash knows app is initialized
-    splashStore.setAppInitialized()
-  }
+  splashStore.setAppInitialized()
 }, 2000)
 
 // Initialize network monitoring
@@ -207,10 +201,6 @@ onMounted(async () => {
     // Wait for smooth initialization (iOS-optimized)
     await new Promise(resolve => setTimeout(resolve, initDelay))
     
-    // Show app content (always set to false, even if there were errors)
-    logger.log('🔍 App.vue: Setting isRouterLoading to false...')
-    isRouterLoading.value = false
-    
     // Wait for Vue to render the content
     await nextTick()
     
@@ -239,9 +229,6 @@ onMounted(async () => {
   } catch (error) {
     logger.error('❌ App.vue: Critical error during initialization:', error)
     logger.error('❌ Error stack:', error.stack)
-    
-    // Always show app content, even on error
-    isRouterLoading.value = false
     
     // Hide splash even if there's an error
     setTimeout(() => {

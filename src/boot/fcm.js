@@ -24,6 +24,11 @@ export default defineBoot(async ({ app, router }) => {
     // Check fcmService's internal flag instead of local variable
     if (fcmService.isInitialized) {
       logger.log(`FCM Boot: Already initialized, skipping (source: ${source})`);
+      setTimeout(() => {
+        fcmService
+          .syncTokenRegistration({ source: `${source}-already-initialized` })
+          .catch((error) => logger.warn('FCM Boot: Background token sync failed:', error?.message || error));
+      }, 0);
       return;
     }
 
@@ -35,6 +40,11 @@ export default defineBoot(async ({ app, router }) => {
       
       if (success) {
         logger.log(`FCM Boot: FCM initialized successfully (source: ${source})`);
+        setTimeout(() => {
+          fcmService
+            .syncTokenRegistration({ source: `${source}-post-init` })
+            .catch((error) => logger.warn('FCM Boot: Post-init token sync failed:', error?.message || error));
+        }, 0);
         
         // Update token last seen periodically (every 24 hours)
         // Only set interval once; store the ID so it can be cleared on logout

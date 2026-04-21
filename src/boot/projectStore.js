@@ -4,7 +4,7 @@ import optimizedAuthService from 'src/services/optimizedAuthService'
 import permissionsService from 'src/services/permissionsService'
 import { Capacitor } from '@capacitor/core'
 
-export default boot(async ({ app }) => {
+export default boot(({ app }) => {
   // Initialize project store when app starts
   const projectStore = useProjectStore()
   

@@ -13,7 +13,7 @@
 // Firebase Messaging is still required to get FCM tokens (push notification tokens come from Firebase)
 // But we only use AWS (DynamoDB) for storage and Cognito for auth
 import { getMessaging, getToken, onMessage, deleteToken } from 'firebase/messaging';
-import { detectPlatformFromUrl } from 'src/boot/smartMirrorFirebase';
+import { detectPlatformFromUrl } from 'src/boot/firebase';
 import { Notify } from 'quasar';
 import logger from 'src/utils/logger';
 
@@ -28,11 +28,82 @@ class FCMService {
     this.listenersSetup = false; // Track if listeners have been set up
     this.isInitialized = false; // Track if FCM has been initialized
     this.hasTokenUpdateInterval = false; // Track if token update interval is set
-    
+    this.lastRegistrationSyncAt = 0; // Throttle token registration sync calls
+
     // VAPID key for web push - uses environment variable with fallback
     this.vapidKey = import.meta.env.VITE_FCM_VAPID_KEY || 'BDL03mUP_fsEjpZLMLwj-EW0XGFUPXDu8alAQgAKrlcGrHe39yxSF8DH1yn75Y93vOYc-5nNcRctEhMoBPvQatQ';
     
     logger.log('FCMService: Constructor called (platform detection deferred)');
+  }
+
+  /**
+   * Keep token registration fresh with minimal overhead.
+   * - Non-blocking and throttled by minIntervalMs
+   * - Reuses granted permissions (no repeated prompts)
+   */
+  async syncTokenRegistration({ source = 'unknown', minIntervalMs = 12 * 60 * 60 * 1000, force = false } = {}) {
+    try {
+      const now = Date.now();
+      if (!force && this.lastRegistrationSyncAt > 0 && now - this.lastRegistrationSyncAt < minIntervalMs) {
+        logger.log(`FCMService: Skipping token sync (throttled, source: ${source})`);
+        return false;
+      }
+
+      if (this.isNative === null || this.platform === null) {
+        const platformInfo = detectPlatformFromUrl();
+        this.isNative = platformInfo.isNative;
+        this.platform = platformInfo.platform;
+      }
+
+      let token = null;
+      if (this.isNative) {
+        await import('@capacitor-firebase/messaging');
+        const firebaseMessaging = window.Capacitor?.Plugins?.FirebaseMessaging;
+        if (!firebaseMessaging) {
+          logger.warn('FCMService: Native plugin unavailable, skipping sync');
+          return false;
+        }
+
+        const permission = await firebaseMessaging.checkPermissions();
+        if (permission?.receive !== 'granted') {
+          logger.log(`FCMService: Permission not granted, skip sync (source: ${source})`);
+          return false;
+        }
+
+        const result = await firebaseMessaging.getToken();
+        token = result?.token || null;
+      } else {
+        if (!('Notification' in window) || Notification.permission !== 'granted') {
+          logger.log(`FCMService: Web permission not granted, skip sync (source: ${source})`);
+          return false;
+        }
+
+        if (!this.messaging) {
+          const { app } = await import('src/boot/firebase');
+          this.messaging = getMessaging(app);
+        }
+
+        token = await getToken(this.messaging, { vapidKey: this.vapidKey });
+      }
+
+      if (!token) {
+        logger.warn(`FCMService: No token found during sync (source: ${source})`);
+        return false;
+      }
+
+      if (this.currentToken !== token) {
+        logger.log(`FCMService: Token changed during sync (source: ${source}), updating registration`);
+        this.currentToken = token;
+      }
+
+      await this.saveTokenWithRetry(token, this.platform || 'web');
+      this.lastRegistrationSyncAt = Date.now();
+      logger.log(`FCMService: Token sync complete (source: ${source})`);
+      return true;
+    } catch (error) {
+      logger.warn(`FCMService: Token sync skipped due to error (source: ${source})`, error?.message || error);
+      return false;
+    }
   }
 
   /**
@@ -91,18 +162,26 @@ class FCMService {
       logger.log('FCMService: FirebaseMessaging plugin loaded from window.Capacitor.Plugins');
       logger.log('FCMService: Has requestPermissions?', typeof FirebaseMessaging?.requestPermissions);
       
-      // Request permissions
-      logger.log('FCMService: Requesting notification permissions...');
-      const permissionResult = await FirebaseMessaging.requestPermissions();
-      logger.log('FCMService: Permission result:', permissionResult);
-      
+      // Check current permission status first (respects Settings toggle without re-prompting)
+      logger.log('FCMService: Checking current notification permission status...');
+      const currentPermission = await FirebaseMessaging.checkPermissions();
+      logger.log('FCMService: Current permission status:', currentPermission);
+
+      let permissionResult = currentPermission;
+      if (currentPermission.receive !== 'granted') {
+        logger.log('FCMService: Requesting notification permissions...');
+        permissionResult = await FirebaseMessaging.requestPermissions();
+        logger.log('FCMService: Permission result after request:', permissionResult);
+      } else {
+        logger.log('FCMService: Permission already granted via Settings ✅');
+      }
+
       if (permissionResult.receive === 'granted') {
         logger.log('FCMService: Permission granted ✅');
-        
+
         // Set up listeners FIRST
         this.setupNativeListeners();
-        
-        // Get the FCM token
+
         logger.log('FCMService: Getting FCM token...');
         const result = await FirebaseMessaging.getToken();
         const token = result.token;
@@ -190,8 +269,8 @@ class FCMService {
       }
       
       // Initialize messaging
-      const { smartMirrorApp } = await import('src/boot/smartMirrorFirebase');
-      this.messaging = getMessaging(smartMirrorApp);
+      const { app } = await import('src/boot/firebase');
+      this.messaging = getMessaging(app);
       logger.log('FCMService: Messaging instance created');
       
       // Request permission

@@ -211,6 +211,17 @@
           </div>
         </div>
 
+        <div v-if="loading" class="upload-progress-card">
+          <div class="upload-progress-header">
+            <span>Uploading your documents...</span>
+            <span>{{ uploadProgress }}%</span>
+          </div>
+          <div class="upload-progress-track">
+            <div class="upload-progress-fill" :style="{ width: `${uploadProgress}%` }"></div>
+          </div>
+          <p class="upload-progress-status">{{ uploadStatusText }}</p>
+        </div>
+
         <button type="submit" class="continue-btn" :disabled="loading">
           <span v-if="loading">Creating Account...</span>
           <span v-else>Continue</span>
@@ -249,6 +260,8 @@ const backIdPreview = ref(null)
 const profilePicturePreview = ref(null)
 const propertyContractPreview = ref(null)
 const propertyContractIsImage = ref(false)
+const uploadProgress = ref(0)
+const uploadStatusText = ref('')
 const profilePictureInput = ref(null)
 const frontIdInput = ref(null)
 const backIdInput = ref(null)
@@ -576,6 +589,8 @@ const handleSubmit = async () => {
   }
 
   loading.value = true
+  uploadProgress.value = 0
+  uploadStatusText.value = 'Preparing uploads...'
 
   try {
     // Use sanitized email as the S3 folder key — no DynamoDB lookup needed at this stage
@@ -588,7 +603,30 @@ const handleSubmit = async () => {
       frontIdFile.value,
       backIdFile.value,
       profilePictureFile.value,
-      propertyContractFile.value
+      propertyContractFile.value,
+      {
+        onOverallProgress: ({ progress }) => {
+          uploadProgress.value = progress
+        },
+        onFileProgress: ({ type, stage }) => {
+          const label = type?.startsWith('propertyContract')
+            ? 'Property contract'
+            : type === 'frontId'
+              ? 'Front ID'
+              : type === 'backId'
+                ? 'Back ID'
+                : type === 'profilePicture'
+                  ? 'Profile picture'
+                  : 'Document'
+          if (stage === 'optimizing') {
+            uploadStatusText.value = `Optimizing ${label}...`
+          } else if (stage === 'uploading') {
+            uploadStatusText.value = `Uploading ${label}...`
+          } else if (stage === 'uploaded') {
+            uploadStatusText.value = `${label} uploaded`
+          }
+        }
+      }
     )
     console.log('[PersonalDetails] ✅ Documents uploaded:', uploadedDocuments)
 
@@ -629,6 +667,8 @@ const handleSubmit = async () => {
     notificationStore.showError('Failed to save: ' + (error?.message || 'Unknown error'))
   } finally {
     loading.value = false
+    uploadProgress.value = 0
+    uploadStatusText.value = ''
   }
 }
 </script>
@@ -1191,6 +1231,43 @@ const handleSubmit = async () => {
 .continue-btn:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+
+.upload-progress-card {
+  margin: 10px 0 16px;
+  padding: 12px;
+  border: 1px solid #e1e5e9;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.upload-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.upload-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.upload-progress-fill {
+  height: 100%;
+  background: #AF1E23;
+  transition: width 0.2s ease;
+}
+
+.upload-progress-status {
+  margin: 8px 0 0;
+  color: #666;
+  font-size: 0.85rem;
 }
 
 /* Responsive design */

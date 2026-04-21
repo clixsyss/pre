@@ -31,6 +31,92 @@ const AWS_SECRET_ACCESS_KEY =
 // S3 Client instance (singleton)
 let s3Client = null
 
+const IMAGE_OPTIMIZATION = {
+  maxDimension: 1600,
+  jpegQuality: 0.82,
+  minBytesToOptimize: 450 * 1024,
+}
+
+function supportsCanvasOptimization() {
+  return typeof window !== 'undefined' && typeof document !== 'undefined'
+}
+
+async function optimizeImageForUpload(file) {
+  if (!file?.type?.startsWith('image/')) {
+    return file
+  }
+
+  if (!supportsCanvasOptimization() || file.size < IMAGE_OPTIMIZATION.minBytesToOptimize) {
+    return file
+  }
+
+  // Keep PNGs with transparency and modern formats untouched unless very large.
+  // Converting everything to JPEG can break transparency-sensitive uploads.
+  const shouldKeepOriginalFormat =
+    file.type === 'image/png' || file.type === 'image/gif' || file.type === 'image/webp'
+  if (shouldKeepOriginalFormat && file.size < 1.2 * 1024 * 1024) {
+    return file
+  }
+
+  try {
+    const bitmap = await createImageBitmap(file)
+    const { width, height } = bitmap
+    const longestSide = Math.max(width, height)
+    const scale = longestSide > IMAGE_OPTIMIZATION.maxDimension
+      ? IMAGE_OPTIMIZATION.maxDimension / longestSide
+      : 1
+
+    const targetWidth = Math.max(1, Math.round(width * scale))
+    const targetHeight = Math.max(1, Math.round(height * scale))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = targetWidth
+    canvas.height = targetHeight
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      bitmap.close()
+      return file
+    }
+    ctx.drawImage(bitmap, 0, 0, targetWidth, targetHeight)
+    bitmap.close()
+
+    const outputType = shouldKeepOriginalFormat ? file.type : 'image/jpeg'
+    const blob = await new Promise((resolve) => {
+      canvas.toBlob(
+        (result) => resolve(result),
+        outputType,
+        outputType === 'image/jpeg' ? IMAGE_OPTIMIZATION.jpegQuality : undefined
+      )
+    })
+
+    if (!blob || blob.size >= file.size) {
+      return file
+    }
+
+    const optimizedExtension = outputType === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop() || 'img')
+    const optimizedName = outputType === 'image/jpeg'
+      ? file.name.replace(/\.[^/.]+$/, '') + `.${optimizedExtension}`
+      : file.name
+
+    console.log('[S3Service] Optimized image before upload:', {
+      originalBytes: file.size,
+      optimizedBytes: blob.size,
+      savingsPercent: Math.round((1 - blob.size / file.size) * 100),
+      originalType: file.type,
+      optimizedType: outputType,
+    })
+
+    return new File([blob], optimizedName, {
+      type: outputType,
+      lastModified: Date.now(),
+    })
+  } catch (error) {
+    console.warn('[S3Service] Image optimization skipped, using original file:', error?.message || error)
+    return file
+  }
+}
+
 /**
  * Initialize S3 client with credentials
  * @returns {Promise<S3Client>} S3 client instance
@@ -200,8 +286,9 @@ class FileUploadService {
    * @param {string} fileName - The file name
    * @returns {Promise<string>} - The download URL
    */
-  async uploadFile(file, path, fileName) {
+  async uploadFile(file, path, fileName, options = {}) {
     try {
+      const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null
       console.log('🚀 Uploading file to S3:', { path, fileName, fileSize: file?.size })
         
       // Validate file
@@ -239,9 +326,15 @@ class FileUploadService {
         throw new Error('Only image files or PDF documents are allowed')
       }
 
-      // Get file as ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer()
-      const uint8Array = new Uint8Array(arrayBuffer)
+      if (onProgress) {
+        onProgress({ stage: 'optimizing', progress: 5 })
+      }
+
+      // Resize/compress large images to reduce network time dramatically on mobile.
+      const uploadFile = await optimizeImageForUpload(file)
+      // Capacitor iOS can fail when AWS SDK receives Blob/File directly ("getReader is not a function").
+      // Use Uint8Array payload for broad compatibility.
+      const uploadBytes = new Uint8Array(await uploadFile.arrayBuffer())
 
       // Construct S3 key (path + fileName)
       const s3Key = `${path}${fileName}`.replace(/\/+/g, '/') // Remove duplicate slashes
@@ -249,8 +342,8 @@ class FileUploadService {
       console.log('📤 Uploading to S3:', {
         bucket: S3_BUCKET,
         key: s3Key,
-        contentType,
-        size: file.size
+        contentType: uploadFile.type || contentType,
+        size: uploadFile.size
       })
 
       // Get S3 client (async - may need to fetch credentials)
@@ -260,14 +353,20 @@ class FileUploadService {
       const putCommand = new PutObjectCommand({
         Bucket: S3_BUCKET,
         Key: s3Key,
-        Body: uint8Array,
-        ContentType: contentType,
+        Body: uploadBytes,
+        ContentType: uploadFile.type || contentType,
         // Make object publicly readable (adjust ACL based on your bucket policy)
         // ACL: 'public-read' // Uncomment if bucket allows public ACLs
       })
 
       // Upload to S3
+      if (onProgress) {
+        onProgress({ stage: 'uploading', progress: 20 })
+      }
       await client.send(putCommand)
+      if (onProgress) {
+        onProgress({ stage: 'uploaded', progress: 100 })
+      }
       
       console.log('✅ File uploaded successfully to S3')
 
@@ -299,16 +398,52 @@ class FileUploadService {
    * @param {Array} files - Array of {file, path, fileName} objects
    * @returns {Promise<Array>} - Array of download URLs
    */
-  async uploadMultipleFiles(files) {
+  async uploadMultipleFiles(files, options = {}) {
     try {
-      // Upload at most 2 files at a time to avoid saturating the mobile radio.
-      // Promise.all on all files simultaneously can stall every upload on weak networks.
-      const CONCURRENCY = 2
+      const onFileProgress = typeof options.onFileProgress === 'function' ? options.onFileProgress : null
+      const onOverallProgress = typeof options.onOverallProgress === 'function' ? options.onOverallProgress : null
+
+      // Dynamic concurrency: keep weak networks safe while speeding up typical 4-file registration.
+      const effectiveType = typeof navigator !== 'undefined' ? navigator?.connection?.effectiveType : null
+      const CONCURRENCY = effectiveType === '2g' || effectiveType === 'slow-2g' ? 1 : (effectiveType === '3g' ? 2 : 3)
       const results = []
+      const normalizedProgress = files.map(() => 0)
+      const totalFiles = files.length || 1
+
+      const emitOverallProgress = () => {
+        if (!onOverallProgress) return
+        const sum = normalizedProgress.reduce((acc, value) => acc + value, 0)
+        const progress = Math.min(100, Math.round((sum / totalFiles) * 100))
+        onOverallProgress({ progress })
+      }
+
+      emitOverallProgress()
+
       for (let i = 0; i < files.length; i += CONCURRENCY) {
         const batch = files.slice(i, i + CONCURRENCY)
         const batchURLs = await Promise.all(
-          batch.map(({ file, path, fileName }) => this.uploadFile(file, path, fileName))
+          batch.map(async ({ file, path, fileName, type }, batchIndex) => {
+            const fileIndex = i + batchIndex
+            const url = await this.uploadFile(file, path, fileName, {
+              onProgress: ({ stage, progress }) => {
+                const normalized = Math.max(0, Math.min(100, Math.round(progress || 0))) / 100
+                normalizedProgress[fileIndex] = normalized
+                if (onFileProgress) {
+                  onFileProgress({
+                    index: fileIndex,
+                    type,
+                    fileName,
+                    stage,
+                    progress: Math.round(normalized * 100),
+                  })
+                }
+                emitOverallProgress()
+              }
+            })
+            normalizedProgress[fileIndex] = 1
+            emitOverallProgress()
+            return url
+          })
         )
         results.push(...batchURLs)
       }
@@ -380,7 +515,14 @@ class FileUploadService {
    * @param {File} propertyContractFile - Property contract/deed file (optional)
    * @returns {Promise<Object>} - Object with download URLs
    */
-  async uploadUserDocuments(userId, frontIdFile, backIdFile, profilePictureFile = null, propertyContractFile = null) {
+  async uploadUserDocuments(
+    userId,
+    frontIdFile,
+    backIdFile,
+    profilePictureFile = null,
+    propertyContractFile = null,
+    options = {}
+  ) {
     try {
       console.log('[FileUpload] Starting S3 upload for user:', userId)
       const uploads = []
@@ -446,7 +588,10 @@ class FileUploadService {
       console.log('[FileUpload] Uploading', uploads.length, 'files to S3...')
       
       // Upload all files
-      const downloadURLs = await this.uploadMultipleFiles(uploads)
+      const downloadURLs = await this.uploadMultipleFiles(uploads, {
+        onFileProgress: options.onFileProgress,
+        onOverallProgress: options.onOverallProgress,
+      })
       console.log('[FileUpload] All files uploaded to S3, URLs received')
 
       // Map URLs to their types

@@ -5,15 +5,14 @@ import { getFirestore } from 'firebase/firestore'
 import { Capacitor } from '@capacitor/core'
 import logger from 'src/utils/logger'
 
-// Smart Mirror Firebase configuration (Web SDK config)
+// Smart Mirror Firebase configuration (Web SDK config) - pre-group project
 const smartMirrorFirebaseConfig = {
-  apiKey: "AIzaSyAur1VKqvq2qAMl5qPfkpcu0nqD53VD4Lg",
-  authDomain: "clixsys-4d367.firebaseapp.com",
-  projectId: "clixsys-4d367",
-  storageBucket: "clixsys-4d367.firebasestorage.app",
-  messagingSenderId: "775251400128",
-  appId: "1:775251400128:web:2fe2decdd9c49ef39a6425",
-  measurementId: "G-XZX0B7TMSR"
+  apiKey: "AIzaSyDpYVhP_uLDecqds0VD7g409N_AMj-OMF8",
+  authDomain: "pre-group.firebaseapp.com",
+  projectId: "pre-group",
+  storageBucket: "pre-group.firebasestorage.app",
+  messagingSenderId: "871778209250",
+  appId: "1:871778209250:web:79e726a4f5b5579bfc7dbb"
 }
 
 // Platform detection using URL scheme and native bridge detection (more reliable)
@@ -116,36 +115,17 @@ smartMirrorApp = app
 smartMirrorAuth = auth
 smartMirrorDb = db
 
-export default defineBoot(async ({ app }) => {
-  // Re-check platform using the same reliable method
-  await new Promise(resolve => setTimeout(resolve, 100))
+export default defineBoot(({ app }) => {
   const platformInfo = detectPlatformFromUrl()
   isNative = platformInfo.isNative
   platform = platformInfo.platform
-  
-  logger.log('Smart Mirror Firebase Boot: Platform re-checked:', platform, 'Native:', isNative)
-  
-  // iOS-optimized: Minimal delay for iOS (services are fast with localStorage cache)
-  if (isNative) {
-    if (platform === 'ios') {
-      // iOS: Very short delay since we use localStorage cache
-      logger.log(`Smart Mirror Firebase Boot: iOS detected - minimal delay for cache...`)
-      await new Promise(resolve => setTimeout(resolve, 100))
-    } else {
-      // Android: Slightly longer delay
-      logger.log(`Smart Mirror Firebase Boot: ${platform} detected - stabilizing services...`)
-      await new Promise(resolve => setTimeout(resolve, 300))
-    }
-    logger.log(`Smart Mirror Firebase Boot: ${platform} services stable ✅`)
-  }
-  
+
   // Make Smart Mirror Firebase services available globally
   app.config.globalProperties.$smartMirrorAuth = smartMirrorAuth
   app.config.globalProperties.$smartMirrorDb = smartMirrorDb
   app.config.globalProperties.$smartMirrorApp = smartMirrorApp
-  
-  logger.log('Smart Mirror Firebase Boot: Global properties set ✅')
-  logger.log('Smart Mirror Firebase Boot: Ready for authentication requests')
+
+  logger.log('Smart Mirror Firebase Boot: Complete ✅', { platform, isNative })
 })
 
 // Export Smart Mirror Firebase services for use in components

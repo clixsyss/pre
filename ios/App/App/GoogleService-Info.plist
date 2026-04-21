@@ -28,8 +28,6 @@
 	<true/>
 	<key>IS_SIGNIN_ENABLED</key>
 	<true/>
-	<key>CFBundleIdentifier</key>
-	<string></string>
 	<key>GOOGLE_APP_ID</key>
 	<string>1:871778209250:ios:cafd338f12c1974efc7dbb</string>
 </dict>
