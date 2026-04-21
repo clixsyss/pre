@@ -209,6 +209,7 @@
               <h3>{{ $t('newsContent') }}</h3>
               <div
                 class="news-content-text"
+                :class="{ 'news-content-text-ar': locBodyDir(selectedNewsItem) === 'rtl' }"
                 :dir="locBodyDir(selectedNewsItem)"
                 v-html="locBodyHtml(selectedNewsItem)"
               ></div>
@@ -1493,6 +1494,11 @@ onUnmounted(() => {
   color: #475569;
   font-size: 1rem;
   line-height: 1.7;
+  text-align: left;
+}
+
+.news-content-text-ar {
+  text-align: right;
 }
 
 /* Body gallery — consistent card size in the article modal */
