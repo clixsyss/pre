@@ -653,6 +653,15 @@ const checkEmailExistsForLoginMessage = async (email) => {
   }
 }
 
+const withTimeout = async (promise, timeoutMs, operationName) => {
+  return Promise.race([
+    promise,
+    new Promise((_resolve, reject) =>
+      setTimeout(() => reject(new Error(`${operationName} timed out after ${timeoutMs}ms`)), timeoutMs)
+    )
+  ])
+}
+
 
 const handleSignIn = async () => {
   if (loading.value) return
@@ -662,29 +671,9 @@ const handleSignIn = async () => {
   try {
     console.log('[SignIn] Starting sign in...')
 
-    // Check if user needs migration BEFORE attempting login
-    // This is for users who exist in DB with oldId but don't have a password set up yet
-    console.log('[SignIn] 🔍 Pre-login: Checking for migration need...')
-    const migrationCheck = await checkForMigration(formData.email.trim())
-    
-    if (migrationCheck.needsMigration) {
-      console.log('[SignIn] ✅ User needs migration, redirecting to migration page')
-      const registrationStore = useRegistrationStore()
-      registrationStore.setPersonalData({ email: formData.email.trim() })
-      registrationStore.setMigrationChallenge({
-        type: 'MIGRATION_REQUIRED',
-        email: formData.email.trim(),
-        userData: migrationCheck.userData
-      })
-      registrationStore.setFirestoreUserId(migrationCheck.userId)
-      
-      notificationStore.showInfo('Please set a new password to complete your account migration.')
-      loading.value = false
-      router.push('/migrate-account')
-      return
-    } else {
-      console.log('[SignIn] ℹ️ Pre-login: User not found in DynamoDB or doesn\'t need migration, proceeding with normal login')
-    }
+    // FAST PATH: Skip pre-auth migration lookup to reduce sign-in latency.
+    // Migration is still handled in the auth-error fallback path below.
+    console.log('[SignIn] ⏩ Skipping pre-login migration lookup for faster login')
 
     // Use optimized auth service (works on all platforms)
     console.log('[SignIn] Starting authentication...')
@@ -769,70 +758,64 @@ const handleSignIn = async () => {
     registrationStore.setFirestoreUserId(userId ?? null)
     registrationStore.clearMigrationChallenge()
 
-    // Check device key BEFORE proceeding
-    // IMPORTANT: Use cognitoSub (actual user ID) for device key operations, not email/username
-    console.log('[SignIn] 🔐 Checking device key...')
-    let deviceCheck
-    try {
-      const deviceKeyService = (await import('../../services/deviceKeyService')).default
-      // Use cognitoSub (actual user ID) instead of userId (which might be email)
-      const userIdentifier = cognitoSub || userId
-      console.log('[SignIn] 🔐 Using user identifier for device check:', userIdentifier)
-      // Add timeout to device key check
-      deviceCheck = await Promise.race([
-        deviceKeyService.handleLoginDeviceCheck(userIdentifier, {
-          lookupEmail: formData.email.trim(),
-        }),
-        new Promise((_resolve, reject) => 
-          setTimeout(() => reject(new Error('Device key check timed out')), 10000)
-        )
-      ])
-    } catch (deviceKeyError) {
-      console.warn('[SignIn] ⚠️ Device key check failed or timed out:', deviceKeyError.message)
-      // In development, allow sign-in even if device key check fails
-      const isDevelopment = import.meta.env.DEV || import.meta.env.MODE === 'development'
-      if (isDevelopment) {
-        console.log('[SignIn] ⚠️ Development mode - allowing sign-in despite device key check failure')
-        deviceCheck = { allowed: true, action: 'skipped_dev_mode' }
-      } else {
-        // In production, treat as not allowed
-        deviceCheck = { allowed: false, message: deviceKeyError.message || 'Device key check failed' }
-      }
-    }
-    
-    if (!deviceCheck.allowed) {
-      console.log('[SignIn] ❌ Device key check failed:', deviceCheck.message)
-      
-      // Save error message to localStorage to persist across navigation
-      localStorage.setItem('showDeviceKeyError', deviceCheck.message)
-      console.log('[SignIn] 💾 Saved device key error to localStorage')
-      
-      // Sign out the user
-      console.log('[SignIn] 🚪 Signing out user with device key error...')
-      loading.value = false
-      try {
-        await optimizedAuthService.signOut()
-        console.log('[SignIn] ✅ User signed out after device key error')
-        
-        // Wait a moment for the auth state to fully clear
-        await new Promise(resolve => setTimeout(resolve, 100))
-        
-        // Check and show the modal immediately (in case we stayed on /signin)
-        console.log('[SignIn] 🔍 Checking for device key error to display modal...')
-        checkAndShowDeviceKeyError()
-      } catch (err) {
-        console.error('[SignIn] ❌ Error during device key signout:', err)
-      }
-      
-      return
-    }
-    
-    console.log('[SignIn] ✅ Device key check passed:', deviceCheck.action)
-    if (deviceCheck.action === 'registered') {
-      notificationStore.showSuccess('Device registered successfully!')
-    } else if (deviceCheck.action === 'reset_approved') {
-      notificationStore.showSuccess('Device reset approved! Welcome to your new device.')
-    }
+    /*
+      Device key login enforcement is TEMPORARILY DISABLED.
+      Keep this block for future re-enable.
+
+      Original behavior:
+      - validate device key on login
+      - block login on mismatch
+      - require reset approval flow
+    */
+    // console.log('[SignIn] 🔐 Checking device key...')
+    // let deviceCheck
+    // try {
+    //   const deviceKeyService = (await import('../../services/deviceKeyService')).default
+    //   const userIdentifier = cognitoSub || userId
+    //   console.log('[SignIn] 🔐 Using user identifier for device check:', userIdentifier)
+    //   deviceCheck = await Promise.race([
+    //     deviceKeyService.handleLoginDeviceCheck(userIdentifier, {
+    //       lookupEmail: formData.email.trim(),
+    //     }),
+    //     new Promise((_resolve, reject) =>
+    //       setTimeout(() => reject(new Error('Device key check timed out')), 10000)
+    //     )
+    //   ])
+    // } catch (deviceKeyError) {
+    //   console.warn('[SignIn] ⚠️ Device key check failed or timed out:', deviceKeyError.message)
+    //   const isDevelopment = import.meta.env.DEV || import.meta.env.MODE === 'development'
+    //   if (isDevelopment) {
+    //     console.log('[SignIn] ⚠️ Development mode - allowing sign-in despite device key check failure')
+    //     deviceCheck = { allowed: true, action: 'skipped_dev_mode' }
+    //   } else {
+    //     deviceCheck = { allowed: false, message: deviceKeyError.message || 'Device key check failed' }
+    //   }
+    // }
+    //
+    // if (!deviceCheck.allowed) {
+    //   console.log('[SignIn] ❌ Device key check failed:', deviceCheck.message)
+    //   localStorage.setItem('showDeviceKeyError', deviceCheck.message)
+    //   console.log('[SignIn] 💾 Saved device key error to localStorage')
+    //   console.log('[SignIn] 🚪 Signing out user with device key error...')
+    //   loading.value = false
+    //   try {
+    //     await optimizedAuthService.signOut()
+    //     console.log('[SignIn] ✅ User signed out after device key error')
+    //     await new Promise(resolve => setTimeout(resolve, 100))
+    //     console.log('[SignIn] 🔍 Checking for device key error to display modal...')
+    //     checkAndShowDeviceKeyError()
+    //   } catch (err) {
+    //     console.error('[SignIn] ❌ Error during device key signout:', err)
+    //   }
+    //   return
+    // }
+    //
+    // console.log('[SignIn] ✅ Device key check passed:', deviceCheck.action)
+    // if (deviceCheck.action === 'registered') {
+    //   notificationStore.showSuccess('Device registered successfully!')
+    // } else if (deviceCheck.action === 'reset_approved') {
+    //   notificationStore.showSuccess('Device reset approved! Welcome to your new device.')
+    // }
 
     // Sync PRE user with Smart Mirror service for user isolation
     console.log('[SignIn] 🔐 Syncing PRE user with Smart Mirror service:', userId)
@@ -891,16 +874,6 @@ const handleSignIn = async () => {
     let dynamoUser = null
     let approvalCheckPassed = false
     
-    // Add timeout wrapper for DynamoDB operations
-    const withTimeout = async (promise, timeoutMs, operationName) => {
-      return Promise.race([
-        promise,
-        new Promise((_resolve, reject) => 
-          setTimeout(() => reject(new Error(`${operationName} timed out after ${timeoutMs}ms`)), timeoutMs)
-        )
-      ])
-    }
-    
     try {
       const { getUserByEmail, getUserById, getUserByAuthUid } = await import('src/services/dynamoDBUsersService')
       console.log('[SignIn] 🔍 Checking DynamoDB for user...')
@@ -918,7 +891,7 @@ const handleSignIn = async () => {
         try {
           dynamoUser = await withTimeout(
             getUserByAuthUid(cognitoSubForLookup),
-            8000, // 8 second timeout
+            5000,
             'getUserByAuthUid'
           )
           if (dynamoUser) {
@@ -936,65 +909,53 @@ const handleSignIn = async () => {
         try {
           dynamoUser = await withTimeout(
             getUserByEmail(userEmail),
-            8000, // 8 second timeout
+            5000,
             'getUserByEmail'
           )
         } catch (emailError) {
           console.warn('[SignIn] ⚠️ Error or timeout getting user by email:', emailError.message)
         }
         
-        // If not found by email, try finding by Cognito user ID (authUid) as last resort
-        // Use both username and sub (sub is more reliable as it's the unique Cognito ID)
+        // Robust fallback chain to avoid false "account doesn't exist" for valid users.
         if (!dynamoUser) {
           const identifiersToTry = []
-          
           if (cognitoSubForLookup && cognitoSubForLookup !== userId) {
             identifiersToTry.push({ type: 'sub', value: cognitoSubForLookup })
           }
           if (userId) {
             identifiersToTry.push({ type: 'username/id', value: userId })
           }
-          
-          if (identifiersToTry.length > 0) {
-            console.log('[SignIn] ⚠️ User not found by email, trying to find by Cognito identifiers...')
-            console.log('[SignIn] Identifiers to try:', identifiersToTry)
-            
-            for (const identifier of identifiersToTry) {
+
+          for (const identifier of identifiersToTry) {
+            try {
               try {
-                console.log(`[SignIn] Trying to find user by ${identifier.type}: ${identifier.value}`)
-                
-                // Try direct lookup by ID first (in case the ID in DynamoDB matches)
+                dynamoUser = await withTimeout(
+                  getUserById(identifier.value),
+                  3500,
+                  `getUserById(${identifier.type})`
+                )
+              } catch (idError) {
+                console.warn(`[SignIn] ⚠️ Error/timeout getUserById(${identifier.type}):`, idError.message)
+              }
+
+              if (!dynamoUser) {
                 try {
                   dynamoUser = await withTimeout(
-                    getUserById(identifier.value),
-                    5000, // 5 second timeout per identifier
-                    `getUserById(${identifier.type})`
+                    getUserByAuthUid(identifier.value),
+                    3500,
+                    `getUserByAuthUid(${identifier.type})`
                   )
-                } catch (idError) {
-                  console.warn(`[SignIn] ⚠️ Error or timeout getting user by ID:`, idError.message)
+                } catch (authUidError) {
+                  console.warn(`[SignIn] ⚠️ Error/timeout getUserByAuthUid(${identifier.type}):`, authUidError.message)
                 }
-                
-                // If not found, try searching by authUid field (Cognito sub)
-                if (!dynamoUser) {
-                  try {
-                    dynamoUser = await withTimeout(
-                      getUserByAuthUid(identifier.value),
-                      5000, // 5 second timeout
-                      `getUserByAuthUid(${identifier.type})`
-                    )
-                  } catch (authUidError) {
-                    console.warn(`[SignIn] ⚠️ Error or timeout getting user by authUid:`, authUidError.message)
-                  }
-                }
-                
-                if (dynamoUser) {
-                  console.log(`[SignIn] ✅ Found user by ${identifier.type}:`, dynamoUser.id)
-                  break // Stop searching once we find the user
-                }
-              } catch (idSearchError) {
-                console.warn(`[SignIn] ⚠️ Error searching by ${identifier.type}:`, idSearchError)
-                // Continue trying other identifiers
               }
+
+              if (dynamoUser) {
+                console.log(`[SignIn] ✅ Found user by ${identifier.type}:`, dynamoUser.id)
+                break
+              }
+            } catch (idSearchError) {
+              console.warn(`[SignIn] ⚠️ Error searching by ${identifier.type}:`, idSearchError)
             }
           }
         }
@@ -1045,7 +1006,7 @@ const handleSignIn = async () => {
         console.log('[SignIn]     6. User account was deleted from DynamoDB')
         await optimizedAuthService.signOut()
         notificationStore.showError(
-          'Your account is not registered in our system. This may happen if registration was incomplete. Please contact support or try registering again.'
+          'We could not verify your account data right now. Please try again in a moment. If the issue continues, contact support.'
         )
         loading.value = false
         return
@@ -1090,53 +1051,32 @@ const handleSignIn = async () => {
     console.log('[SignIn] Email verified:', emailVerified)
     console.log('[SignIn] Approval status approved:', approvalCheckPassed)
 
-    // Load user projects and profile immediately after successful sign-in
-    console.log('[SignIn] 🚀 Loading user projects and profile...')
-    
-    try {
-      // Get DynamoDB user ID from the user we already fetched
-      const dynamoDbUserId = dynamoUser.id
-      console.log('[SignIn] Using DynamoDB user ID for projects:', dynamoDbUserId)
-      
-      // Load projects using the project store
-      const { useProjectStore } = await import('../../stores/projectStore')
-      const projectStore = useProjectStore()
-      
-      // Load user projects
-      console.log('[SignIn] Fetching user projects...')
-      await projectStore.fetchUserProjects(dynamoDbUserId)
-      console.log('[SignIn] ✅ Projects loaded:', projectStore.userProjects.length)
-      
-      // Auto-select first project if available and none selected
-      if (projectStore.userProjects.length > 0 && !projectStore.hasSelectedProject) {
-        console.log('[SignIn] Auto-selecting first project')
-        projectStore.selectProject(projectStore.userProjects[0])
-      }
-      
-      // Preload profile data in background (non-blocking)
-      // This ensures profile data is ready when user visits profile page
-      ;(async () => {
-        try {
-          const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
-          const profileData = await getUserByEmail(userEmail)
-          if (profileData) {
-            // Store in global cache for ProfilePage
-            window.__profileCache = {
-              data: profileData,
-              userId: userId,
-              timestamp: Date.now()
-            }
-            console.log('[SignIn] ✅ Profile data preloaded')
-          }
-        } catch (profileError) {
-          console.warn('[SignIn] ⚠️ Profile preload failed (non-critical):', profileError)
+    // Load projects/profile in background so navigation is not delayed.
+    console.log('[SignIn] 🚀 Scheduling background preload (projects/profile)...')
+    ;(async () => {
+      try {
+        const dynamoDbUserId = dynamoUser.id
+        const { useProjectStore } = await import('../../stores/projectStore')
+        const projectStore = useProjectStore()
+        await projectStore.fetchUserProjects(dynamoDbUserId)
+        if (projectStore.userProjects.length > 0 && !projectStore.hasSelectedProject) {
+          projectStore.selectProject(projectStore.userProjects[0])
         }
-      })()
-      
-    } catch (loadError) {
-      console.error('[SignIn] ❌ Error loading projects/profile:', loadError)
-      // Continue anyway - projects can load on home page
-    }
+
+        const { getUserByEmail } = await import('src/services/dynamoDBUsersService')
+        const profileData = await getUserByEmail(userEmail)
+        if (profileData) {
+          window.__profileCache = {
+            data: profileData,
+            userId: userId,
+            timestamp: Date.now()
+          }
+        }
+        console.log('[SignIn] ✅ Background preload completed')
+      } catch (loadError) {
+        console.warn('[SignIn] ⚠️ Background preload failed (non-critical):', loadError?.message || loadError)
+      }
+    })()
     
     console.log('[SignIn] Proceeding to home...')
     
@@ -1157,9 +1097,6 @@ const handleSignIn = async () => {
     } catch (fcmImportError) {
       console.warn('[SignIn] ⚠️ Failed to import FCM service (non-critical):', fcmImportError)
     }
-
-    // Wait a bit to ensure auth state is fully established
-    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // User is confirmed and approved, proceed to home
     loading.value = false

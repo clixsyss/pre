@@ -412,17 +412,16 @@ const handleMigration = async () => {
       throw new Error('Migration finished but Cognito still requires a new password. Please sign in again.')
     }
 
-    const signedUser = signInResult.user
-    const cognitoSubAfterLogin =
-      signedUser?.attributes?.sub ||
-      signedUser?.cognitoAttributes?.sub ||
-      signedUser?.username
-    const deviceCheck = await deviceKeyService.handleLoginDeviceCheck(cognitoSubAfterLogin, {
-      lookupEmail: normalizedEmail,
-    })
-    if (!deviceCheck.allowed) {
-      throw new Error(deviceCheck.message || 'Device registration failed after migration.')
-    }
+    /*
+      Device key enforcement after migration is TEMPORARILY DISABLED.
+      Keep this block for easy rollback later.
+    */
+    // const deviceCheck = await deviceKeyService.handleLoginDeviceCheck(cognitoSubAfterLogin, {
+    //   lookupEmail: normalizedEmail,
+    // })
+    // if (!deviceCheck.allowed) {
+    //   throw new Error(deviceCheck.message || 'Device registration failed after migration.')
+    // }
 
     // Clear migration challenge before redirecting
     registrationStore.clearMigrationChallenge()
