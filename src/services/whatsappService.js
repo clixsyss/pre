@@ -288,7 +288,7 @@ class SharingService {
     const unit = sanitizeString(pass.unit || '', 50)
     const passCode = sanitizeString(pass.code || pass.id || '', 100)
 
-    return `🏘️ *PRE Group - Guest Pass*
+    return `*PRE Group - Guest Pass*
 
 Dear ${guestName},
 
@@ -296,6 +296,7 @@ You have been invited as a guest to PRE Group community.
 
 *Pass Details:*
 Project: ${projectName}
+Entrance: Gate 2
 Guest: ${guestName}
 ${hostName ? `Host: ${hostName}\n` : ''}${unit ? `Unit: ${unit}\n` : ''}Pass Code: ${passCode}
 Valid Until: ${validDate}

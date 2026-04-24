@@ -2651,26 +2651,39 @@ const drawGatePass = (ctx, qrImg, pass, canvasWidth, canvasHeight, logoImg = nul
   ctx.textAlign = 'center'
   ctx.fillText(displayProject, centerX, projectPillY + 16)
 
+  // Add static gate context beside project info as requested.
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+  ctx.font = '600 13px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
+  let displayProjectGate = String('Gate 2')
+  while (ctx.measureText(displayProjectGate).width > maxProjectWidth && displayProjectGate.length > 1) {
+    displayProjectGate = `${displayProjectGate.slice(0, -2)}…`
+  }
+  ctx.fillText(displayProjectGate, centerX, projectPillY + 40)
+
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '700 24px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
-  ctx.fillText(isArabic ? 'تصريح دخول' : 'Gate Pass', centerX, cardY + 142)
+  ctx.fillText(isArabic ? 'تصريح دخول' : 'Gate Pass', centerX, cardY + 156)
+
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = '800 16px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
+  ctx.fillText('Gate 2', centerX, cardY + 182)
 
   ctx.fillStyle = 'rgba(255, 255, 255, 0.88)'
   ctx.font = '500 11px "Inter", -apple-system, "Segoe UI", Arial, sans-serif'
   ctx.fillText(
     isArabic ? `تم الإنشاء: ${createdAtParts.date}` : `Generated: ${createdAtParts.date}`,
     centerX,
-    cardY + 162
+    cardY + 206
   )
   ctx.fillText(
     isArabic ? `الوقت: ${createdAtParts.time}` : `Time: ${createdAtParts.time}`,
     centerX,
-    cardY + 178
+    cardY + 222
   )
 
   const qrSize = 300
   const qrX = centerX - qrSize / 2
-  const qrY = cardY + 204
+  const qrY = cardY + 248
   const qrFramePadding = 14
   ctx.fillStyle = '#FFFFFF'
   ctx.fillRect(qrX - qrFramePadding, qrY - qrFramePadding, qrSize + (qrFramePadding * 2), qrSize + (qrFramePadding * 2))
