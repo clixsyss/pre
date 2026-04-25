@@ -1001,7 +1001,7 @@
             </div> -->
 
             <!-- Face ID / Face Verification Settings -->
-            <div class="settings-group">
+            <!-- <div class="settings-group">
               <div class="settings-header">
                 <div class="settings-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1039,7 +1039,7 @@
                   Set Up Face Verification
                 </button>
               </div>
-            </div>
+            </div> -->
           </div>
         </div>
       </div>
@@ -2053,9 +2053,9 @@ const checkFaceVerificationStatus = () => {
 }
 
 // Navigate to Face ID enrollment/update page
-const openFaceVerificationModal = () => {
-  router.push('/profile/face-verification')
-}
+// const openFaceVerificationModal = () => {
+//   router.push('/profile/face-verification')
+// }
 
 // Accordion state
 const activeAccordion = ref(null) // Default to all accordions closed

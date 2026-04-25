@@ -15,8 +15,7 @@ export default defineBoot(async ({ app, router }) => {
   // Make FCM service available globally
   app.config.globalProperties.$fcm = fcmService;
 
-  // Track cleanup handles so listeners and intervals are released on logout/unmount
-  let authUnsubscribe = null;
+  // Track cleanup handle for the token update interval (cleared on logout)
   let tokenUpdateIntervalId = null;
 
   // Helper function to initialize FCM (uses fcmService's internal tracking)
@@ -86,32 +85,18 @@ export default defineBoot(async ({ app, router }) => {
   const detectedPlatform = detectPlatform();
   logger.log('FCM Boot: Detected platform:', detectedPlatform);
 
-  // Listen for Cognito auth state changes (AWS-only, no Firebase Auth)
-  // Store the returned unsubscribe function so it can be called on logout
-  authUnsubscribe = optimizedAuthService.onAuthStateChanged(async (user) => {
-    if (user) {
-      logger.log('FCM Boot: Cognito auth state changed - user authenticated');
-      
-      // iOS-optimized: Shorter delay since auth state is cached
-      const delay = detectedPlatform === 'ios' ? 1500 : 1000;
-      
-      setTimeout(() => {
-        initializeFCM('optimizedAuthService.onAuthStateChanged');
-      }, delay);
-    } else {
+  // Listen for Cognito auth state changes — used ONLY for logout/unregister.
+  // Login-side FCM init is handled directly in SignIn.vue via fcmService.registerTokenForUser(),
+  // because the Hub signIn event fires before currentUser is set, making this callback
+  // unreliable for the login path (it would receive null and trigger unregister instead).
+  optimizedAuthService.onAuthStateChanged(async (user) => {
+    if (!user) {
       logger.log('FCM Boot: User logged out, unregistering FCM...');
 
-      // Clear the token update interval so it doesn't fire after logout
       if (tokenUpdateIntervalId !== null) {
         clearInterval(tokenUpdateIntervalId);
         tokenUpdateIntervalId = null;
         fcmService.hasTokenUpdateInterval = false;
-      }
-
-      // Remove the auth state listener now that the user is logged out
-      if (authUnsubscribe !== null) {
-        authUnsubscribe();
-        authUnsubscribe = null;
       }
 
       try {

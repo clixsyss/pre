@@ -216,6 +216,20 @@ export async function registerUserToken({ userId, token, platform = 'web' }) {
   }
 }
 
+/**
+ * Clear cached token registration data for a specific user.
+ * Must be called on logout so the next user on this device is not served
+ * a stale cache entry from the previous user's session.
+ */
+export function clearUserTokenCache(userId) {
+  if (userId) {
+    tokenCache.delete(userId)
+  } else {
+    tokenCache.clear()
+  }
+  logOnceMap.clear()
+}
+
 // Export alias for backward compatibility
 export const registerFcmToken = registerUserToken
 
@@ -223,6 +237,7 @@ export const registerFcmToken = registerUserToken
 export default {
   registerUserToken,
   registerFcmToken, // Alias for backward compatibility
+  clearUserTokenCache,
 }
 
 // Debug helper (dev only)

@@ -922,28 +922,125 @@ class FCMService {
     try {
       logger.log('FCMService: Unregistering from push notifications...');
 
-      // Remove token from DynamoDB (mark as inactive)
-      if (this.currentToken) {
-        await this.removeTokenFromFirestore(this.currentToken);
+      // Reset state flags FIRST — synchronously — so that if the next user's
+      // onAuthStateChanged fires during the async cleanup below, initializeFCM()
+      // is not blocked by a stale isInitialized=true. This was the root cause of
+      // the second user never getting a token saved on a shared device.
+      const tokenToRemove = this.currentToken;
+      this.currentToken = null;
+      this.isInitialized = false;
+      this.listenersSetup = false;
+
+      // Deactivate the outgoing user's token in DynamoDB.
+      // removeTokenFromFirestore re-fetches userId internally; because sign-out
+      // has already happened it will find no auth user and skip gracefully.
+      // We pass the token string directly so it doesn't need to re-query.
+      if (tokenToRemove) {
+        await this.removeTokenFromFirestore(tokenToRemove);
       }
 
-      // Platform-specific unregistration
+      // Clear in-memory token cache for the outgoing user so the next user
+      // on this device doesn't get served a stale cache hit.
+      try {
+        const { clearUserTokenCache } = await import('./tokenRegistrationService');
+        clearUserTokenCache();
+      } catch (cacheError) {
+        logger.warn('FCMService: Could not clear token cache on unregister:', cacheError?.message);
+      }
+
+      // Platform-specific cleanup
       if (this.isNative && this.FirebaseMessaging) {
         await this.FirebaseMessaging.removeAllListeners();
         logger.log('FCMService: Native listeners removed');
-        this.listenersSetup = false; // Reset listener flag
       } else if (this.messaging) {
-        // Delete token from FCM
         await deleteToken(this.messaging);
         logger.log('FCMService: Web token deleted');
       }
 
-      this.currentToken = null;
-      this.isInitialized = false; // Reset initialization flag
       logger.log('FCMService: Unregistered successfully');
     } catch (error) {
+      // Ensure flags are reset even if cleanup throws, so the next login
+      // is not permanently blocked.
+      this.isInitialized = false;
+      this.listenersSetup = false;
+      this.currentToken = null;
       logger.error('FCMService: Error unregistering:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Register the device token for a specific user immediately after login.
+   *
+   * Unlike initialize(), this method:
+   * - Does NOT request permissions (uses whatever is already granted)
+   * - Does NOT check/set isInitialized
+   * - Fetches the current token and saves it under the given userId
+   *
+   * Call this directly from the login success path so the token is always
+   * associated with the user who just signed in, regardless of FCM init state.
+   */
+  async registerTokenForUser(userId) {
+    if (!userId) {
+      logger.warn('FCMService.registerTokenForUser: no userId provided, skipping');
+      return;
+    }
+
+    try {
+      // Detect platform if not yet known
+      if (this.isNative === null || this.platform === null) {
+        const platformInfo = detectPlatformFromUrl();
+        this.isNative = platformInfo.isNative;
+        this.platform = platformInfo.platform;
+      }
+
+      let token = null;
+
+      if (this.isNative) {
+        await import('@capacitor-firebase/messaging');
+        const FirebaseMessaging = window.Capacitor?.Plugins?.FirebaseMessaging;
+        if (!FirebaseMessaging) {
+          logger.warn('FCMService.registerTokenForUser: native plugin not available');
+          return;
+        }
+        const permission = await FirebaseMessaging.checkPermissions();
+        if (permission?.receive !== 'granted') {
+          // Permission not yet granted — fall back to full initialize() which will prompt
+          logger.log('FCMService.registerTokenForUser: permission not granted, running full initialize()');
+          await this.initialize();
+          // After initialize(), token is already saved under the current user via getCurrentUserId().
+          // But getCurrentUserId() may race with auth state; re-save explicitly here.
+          token = this.currentToken;
+        } else {
+          const result = await FirebaseMessaging.getToken();
+          token = result?.token || null;
+        }
+      } else {
+        if (!('Notification' in window) || Notification.permission !== 'granted') {
+          logger.log('FCMService.registerTokenForUser: web permission not granted, running full initialize()');
+          await this.initialize();
+          token = this.currentToken;
+        } else {
+          if (!this.messaging) {
+            const { app } = await import('src/boot/firebase');
+            this.messaging = getMessaging(app);
+          }
+          token = await getToken(this.messaging, { vapidKey: this.vapidKey });
+        }
+      }
+
+      if (!token) {
+        logger.warn('FCMService.registerTokenForUser: no token available');
+        return;
+      }
+
+      this.currentToken = token;
+
+      const { registerUserToken } = await import('./tokenRegistrationService');
+      await registerUserToken({ userId, token, platform: this.platform || 'web' });
+      logger.log(`FCMService.registerTokenForUser: token saved for user ${userId}`);
+    } catch (error) {
+      logger.error('FCMService.registerTokenForUser: error:', error?.message || error);
     }
   }
 
