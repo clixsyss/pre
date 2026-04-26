@@ -1,5 +1,10 @@
 <template>
   <div class="services-page">
+
+    <!-- Suspension banner — shown when this feature is blocked -->
+    <SuspensionBanner v-if="isBlocked" :message="suspensionMessage" />
+
+    <div class="services-page-content" :class="{ 'page-blocked': isBlocked }">
     <div class="hero-section">
       <div class="hero-content">
         <div class="hero-text">
@@ -361,6 +366,7 @@
     <!-- Service Booking Modal -->
     <ServiceBookingModal :isOpen="showBookingModal" :booking="selectedBooking" @close="closeBookingModal"
       @openChat="openBookingChat" />
+    </div><!-- end services-page-content -->
   </div>
 </template>
 
@@ -377,6 +383,8 @@ import { useSmartMirrorStore } from '../../stores/smartMirrorStore';
 import serviceBookingService from '../../services/serviceBookingService';
 import firestoreService from '../../services/firestoreService';
 import ServiceBookingModal from '../../components/ServiceBookingModal.vue';
+import SuspensionBanner from '../../components/SuspensionBanner.vue';
+import { useSuspensionGuard } from '../../composables/useSuspensionGuard';
 
 // Component name for ESLint
 defineOptions({
@@ -387,6 +395,7 @@ const router = useRouter();
 const { t, locale } = useI18n();
 const serviceCategoriesStore = useServiceCategoriesStore();
 const projectStore = useProjectStore();
+const { isBlocked, suspensionMessage } = useSuspensionGuard('services');
 const sportsStore = useSportsStore();
 const academiesStore = useAcademiesStore();
 const smartMirrorStore = useSmartMirrorStore();
@@ -813,6 +822,12 @@ const getLastMessagePreview = (booking) => {
 <style scoped>
 .services-page {
   background: #fafafa;
+}
+
+.page-blocked {
+  pointer-events: none;
+  opacity: 0.4;
+  user-select: none;
 }
 
 /* Hero Section */

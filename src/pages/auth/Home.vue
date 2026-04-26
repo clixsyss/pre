@@ -24,6 +24,20 @@
     <!-- Warning Banner (persistent, shown when user has active warnings) -->
     <WarningBanner :show="showWarningBanner" :count="activeWarningsCount" @click="navigateToWarnings" />
 
+    <!-- Family Suspension Banner (shown to primary account holders when all family members are suspended) -->
+    <div v-if="projectStore.familySuspensionState.allSuspended" class="family-suspension-banner" :dir="isArabic ? 'rtl' : 'ltr'">
+      <div class="family-suspension-icon">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      </div>
+      <div class="family-suspension-text">
+        <strong>{{ $t('suspension.familySuspendedTitle') }}</strong>
+        <span>{{ $t('suspension.familySuspendedBody') }}</span>
+      </div>
+    </div>
+
     <!-- Ads Carousel -->
     <AdsCarousel />
 
@@ -163,6 +177,7 @@ const router = useRouter()
 const route = useRoute()
 const { t, locale } = useI18n()
 const projectStore = useProjectStore()
+const isArabic = computed(() => locale.value === 'ar' || locale.value === 'ar-SA')
 
 // ── Warnings banner & modal ───────────────────────────────────────────────
 const showWarningBanner = ref(false)
@@ -687,6 +702,53 @@ onActivated(async () => {
 </script>
 
 <style scoped>
+/* ── Family suspension banner ── */
+.family-suspension-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 16px 12px;
+  padding: 14px 16px;
+  background: #fff7ed;
+  border: 1.5px solid #fed7aa;
+  border-radius: 14px;
+  animation: slideDown 0.3s ease;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+[dir="rtl"] .family-suspension-banner { flex-direction: row-reverse; }
+
+.family-suspension-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, #fb923c, #ea580c);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.family-suspension-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.family-suspension-text strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: #9a3412;
+}
+.family-suspension-text span {
+  font-size: 12px;
+  font-weight: 500;
+  color: #c2410c;
+  line-height: 1.5;
+}
+
 .home-page {
   background: #fafafa;
   width: 100%;

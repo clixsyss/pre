@@ -1241,4 +1241,30 @@ export default {
   typeDELETE: 'DELETE',
   deleteMyAccount: 'حذف حسابي',
   deleting: 'جاري الحذف',
+
+  // ── نافذة التعليق (SuspensionMessage.vue) ────────────────────────────────
+  suspension: {
+    partialBadge: 'تعليق جزئي',
+    fullBadge: 'تعليق كامل',
+    accessRestricted: 'تم تقييد الوصول إلى حسابك',
+
+    reason: 'سبب التعليق',
+    reasonNotProvided: 'لم يتم تقديم سبب',
+
+    restrictedFeatures: 'الميزات المقيدة',
+    otherFeaturesOk: 'جميع الميزات الأخرى لا تزال متاحة',
+
+    suspensionType: 'نوع التعليق',
+    partialTemporary: 'جزئي · مؤقت',
+    fullTemporary: 'كامل · مؤقت',
+    partialPermanent: 'جزئي · دائم',
+    fullPermanent: 'كامل · دائم',
+
+    endsOn: 'ينتهي في',
+    canAccessProfileGate: 'لا يزال بإمكانك الوصول إلى ملفك الشخصي ووظيفة البوابة',
+    contactSupport: 'تواصل مع الدعم',
+    iUnderstand: 'فهمت',
+    familySuspendedTitle: 'تم تعليق أفراد العائلة',
+    familySuspendedBody: 'تم تعليق جميع أفراد العائلة المرتبطين بحسابك من قِبل مدير المشروع.',
+  },
 }

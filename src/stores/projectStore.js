@@ -19,6 +19,48 @@ export const useProjectStore = defineStore('project', () => {
     validityEndDate: null
   })
 
+  // Suspension state — populated by MainLayout after checkUserSuspension
+  const suspensionState = ref({
+    isSuspended: false,
+    level: null,          // 'full' | 'partial' | null
+    blockedFeatures: [],  // e.g. ['bookings', 'requests']
+    details: null,        // full suspensionDetails object
+  })
+
+  const setSuspensionState = (suspensionDetails) => {
+    if (!suspensionDetails) {
+      suspensionState.value = { isSuspended: false, level: null, blockedFeatures: [], details: null }
+      return
+    }
+    suspensionState.value = {
+      isSuspended: true,
+      level: suspensionDetails.level || 'full',
+      blockedFeatures: suspensionDetails.blockedFeatures || [],
+      details: suspensionDetails,
+    }
+  }
+
+  const clearSuspensionState = () => {
+    suspensionState.value = { isSuspended: false, level: null, blockedFeatures: [], details: null }
+  }
+
+  // Family suspension state — set when primary user's family members are all suspended
+  const familySuspensionState = ref({
+    allSuspended: false,
+    reason: null,
+  })
+
+  const setFamilySuspensionState = (isSuspended, reason = null) => {
+    familySuspensionState.value = { allSuspended: !!isSuspended, reason: reason || null }
+  }
+
+  /** Returns true if the given feature is blocked by the current suspension. */
+  const isFeatureBlocked = (featureId) => {
+    if (!suspensionState.value.isSuspended) return false
+    if (suspensionState.value.level === 'full') return true
+    return suspensionState.value.blockedFeatures.includes(featureId)
+  }
+
   const setUserAccountExpiryFromProfile = (userData) => {
     if (!userData) {
       userAccountExpiry.value = { isTemporary: false, validityEndDate: null }
@@ -557,6 +599,14 @@ export const useProjectStore = defineStore('project', () => {
     clearSelectedProject,
     resetStore,
     setLoading,
-    debugState
+    debugState,
+
+    // Suspension
+    suspensionState,
+    setSuspensionState,
+    clearSuspensionState,
+    isFeatureBlocked,
+    familySuspensionState,
+    setFamilySuspensionState,
   }
 })

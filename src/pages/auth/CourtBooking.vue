@@ -1,10 +1,14 @@
 <template>
   <div class="court-booking-page">
-    <PageHeader 
-      :title="$t('courtBookingTitle')" 
+    <PageHeader
+      :title="$t('courtBookingTitle')"
       :subtitle="projectName ? `${$t('bookCourtsIn')} ${projectName}` : $t('chooseSportCourtDateTime')"
     />
 
+    <!-- Suspension banner -->
+    <SuspensionBanner v-if="isBlocked" :message="suspensionMessage" />
+
+    <div :class="{ 'page-blocked': isBlocked }">
     <!-- Loading State -->
     <div v-if="loading && sportsOptions.length === 0" class="loading-container">
       <div class="loading-spinner"></div>
@@ -267,6 +271,7 @@
         </div>
       </div>
     </div>
+    </div><!-- end page-blocked wrapper -->
   </div>
 </template>
 
@@ -280,6 +285,8 @@ import { useAcademiesStore } from 'src/stores/academyStore';
 import bookingService from 'src/services/bookingService';
 import optimizedAuthService from 'src/services/optimizedAuthService';
 import PageHeader from '../../components/PageHeader.vue';
+import SuspensionBanner from '../../components/SuspensionBanner.vue';
+import { useSuspensionGuard } from '../../composables/useSuspensionGuard';
 import { useFormKeyboard } from '../../composables/useFormKeyboard';
 import { useDateFormat } from '../../composables/useDateFormat';
 import { useI18n } from 'vue-i18n';
@@ -299,6 +306,7 @@ useFormKeyboard({
 const router = useRouter();
 const sportsStore = useSportsStore();
 const projectStore = useProjectStore();
+const { isBlocked, suspensionMessage } = useSuspensionGuard('bookings');
 const notificationStore = useNotificationStore();
 const academiesStore = useAcademiesStore();
 const { formatDateWithWeekday } = useDateFormat();
@@ -604,6 +612,12 @@ onMounted(async () => {
   padding: 0;
   background: #fafafa;
   min-height: 100%;
+}
+
+.page-blocked {
+  pointer-events: none;
+  opacity: 0.4;
+  user-select: none;
 }
 
 /* Loading and Error States */

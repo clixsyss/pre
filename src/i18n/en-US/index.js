@@ -1237,4 +1237,30 @@ export default {
   deleteMyAccount: 'Delete Account',
   deleting: 'Deleting',
 
+  // ── Suspension modal (SuspensionMessage.vue) ──────────────────────────────
+  suspension: {
+    partialBadge: 'Partial Suspension',
+    fullBadge: 'Full Suspension',
+    accessRestricted: 'Your account access has been restricted',
+
+    reason: 'Reason for Suspension',
+    reasonNotProvided: 'No reason provided',
+
+    restrictedFeatures: 'Restricted Features',
+    otherFeaturesOk: 'All other features remain accessible',
+
+    suspensionType: 'Suspension Type',
+    partialTemporary: 'Partial · Temporary',
+    fullTemporary: 'Full · Temporary',
+    partialPermanent: 'Partial · Permanent',
+    fullPermanent: 'Full · Permanent',
+
+    endsOn: 'Ends On',
+    canAccessProfileGate: 'You can still access your profile and gate functionality',
+    contactSupport: 'Contact Support',
+    iUnderstand: 'I Understand',
+    familySuspendedTitle: 'Family Members Suspended',
+    familySuspendedBody: 'All family members linked to your account have been suspended by the project administrator.',
+  },
+
 }

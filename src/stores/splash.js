@@ -57,20 +57,20 @@ export const useSplashStore = defineStore('splash', () => {
   const checkAndHideSplash = async () => {
     if (videoCompleted.value && appInitialized.value) {
       console.log('🎬 Splash: Both video and app ready — hiding splash')
+      // Apply app-loaded BEFORE hiding the splash so the content underneath
+      // already has the correct background when the fade-out completes.
+      applyAppLoaded()
       hideSplash()
-      const fadeMs = 250
       setTimeout(async () => {
         try {
           if (Capacitor.isNativePlatform()) {
             await SplashScreen.hide()
             console.log('✅ Native splash hidden - app is fully loaded')
           }
-          applyAppLoaded()
         } catch (error) {
           console.warn('⚠️ Could not hide native splash:', error)
-          applyAppLoaded()
         }
-      }, fadeMs)
+      }, 250)
     } else {
       console.log('⏳ Splash: Waiting...', {
         videoCompleted: videoCompleted.value,
@@ -85,8 +85,8 @@ export const useSplashStore = defineStore('splash', () => {
       console.warn('⏱️ Splash Store: Safety timeout reached, forcing hide')
       videoCompleted.value = true
       appInitialized.value = true
-      hideSplash()
       applyAppLoaded()
+      hideSplash()
       if (Capacitor.isNativePlatform()) {
         SplashScreen.hide().catch(err => {
           console.warn('⚠️ Could not hide native splash on timeout:', err)

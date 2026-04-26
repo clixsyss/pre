@@ -89,14 +89,30 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
         // Called when the app was launched with a url.
-        
+
         // If this is a guest-pass URL or firebaseapp.com, open it in Safari instead of the app
         if url.absoluteString.contains("/guest-pass/") || url.host?.contains("firebaseapp.com") == true {
             print("🔗 Guest pass link detected - opening in Safari instead of app")
             UIApplication.shared.open(url, options: [:], completionHandler: nil)
             return true
         }
-        
+
+        // Widget / shortcut gate-open URL — flag it in UserDefaults so JS can
+        // pick it up on both cold starts and warm starts via the boot file.
+        if url.absoluteString.contains("open-gate") {
+            let source: String
+            if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+               let sourceParam = components.queryItems?.first(where: { $0.name == "source" })?.value {
+                source = sourceParam
+            } else {
+                source = "ios-widget"
+            }
+            print("🔓 AppDelegate: Gate widget URL detected, source: \(source)")
+            // Use "CapacitorStorage." prefix to match @capacitor/preferences key format
+            UserDefaults.standard.set(source, forKey: "CapacitorStorage.pendingGateOpenSource")
+            UserDefaults.standard.set(String(Date().timeIntervalSince1970 * 1000), forKey: "CapacitorStorage.pendingGateOpenTimestamp")
+        }
+
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 

@@ -348,8 +348,6 @@ const {
 const { initialize: initializeAndroidSafeArea, cleanup: cleanupAndroidSafeArea } = useAndroidSafeArea()
 
 const shakeDetection = ref(null)
-const QUICK_OPEN_STORAGE_KEY = 'pendingQuickOpenGate'
-const quickOpenRequestInProgress = ref(false)
 
 const handleShake = async () => {
   if (!appSettingsStore.shakeEnabled) return
@@ -376,55 +374,49 @@ watch(
   { immediate: true },
 )
 
-const triggerQuickOpenFromExternal = async (source = 'external') => {
-  if (quickOpenRequestInProgress.value) return
-  quickOpenRequestInProgress.value = true
-
+const triggerQuickOpenFromExternal = async () => {
   try {
     if (!isNativePlatform.value) {
       console.warn('Native platform not detected, attempting BLE quick open anyway')
     }
 
-    const currentUser = await optimizedAuthService.getCurrentUser()
+    let currentUser = await optimizedAuthService.getCurrentUser()
     if (!currentUser) {
-      console.warn('Quick open ignored: user is not authenticated')
+      // Cold-start: Cognito session may still be restoring from keychain.
+      // Wait up to 10s before giving up so widget taps always work.
+      console.warn('Quick open: no cached user, waiting for auth to restore...')
+      currentUser = await optimizedAuthService.waitForAuthState(10000)
+    }
+    if (!currentUser) {
+      console.warn('Quick open ignored: user is not authenticated after waiting')
       return
     }
 
-    // BLE-only quick open path (no route fallback).
-    const gateOpened = await triggerOpenGateFromProximity(source)
-    if (!gateOpened && route.path !== '/access') {
-      await router.push({
-        path: '/access',
-        query: { fromShake: '1', source: `${source}-fallback` },
-      })
-    }
+    // Show the same feedback modal as the FAB, but don't navigate to /access on failure —
+    // the user tapped the widget to open the gate, not to browse the access page.
+    await handleGlassGatePrimaryAction({ navigateOnFail: false })
   } catch (error) {
     console.warn('Quick open failed:', error)
-  } finally {
-    window.setTimeout(() => {
-      quickOpenRequestInProgress.value = false
-    }, 800)
   }
 }
 
-const consumePendingQuickOpenRequest = () => {
+const consumePendingQuickOpenRequest = async () => {
   try {
-    const pendingValue = localStorage.getItem(QUICK_OPEN_STORAGE_KEY)
-    if (!pendingValue) return
-    localStorage.removeItem(QUICK_OPEN_STORAGE_KEY)
-
-    let source = 'shortcut'
-    try {
-      const parsed = JSON.parse(pendingValue)
-      if (parsed?.source) {
-        source = String(parsed.source)
+    // Cold-start: native AppDelegate/MainActivity wrote the gate-open source to
+    // Capacitor Preferences when it handled the widget URL before JS loaded.
+    const { Preferences } = await import('@capacitor/preferences')
+    const { value: source } = await Preferences.get({ key: 'pendingGateOpenSource' })
+    const { value: tsStr } = await Preferences.get({ key: 'pendingGateOpenTimestamp' })
+    if (source) {
+      const ageMs = Date.now() - (tsStr ? Number(tsStr) : 0)
+      // Clear immediately so it doesn't re-fire on next mount
+      await Preferences.remove({ key: 'pendingGateOpenSource' })
+      await Preferences.remove({ key: 'pendingGateOpenTimestamp' })
+      if (ageMs < 60000) {
+        console.log('🔓 MainLayout: Cold-start widget gate-open detected, source:', source)
+        void triggerQuickOpenFromExternal()
       }
-    } catch {
-      // Keep fallback source when pending value is malformed.
     }
-
-    void triggerQuickOpenFromExternal(source)
   } catch (error) {
     console.warn('Failed to consume pending quick-open request:', error)
   }
@@ -855,7 +847,7 @@ const showGateFeedback = (state, message, autoCloseMs = 0) => {
   }
 }
 
-const handleGlassGatePrimaryAction = async () => {
+const handleGlassGatePrimaryAction = async ({ navigateOnFail = true } = {}) => {
   if (isGateFeedbackLoading.value) return
 
   if (!isNativePlatform.value) {
@@ -870,7 +862,7 @@ const handleGlassGatePrimaryAction = async () => {
     return
   }
 
-  if (route.path !== '/access') {
+  if (navigateOnFail && route.path !== '/access') {
     try {
       await router.push({
         path: '/access',
@@ -1146,12 +1138,17 @@ const checkUserSuspensionStatus = async () => {
       isUserSuspended.value = true
       suspensionMessage.value = getSuspensionMessage(suspensionStatus.suspensionDetails)
       showSuspensionMessage.value = true
+      projectStore.setSuspensionState(suspensionStatus.suspensionDetails)
       console.log('🚫 MainLayout: User is suspended, showing suspension message')
     } else {
       isUserSuspended.value = false
       showSuspensionMessage.value = false
       suspensionMessage.value = null
+      projectStore.clearSuspensionState()
     }
+
+    // Update family suspension banner regardless of own suspension status
+    projectStore.setFamilySuspensionState(suspensionStatus.familyMembersSuspended ?? false)
   } catch (error) {
     console.error('❌ MainLayout: Error checking user suspension:', error)
   }
@@ -1401,6 +1398,7 @@ const handleSuspensionMessage = (event) => {
     isUserSuspended.value = true
     suspensionMessage.value = getSuspensionMessage(suspensionDetails)
     showSuspensionMessage.value = true
+    projectStore.setSuspensionState(suspensionDetails)
   }
 }
 

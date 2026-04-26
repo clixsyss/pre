@@ -182,6 +182,21 @@ class FCMService {
         // Set up listeners FIRST
         this.setupNativeListeners();
 
+        // Check for a notification that launched the app (cold-start tap).
+        // The notificationActionPerformed event fires before listeners are registered
+        // on a cold start, so we poll getLaunchNotification here. The boot file also
+        // does an early check to set pendingDeepLink before the router guard runs;
+        // this call handles the actual navigation after auth is confirmed.
+        try {
+          const launchResult = await FirebaseMessaging.getLaunchNotification();
+          if (launchResult?.notification) {
+            logger.log('FCMService: Found launch notification (cold-start tap):', launchResult.notification);
+            await this.handleNotificationTap({ notification: launchResult.notification });
+          }
+        } catch (launchErr) {
+          logger.warn('FCMService: getLaunchNotification not supported or failed:', launchErr?.message);
+        }
+
         logger.log('FCMService: Getting FCM token...');
         const result = await FirebaseMessaging.getToken();
         const token = result.token;
@@ -537,10 +552,18 @@ class FCMService {
    */
   async handleNotificationTap(event) {
     logger.log('FCMService: Handling notification tap:', event);
-    
+
     // Extract data
     const data = event.notification?.data || {};
-    
+
+    // Store the deep-link destination immediately so the router guard can pick it
+    // up even if auth hasn't restored yet (cold-start race condition).
+    const pendingRoute = this._resolveNotificationRoute(data);
+    if (pendingRoute) {
+      localStorage.setItem('pendingDeepLink', pendingRoute);
+      logger.log('FCMService: Stored pendingDeepLink:', pendingRoute);
+    }
+
     await this.handleNotificationAction(data);
   }
 
@@ -588,58 +611,91 @@ class FCMService {
   }
 
   /**
+   * Resolve the target route path for a notification data payload.
+   * Returns a route string or null if no specific destination can be determined.
+   */
+  _resolveNotificationRoute(data) {
+    if (!data) return null;
+
+    // Explicit deep-link wins over everything else
+    if (data.deepLink) return data.deepLink;
+
+    const notificationType = data.type || data.actionType || data.category || '';
+
+    switch (notificationType) {
+      case 'booking':
+      case 'court_booking':
+      case 'academy_booking':
+        return '/my-bookings';
+      case 'order':
+        return '/orders';
+      case 'news':
+        return data.newsId ? `/news/${data.newsId}` : '/news';
+      case 'announcement':
+      case 'alert':
+      case 'info':
+      case 'success':
+      case 'warning':
+        return '/notifications';
+      case 'promo':
+      case 'promotion':
+        return '/promotions';
+      case 'support':
+      case 'support_chat':
+        return data.chatId ? `/support-chat/${data.chatId}` : '/support-chat';
+      case 'complaint':
+        return data.complaintId ? `/complaints/${data.complaintId}` : '/complaints';
+      case 'request':
+      case 'request_chat':
+        return data.requestId ? `/request-chat/${data.requestId}` : '/requests';
+      case 'service_booking':
+      case 'service':
+        return data.bookingId ? `/service-booking-chat/${data.bookingId}` : '/services';
+      case 'warning_notice':
+      case 'violation':
+        return '/warnings';
+      case 'fine':
+        return '/violations';
+      default:
+        return '/notifications';
+    }
+  }
+
+  /**
    * Handle notification action (routing/navigation)
    */
   async handleNotificationAction(data) {
     logger.log('FCMService: Handling notification action:', data);
-    
+
     // CRITICAL: Wait for authentication state to be ready before navigating
     // This prevents the "logout" issue when opening app from notification
     const isAuthReady = await this.waitForAuthenticationState();
-    
+
     if (!isAuthReady) {
       logger.error('FCMService: Authentication not ready, cannot navigate from notification');
-      // Still allow navigation, router guards will handle redirect if needed
+      // pendingDeepLink in localStorage will be consumed by the router guard
+      return;
     }
-    
+
     // iOS needs extra time for Cognito auth persistence to fully restore
     // and for the app initialization to complete before navigation
     // After waiting for auth state above, add a small delay to ensure router is ready
-    const additionalDelay = this.platform === 'ios' ? 2000 : 1000; // Increased for iOS
+    const additionalDelay = this.platform === 'ios' ? 2000 : 1000;
     logger.log(`FCMService: Waiting ${additionalDelay}ms before navigation (platform: ${this.platform})`);
     await new Promise(resolve => setTimeout(resolve, additionalDelay));
-    
+
     // Import router dynamically to avoid circular dependencies
     import('src/router').then(({ default: router }) => {
-      const notificationType = data?.type || data?.actionType || 'alert';
-      logger.log('FCMService: Router loaded, navigating to:', notificationType);
-      
-      // Handle different notification types
-      switch (notificationType) {
-        case 'booking':
-          router.push('/bookings');
-          break;
-        case 'order':
-          router.push('/orders');
-          break;
-        case 'news':
-          if (data.newsId) {
-            router.push(`/news/${data.newsId}`);
-          } else {
-            router.push('/news');
-          }
-          break;
-        case 'announcement':
-        case 'alert':
-          router.push('/notifications');
-          break;
-        case 'promo':
-        case 'promotion':
-          router.push('/promotions');
-          break;
-        default:
-          router.push('/notifications');
-      }
+      const targetRoute = this._resolveNotificationRoute(data);
+      logger.log('FCMService: Router loaded, navigating to:', targetRoute);
+      // Clear the pending deep-link since we're navigating now
+      localStorage.removeItem('pendingDeepLink');
+      // Signal the splash store to hide — it may still be up covering the blank
+      // screen we parked on while waiting for auth to restore.
+      import('src/stores/splash').then(({ useSplashStore }) => {
+        useSplashStore().setAppInitialized();
+      }).catch(() => {});
+      router.push(targetRoute || '/notifications');
     }).catch(error => {
       logger.error('FCMService: Error loading router:', error);
     });

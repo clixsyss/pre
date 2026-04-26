@@ -302,16 +302,17 @@
             <div v-if="userBlockingStatus.isBlocked" class="blocked-hint">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-                <line
-                  x1="4.93"
-                  y1="4.93"
-                  x2="19.07"
-                  y2="19.07"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
+                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" stroke="currentColor" stroke-width="2" />
               </svg>
               <span>{{ $t('generationBlocked') || 'Pass generation is currently disabled' }}</span>
+            </div>
+
+            <div v-if="projectStore.isFeatureBlocked('qr_codes')" class="blocked-hint">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" stroke="currentColor"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <span>Your account is suspended from generating QR codes</span>
             </div>
 
             <!-- Location Restriction Indicator -->
@@ -1076,7 +1077,8 @@ const isGeneratePassDisabled = computed(() => {
   const monthlyReached = hasMonthlyLimit && (passLimits.value.usedThisMonth || 0) >= passLimits.value.monthlyLimit
   const hasDailyLimit = passLimits.value.dailyLimit !== null && passLimits.value.dailyLimit !== undefined
   const dailyReached = hasDailyLimit && (passLimits.value.usedToday || 0) >= passLimits.value.dailyLimit
-  return monthlyReached || dailyReached
+  const qrSuspended = projectStore.isFeatureBlocked('qr_codes')
+  return monthlyReached || dailyReached || qrSuspended
 })
 
 // User unit information
@@ -2215,6 +2217,15 @@ const generatePass = async () => {
     if (userBlockingStatus.value.isBlocked) {
       notificationStore.showWarning(
         'You are currently blocked from generating passes. Please contact support for assistance.',
+      )
+      isGeneratingPass.value = false
+      return
+    }
+
+    // Check if QR code / guest pass generation is suspended
+    if (projectStore.isFeatureBlocked('qr_codes')) {
+      notificationStore.showWarning(
+        'Your account is suspended from generating QR codes and guest passes. Please contact the management office for assistance.',
       )
       isGeneratingPass.value = false
       return

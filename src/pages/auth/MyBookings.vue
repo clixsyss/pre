@@ -3,7 +3,10 @@
     <PageHeader :title="$t('myBookings')"
       :subtitle="projectName ? `${$t('bookingsIn')} ${projectName}` : $t('viewManageBookings')" />
 
-    <div class="bookings-content">
+    <!-- Suspension banner -->
+    <SuspensionBanner v-if="isBlocked" :message="suspensionMessage" />
+
+    <div class="bookings-content" :class="{ 'page-blocked': isBlocked }">
       <!-- Filter Tabs -->
       <div class="filter-tabs">
         <button class="filter-tab" :class="{ active: activeFilter === 'all' }" @click="setFilter('all')">
@@ -332,6 +335,8 @@ import bookingService from 'src/services/bookingService';
 import serviceBookingService from 'src/services/serviceBookingService';
 import optimizedAuthService from 'src/services/optimizedAuthService';
 import PageHeader from '../../components/PageHeader.vue';
+import SuspensionBanner from '../../components/SuspensionBanner.vue';
+import { useSuspensionGuard } from '../../composables/useSuspensionGuard';
 
 // Component name for ESLint
 defineOptions({
@@ -341,6 +346,7 @@ defineOptions({
 const router = useRouter();
 const academiesStore = useAcademiesStore();
 const projectStore = useProjectStore();
+const { isBlocked, suspensionMessage } = useSuspensionGuard('bookings');
 const notificationStore = useNotificationStore();
 const serviceBookingStore = useServiceBookingStore();
 const { openModal, closeModal: hideNavigationBars } = useModalState();
@@ -756,6 +762,12 @@ onBeforeUnmount(() => {
 .my-bookings-page {
   max-width: 800px;
   margin: 0 auto;
+}
+
+.page-blocked {
+  pointer-events: none;
+  opacity: 0.4;
+  user-select: none;
 }
 
 /* Page header styles moved to PageHeader component */

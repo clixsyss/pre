@@ -59,20 +59,7 @@ defineOptions({
 const route = useRoute()
 const isRouterLoading = ref(false)
 const splashStore = useSplashStore()
-const QUICK_OPEN_STORAGE_KEY = 'pendingQuickOpenGate'
 let appUrlOpenListener = null
-
-const queueQuickOpenGateRequest = (source = 'unknown') => {
-  try {
-    localStorage.setItem(
-      QUICK_OPEN_STORAGE_KEY,
-      JSON.stringify({ source, timestamp: Date.now() }),
-    )
-  } catch (error) {
-    logger.warn('⚠️ Failed to persist quick-open request:', error)
-  }
-  window.dispatchEvent(new CustomEvent('quick-open-gate-request', { detail: { source } }))
-}
 
 const parseQuickOpenUrl = (urlValue) => {
   const value = String(urlValue || '').trim()
@@ -82,7 +69,7 @@ const parseQuickOpenUrl = (urlValue) => {
   return value.includes('source=') ? value.split('source=')[1].split('&')[0] : 'deep-link'
 }
 
-// Safety timeout: Ensure splash knows app is initialized within 2 seconds
+// Safety timeout: Ensure splash knows app is initialized within 2 seconds.
 setTimeout(() => {
   splashStore.setAppInitialized()
 }, 2000)
@@ -129,15 +116,13 @@ try {
 onMounted(async () => {
   try {
     try {
-      const launchUrl = await CapacitorApp.getLaunchUrl()
-      const source = parseQuickOpenUrl(launchUrl?.url)
-      if (source) {
-        queueQuickOpenGateRequest(source)
-      }
+      // Warm-start: app already running when widget is tapped.
+      // Fire the gate-open event directly — MainLayout is already mounted and listening.
       appUrlOpenListener = await CapacitorApp.addListener('appUrlOpen', ({ url }) => {
         const incomingSource = parseQuickOpenUrl(url)
         if (incomingSource) {
-          queueQuickOpenGateRequest(incomingSource)
+          logger.log('🔓 App.vue: Widget URL received (warm start), source:', incomingSource)
+          window.dispatchEvent(new CustomEvent('quick-open-gate-request', { detail: { source: incomingSource } }))
         }
       })
     } catch (error) {
@@ -367,9 +352,10 @@ const isAuthenticatedPage = computed(() => {
   if (route.path.startsWith('/request-category/')) {
     return true
   }
-  
+
   return false
 })
+
 </script>
 
 <style>

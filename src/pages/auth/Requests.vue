@@ -1,5 +1,10 @@
 <template>
   <div class="services-page">
+
+    <!-- Suspension banner -->
+    <SuspensionBanner v-if="isBlocked" :message="suspensionMessage" />
+
+    <div class="requests-page-content" :class="{ 'page-blocked': isBlocked }">
     <div class="hero-section">
       <div class="hero-content">
         <div class="hero-text">
@@ -165,6 +170,7 @@
     </div>
 
     <!-- Request chat now opens as a dedicated page via router -->
+    </div><!-- end requests-page-content -->
   </div>
 </template>
 
@@ -174,6 +180,8 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useRequestCategoriesStore } from '../../stores/requestCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
+import SuspensionBanner from '../../components/SuspensionBanner.vue';
+import { useSuspensionGuard } from '../../composables/useSuspensionGuard';
 import requestSubmissionService from '../../services/requestSubmissionService';
 import optimizedAuthService from '../../services/optimizedAuthService';
 
@@ -185,6 +193,7 @@ defineOptions({
 const router = useRouter();
 const requestCategoriesStore = useRequestCategoriesStore();
 const projectStore = useProjectStore();
+const { isBlocked, suspensionMessage } = useSuspensionGuard('requests');
 
 // Reactive state
 const activeTab = ref('requests');
@@ -323,6 +332,12 @@ const getRequestPreview = (request) => {
 <style scoped>
 .services-page {
   background: #fafafa;
+}
+
+.page-blocked {
+  pointer-events: none;
+  opacity: 0.4;
+  user-select: none;
 }
 
 /* Hero Section */

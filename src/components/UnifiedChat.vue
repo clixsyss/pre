@@ -41,6 +41,19 @@
       </div>
     </div>
 
+    <!-- Staff Identity Banner -->
+    <div v-if="assignedStaff" class="staff-banner">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>
+        You are speaking with <strong>{{ assignedStaff.name.split(' ')[0] }}</strong>
+        <span v-if="assignedStaff.department"> — {{ assignedStaff.department }}</span>
+      </span>
+    </div>
+
     <!-- Messages -->
     <div class="messages-container" ref="messagesContainer">
       <div v-if="loading && !chatData" class="loading-state">
@@ -87,6 +100,11 @@
 
           <!-- Message Content -->
           <div class="message-content">
+            <!-- Sender label (admin messages only) -->
+            <div v-if="message.senderType === 'admin'" class="sender-label">
+              <span class="sender-name">{{ (message.senderName || 'Staff').split(' ')[0] }}</span>
+              <span v-if="message.senderDepartment" class="sender-dept">{{ message.senderDepartment }}</span>
+            </div>
             <div class="message-bubble">
               <!-- Image Message -->
               <div v-if="message.imageUrl" class="message-image" @click="viewImage(message.imageUrl)">
@@ -320,6 +338,15 @@ const documentFocusHandler = ref(null);
 const documentBlurHandler = ref(null);
 
 // Computed properties
+
+// Find the most recent admin who replied — used for the staff identity banner
+const assignedStaff = computed(() => {
+  if (!props.messages || props.messages.length === 0) return null;
+  const adminMsg = [...props.messages].reverse().find(m => m.senderType === 'admin' && m.senderName && m.senderName !== 'Admin' && m.senderName !== 'Support Team');
+  if (!adminMsg) return null;
+  return { name: adminMsg.senderName, department: adminMsg.senderDepartment || '' };
+});
+
 const isClosed = computed(() => {
   if (!props.chatData) return false;
   const status = props.chatData.status?.toLowerCase();
@@ -923,6 +950,52 @@ body.keyboard-open .unified-chat {
   background: #e5e7eb;
   color: #374151;
 } */
+
+/* Staff Identity Banner */
+.staff-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f0f4ff;
+  border-bottom: 1px solid #c7d4f5;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.8rem;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.staff-banner svg {
+  flex-shrink: 0;
+  color: #1976d2;
+}
+
+.staff-banner strong {
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+/* Sender label above admin bubbles */
+.sender-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+  padding-left: 0.25rem;
+}
+
+.sender-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1976d2;
+}
+
+.sender-dept {
+  font-size: 0.7rem;
+  color: #6b7280;
+  background: #f3f4f6;
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+}
 
 /* Messages Container */
 .messages-container {

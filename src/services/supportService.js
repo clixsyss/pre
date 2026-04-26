@@ -105,31 +105,45 @@ export const getUserSupportChats = async (projectId, userId) => {
     try {
       console.log('🔍 Getting user support chats:', { projectId, userId })
       
-      // Use DynamoDB service first
+      // Try DynamoDB first, then always fall back to Firestore
+      // (DynamoDB may return [] if migration is incomplete — don't trust an empty result)
+      let dynamoChats = []
       try {
         const { getUserSupportChats: getDynamoDBUserSupportChats } = await import('src/services/dynamoDBSupportChatsService')
-        const chats = await getDynamoDBUserSupportChats(projectId, userId, { limit: 100 })
-        console.log('✅ User support chats retrieved from DynamoDB:', { count: chats.length })
-        return chats
+        dynamoChats = await getDynamoDBUserSupportChats(projectId, userId, { limit: 100 })
+        console.log('✅ User support chats retrieved from DynamoDB:', { count: dynamoChats.length })
       } catch (dynamoError) {
-        console.warn('⚠️ DynamoDB fetch failed, falling back to Firestore:', dynamoError)
-        
-        // Fallback to Firestore
-        const collectionPath = `projects/${projectId}/supportChats`
-        const queryOptions = {
-          filters: [{ field: 'userId', operator: '==', value: userId }],
-          orderBy: { field: 'lastMessageAt', direction: 'desc' }
-        }
-        
-        const result = await firestoreService.getDocs(collectionPath, queryOptions)
-        const chats = result.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        
-        console.log('✅ User support chats retrieved from Firestore:', { count: chats.length })
-        return chats;
+        console.warn('⚠️ DynamoDB fetch failed, will use Firestore:', dynamoError)
       }
+
+      // Always also fetch from Firestore — chats may have been created there
+      const collectionPath = `projects/${projectId}/supportChats`
+      const queryOptions = {
+        filters: [{ field: 'userId', operator: '==', value: userId }],
+        orderBy: { field: 'lastMessageAt', direction: 'desc' }
+      }
+      let firestoreChats = []
+      try {
+        const result = await firestoreService.getDocs(collectionPath, queryOptions)
+        firestoreChats = result.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        console.log('✅ User support chats retrieved from Firestore:', { count: firestoreChats.length })
+      } catch (fsError) {
+        console.warn('⚠️ Firestore fetch failed:', fsError)
+      }
+
+      // Merge: Firestore is the source of truth — DynamoDB entries with same id are skipped
+      const firestoreIds = new Set(firestoreChats.map(c => c.id))
+      const merged = [
+        ...firestoreChats,
+        ...dynamoChats.filter(c => !firestoreIds.has(c.id))
+      ]
+      merged.sort((a, b) => {
+        const tA = a.lastMessageAt?.toDate?.() || new Date(a.lastMessageAt || 0)
+        const tB = b.lastMessageAt?.toDate?.() || new Date(b.lastMessageAt || 0)
+        return tB - tA
+      })
+      console.log('✅ Merged support chats total:', merged.length)
+      return merged
     } catch (error) {
       console.error('❌ Error fetching user support chats:', error);
       errorHandlingService.handleFirestoreError(error, 'getUserSupportChats')

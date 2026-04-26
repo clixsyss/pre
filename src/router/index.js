@@ -574,8 +574,6 @@ router.beforeEach(async (to, from, next) => {
       
       let currentUser
       try {
-        // iOS-optimized: Use faster timeout with localStorage cache
-        // BUT: If this is notification navigation on iOS, wait much longer
         // Always try cache first for instant navigation
         const cachedUser = await optimizedAuthService.getCurrentUser()
         if (cachedUser) {
@@ -592,8 +590,6 @@ router.beforeEach(async (to, from, next) => {
           currentUser ? 'authenticated' : 'not authenticated',
         )
       } catch (authError) {
-        // If this is notification navigation on iOS, don't immediately redirect to onboarding
-        // Auth state might still be restoring
         logger.warn('Navigation guard: Error checking auth state, redirecting to onboarding:', authError)
         if (guardTimeout) clearTimeout(guardTimeout)
         next('/onboarding')
@@ -694,15 +690,13 @@ router.beforeEach(async (to, from, next) => {
           return
         }
       } else {
-        logger.log('Navigation guard: User not authenticated, redirecting to /onboarding')
         if (guardTimeout) clearTimeout(guardTimeout)
+        logger.log('Navigation guard: User not authenticated, redirecting to /onboarding')
         next('/onboarding')
         return
       }
     } catch (error) {
       logger.error('Navigation guard: Error checking auth state:', error)
-      // In development, always allow navigation to onboarding
-      logger.log('Navigation guard: Development mode - redirecting to onboarding despite error')
       if (guardTimeout) clearTimeout(guardTimeout)
       next('/onboarding')
       return

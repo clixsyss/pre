@@ -577,6 +577,48 @@
             </div>
           </div>
 
+          <div v-if="hasOwnerProjectSelected" class="form-group">
+            <label class="form-label">Property Contract / Deed <span style="color: #ef4444;">*</span></label>
+            <div class="media-upload-options">
+              <button type="button" @click="selectPropertyContract" class="add-project-btn">
+                Upload Contract/Deed
+              </button>
+            </div>
+            <input
+              ref="propertyContractInput"
+              type="file"
+              accept="image/*,.pdf,application/pdf"
+              @change="handlePropertyContractUpload"
+              style="display: none"
+            />
+            <div v-if="propertyContractFile" class="file-preview">
+              <img
+                v-if="propertyContractPreview && propertyContractIsImage"
+                :src="propertyContractPreview"
+                alt="Property Contract Preview"
+                class="preview-image"
+              />
+              <div v-else class="text-sm text-gray-700 font-medium">
+                {{ propertyContractFile.name }}
+              </div>
+              <button type="button" @click="removePropertyContract" class="remove-file-btn">✕ Remove</button>
+            </div>
+            <p v-else class="form-help-text" style="margin-top: 8px; color: #666;">
+              Required for owners only.
+            </p>
+          </div>
+
+          <div v-if="loading && hasOwnerProjectSelected && propertyContractFile" class="upload-progress-card">
+            <div class="upload-progress-header">
+              <span>Uploading deed/contract...</span>
+              <span>{{ deedUploadProgress }}%</span>
+            </div>
+            <div class="upload-progress-track">
+              <div class="upload-progress-fill" :style="{ width: `${deedUploadProgress}%` }"></div>
+            </div>
+            <p class="upload-progress-status">{{ deedUploadStatusText || 'Preparing upload...' }}</p>
+          </div>
+
           <div class="form-actions">
             <button type="button" @click="goToPreviousStep" class="back-action-btn">
               Back
@@ -593,7 +635,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
 import { useRegistrationStore } from '../../stores/registration'
@@ -603,6 +645,7 @@ import { getUnitsByProject } from '../../services/dynamoDBUnitsService'
 import { projectsUnitsService } from '../../services/dynamoDBTableServices'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import { signupDraftService } from '../../services/signupDraftService'
+import fileUploadService from '../../services/fileUploadService'
 import {
   getPendingRegistrationEnrollments,
   clearPendingRegistrationEnrollments,
@@ -627,6 +670,12 @@ const loading = ref(false)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const showPendingModal = ref(false)
+const propertyContractFile = ref(null)
+const propertyContractPreview = ref(null)
+const propertyContractIsImage = ref(false)
+const propertyContractInput = ref(null)
+const deedUploadProgress = ref(0)
+const deedUploadStatusText = ref('')
 
 // Setup keyboard handling for better mobile UX
 useFormKeyboard({
@@ -657,6 +706,16 @@ const additionalPropertyForm = reactive({
   unit: '',
   role: ''
 })
+
+function revokePreview (url) {
+  if (url && typeof url === 'string' && url.startsWith('blob:')) {
+    try {
+      URL.revokeObjectURL(url)
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 // Function to fetch available projects from DynamoDB with units count
 const fetchAvailableProjects = async () => {
@@ -888,6 +947,10 @@ const canProceedToNext = computed(() => {
   return false
 })
 
+const hasOwnerProjectSelected = computed(() => {
+  return selectedProjects.value.some((project) => project.role === 'owner')
+})
+
 // Check if personal details are completed
 const isPersonalDetailsCompleted = computed(() => {
   const userDetails = registrationStore.userDetails
@@ -926,6 +989,48 @@ const canAddProject = computed(() => {
   return propertyForm.selectedProject && propertyForm.unit && propertyForm.role
 })
 
+watch(hasOwnerProjectSelected, (isOwnerSelected) => {
+  if (!isOwnerSelected) {
+    removePropertyContract()
+  }
+})
+
+onUnmounted(() => {
+  revokePreview(propertyContractPreview.value)
+})
+
+const handlePropertyContractUpload = (event) => {
+  const input = event.target
+  const raw = input.files[0]
+  input.value = ''
+  if (!raw) return
+
+  const ext = (raw.name.split('.').pop() || '').toLowerCase()
+  const isPdf = raw.type === 'application/pdf' || ext === 'pdf'
+  const isImage = raw.type.startsWith('image/')
+
+  if (!isImage && !isPdf) {
+    notificationStore.showError('Property contract/deed must be an image or PDF')
+    return
+  }
+
+  revokePreview(propertyContractPreview.value)
+  propertyContractFile.value = raw
+  propertyContractIsImage.value = isImage
+  propertyContractPreview.value = isImage ? URL.createObjectURL(raw) : null
+}
+
+const selectPropertyContract = () => {
+  propertyContractInput.value?.click()
+}
+
+const removePropertyContract = () => {
+  revokePreview(propertyContractPreview.value)
+  propertyContractFile.value = null
+  propertyContractPreview.value = null
+  propertyContractIsImage.value = false
+}
+
 const handlePersonalSubmit = async () => {
   if (loading.value) return
 
@@ -947,6 +1052,8 @@ const handlePersonalSubmit = async () => {
   }
 
   loading.value = true
+  deedUploadProgress.value = 0
+  deedUploadStatusText.value = ''
 
   try {
     const normalizedEmail = personalForm.email.trim().toLowerCase()
@@ -1001,6 +1108,10 @@ const handlePropertySubmit = async () => {
     notificationStore.showError('Please select at least one project.')
     return
   }
+  if (hasOwnerProjectSelected.value && !propertyContractFile.value) {
+    notificationStore.showError('Please upload your property contract/deed for owner registration.')
+    return
+  }
 
   loading.value = true
 
@@ -1046,7 +1157,25 @@ const handlePropertySubmit = async () => {
     signupDraftService.save({ tempUserId: userSub })
 
     const userDetails = registrationStore.userDetails
+    let propertyContractUrl = userDetails.documents?.propertyContractUrl || null
     const now = new Date().toISOString()
+
+    if (hasOwnerProjectSelected.value && propertyContractFile.value) {
+      const extension = (propertyContractFile.value.name.split('.').pop() || 'pdf').toLowerCase()
+      propertyContractUrl = await fileUploadService.uploadFile(
+        propertyContractFile.value,
+        `users/${email.replace(/[^a-z0-9]/g, '_')}/`,
+        `property-contract.${extension}`,
+        {
+          onProgress: ({ stage, progress }) => {
+            deedUploadProgress.value = Math.max(0, Math.min(100, Math.round(progress || 0)))
+            if (stage === 'optimizing') deedUploadStatusText.value = 'Optimizing deed/contract...'
+            if (stage === 'uploading') deedUploadStatusText.value = 'Uploading deed/contract...'
+            if (stage === 'uploaded') deedUploadStatusText.value = 'Deed/contract uploaded'
+          }
+        }
+      )
+    }
 
     const base = { ...(userDetails.documents || {}) }
     const fromResults = (registrationStore.faceEnrollmentResults || []).reduce((acc, e) => {
@@ -1062,6 +1191,9 @@ const handlePropertySubmit = async () => {
     const documents = registrationStore.faceEnrollmentCompleted && Object.keys(faceEnrollments).length > 0
       ? { ...base, faceEnrolledAt: now, faceEnrollments }
       : base
+    if (propertyContractUrl) {
+      documents.propertyContractUrl = propertyContractUrl
+    }
 
     const completeUserData = {
       email,
@@ -1136,6 +1268,8 @@ const handlePropertySubmit = async () => {
     notificationStore.showError(error?.message || 'Something went wrong saving your registration. Please try again.')
   } finally {
     loading.value = false
+    deedUploadProgress.value = 0
+    deedUploadStatusText.value = ''
   }
 }
 
@@ -2024,6 +2158,84 @@ select.form-input:disabled {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+}
+
+.media-upload-options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.file-preview {
+  margin-top: 12px;
+  padding: 12px;
+  border: 2px solid #10b981;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.preview-image {
+  width: 100%;
+  max-width: 250px;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 2px solid white;
+}
+
+.remove-file-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.upload-progress-card {
+  margin: 10px 0 16px;
+  padding: 12px;
+  border: 1px solid #e1e5e9;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.upload-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.upload-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.upload-progress-fill {
+  height: 100%;
+  background: #AF1E23;
+  transition: width 0.2s ease;
+}
+
+.upload-progress-status {
+  margin: 8px 0 0;
+  color: #666;
+  font-size: 0.85rem;
 }
 
 /* Primary Property Display */

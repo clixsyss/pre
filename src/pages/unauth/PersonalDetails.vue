@@ -77,17 +77,26 @@
         </div>
 
         <div class="form-group">
-          <label for="dateOfBirth" class="form-label">Date of Birth</label>
-          <div class="date-input-wrapper">
-            <input id="dateOfBirth" v-model="formData.dateOfBirth" type="date" class="form-input" required
-              @change="saveToStore" />
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
-              class="calendar-icon">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
-              <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" />
-              <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" />
-              <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" />
-            </svg>
+          <label class="form-label">Date of Birth</label>
+          <div class="dob-select-row">
+            <select v-model="selectedDobYear" class="form-input dob-select" required @change="onDobPartChange">
+              <option value="">Year</option>
+              <option v-for="year in dobYears" :key="year" :value="String(year)">
+                {{ year }}
+              </option>
+            </select>
+            <select v-model="selectedDobMonth" class="form-input dob-select" required @change="onDobPartChange">
+              <option value="">Month</option>
+              <option v-for="month in dobMonths" :key="month.value" :value="month.value">
+                {{ month.label }}
+              </option>
+            </select>
+            <select v-model="selectedDobDay" class="form-input dob-select" required @change="onDobPartChange">
+              <option value="">Day</option>
+              <option v-for="day in dobDays" :key="day" :value="String(day).padStart(2, '0')">
+                {{ day }}
+              </option>
+            </select>
           </div>
         </div>
 
@@ -177,40 +186,6 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Property Contract / Deed <span class="required">*</span></label>
-          <div class="media-upload-options">
-            <button type="button" @click="selectPropertyContract" class="upload-option-btn">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
-                <path d="M7 12H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                <path d="M7 16H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                <path d="M8 8H8.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-              </svg>
-              Upload Contract/Deed
-            </button>
-          </div>
-          <input
-            ref="propertyContractInput"
-            type="file"
-            accept="image/*,.pdf,application/pdf"
-            @change="handlePropertyContractUpload"
-            style="display: none"
-          />
-          <div v-if="propertyContractFile" class="file-preview">
-            <img
-              v-if="propertyContractPreview && propertyContractIsImage"
-              :src="propertyContractPreview"
-              alt="Property Contract Preview"
-              class="preview-image"
-            />
-            <div v-else class="text-sm text-gray-700 font-medium">
-              {{ propertyContractFile.name }}
-            </div>
-            <button type="button" @click="removePropertyContract" class="remove-file-btn">✕ Remove</button>
-          </div>
-        </div>
-
         <div v-if="loading" class="upload-progress-card">
           <div class="upload-progress-header">
             <span>Uploading your documents...</span>
@@ -232,7 +207,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useFormKeyboard } from '../../composables/useFormKeyboard'
@@ -254,18 +229,14 @@ const loading = ref(false)
 const frontIdFile = ref(null)
 const backIdFile = ref(null)
 const profilePictureFile = ref(null)
-const propertyContractFile = ref(null)
 const frontIdPreview = ref(null)
 const backIdPreview = ref(null)
 const profilePicturePreview = ref(null)
-const propertyContractPreview = ref(null)
-const propertyContractIsImage = ref(false)
 const uploadProgress = ref(0)
 const uploadStatusText = ref('')
 const profilePictureInput = ref(null)
 const frontIdInput = ref(null)
 const backIdInput = ref(null)
-const propertyContractInput = ref(null)
 
 /**
  * Signup face verification (FaceVerificationPage) is skipped while true.
@@ -408,6 +379,70 @@ const formData = reactive({
   nationalId: '',
 })
 
+const selectedDobYear = ref('')
+const selectedDobMonth = ref('')
+const selectedDobDay = ref('')
+
+const currentYear = new Date().getFullYear()
+const dobYears = Array.from({ length: 100 }, (_, i) => currentYear - i)
+const dobMonths = [
+  { value: '01', label: 'January' },
+  { value: '02', label: 'February' },
+  { value: '03', label: 'March' },
+  { value: '04', label: 'April' },
+  { value: '05', label: 'May' },
+  { value: '06', label: 'June' },
+  { value: '07', label: 'July' },
+  { value: '08', label: 'August' },
+  { value: '09', label: 'September' },
+  { value: '10', label: 'October' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'December' },
+]
+
+const dobDays = computed(() => {
+  if (!selectedDobYear.value || !selectedDobMonth.value) {
+    return Array.from({ length: 31 }, (_, i) => i + 1)
+  }
+  const year = Number(selectedDobYear.value)
+  const month = Number(selectedDobMonth.value)
+  const daysInMonth = new Date(year, month, 0).getDate()
+  return Array.from({ length: daysInMonth }, (_, i) => i + 1)
+})
+
+const initializeDobSelectorsFromForm = () => {
+  const dob = formData.dateOfBirth
+  if (!dob || !dob.includes('-')) return
+  const [year, month, day] = dob.split('-')
+  selectedDobYear.value = year || ''
+  selectedDobMonth.value = month || ''
+  selectedDobDay.value = day || ''
+}
+
+const onDobPartChange = () => {
+  if (!selectedDobYear.value || !selectedDobMonth.value || !selectedDobDay.value) {
+    formData.dateOfBirth = ''
+    saveToStore()
+    return
+  }
+
+  const maxDay = new Date(Number(selectedDobYear.value), Number(selectedDobMonth.value), 0).getDate()
+  if (Number(selectedDobDay.value) > maxDay) {
+    selectedDobDay.value = String(maxDay).padStart(2, '0')
+  }
+
+  formData.dateOfBirth = `${selectedDobYear.value}-${selectedDobMonth.value}-${selectedDobDay.value}`
+  saveToStore()
+}
+
+watch(dobDays, (days) => {
+  if (!selectedDobDay.value) return
+  if (Number(selectedDobDay.value) > days.length) {
+    selectedDobDay.value = String(days.length).padStart(2, '0')
+    onDobPartChange()
+  }
+})
+
 onMounted(() => {
   // Restore from draft (handles app-reopen resume), then fall back to in-session store
   const draft = signupDraftService.load()
@@ -424,13 +459,13 @@ onMounted(() => {
     formData.gender = details.gender || 'male'
     formData.nationalId = details.nationalId
   }
+  initializeDobSelectorsFromForm()
 })
 
 onUnmounted(() => {
   revokePreview(profilePicturePreview.value)
   revokePreview(frontIdPreview.value)
   revokePreview(backIdPreview.value)
-  revokePreview(propertyContractPreview.value)
 })
 
 const goToOnboarding = () => {
@@ -537,36 +572,6 @@ const removeBackId = () => {
   backIdPreview.value = null
 }
 
-const handlePropertyContractUpload = async (event) => {
-  const input = event.target
-  const raw = input.files[0]
-  input.value = ''
-  if (!raw) return
-  try {
-    const file = await snapshotDocumentFileForUpload(raw, 'Property contract/deed')
-    revokePreview(propertyContractPreview.value)
-    propertyContractFile.value = file
-    propertyContractIsImage.value = file.type.startsWith('image/')
-    propertyContractPreview.value = propertyContractIsImage.value ? URL.createObjectURL(file) : null
-  } catch (e) {
-    propertyContractFile.value = null
-    propertyContractPreview.value = null
-    propertyContractIsImage.value = false
-    notificationStore.showError(e?.message || 'Could not load contract/deed file')
-  }
-}
-
-const selectPropertyContract = () => {
-  propertyContractInput.value.click();
-};
-
-const removePropertyContract = () => {
-  revokePreview(propertyContractPreview.value)
-  propertyContractFile.value = null
-  propertyContractPreview.value = null
-  propertyContractIsImage.value = false
-}
-
 const handleSubmit = async () => {
   if (loading.value) return
 
@@ -583,11 +588,6 @@ const handleSubmit = async () => {
     notificationStore.showError('Please upload a profile picture')
     return
   }
-  if (!propertyContractFile.value) {
-    notificationStore.showError('Please upload your property contract/deed')
-    return
-  }
-
   loading.value = true
   uploadProgress.value = 0
   uploadStatusText.value = 'Preparing uploads...'
@@ -597,21 +597,19 @@ const handleSubmit = async () => {
     const email = formData.email.trim().toLowerCase()
     const safeEmailFolder = email.replace(/[^a-z0-9]/g, '_')
 
-    console.log('[PersonalDetails] Uploading 4 documents to S3 (parallel)...')
+    console.log('[PersonalDetails] Uploading 3 documents to S3 (parallel)...')
     const uploadedDocuments = await fileUploadService.uploadUserDocuments(
       safeEmailFolder,
       frontIdFile.value,
       backIdFile.value,
       profilePictureFile.value,
-      propertyContractFile.value,
+      null,
       {
         onOverallProgress: ({ progress }) => {
           uploadProgress.value = progress
         },
         onFileProgress: ({ type, stage }) => {
-          const label = type?.startsWith('propertyContract')
-            ? 'Property contract'
-            : type === 'frontId'
+          const label = type === 'frontId'
               ? 'Front ID'
               : type === 'backId'
                 ? 'Back ID'
@@ -641,7 +639,6 @@ const handleSubmit = async () => {
         frontIdUrl: uploadedDocuments.frontId,
         backIdUrl: uploadedDocuments.backId,
         profilePictureUrl: uploadedDocuments.profilePicture || null,
-        propertyContractUrl: uploadedDocuments.propertyContract || null,
       },
     }
 
@@ -1045,34 +1042,14 @@ const handleSubmit = async () => {
   cursor: not-allowed;
 }
 
-.date-input-wrapper {
-  position: relative;
+.dob-select-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
 }
 
-.date-input-wrapper input[type="date"] {
-  /* iOS date input improvements */
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  background-image: none;
-}
-
-.date-input-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
-  opacity: 0;
-  position: absolute;
-  right: 0;
-  width: 100%;
-  height: 100%;
-  cursor: pointer;
-}
-
-.calendar-icon {
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #666;
-  pointer-events: none;
+.dob-select {
+  padding-right: 10px;
 }
 
 .gender-buttons {

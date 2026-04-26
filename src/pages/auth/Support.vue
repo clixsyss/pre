@@ -2,6 +2,11 @@
   <div class="support-page">
     <PageHeader :title="$t('support')" :subtitle="$t('getSupportHelp')" />
 
+    <!-- Suspension banner -->
+    <SuspensionBanner v-if="isBlocked" :message="suspensionMessage" />
+
+    <div class="support-page-content" :class="{ 'page-blocked': isBlocked }">
+
     <!-- Content -->
     <div class="content">
       <!-- Support Hero -->
@@ -55,6 +60,7 @@
       </div>
     </div>
 
+    </div><!-- end support-page-content -->
   </div>
 </template>
 
@@ -63,6 +69,8 @@ import { onMounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSupportStore } from '../../stores/supportStore'
 import PageHeader from '../../components/PageHeader.vue'
+import SuspensionBanner from '../../components/SuspensionBanner.vue'
+import { useSuspensionGuard } from '../../composables/useSuspensionGuard'
 
 defineOptions({
   name: 'AuthSupportPage'
@@ -70,6 +78,7 @@ defineOptions({
 
 const router = useRouter()
 const supportStore = useSupportStore()
+const { isBlocked, suspensionMessage } = useSuspensionGuard('support')
 
 // State
 const creatingChat = ref(false)
@@ -137,6 +146,12 @@ onMounted(async () => {
 .support-page {
   min-height: 100vh;
   background-color: #f8f9fa;
+}
+
+.page-blocked {
+  pointer-events: none;
+  opacity: 0.4;
+  user-select: none;
 }
 
 .content {

@@ -85,6 +85,34 @@ export default defineBoot(async ({ app, router }) => {
   const detectedPlatform = detectPlatform();
   logger.log('FCM Boot: Detected platform:', detectedPlatform);
 
+  // ── Early launch detection (non-blocking) ────────────────────────────────
+  // Run fire-and-forget so these async checks never delay app startup.
+  // They write to localStorage which the router guard reads synchronously.
+  if (detectedPlatform === 'ios' || detectedPlatform === 'android') {
+    Promise.resolve().then(async () => {
+      // Notification cold-start: getLaunchNotification captures a tap that fired
+      // before FCM listeners were registered.
+      try {
+        await import('@capacitor-firebase/messaging');
+        const FirebaseMessaging = window.Capacitor?.Plugins?.FirebaseMessaging;
+        if (FirebaseMessaging?.getLaunchNotification) {
+          const launchResult = await FirebaseMessaging.getLaunchNotification();
+          if (launchResult?.notification?.data) {
+            const data = launchResult.notification.data;
+            const pendingRoute = fcmService._resolveNotificationRoute(data);
+            if (pendingRoute) {
+              localStorage.setItem('pendingDeepLink', pendingRoute);
+              logger.log('FCM Boot: Stored launch notification deep-link:', pendingRoute);
+            }
+          }
+        }
+      } catch (launchCheckErr) {
+        logger.warn('FCM Boot: Early launch notification check failed:', launchCheckErr?.message);
+      }
+
+    });
+  }
+
   // Listen for Cognito auth state changes — used ONLY for logout/unregister.
   // Login-side FCM init is handled directly in SignIn.vue via fcmService.registerTokenForUser(),
   // because the Hub signIn event fires before currentUser is set, making this callback

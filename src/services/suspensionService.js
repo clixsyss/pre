@@ -1,268 +1,267 @@
 import firestoreService from './firestoreService';
 
+// Feature IDs that can be partially blocked
+export const SUSPENSION_FEATURES = ['bookings', 'services', 'requests', 'complaints', 'support', 'qr_codes'];
+
 /**
- * Check if a user is currently suspended for a specific project
- * @param {string} userId - The user's ID
- * @param {string} projectId - The project ID (optional, gets from store if not provided)
- * @returns {Promise<Object>} - Suspension status and details
+ * Check if a user is currently suspended for a specific project.
+ * Returns both full-suspension status and the list of blocked features
+ * for partial suspensions.
+ *
+ * @param {string} userId
+ * @param {string|null} projectId  — resolved from store if omitted
+ * @returns {Promise<{isSuspended: boolean, suspensionDetails: object|null}>}
  */
 export const checkUserSuspension = async (userId, projectId = null) => {
   try {
-    // Get project ID from store if not provided
     if (!projectId) {
       const { useProjectStore } = await import('../stores/projectStore');
       const projectStore = useProjectStore();
       projectId = projectStore.selectedProject?.id;
     }
-    
+
     if (!projectId) {
       console.warn('⚠️ SuspensionService: No project ID available for suspension check');
-      return {
-        isSuspended: false,
-        suspensionDetails: null
-      };
+      return { isSuspended: false, suspensionDetails: null };
     }
-    
+
     console.log('🔍 SuspensionService: Checking suspension for user:', userId, 'project:', projectId);
-    
+
     const userDoc = await firestoreService.getDoc(`users/${userId}`);
-    
+
     if (!userDoc.exists()) {
       console.warn('⚠️ SuspensionService: User document does not exist:', userId);
-      return {
-        isSuspended: false,
-        suspensionDetails: null
-      };
+      return { isSuspended: false, suspensionDetails: null };
     }
-    
+
     const userData = userDoc.data();
-    
     if (!userData) {
-      console.warn('⚠️ SuspensionService: User data is null or undefined');
-      return {
-        isSuspended: false,
-        suspensionDetails: null
-      };
+      return { isSuspended: false, suspensionDetails: null };
     }
-    
-    // Ensure projects is an array
+
     const projects = Array.isArray(userData.projects) ? userData.projects : [];
-    console.log('🔍 SuspensionService: User has', projects.length, 'projects');
-    
-    // Find the project-specific data
-    const userProject = projects.find(p => {
-      // Handle both direct projectId and nested projectId
+    const userProject = projects.find((p) => {
       const projId = p.projectId || p.M?.projectId?.S || p.M?.projectId;
       return projId === projectId;
     });
-    
+
     if (!userProject) {
       console.warn('⚠️ SuspensionService: User not found in project:', projectId);
-      console.log('🔍 SuspensionService: Available project IDs:', projects.map(p => p.projectId || p.M?.projectId?.S || p.M?.projectId));
-      return {
-        isSuspended: false,
-        suspensionDetails: null
-      };
+      return { isSuspended: false, suspensionDetails: null };
     }
-    
-    // Extract isSuspended - handle both JavaScript format and DynamoDB format
+
+    // Extract isSuspended (JS or DynamoDB format)
     let isSuspended = false;
     if (userProject.isSuspended !== undefined) {
-      // JavaScript format
-      isSuspended = typeof userProject.isSuspended === 'boolean' 
-        ? userProject.isSuspended 
-        : userProject.isSuspended === true || userProject.isSuspended === 'true';
+      isSuspended =
+        typeof userProject.isSuspended === 'boolean'
+          ? userProject.isSuspended
+          : userProject.isSuspended === true || userProject.isSuspended === 'true';
     } else if (userProject.M?.isSuspended?.BOOL !== undefined) {
-      // DynamoDB format
       isSuspended = userProject.M.isSuspended.BOOL;
     } else if (userProject.M?.isSuspended?.S) {
-      // DynamoDB string format
       isSuspended = userProject.M.isSuspended.S === 'true';
     }
-    
-    console.log('🔍 SuspensionService: User project isSuspended:', isSuspended, 'for project:', projectId);
-    
-    // Check if user is suspended for THIS PROJECT
+
+    // Check familyMembersSuspended regardless of whether the current user is suspended
+    const familyMembersSuspended =
+      userProject.familyMembersSuspended === true ||
+      userProject.M?.familyMembersSuspended?.BOOL === true ||
+      userProject.M?.familyMembersSuspended?.S === 'true';
+
     if (!isSuspended) {
-      return {
-        isSuspended: false,
-        suspensionDetails: null
-      };
+      return { isSuspended: false, suspensionDetails: null, familyMembersSuspended };
     }
-    
-    // Extract suspension details - handle both JavaScript and DynamoDB formats
+
+    // Extract fields (both JS and DynamoDB formats)
     const extractField = (fieldName) => {
-      if (userProject[fieldName] !== undefined) {
-        return userProject[fieldName];
-      } else if (userProject.M?.[fieldName]?.S) {
-        return userProject.M[fieldName].S;
-      } else if (userProject.M?.[fieldName]?.BOOL !== undefined) {
-        return userProject.M[fieldName].BOOL;
-      } else if (userProject.M?.[fieldName]?.N) {
-        return Number(userProject.M[fieldName].N);
+      if (userProject[fieldName] !== undefined) return userProject[fieldName];
+      if (userProject.M?.[fieldName]?.S) return userProject.M[fieldName].S;
+      if (userProject.M?.[fieldName]?.BOOL !== undefined) return userProject.M[fieldName].BOOL;
+      if (userProject.M?.[fieldName]?.N) return Number(userProject.M[fieldName].N);
+      if (userProject.M?.[fieldName]?.L) {
+        // DynamoDB list (blockedFeatures)
+        return userProject.M[fieldName].L.map((item) => item.S || item).filter(Boolean);
       }
       return null;
     };
-    
+
     const suspensionType = extractField('suspensionType');
     const suspensionEndDate = extractField('suspensionEndDate');
     const suspensionReason = extractField('suspensionReason');
+    const suspensionLevel = extractField('suspensionLevel') || 'full';
+    const blockedFeatures = extractField('blockedFeatures') || [];
     const suspendedAt = extractField('suspendedAt');
     const suspendedBy = extractField('suspendedBy');
-    
-    // Check if temporary suspension has expired
+
+    // Auto-expire temporary suspensions
     if (suspensionType === 'temporary' && suspensionEndDate) {
       let endDate;
       if (suspensionEndDate instanceof Date) {
         endDate = suspensionEndDate;
-      } else if (suspensionEndDate.toDate) {
+      } else if (suspensionEndDate?.toDate) {
         endDate = suspensionEndDate.toDate();
-      } else if (typeof suspensionEndDate === 'string') {
-        endDate = new Date(suspensionEndDate);
-      } else if (typeof suspensionEndDate === 'number') {
-        endDate = new Date(suspensionEndDate);
       } else {
         endDate = new Date(suspensionEndDate);
       }
-      
-      if (isNaN(endDate.getTime())) {
-        console.warn('⚠️ SuspensionService: Invalid suspensionEndDate:', suspensionEndDate);
-      } else if (new Date() > endDate) {
-        // Suspension has expired, automatically unsuspend for this project
-        console.log('⏰ SuspensionService: Temporary suspension has expired, auto-unsuspending');
-        await unsuspendUser(userId, projectId);
-        return {
-          isSuspended: false,
-          suspensionDetails: null
-        };
+
+      if (!isNaN(endDate.getTime()) && new Date() > endDate) {
+        console.log('⏰ SuspensionService: Temporary suspension expired, auto-unsuspending');
+        await _unsuspendUser(userId, projectId);
+        return { isSuspended: false, suspensionDetails: null };
       }
     }
-    
-    // User is suspended for this project
+
     console.log('🚫 SuspensionService: User is suspended for project:', projectId, {
-      reason: suspensionReason,
-      type: suspensionType,
-      endDate: suspensionEndDate
+      level: suspensionLevel,
+      blockedFeatures,
     });
-    
+
     return {
       isSuspended: true,
+      familyMembersSuspended,
       suspensionDetails: {
         reason: suspensionReason,
         type: suspensionType,
-        suspendedAt: suspendedAt,
-        suspendedBy: suspendedBy,
-        suspensionEndDate: suspensionEndDate,
-        projectId: projectId
-      }
+        level: suspensionLevel,
+        blockedFeatures: Array.isArray(blockedFeatures) ? blockedFeatures : [],
+        suspendedAt,
+        suspendedBy,
+        suspensionEndDate,
+        projectId,
+      },
     };
-    
   } catch (error) {
     console.error('Error checking user suspension:', error);
-    return {
-      isSuspended: false,
-      suspensionDetails: null
-    };
+    return { isSuspended: false, suspensionDetails: null };
   }
 };
 
 /**
- * Automatically unsuspend a user when temporary suspension expires (project-specific)
- * @param {string} userId - The user's ID
- * @param {string} projectId - The project ID
+ * Returns true if the user is suspended from the given feature.
+ * Full suspension blocks all features; partial suspension blocks listed features only.
+ *
+ * @param {object|null} suspensionDetails  — from checkUserSuspension
+ * @param {string} featureId  — e.g. 'bookings', 'services', 'requests', 'complaints', 'support'
+ * @returns {boolean}
  */
-const unsuspendUser = async (userId, projectId) => {
+export const isFeatureBlocked = (suspensionDetails, featureId) => {
+  if (!suspensionDetails) return false;
+  if (suspensionDetails.level === 'full') return true;
+  return (suspensionDetails.blockedFeatures || []).includes(featureId);
+};
+
+/**
+ * Check if a user can access a specific route.
+ */
+export const canUserAccessRoute = async (userId, route) => {
+  const suspensionStatus = await checkUserSuspension(userId);
+  if (!suspensionStatus.isSuspended) return true;
+
+  const allowedRoutes = ['/', '/home', '/profile', '/access', '/gate-access', '/gate', '/support', '/support-chat'];
+  return allowedRoutes.includes(route);
+};
+
+/**
+ * Build a structured, bilingual suspension message object.
+ * The modal renders each field individually — no concatenated strings.
+ */
+export const getSuspensionMessage = (suspensionDetails) => {
+  if (!suspensionDetails) return null;
+
+  const { reason, type, suspensionEndDate, level, blockedFeatures } = suspensionDetails;
+
+  // Resolve end date once
+  let endDateObj = null;
+  if (suspensionEndDate) {
+    endDateObj = suspensionEndDate?.toDate ? suspensionEndDate.toDate() : new Date(suspensionEndDate);
+    if (isNaN(endDateObj?.getTime())) endDateObj = null;
+  }
+
+  const isPartial = level === 'partial';
+
+  return {
+    // EN titles / subtitles
+    title:    isPartial ? 'Partial Suspension'  : 'Account Suspended',
+    title_ar: isPartial ? 'تعليق جزئي'          : 'تم تعليق الحساب',
+
+    // EN / AR body (short, single sentence — detail cards below handle the rest)
+    body:    isPartial
+      ? 'Some features on your account have been temporarily restricted.'
+      : 'Your account has been suspended. You can view the app but cannot perform any actions.',
+    body_ar: isPartial
+      ? 'تم تقييد بعض الميزات على حسابك.'
+      : 'تم تعليق حسابك. يمكنك عرض التطبيق فقط ولا يمكنك اتخاذ أي إجراءات.',
+
+    // Reason — always required now, shown in its own card
+    reason:    reason || '',
+    reason_ar: reason || '',   // admin enters one reason; Arabic label wraps it
+
+    // Suspension meta
+    type,
+    level: level || 'full',
+    blockedFeatures: blockedFeatures || [],
+    endDate: endDateObj ? endDateObj.toISOString() : null,
+    endDateFormatted:    endDateObj ? endDateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : null,
+    endDateFormatted_ar: endDateObj ? endDateObj.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : null,
+
+    // Feature labels (id → display name)
+    blockedFeatureLabels: buildFeatureLabels(blockedFeatures || []),
+  };
+};
+
+const FEATURE_LABELS = {
+  bookings:   { en: 'Bookings',      ar: 'الحجوزات' },
+  services:   { en: 'Services',      ar: 'الخدمات' },
+  requests:   { en: 'Requests',      ar: 'الطلبات' },
+  complaints: { en: 'Complaints',    ar: 'الشكاوى' },
+  support:    { en: 'Support',       ar: 'الدعم الفني' },
+  qr_codes:   { en: 'QR Codes / Guest Passes', ar: 'رموز QR / تصاريح الزوار' },
+};
+
+const buildFeatureLabels = (features) =>
+  features.map((id) => ({
+    id,
+    en: FEATURE_LABELS[id]?.en || id,
+    ar: FEATURE_LABELS[id]?.ar || id,
+  }));
+
+// ─── internal ──────────────────────────────────────────────────────────────────
+
+const _unsuspendUser = async (userId, projectId) => {
   try {
     const userDoc = await firestoreService.getDoc(`users/${userId}`);
     const userData = userDoc.data();
-    
-    // Update the projects array to remove suspension for this specific project
-    const updatedProjects = (userData.projects || []).map(proj => {
+
+    const updatedProjects = (userData.projects || []).map((proj) => {
       if (proj.projectId === projectId) {
         return {
           ...proj,
           isSuspended: false,
           suspensionReason: null,
           suspensionType: null,
+          suspensionLevel: null,
+          blockedFeatures: [],
           suspendedAt: null,
           suspendedBy: null,
           suspensionEndDate: null,
-          unsuspendedAt: new Date(),
-          unsuspendedBy: 'system'
+          unsuspendedAt: new Date().toISOString(),
+          unsuspendedBy: 'system',
         };
       }
       return proj;
     });
 
     await firestoreService.updateDoc(`users/${userId}`, {
+      isSuspended: false,
+      suspensionLevel: null,
+      blockedFeatures: [],
       projects: updatedProjects,
-      updatedAt: new Date()
+      updatedAt: new Date().toISOString(),
     });
-    
+
     console.log('✅ Auto-unsuspended user for project:', projectId);
   } catch (error) {
     console.error('Error auto-unsuspending user:', error);
   }
-};
-
-/**
- * Check if a user can access a specific route
- * @param {string} userId - The user's ID
- * @param {string} route - The route being accessed
- * @returns {Promise<boolean>} - Whether the user can access the route
- */
-export const canUserAccessRoute = async (userId, route) => {
-  const suspensionStatus = await checkUserSuspension(userId);
-  
-  if (!suspensionStatus.isSuspended) {
-    return true;
-  }
-  
-  // Define allowed routes for suspended users
-  const allowedRoutes = [
-    '/',
-    '/home',
-    '/profile',
-    '/access',
-    '/gate-access',
-    '/gate',
-    '/support',
-    '/support-chat'
-  ];
-  
-  return allowedRoutes.includes(route);
-};
-
-/**
- * Get suspension message for display to user
- * @param {Object} suspensionDetails - Suspension details from checkUserSuspension
- * @returns {Object} - Formatted message for display
- */
-export const getSuspensionMessage = (suspensionDetails) => {
-  if (!suspensionDetails) {
-    return null;
-  }
-  
-  const { reason, type, suspensionEndDate } = suspensionDetails;
-  
-  let message = `Your account has been suspended. Reason: ${reason}`;
-  
-  if (type === 'temporary' && suspensionEndDate) {
-    const endDate = suspensionEndDate.toDate ? 
-      suspensionEndDate.toDate() : 
-      new Date(suspensionEndDate);
-    
-    message += `\n\nSuspension will end on: ${endDate.toLocaleString()}`;
-  } else if (type === 'permanent') {
-    message += '\n\nThis is a permanent suspension.';
-  }
-  
-  message += '\n\nYou can still access your profile and gate functionality.';
-  
-  return {
-    title: 'Account Suspended',
-    message: message,
-    type: type,
-    endDate: suspensionEndDate
-  };
 };

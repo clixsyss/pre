@@ -1,5 +1,10 @@
 <template>
   <div class="complaints-page">
+
+    <!-- Suspension banner -->
+    <SuspensionBanner v-if="isBlocked" :message="suspensionMessage" />
+
+    <div class="complaints-page-content" :class="{ 'page-blocked': isBlocked }">
     <!-- Hero Section -->
     <div class="hero-section">
       <div class="hero-content">
@@ -306,6 +311,7 @@
       </div>
     </div>
     </Teleport>
+    </div><!-- end complaints-page-content -->
   </div>
 </template>
 
@@ -320,6 +326,8 @@ import { useFormKeyboard } from '../../composables/useFormKeyboard';
 import ModalHeader from '../../components/ModalHeader.vue';
 import ComplaintLucideIcon from '../../components/ComplaintLucideIcon.vue';
 import { getComplaintCategoryEmoji } from '../../utils/complaintCategoryDisplay';
+import SuspensionBanner from '../../components/SuspensionBanner.vue';
+import { useSuspensionGuard } from '../../composables/useSuspensionGuard';
 
 // Component name for ESLint
 defineOptions({
@@ -334,6 +342,7 @@ useFormKeyboard({
 });
 
 const router = useRouter();
+const { isBlocked, suspensionMessage } = useSuspensionGuard('complaints');
 const complaintStore = useComplaintStore();
 const notificationStore = useNotificationStore();
 const { openModal, closeModal: hideNavigationBars } = useModalState();
@@ -580,6 +589,12 @@ watch(showNewComplaintModal, (isOpen) => {
   margin: 0 auto;
   box-sizing: border-box;
   overflow-x: hidden;
+}
+
+.page-blocked {
+  pointer-events: none;
+  opacity: 0.4;
+  user-select: none;
 }
 
 /* Hero Section */
