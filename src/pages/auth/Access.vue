@@ -1049,7 +1049,7 @@ const currentProjectPasses = computed(() => {
   if (!projectId) return []
 
   // Filter passes to only show those for the current project
-  return passes.value.filter(pass => pass.projectId === projectId)
+  return passes.value.filter(pass => pass.projectId === projectId && isResidentGuestPass(pass))
 })
 
 // Computed: Displayed passes with pagination
@@ -1185,6 +1185,8 @@ const getPrimaryUserIdentifier = (user) => {
 }
 
 const normalizePassIdentifier = (value) => String(value || '').trim().toLowerCase()
+
+const isResidentGuestPass = (passData) => passData?.purpose !== 'gate_scan'
 
 const buildCurrentUserIdentifierSet = (user, resolvedUserId = '') => {
   const set = new Set()
@@ -1478,7 +1480,7 @@ const handleShakeOpen = () => {
   }
 }
 
-const logBleGateEntry = () => {
+const logBleGateEntry = (scannedGateName = '') => {
   return logResidentEntry({
     projectId: projectStore.selectedProject?.id,
     projectName: projectStore.selectedProject?.name,
@@ -1486,10 +1488,10 @@ const logBleGateEntry = () => {
     userRole: projectStore.selectedProject?.userRole || 'owner',
     entryType: 'resident_ble',
     gateName:
+      scannedGateName ||
       deviceName.value ||
       activeGate.value?.bleName ||
       activeGate.value?.name ||
-      currentGateDeviceNames.value[0] ||
       '',
     gateKey: activeGateKey.value,
   })
@@ -1511,16 +1513,23 @@ const quickOpenGate = async (gateKey = activeGateKey.value) => {
       }
     }, 900)
 
-    const connected = currentGateSystem.value.fastMode
-      ? (await scanAndConnectNearest(currentServiceUUID.value, {
-          deviceNames: currentGateDeviceNames.value,
-          timeoutMs: currentGateScanDurationMs.value,
-          minRssi: currentGateVeryCloseRssiMin.value,
-          scanMode: 2,
-        })).success
-      : await connect(currentServiceUUID.value, {
-          name: currentGateBleName.value,
-        })
+    let connected = false
+    let scannedGateName = ''
+
+    if (currentGateSystem.value.fastMode) {
+      const result = await scanAndConnectNearest(currentServiceUUID.value, {
+        deviceNames: currentGateDeviceNames.value,
+        timeoutMs: currentGateScanDurationMs.value,
+        minRssi: currentGateVeryCloseRssiMin.value,
+        scanMode: 2,
+      })
+      connected = result.success
+      scannedGateName = result.deviceName || ''
+    } else {
+      connected = await connect(currentServiceUUID.value, {
+        name: currentGateBleName.value,
+      })
+    }
 
     if (!connected) {
       autoConnecting.value = false
@@ -1545,7 +1554,7 @@ const quickOpenGate = async (gateKey = activeGateKey.value) => {
       statusMessage.value = t('gateOpenedSuccessfully') || 'Gate opened successfully! 🎉'
       statusMessageType.value = 'success'
       gatePhase.value = 'confirmed'
-      await logBleGateEntry()
+      await logBleGateEntry(scannedGateName)
 
       setTimeout(async () => {
         await disconnect()
@@ -1825,15 +1834,15 @@ const loadPassesFromFirebase = async () => {
       })
     }
 
-    // Filter out soft-deleted passes
+    // Filter out soft-deleted passes and scanner-created gate scan records
     const activePasses = allPasses.filter((docSnapshot) => {
       const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
-      return !docData.deleted // Exclude passes with deleted: true
+      return !docData.deleted && isResidentGuestPass(docData)
     })
 
-    console.log('✅ Active passes (not deleted):', activePasses.length, 'out of', allPasses.length)
+    console.log('✅ Resident active passes (not deleted / not gate scans):', activePasses.length, 'out of', allPasses.length)
 
-    // Count passes created this month (excluding deleted)
+    // Count passes created this month (excluding deleted and gate scans)
     const now = new Date()
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
@@ -1871,7 +1880,7 @@ const loadPassesFromFirebase = async () => {
     const currentUserIdentifierSet = buildCurrentUserIdentifierSet(user)
     const userOwnedActivePasses = activePasses.filter((docSnapshot) => {
       const docData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
-      return doesPassBelongToCurrentUser(docData, currentUserIdentifierSet)
+      return isResidentGuestPass(docData) && doesPassBelongToCurrentUser(docData, currentUserIdentifierSet)
     })
     console.log(
       `👤 User-owned passes: ${userOwnedActivePasses.length}/${activePasses.length} (showing current account only)`,
@@ -2011,7 +2020,7 @@ const loadPassesFromAWS = async () => {
     const loadedPasses = await getGuestPassesForUnit(projectId, resolvedUserId, userUnit || null)
     const currentUserIdentifierSet = buildCurrentUserIdentifierSet(user, resolvedUserId)
     const userOwnedPasses = loadedPasses.filter((pass) =>
-      doesPassBelongToCurrentUser(pass, currentUserIdentifierSet),
+      isResidentGuestPass(pass) && doesPassBelongToCurrentUser(pass, currentUserIdentifierSet),
     )
 
     console.log(

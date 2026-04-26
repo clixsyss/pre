@@ -51,6 +51,8 @@ const _S3_REGION =
   'us-east-1'
 const _getS3Url = (key) => `https://${_S3_BUCKET}.s3.${_S3_REGION}.amazonaws.com/${key}`
 
+const isResidentGuestPass = (pass) => pass?.purpose !== 'gate_scan'
+
 const getDaysRemainingInMonthIncludingToday = (date = new Date()) => {
   const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
   return Math.max(1, daysInMonth - date.getDate() + 1)
@@ -130,12 +132,16 @@ const _queryUserPassCounts = async (projectId, canonicalUserId, dailyResetAt = n
   // Fetch only the two fields needed for counting — reduces network payload significantly.
   const passes = await queryAll(GUEST_PASSES_TABLE, {
     KeyConditionExpression: 'parentId = :parentId',
-    FilterExpression: 'userId = :userId AND createdAt >= :monthStart AND (attribute_not_exists(deleted) OR deleted = :false)',
+    FilterExpression: 'userId = :userId AND createdAt >= :monthStart AND (attribute_not_exists(deleted) OR deleted = :false) AND (attribute_not_exists(#purpose) OR #purpose <> :gateScanPurpose)',
+    ExpressionAttributeNames: {
+      '#purpose': 'purpose',
+    },
     ExpressionAttributeValues: {
       ':parentId': projectId,
       ':userId': canonicalUserId,
       ':monthStart': firstDayTimestamp,
       ':false': false,
+      ':gateScanPurpose': 'gate_scan',
     },
     ProjectionExpression: 'createdAt',
     pageSize: 100,
@@ -958,12 +964,13 @@ export const getGuestPassesForUnit = async (projectId, userId, unit = null) => {
     const filterValue = unit || userId
     const passes = await queryAll(GUEST_PASSES_TABLE, {
       KeyConditionExpression: 'parentId = :parentId',
-      FilterExpression: `#filterField = :filterValue AND (attribute_not_exists(deleted) OR deleted = :false)`,
-      ExpressionAttributeNames: { '#filterField': filterField },
+      FilterExpression: `#filterField = :filterValue AND (attribute_not_exists(deleted) OR deleted = :false) AND (attribute_not_exists(#purpose) OR #purpose <> :gateScanPurpose)`,
+      ExpressionAttributeNames: { '#filterField': filterField, '#purpose': 'purpose' },
       ExpressionAttributeValues: {
         ':parentId': projectId,
         ':filterValue': filterValue,
         ':false': false,
+        ':gateScanPurpose': 'gate_scan',
       },
       pageSize: 100,
       maxPages: 10,
@@ -973,7 +980,7 @@ export const getGuestPassesForUnit = async (projectId, userId, unit = null) => {
 
     // Sort by createdAt descending (newest first) and cap at 50 for display.
     const filteredPasses = passes
-      .filter(p => p.deleted !== true)
+      .filter(p => p.deleted !== true && isResidentGuestPass(p))
       .sort((a, b) => {
         const aTime = a.createdAt || 0
         const bTime = b.createdAt || 0

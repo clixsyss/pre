@@ -615,18 +615,23 @@ const sendOpenCommand = async () => {
 const openGateWithExistingBleFlow = async () => {
   await checkBLESupport()
 
-  const connected = gateSystem.value.fastMode
-    ? (
-      await scanAndConnectNearest(currentServiceUUID.value, {
+  let connected = false
+  let connectedGateName = ''
+
+  if (gateSystem.value.fastMode) {
+    const result = await scanAndConnectNearest(currentServiceUUID.value, {
         deviceNames: currentGateDeviceNames.value,
         timeoutMs: currentGateScanDurationMs.value,
         minRssi: currentGateVeryCloseRssiMin.value,
         scanMode: 2,
       })
-    ).success
-    : await connect(currentServiceUUID.value, {
+    connected = result.success
+    connectedGateName = result.deviceName || ''
+  } else {
+    connected = await connect(currentServiceUUID.value, {
       name: currentGateBleName.value,
     })
+  }
 
   if (!connected) {
     throw new Error('Failed to connect to gate')
@@ -639,6 +644,8 @@ const openGateWithExistingBleFlow = async () => {
 
   // Mirror Access page behavior and avoid keeping the BLE link open.
   await disconnect()
+
+  return connectedGateName || bleDeviceName.value || ''
 }
 
 const triggerOpenGateFromProximity = async (source = 'manual') => {
@@ -661,13 +668,16 @@ const triggerOpenGateFromProximity = async (source = 'manual') => {
   let openedSuccessfully = false
 
   try {
-    await openGateWithExistingBleFlow()
+    const openedGateName = await openGateWithExistingBleFlow()
     openedSuccessfully = true
-    logResidentEntry({
+    await logResidentEntry({
       projectId: currentProject.value?.id,
+      projectName: currentProject.value?.name,
       unit: currentProject.value?.userUnit,
+      userRole: currentProject.value?.userRole || 'owner',
       entryType: 'resident_ble',
-      gateName: bleDeviceName.value || currentGateDeviceNames.value[0] || '',
+      gateName: openedGateName,
+      gateKey: activeGateKey.value,
     })
   } catch (error) {
     console.warn('Proximity open gate failed:', normalizeBleError(error))
