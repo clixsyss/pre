@@ -298,13 +298,6 @@ export function useBluetooth() {
       isScanning.value = false
       console.log('✅ Connected to device:', deviceName.value)
 
-      Notify.create({
-        type: 'positive',
-        message: `Connected to ${deviceName.value}`,
-        position: 'top',
-        timeout: 2000,
-      })
-
       return true
     } catch (error) {
       console.error('❌ Capacitor BLE connection error:', error)
@@ -384,13 +377,6 @@ export function useBluetooth() {
         strongestResult.localName || strongestResult.device.name || strongestResult.device.deviceId
       isConnected.value = true
 
-      Notify.create({
-        type: 'positive',
-        message: `Connected to ${deviceName.value}`,
-        position: 'top',
-        timeout: 2000,
-      })
-
       return {
         success: true,
         rssi: strongestResult.rssi,
@@ -456,13 +442,6 @@ export function useBluetooth() {
 
       isConnected.value = true
       isScanning.value = false
-
-      Notify.create({
-        type: 'positive',
-        message: `Connected to ${deviceName.value}`,
-        position: 'top',
-        timeout: 2000,
-      })
 
       return true
     } catch (error) {

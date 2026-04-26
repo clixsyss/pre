@@ -31,11 +31,6 @@
           <span>{{ $t('disconnected') || 'Disconnected' }}</span>
         </div>
 
-        <!-- Device Name -->
-        <div v-if="deviceName" class="device-name">
-          <q-icon name="devices" size="16px" />
-          <span>{{ deviceName }}</span>
-        </div>
       </div>
 
       <!-- BLE Not Supported Warning -->
@@ -168,6 +163,7 @@ import {
   getGateByKey,
   getGateSystemForProject,
 } from '../../constants/gateConfig'
+import { logResidentEntry } from '../../services/gateEntryLogService'
 
 // Component name for ESLint
 defineOptions({
@@ -227,15 +223,8 @@ const handleConnect = async (gateKey = activeGateKey.value) => {
 
     if (success) {
       console.log('✅ Successfully connected to gate device')
-      statusMessage.value = 'Successfully connected to gate device'
+      statusMessage.value = ''
       statusMessageType.value = 'success'
-
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        if (statusMessage.value === 'Successfully connected to gate device') {
-          statusMessage.value = ''
-        }
-      }, 3000)
       if (gateSystem.value.fastMode) {
         await handleOpenGate()
       }
@@ -283,6 +272,16 @@ const handleOpenGate = async () => {
       console.log('✅ Gate command sent successfully')
       statusMessage.value = 'Gate opened successfully! 🎉'
       statusMessageType.value = 'success'
+
+      await logResidentEntry({
+        projectId: projectStore.selectedProject?.id,
+        projectName: projectStore.selectedProject?.name,
+        unit: projectStore.selectedProject?.userUnit || projectStore.selectedUnit,
+        userRole: projectStore.selectedProject?.userRole || 'owner',
+        entryType: 'resident_ble',
+        gateName: deviceName.value || activeGate.value?.name || '',
+        gateKey: activeGateKey.value,
+      })
 
       // Clear success message after 5 seconds
       setTimeout(() => {

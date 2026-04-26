@@ -23,7 +23,7 @@ const USERS_TABLE = 'users'
 const _SCANNER_CHARS = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_abcdefghijklmnopqrstuvwxyz{|}~"
 const _SCANNER_BASE = BigInt(_SCANNER_CHARS.length)
 
-async function _buildScannerQrString(payload) {
+export async function _buildScannerQrString(payload) {
   const secretKey = (import.meta.env.VITE_PI_SECRET_KEY || '').trim()
   const enc = new TextEncoder()
   // SHA-256 → first 16 bytes as XOR key (matches scanner's .subarray(0,16))
@@ -505,23 +505,23 @@ export const createGuestPass = async (
     const userUnit = projectInfo?.unit || user?.unit || ''
     console.log(`🏠 Creating pass for unit: ${userUnit}`)
 
-    // Build compact payload matching the gate scanner's expected format.
-    // Encrypted with SHA-256(SECRET_KEY) XOR + Base-94 (matches qr-decryptor.js).
-    const qrData = await _buildScannerQrString({
-      f: userName.trim().split(/\s+/)[0] || '',
-      l: userName.trim().split(/\s+/).slice(1).join(' ') || '',
-      u: userUnit,
-      usr: userId,
-      i: userUnit,
-      p: projectId,
-      g: (import.meta.env.VITE_GATE_ID || 'main').trim(),
-      t: Math.floor(createdAt.getTime() / 1000),
-      ...((import.meta.env.VITE_ZONE || '').trim() ? { z: import.meta.env.VITE_ZONE.trim() } : {}),
-    })
+    // Build the canonical QR payload stored on the pass document.
+    const qrPayload = {
+      v: 1,
+      id: passId,
+      projectId,
+      userId,
+      userName,
+      guestName,
+      unit: userUnit,
+      purpose,
+      validFrom: createdAt.getTime(),
+      validUntil: validUntil.getTime(),
+    }
 
     // Generate QR code as data URL (fast — no network)
     console.log('🎨 Generating QR code...')
-    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+    const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrPayload), {
       errorCorrectionLevel: 'H',
       type: 'image/png',
       width: 512,
@@ -549,6 +549,7 @@ export const createGuestPass = async (
       sentStatus: false,
       sentAt: null,
       qrCodeUrl,
+      qrPayload,
       used: false,
       usedAt: null,
       verificationToken,

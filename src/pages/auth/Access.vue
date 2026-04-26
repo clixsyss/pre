@@ -904,6 +904,7 @@ import {
   getGateByKey,
   getGateSystemForProject,
 } from '../../constants/gateConfig'
+import { logResidentEntry } from '../../services/gateEntryLogService'
 
 defineOptions({
   name: 'AccessPage',
@@ -928,6 +929,7 @@ const activeTab = ref('ble')
 // Use bluetooth composable
 const {
   isConnected,
+  deviceName,
   checkBLESupport,
   connect,
   scanAndConnectNearest,
@@ -1474,6 +1476,23 @@ const handleShakeOpen = () => {
   }
 }
 
+const logBleGateEntry = () => {
+  return logResidentEntry({
+    projectId: projectStore.selectedProject?.id,
+    projectName: projectStore.selectedProject?.name,
+    unit: projectStore.selectedProject?.userUnit || projectStore.selectedUnit || userUnitInfo.value,
+    userRole: projectStore.selectedProject?.userRole || 'owner',
+    entryType: 'resident_ble',
+    gateName:
+      deviceName.value ||
+      activeGate.value?.bleName ||
+      activeGate.value?.name ||
+      currentGateDeviceNames.value[0] ||
+      '',
+    gateKey: activeGateKey.value,
+  })
+}
+
 const quickOpenGate = async (gateKey = activeGateKey.value) => {
   try {
     autoConnecting.value = true
@@ -1524,6 +1543,7 @@ const quickOpenGate = async (gateKey = activeGateKey.value) => {
       statusMessage.value = t('gateOpenedSuccessfully') || 'Gate opened successfully! 🎉'
       statusMessageType.value = 'success'
       gatePhase.value = 'confirmed'
+      await logBleGateEntry()
 
       setTimeout(async () => {
         await disconnect()
@@ -1563,6 +1583,7 @@ const handleOpenGate = async () => {
       statusMessage.value = t('gateOpenedSuccessfully') || 'Gate opened successfully! 🎉'
       statusMessageType.value = 'success'
       gatePhase.value = 'confirmed'
+      await logBleGateEntry()
 
       setTimeout(() => {
         if (statusMessage.value.includes(t('gateOpenedSuccessfully') || 'Gate opened successfully')) {

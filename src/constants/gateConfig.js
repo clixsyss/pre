@@ -28,6 +28,10 @@ export const STONE_RESIDENCE_GATE_SYSTEM = {
   veryCloseRssiMin: -55,
   scanDurationMs: 2200,
   deviceNames: ['GATE_LEFT', 'GATE_RIGHT'],
+  deviceDisplayNames: {
+    GATE_LEFT: 'Gate 1',
+    GATE_RIGHT: 'Gate 2',
+  },
   // Gate_right is Gate 2, Gate_left is Gate 1 (PHYSICALLY)
   gates: [
     {
@@ -51,4 +55,12 @@ export const getGateSystemForProject = (projectId) => {
 export const getGateByKey = (projectId, gateKey) => {
   const gateSystem = getGateSystemForProject(projectId)
   return gateSystem.gates.find((gate) => gate.key === gateKey) || gateSystem.gates[0]
+}
+
+export const getGateDisplayName = (projectId, gateName) => {
+  const rawName = String(gateName || '').trim()
+  if (!rawName) return ''
+
+  const gateSystem = getGateSystemForProject(projectId)
+  return gateSystem.deviceDisplayNames?.[rawName] || rawName
 }

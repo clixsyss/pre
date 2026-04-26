@@ -318,6 +318,7 @@ import permissionsService from '../services/permissionsService'
 import { Capacitor } from '@capacitor/core'
 import { useAndroidSafeArea } from '../composables/useAndroidSafeArea'
 import { getGateByKey, getGateSystemForProject } from '../constants/gateConfig'
+import { logResidentEntry } from '../services/gateEntryLogService'
 import barrierIcon from '../assets/barrier.png'
 
 // Component name for ESLint
@@ -444,6 +445,7 @@ const {
   write,
   read,
   disconnect,
+  deviceName: bleDeviceName,
 } = useBluetooth()
 
 const ACCESS_GRANTED = 'ACCESS_GRANTED'
@@ -669,6 +671,12 @@ const triggerOpenGateFromProximity = async (source = 'manual') => {
   try {
     await openGateWithExistingBleFlow()
     openedSuccessfully = true
+    logResidentEntry({
+      projectId: currentProject.value?.id,
+      unit: currentProject.value?.userUnit,
+      entryType: 'resident_ble',
+      gateName: bleDeviceName.value || currentGateDeviceNames.value[0] || '',
+    })
   } catch (error) {
     console.warn('Proximity open gate failed:', normalizeBleError(error))
   } finally {
