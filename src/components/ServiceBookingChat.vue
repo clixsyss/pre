@@ -40,6 +40,13 @@ const projectStore = useProjectStore();
 const booking = ref(null);
 const loading = ref(true);
 const unsubscribe = ref(null);
+const TERMINAL_BOOKING_STATUSES = new Set(['closed', 'completed', 'cancelled', 'rejected', 'resolved']);
+
+const normalizeStatus = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
 
 // Get booking ID from route
 const bookingId = route.params.id;
@@ -93,6 +100,11 @@ const loadBooking = async () => {
       projectStore.selectedProject.id, 
       bookingId
     );
+    if (TERMINAL_BOOKING_STATUSES.has(normalizeStatus(bookingData?.status))) {
+      alert('This service chat is closed/completed/cancelled and cannot be started.');
+      await router.replace('/services');
+      return;
+    }
     console.log('🔍 ServiceBookingChat: Booking data loaded successfully:', bookingData);
     booking.value = bookingData;
   } catch (error) {

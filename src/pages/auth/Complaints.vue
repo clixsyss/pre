@@ -404,6 +404,11 @@ const startQuickComplaint = (category) => {
 };
 
 const openComplaint = (complaint) => {
+  const status = String(complaint?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+  if (['closed', 'completed', 'cancelled', 'resolved', 'rejected'].includes(status)) {
+    alert('This complaint is closed/completed/cancelled and chat cannot be started.');
+    return;
+  }
   router.push(`/complaints/${complaint.id}`);
 };
 

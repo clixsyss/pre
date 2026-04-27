@@ -707,6 +707,11 @@ const closeBookingModal = () => {
 
 // Open booking chat (called from modal)
 const openBookingChat = (booking) => {
+  const status = String(booking?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+  if (['closed', 'completed', 'cancelled', 'rejected', 'resolved'].includes(status)) {
+    alert('This service booking is closed/completed/cancelled and chat cannot be started.');
+    return;
+  }
   router.push(`/service-booking-chat/${booking.id}`);
 };
 

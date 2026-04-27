@@ -293,6 +293,11 @@ const navigateToRequestCategory = (category) => {
 
 const openRequestChat = (request) => {
   if (!request?.id) return;
+  const status = String(request?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+  if (['closed', 'completed', 'cancelled', 'rejected', 'resolved'].includes(status)) {
+    alert('This request is closed/completed/cancelled and chat cannot be started.');
+    return;
+  }
   router.push(`/request-chat/${request.id}`);
 };
 

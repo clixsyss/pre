@@ -119,6 +119,12 @@ const startNewChat = async () => {
 }
 
 const viewChat = (chatId) => {
+  const chat = supportChats.value.find((item) => item.id === chatId);
+  const status = String(chat?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+  if (['closed', 'completed', 'cancelled', 'resolved'].includes(status)) {
+    alert('This support chat is closed/completed/cancelled and cannot be started.');
+    return;
+  }
   router.push(`/support-chat/${chatId}`)
 }
 

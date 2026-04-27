@@ -16,15 +16,23 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useComplaintStore } from '../stores/complaintStore';
 import { useNotificationStore } from '../stores/notifications';
 import optimizedAuthService from '../services/optimizedAuthService';
 import UnifiedChat from './UnifiedChat.vue';
 
 const route = useRoute();
+const router = useRouter();
 const complaintStore = useComplaintStore();
 const notificationStore = useNotificationStore();
+const TERMINAL_COMPLAINT_STATUSES = new Set(['closed', 'completed', 'resolved', 'cancelled', 'rejected']);
+
+const normalizeStatus = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
 
 // Get complaint ID from route params
 const complaintId = computed(() => route.params.id);
@@ -125,6 +133,12 @@ onMounted(async () => {
     
     // Fetch complaint data
     await complaintStore.fetchComplaint(complaintId.value);
+    const status = complaintStore.currentComplaint?.status;
+    if (TERMINAL_COMPLAINT_STATUSES.has(normalizeStatus(status))) {
+      notificationStore.showError('This complaint chat is already closed/completed/cancelled and cannot be started.');
+      await router.replace('/complaints');
+      return;
+    }
     
     // Subscribe to real-time updates
     unsubscribe = await complaintStore.subscribeToComplaint(complaintId.value);

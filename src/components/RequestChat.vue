@@ -62,6 +62,13 @@ const normalizeStatus = (value) =>
 
 const isRequestClosed = () => TERMINAL_REQUEST_STATUSES.has(normalizeStatus(requestData.value?.status));
 
+const redirectIfClosed = (statusValue) => {
+  if (!TERMINAL_REQUEST_STATUSES.has(normalizeStatus(statusValue))) return false;
+  alert('This request is closed/completed/cancelled and chat can no longer be started.');
+  router.replace('/requests');
+  return true;
+};
+
 // Load messages when component mounts
 onMounted(async () => {
   await loadRequestData();
@@ -85,6 +92,7 @@ const loadRequestData = async () => {
     
     if (requestSnap.exists()) {
       const data = requestSnap.data();
+      if (redirectIfClosed(data.status)) return;
       requestData.value = {
         id: requestSnap.id,
         title: data.title || data.description || t('requestChat'),

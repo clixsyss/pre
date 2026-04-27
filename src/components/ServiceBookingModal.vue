@@ -312,6 +312,12 @@ const openChat = () => {
     });
     return;
   }
+
+  const status = String(currentBooking.value?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+  if (['closed', 'completed', 'cancelled', 'rejected', 'resolved'].includes(status)) {
+    alert('This service booking is closed/completed/cancelled and chat cannot be started.');
+    return;
+  }
   
   // Mark messages as read when opening chat
   if (currentBooking.value.messages && currentBooking.value.messages.length > 0) {

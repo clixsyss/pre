@@ -38,6 +38,13 @@ const supportChatId = computed(() => route.params.id);
 const supportChat = computed(() => supportStore.currentSupportChat);
 const unsubscribe = ref(null);
 const loading = ref(true);
+const TERMINAL_SUPPORT_STATUSES = new Set(['closed', 'completed', 'resolved', 'cancelled']);
+
+const normalizeStatus = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
 
 // Computed properties
 const messages = computed(() => {
@@ -65,6 +72,15 @@ const loadSupportChat = async () => {
   try {
     console.log('🔍 SupportChat: Loading chat with ID:', supportChatId.value);
     await supportStore.fetchSupportChat(supportChatId.value);
+    const status = supportStore.currentSupportChat?.status;
+    if (TERMINAL_SUPPORT_STATUSES.has(normalizeStatus(status))) {
+      notificationStore.addNotification({
+        type: 'warning',
+        message: 'This support chat is already closed/completed/cancelled and cannot be opened.'
+      });
+      await router.replace('/support');
+      return;
+    }
     console.log('✅ SupportChat: Support chat loaded successfully');
   } catch (error) {
     console.error('❌ SupportChat: Error loading support chat:', error);

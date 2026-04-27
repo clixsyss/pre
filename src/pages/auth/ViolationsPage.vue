@@ -264,6 +264,11 @@ const closeDetailModal = () => {
 }
 
 const startChat = (violation) => {
+  const status = String(violation?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+  if (['closed', 'completed', 'cancelled'].includes(status)) {
+    alert('This violation is closed/completed/cancelled and chat cannot be started.');
+    return;
+  }
   router.push(`/violation-chat/${violation.id}`)
 }
 

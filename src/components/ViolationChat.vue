@@ -36,6 +36,13 @@ const violationId = computed(() => route.params.id);
 const loading = ref(false);
 const violation = ref(null);
 const unsubscribe = ref(null);
+const TERMINAL_VIOLATION_STATUSES = new Set(['closed', 'completed', 'cancelled']);
+
+const normalizeStatus = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
 
 // Computed properties
 const messages = computed(() => {
@@ -48,6 +55,11 @@ onMounted(async () => {
     loading.value = true;
     // Fetch violation data
     const violationData = await getFine(projectStore.selectedProject.id, violationId.value);
+    if (TERMINAL_VIOLATION_STATUSES.has(normalizeStatus(violationData?.status))) {
+      alert('This violation is closed/completed/cancelled and chat cannot be started.');
+      await router.replace('/violations');
+      return;
+    }
     violation.value = violationData;
     
     // Mark messages as read
