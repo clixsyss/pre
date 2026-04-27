@@ -1965,14 +1965,16 @@ const loadPassesFromAWS = async () => {
 
     if (!user || !projectId) {
       console.log('👤 No user or project, skipping pass load')
-      passes.value = []
-      passLimits.value = {
-        monthlyLimit: 30,
-        usedThisMonth: 0,
-        remainingQuota: 30,
-        dailyLimit: null,
-        usedToday: 0,
-        dailyRemainingQuota: null,
+      if (!user) {
+        passes.value = []
+        passLimits.value = {
+          monthlyLimit: 30,
+          usedThisMonth: 0,
+          remainingQuota: 30,
+          dailyLimit: null,
+          usedToday: 0,
+          dailyRemainingQuota: null,
+        }
       }
       isLoadingPasses.value = false
       return
@@ -2019,16 +2021,17 @@ const loadPassesFromAWS = async () => {
     // This function already sorts by newest first
     const loadedPasses = await getGuestPassesForUnit(projectId, resolvedUserId, userUnit || null)
     const currentUserIdentifierSet = buildCurrentUserIdentifierSet(user, resolvedUserId)
-    const userOwnedPasses = loadedPasses.filter((pass) =>
-      isResidentGuestPass(pass) && doesPassBelongToCurrentUser(pass, currentUserIdentifierSet),
-    )
+    const visibleResidentPasses = loadedPasses.filter((pass) => {
+      if (!isResidentGuestPass(pass)) return false
+      return userUnit ? true : doesPassBelongToCurrentUser(pass, currentUserIdentifierSet)
+    })
 
     console.log(
-      `✅ Loaded ${loadedPasses.length} passes from AWS, user-owned: ${userOwnedPasses.length} (showing current account only)`,
+      `✅ Loaded ${loadedPasses.length} passes from AWS, visible resident passes: ${visibleResidentPasses.length} (${userUnit ? 'showing unit passes' : 'showing current account only'})`,
     )
 
     // Map passes to the format expected by the component
-    passes.value = userOwnedPasses.map(pass => ({
+    passes.value = visibleResidentPasses.map(pass => ({
       id: pass.id,
       projectId: pass.projectId,
       userName: normalizeOwnerName(pass.userName),
@@ -3037,10 +3040,21 @@ watch(
 // Watch for project changes to reset pagination
 watch(
   () => projectStore.selectedProject?.id,
-  () => {
+  async (projectId, previousProjectId) => {
     displayedPassesCount.value = 5 // Reset to 5 when switching projects
     activeGateKey.value = getGateSystemForProject(currentProjectId.value).gates[0]?.key || 'main'
     lastConnectedDevice.value = null
+
+    if (!projectId || projectId === previousProjectId) return
+
+    try {
+      await Promise.all([
+        loadPassesFromAWS(),
+        checkUserBlockingStatus(),
+      ])
+    } catch (error) {
+      console.error('❌ Error reloading passes after project became ready:', error)
+    }
   }
 )
 

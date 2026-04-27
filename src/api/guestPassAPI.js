@@ -105,18 +105,20 @@ const _setCachedPassCounts = (cacheKey, value) => {
   _passCountCache.set(cacheKey, { ts: Date.now(), value })
 }
 
-// Invalidate cached pass counts for a user/project after a new pass is created.
-const _invalidatePassCountCache = (projectId, userId) => {
-  const key = `${projectId}:${userId}`
+// Invalidate cached pass counts for a user/project or unit/project after a new pass is created.
+const _invalidatePassCountCache = (projectId, ownerKey) => {
+  const key = `${projectId}:${ownerKey}`
   _passCountCache.delete(key)
 }
 
 /**
- * Query only this user's passes for the current month using a DynamoDB FilterExpression.
+ * Query resident-created passes for the current month using a DynamoDB FilterExpression.
  * Much cheaper than fetching all project passes and filtering in JS.
  */
-const _queryUserPassCounts = async (projectId, canonicalUserId, dailyResetAt = null) => {
-  const cacheKey = `${projectId}:${canonicalUserId}`
+const _queryResidentPassCounts = async (projectId, { canonicalUserId, unit = '' }, dailyResetAt = null) => {
+  const countField = unit ? 'unit' : 'userId'
+  const countValue = unit || canonicalUserId
+  const cacheKey = `${projectId}:${countField}:${countValue}`
   const cached = _getCachedPassCounts(cacheKey)
   if (cached) return cached
 
@@ -132,13 +134,14 @@ const _queryUserPassCounts = async (projectId, canonicalUserId, dailyResetAt = n
   // Fetch only the two fields needed for counting — reduces network payload significantly.
   const passes = await queryAll(GUEST_PASSES_TABLE, {
     KeyConditionExpression: 'parentId = :parentId',
-    FilterExpression: 'userId = :userId AND createdAt >= :monthStart AND (attribute_not_exists(deleted) OR deleted = :false) AND (attribute_not_exists(#purpose) OR #purpose <> :gateScanPurpose)',
+    FilterExpression: '#countField = :countValue AND createdAt >= :monthStart AND (attribute_not_exists(deleted) OR deleted = :false) AND (attribute_not_exists(#purpose) OR #purpose <> :gateScanPurpose)',
     ExpressionAttributeNames: {
+      '#countField': countField,
       '#purpose': 'purpose',
     },
     ExpressionAttributeValues: {
       ':parentId': projectId,
-      ':userId': canonicalUserId,
+      ':countValue': countValue,
       ':monthStart': firstDayTimestamp,
       ':false': false,
       ':gateScanPurpose': 'gate_scan',
@@ -373,15 +376,15 @@ export const checkUserEligibility = async (projectId, userId) => {
 
     monthlyLimit = enforceMonthlyFloor(monthlyLimit, dailyLimit)
 
-    // Count passes created this month/today for this user (server-side filtered, cached)
+    // Count resident-created passes this month/today for this unit, falling back to user when no unit exists.
     let usedThisMonth = 0
     let usedToday = 0
     try {
       const canonicalUserId = user?.id || userId
-      const counts = await _queryUserPassCounts(projectId, canonicalUserId, dailyResetAt)
+      const counts = await _queryResidentPassCounts(projectId, { canonicalUserId, unit: userUnit }, dailyResetAt)
       usedThisMonth = counts.usedThisMonth
       usedToday = counts.usedToday
-      console.log(`📊 Counted ${usedThisMonth} active passes this month, ${usedToday} today for user ${canonicalUserId}`)
+      console.log(`📊 Counted ${usedThisMonth} active passes this month, ${usedToday} today for ${userUnit ? `unit ${userUnit}` : `user ${canonicalUserId}`}`)
     } catch (error) {
       console.error('❌ Error counting monthly passes:', error)
       usedThisMonth = 0
@@ -575,7 +578,7 @@ export const createGuestPass = async (
     })
 
     // Bust the pass-count cache so the next eligibility/status check reflects the new pass.
-    _invalidatePassCountCache(projectId, userId)
+    _invalidatePassCountCache(projectId, userUnit ? `unit:${userUnit}` : `userId:${userId}`)
 
     console.log('✅ Pass saved to DynamoDB with ID:', passId)
 
@@ -913,12 +916,12 @@ export const getUserStatus = async (userId, projectId = null) => {
     
     monthlyLimit = enforceMonthlyFloor(monthlyLimit, dailyLimit)
 
-    // Get actual usage for this user this month/today (server-side filtered, cached)
+    // Get actual usage for this unit this month/today, falling back to user when no unit exists.
     let usedThisMonth = 0
     let usedToday = 0
     try {
       const canonicalUserId = user?.id || userId
-      const counts = await _queryUserPassCounts(projectId, canonicalUserId, dailyResetAt)
+      const counts = await _queryResidentPassCounts(projectId, { canonicalUserId, unit: userUnit }, dailyResetAt)
       usedThisMonth = counts.usedThisMonth
       usedToday = counts.usedToday
     } catch (error) {
