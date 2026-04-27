@@ -52,6 +52,15 @@ const messages = ref([]);
 const loading = ref(false);
 const requestData = ref(null);
 const pollInterval = ref(null);
+const TERMINAL_REQUEST_STATUSES = new Set(['closed', 'completed', 'resolved', 'rejected', 'cancelled']);
+
+const normalizeStatus = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+
+const isRequestClosed = () => TERMINAL_REQUEST_STATUSES.has(normalizeStatus(requestData.value?.status));
 
 // Load messages when component mounts
 onMounted(async () => {
@@ -161,9 +170,16 @@ const loadMessages = async () => {
       try {
         const requestSnap = await firestoreService.getDoc(requestPath, { useCache: false });
         if (requestSnap.exists()) {
-          const requestData = requestSnap.data();
-          if (Array.isArray(requestData.messages)) {
-            const newMessages = requestData.messages.map((msg, index) => ({
+          const latestRequestData = requestSnap.data();
+          const nextStatus = latestRequestData.status || 'pending';
+          if (requestData.value && requestData.value.status !== nextStatus) {
+            requestData.value = {
+              ...requestData.value,
+              status: nextStatus
+            };
+          }
+          if (Array.isArray(latestRequestData.messages)) {
+            const newMessages = latestRequestData.messages.map((msg, index) => ({
               id: msg.id || `msg-${index}`,
               ...msg,
               timestamp: msg.createdAt || msg.timestamp
@@ -197,6 +213,10 @@ const handleSendMessage = async (messageText) => {
 
     if (!projectId.value || !requestId.value) {
       throw new Error('Missing projectId or requestId');
+    }
+
+    if (isRequestClosed()) {
+      throw new Error('This request is closed and cannot receive new messages.');
     }
 
     // Create temporary message for instant display (optimistic UI like WhatsApp)
@@ -253,6 +273,10 @@ const handleImageUpload = async (file) => {
 
     if (!projectId.value || !requestId.value) {
       throw new Error('Missing projectId or requestId');
+    }
+
+    if (isRequestClosed()) {
+      throw new Error('This request is closed and cannot receive new messages.');
     }
 
     // Generate filename and path

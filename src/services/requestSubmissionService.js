@@ -3,6 +3,14 @@ import { createRequestNotification } from './notificationCenterService';
 import { smartMirrorDb as db } from '../boot/smartMirrorFirebase';
 
 class RequestSubmissionService {
+  isSubmissionMessagingClosed(status) {
+    const normalized = String(status || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '_');
+    return ['closed', 'completed', 'resolved', 'rejected', 'cancelled'].includes(normalized);
+  }
+
   /**
    * Submit a request with form data and optional media files
    * @param {Object} submissionData - The request submission data
@@ -590,6 +598,9 @@ class RequestSubmissionService {
       }
       
       const requestData = requestSnap.data();
+      if (this.isSubmissionMessagingClosed(requestData?.status)) {
+        throw new Error('This request is closed. New messages are disabled.');
+      }
       const existingMessages = Array.isArray(requestData.messages) ? requestData.messages : [];
       
       // Create new message object

@@ -144,7 +144,12 @@
             <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"
               stroke-linejoin="round" />
           </svg>
-          <span>{{ closedMessage }}</span>
+          <div class="closed-notice-text">
+            <span>{{ closedMessage }}</span>
+            <span v-if="effectiveClosureReason" class="closed-reason">
+              Reason: {{ effectiveClosureReason }}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -300,6 +305,10 @@ const props = defineProps({
     type: String,
     default: 'This chat is closed'
   },
+  closureReason: {
+    type: String,
+    default: ''
+  },
   onSendMessage: {
     type: Function,
     required: true
@@ -347,10 +356,44 @@ const assignedStaff = computed(() => {
   return { name: adminMsg.senderName, department: adminMsg.senderDepartment || '' };
 });
 
+const TERMINAL_CHAT_STATUSES = new Set(['closed', 'completed', 'resolved', 'rejected', 'cancelled']);
+
+const normalizeStatus = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+
 const isClosed = computed(() => {
   if (!props.chatData) return false;
-  const status = props.chatData.status?.toLowerCase();
-  return status === 'closed' || status === 'completed' || status === 'resolved';
+  return TERMINAL_CHAT_STATUSES.has(normalizeStatus(props.chatData.status));
+});
+
+const extractClosureReason = (data) => {
+  if (!data || typeof data !== 'object') return '';
+  const candidates = [
+    data.statusReason,
+    data.closureReason,
+    data.closingReason,
+    data.closeReason,
+    data.statusUpdateReason,
+    data.adminReason,
+    data.resolutionReason,
+    data.rejectionReason,
+    data.rejectReason,
+    data.cancellationReason
+  ];
+  for (const candidate of candidates) {
+    const value = String(candidate || '').trim();
+    if (value) return value;
+  }
+  return '';
+};
+
+const effectiveClosureReason = computed(() => {
+  const explicitReason = String(props.closureReason || '').trim();
+  if (explicitReason) return explicitReason;
+  return extractClosureReason(props.chatData);
 });
 
 // Methods
@@ -1276,6 +1319,18 @@ body.keyboard-open .unified-chat {
   padding: 0.75rem 1rem;
   color: #dc2626;
   font-size: 0.875rem;
+}
+
+.closed-notice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.closed-reason {
+  font-size: 0.8rem;
+  color: #b91c1c;
+  font-weight: 600;
 }
 
 .message-input {
