@@ -53,10 +53,11 @@ const _getS3Url = (key) => `https://${_S3_BUCKET}.s3.${_S3_REGION}.amazonaws.com
 
 const isResidentGuestPass = (pass) => pass?.purpose !== 'gate_scan'
 
-const getDaysRemainingInMonthIncludingToday = (date = new Date()) => {
-  const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
-  return Math.max(1, daysInMonth - date.getDate() + 1)
-}
+// Monthly helper intentionally disabled in app (daily-limit-only mode).
+// const getDaysRemainingInMonthIncludingToday = (date = new Date()) => {
+//   const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+//   return Math.max(1, daysInMonth - date.getDate() + 1)
+// }
 
 const normalizeLimit = (value, fallback = null) => {
   if (value === undefined || value === null || value === '') return fallback
@@ -65,11 +66,12 @@ const normalizeLimit = (value, fallback = null) => {
   return parsed
 }
 
-const enforceMonthlyFloor = (monthlyLimit, dailyLimit) => {
-  if (dailyLimit === null || dailyLimit === undefined) return normalizeLimit(monthlyLimit, 0)
-  const minimumMonthly = dailyLimit * getDaysRemainingInMonthIncludingToday()
-  return Math.max(normalizeLimit(monthlyLimit, minimumMonthly), minimumMonthly)
-}
+// Monthly helper intentionally disabled in app (daily-limit-only mode).
+// const enforceMonthlyFloor = (monthlyLimit, dailyLimit) => {
+//   if (dailyLimit === null || dailyLimit === undefined) return normalizeLimit(monthlyLimit, 0)
+//   const minimumMonthly = dailyLimit * getDaysRemainingInMonthIncludingToday()
+//   return Math.max(normalizeLimit(monthlyLimit, minimumMonthly), minimumMonthly)
+// }
 
 const toTimestamp = (value) => {
   if (value === undefined || value === null) return null
@@ -321,8 +323,9 @@ export const checkUserEligibility = async (projectId, userId) => {
       globalSettings = {}
     }
 
-    // Get monthly/daily limits (default monthly: 30, daily: disabled)
-    let monthlyLimit = normalizeLimit(globalSettings.monthlyLimit, 30)
+    // Daily-limit-only mode: monthly enforcement is intentionally disabled.
+    // let monthlyLimit = normalizeLimit(globalSettings.monthlyLimit, 30)
+    let monthlyLimit = null
     let dailyLimit = normalizeLimit(globalSettings.dailyLimit, null)
     let dailyResetAt = toTimestamp(globalSettings.dailyResetAt)
     let unitBlocked = false
@@ -336,10 +339,11 @@ export const checkUserEligibility = async (projectId, userId) => {
         
         if (unitSettings) {
           // Use unit-specific limit if set
-          if (unitSettings.monthlyLimit !== undefined && unitSettings.monthlyLimit !== null) {
-            monthlyLimit = normalizeLimit(unitSettings.monthlyLimit, monthlyLimit)
-            console.log(`📊 Using unit-specific limit: ${monthlyLimit} for unit ${userUnit}`)
-          }
+          // Monthly limit override is disabled in app (kept commented by request).
+          // if (unitSettings.monthlyLimit !== undefined && unitSettings.monthlyLimit !== null) {
+          //   monthlyLimit = normalizeLimit(unitSettings.monthlyLimit, monthlyLimit)
+          //   console.log(`📊 Using unit-specific limit: ${monthlyLimit} for unit ${userUnit}`)
+          // }
           if (unitSettings.dailyLimit !== undefined && unitSettings.dailyLimit !== null) {
             dailyLimit = normalizeLimit(unitSettings.dailyLimit, dailyLimit)
             console.log(`📊 Using unit-specific daily limit: ${dailyLimit} for unit ${userUnit}`)
@@ -374,7 +378,8 @@ export const checkUserEligibility = async (projectId, userId) => {
       }
     }
 
-    monthlyLimit = enforceMonthlyFloor(monthlyLimit, dailyLimit)
+    // Monthly floor logic is disabled together with monthly limit enforcement.
+    // monthlyLimit = enforceMonthlyFloor(monthlyLimit, dailyLimit)
 
     // Count resident-created passes this month/today for this unit, falling back to user when no unit exists.
     let usedThisMonth = 0
@@ -405,29 +410,31 @@ export const checkUserEligibility = async (projectId, userId) => {
           dailyRemainingQuota: 0,
           usedThisMonth,
           monthlyLimit,
-          remainingQuota: Math.max(0, monthlyLimit - usedThisMonth),
+          // remainingQuota (monthly) intentionally disabled in daily-only mode.
+          remainingQuota: null,
         },
       }
     }
 
-    if (usedThisMonth >= monthlyLimit) {
-      return {
-        success: false,
-        error: 'Limit reached',
-        message: `You have reached your monthly limit of ${monthlyLimit} passes for this project`,
-        data: {
-          canGenerate: false,
-          reason: 'limit_reached',
-          user: user,
-          usedThisMonth,
-          monthlyLimit,
-          usedToday,
-          dailyLimit,
-          dailyRemainingQuota: dailyLimit !== null ? Math.max(0, dailyLimit - usedToday) : null,
-          remainingQuota: 0,
-        },
-      }
-    }
+    // Monthly limit blocking is intentionally disabled in daily-only mode.
+    // if (usedThisMonth >= monthlyLimit) {
+    //   return {
+    //     success: false,
+    //     error: 'Limit reached',
+    //     message: `You have reached your monthly limit of ${monthlyLimit} passes for this project`,
+    //     data: {
+    //       canGenerate: false,
+    //       reason: 'limit_reached',
+    //       user: user,
+    //       usedThisMonth,
+    //       monthlyLimit,
+    //       usedToday,
+    //       dailyLimit,
+    //       dailyRemainingQuota: dailyLimit !== null ? Math.max(0, dailyLimit - usedToday) : null,
+    //       remainingQuota: 0,
+    //     },
+    //   }
+    // }
 
     // User is eligible
     return {
@@ -443,7 +450,8 @@ export const checkUserEligibility = async (projectId, userId) => {
         usedToday,
         dailyLimit,
         dailyRemainingQuota: dailyLimit !== null ? Math.max(0, dailyLimit - usedToday) : null,
-        remainingQuota: monthlyLimit - usedThisMonth,
+        // remainingQuota (monthly) intentionally disabled in daily-only mode.
+        remainingQuota: null,
       },
     }
   } catch (error) {
@@ -838,9 +846,9 @@ export const getUserStatus = async (userId, projectId = null) => {
           name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
           email: user.email,
           blocked: false,
-          monthlyLimit: 10,
+          monthlyLimit: null,
           usedThisMonth: 0,
-          remainingQuota: 10,
+          remainingQuota: null,
         },
       }
     }
@@ -851,8 +859,9 @@ export const getUserStatus = async (userId, projectId = null) => {
     const userUnit = projectInfo?.unit || user.unit || ''
     const userRole = projectInfo?.role || user.role || ''
     
-    // Get monthly/daily limits from global settings
-    let monthlyLimit = 30
+    // Daily-limit-only mode: monthly enforcement is intentionally disabled.
+    // let monthlyLimit = 30
+    let monthlyLimit = null
     let dailyLimit = null
     let dailyResetAt = null
     let blocked = false
@@ -869,9 +878,10 @@ export const getUserStatus = async (userId, projectId = null) => {
         blocked = true
       }
       
-      if (globalSettings?.monthlyLimit) {
-        monthlyLimit = normalizeLimit(globalSettings.monthlyLimit, monthlyLimit)
-      }
+      // Monthly limit from global settings is intentionally ignored in app (daily-only mode).
+      // if (globalSettings?.monthlyLimit) {
+      //   monthlyLimit = normalizeLimit(globalSettings.monthlyLimit, monthlyLimit)
+      // }
       if (globalSettings?.dailyLimit !== undefined && globalSettings?.dailyLimit !== null) {
         dailyLimit = normalizeLimit(globalSettings.dailyLimit, dailyLimit)
       }
@@ -890,10 +900,11 @@ export const getUserStatus = async (userId, projectId = null) => {
         
         if (unitSettings) {
           // Use unit-specific limit if set
-          if (unitSettings.monthlyLimit !== undefined && unitSettings.monthlyLimit !== null) {
-            monthlyLimit = normalizeLimit(unitSettings.monthlyLimit, monthlyLimit)
-            console.log(`📊 Using unit-specific limit: ${monthlyLimit} for unit ${userUnit}`)
-          }
+          // Monthly per-unit override is intentionally disabled in app (daily-only mode).
+          // if (unitSettings.monthlyLimit !== undefined && unitSettings.monthlyLimit !== null) {
+          //   monthlyLimit = normalizeLimit(unitSettings.monthlyLimit, monthlyLimit)
+          //   console.log(`📊 Using unit-specific limit: ${monthlyLimit} for unit ${userUnit}`)
+          // }
           if (unitSettings.dailyLimit !== undefined && unitSettings.dailyLimit !== null) {
             dailyLimit = normalizeLimit(unitSettings.dailyLimit, dailyLimit)
             console.log(`📊 Using unit-specific daily limit: ${dailyLimit} for unit ${userUnit}`)
@@ -914,7 +925,8 @@ export const getUserStatus = async (userId, projectId = null) => {
       }
     }
     
-    monthlyLimit = enforceMonthlyFloor(monthlyLimit, dailyLimit)
+    // Monthly floor logic is disabled together with monthly limit enforcement.
+    // monthlyLimit = enforceMonthlyFloor(monthlyLimit, dailyLimit)
 
     // Get actual usage for this unit this month/today, falling back to user when no unit exists.
     let usedThisMonth = 0
@@ -940,7 +952,8 @@ export const getUserStatus = async (userId, projectId = null) => {
         dailyLimit: dailyLimit,
         usedThisMonth: usedThisMonth,
         usedToday: usedToday,
-        remainingQuota: Math.max(0, monthlyLimit - usedThisMonth),
+        // remainingQuota (monthly) intentionally disabled in daily-only mode.
+        remainingQuota: null,
         dailyRemainingQuota: dailyLimit !== null ? Math.max(0, dailyLimit - usedToday) : null,
       },
     }

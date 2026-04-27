@@ -1067,18 +1067,19 @@ const loadMorePasses = () => {
   displayedPassesCount.value += 5
 }
 
-// Computed: Current month pass count for display
-const currentMonthPassCount = computed(() => {
-  return passLimits.value.usedThisMonth || 0
-})
+// Monthly counter kept disabled intentionally in daily-limit-only mode.
+// const currentMonthPassCount = computed(() => {
+//   return passLimits.value.usedThisMonth || 0
+// })
 
 const isGeneratePassDisabled = computed(() => {
-  const hasMonthlyLimit = passLimits.value.monthlyLimit !== null && passLimits.value.monthlyLimit !== undefined
-  const monthlyReached = hasMonthlyLimit && (passLimits.value.usedThisMonth || 0) >= passLimits.value.monthlyLimit
+  // Monthly blocking intentionally disabled (daily-limit-only mode).
+  // const hasMonthlyLimit = passLimits.value.monthlyLimit !== null && passLimits.value.monthlyLimit !== undefined
+  // const monthlyReached = hasMonthlyLimit && (passLimits.value.usedThisMonth || 0) >= passLimits.value.monthlyLimit
   const hasDailyLimit = passLimits.value.dailyLimit !== null && passLimits.value.dailyLimit !== undefined
   const dailyReached = hasDailyLimit && (passLimits.value.usedToday || 0) >= passLimits.value.dailyLimit
   const qrSuspended = projectStore.isFeatureBlocked('qr_codes')
-  return monthlyReached || dailyReached || qrSuspended
+  return dailyReached || qrSuspended
 })
 
 // User unit information
@@ -1715,8 +1716,9 @@ const loadPassesFromFirebase = async () => {
 
     console.log('🏠 User unit:', userUnit)
 
-    // Check for global settings first
-    let globalMonthlyLimit = 30
+    // Daily-limit-only mode: monthly limit in app is intentionally disabled.
+    // let globalMonthlyLimit = 30
+    let globalMonthlyLimit = null
     let globalBlockAllUsers = false
     let globalBlockFamilyMembers = false
     let globalSettingsDoc = null
@@ -1725,13 +1727,14 @@ const loadPassesFromFirebase = async () => {
       const globalSettingsResult = await firestoreService.getDoc(`guestPassSettings/${projectId}`)
       globalSettingsDoc = globalSettingsResult.data ? globalSettingsResult.data() : globalSettingsResult
 
-      if (globalSettingsDoc?.monthlyLimit) {
-        // Handle both string and number values
-        globalMonthlyLimit = typeof globalSettingsDoc.monthlyLimit === 'string'
-          ? parseInt(globalSettingsDoc.monthlyLimit, 10)
-          : globalSettingsDoc.monthlyLimit
-        console.log('🌐 Global monthly limit from settings:', globalMonthlyLimit, '(type:', typeof globalSettingsDoc.monthlyLimit, ')')
-      }
+      // Monthly limit handling is intentionally disabled in app (daily-only mode).
+      // if (globalSettingsDoc?.monthlyLimit) {
+      //   // Handle both string and number values
+      //   globalMonthlyLimit = typeof globalSettingsDoc.monthlyLimit === 'string'
+      //     ? parseInt(globalSettingsDoc.monthlyLimit, 10)
+      //     : globalSettingsDoc.monthlyLimit
+      //   console.log('🌐 Global monthly limit from settings:', globalMonthlyLimit, '(type:', typeof globalSettingsDoc.monthlyLimit, ')')
+      // }
       globalBlockAllUsers = globalSettingsDoc?.blockAllUsers || false
       globalBlockFamilyMembers = globalSettingsDoc?.blockFamilyMembers || false
     } catch (settingsError) {
@@ -1758,14 +1761,14 @@ const loadPassesFromFirebase = async () => {
       }
     }
 
-    // Use per-unit limit if set, otherwise use global limit
+    // Use daily limit only in app; monthly limit is intentionally disabled.
     let monthlyLimit = globalMonthlyLimit
-    if (unitSettings?.monthlyLimit !== undefined && unitSettings?.monthlyLimit !== null) {
-      // Handle both string and number values for per-unit limit
-      monthlyLimit = typeof unitSettings.monthlyLimit === 'string'
-        ? parseInt(unitSettings.monthlyLimit, 10)
-        : unitSettings.monthlyLimit
-    }
+    // if (unitSettings?.monthlyLimit !== undefined && unitSettings?.monthlyLimit !== null) {
+    //   // Handle both string and number values for per-unit limit
+    //   monthlyLimit = typeof unitSettings.monthlyLimit === 'string'
+    //     ? parseInt(unitSettings.monthlyLimit, 10)
+    //     : unitSettings.monthlyLimit
+    // }
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('📊 GUEST PASS LIMIT CALCULATION (PER-UNIT)')
@@ -1774,10 +1777,10 @@ const loadPassesFromFirebase = async () => {
     console.log('🏠 Unit:', userUnit)
     console.log('👥 User Role:', userRole)
     console.log('📋 Per-unit settings:', unitSettings)
-    console.log('🌐 Global limit for this project:', globalMonthlyLimit)
-    console.log('🎯 Per-unit custom limit:', unitSettings?.monthlyLimit || 'NOT SET (will use global)')
-    console.log('📊 Final monthly limit:', monthlyLimit)
-    console.log('💡 Limit source:', unitSettings?.monthlyLimit !== undefined && unitSettings?.monthlyLimit !== null ? '🎯 CUSTOM LIMIT FOR THIS UNIT ONLY' : '🌐 GLOBAL DEFAULT FOR THIS PROJECT')
+    // console.log('🌐 Global limit for this project:', globalMonthlyLimit)
+    // console.log('🎯 Per-unit custom limit:', unitSettings?.monthlyLimit || 'NOT SET (will use global)')
+    // console.log('📊 Final monthly limit:', monthlyLimit)
+    // console.log('💡 Limit source:', unitSettings?.monthlyLimit !== undefined && unitSettings?.monthlyLimit !== null ? '🎯 CUSTOM LIMIT FOR THIS UNIT ONLY' : '🌐 GLOBAL DEFAULT FOR THIS PROJECT')
     console.log('🔒 Global block all users:', globalBlockAllUsers)
     console.log('🔒 Global block family members:', globalBlockFamilyMembers)
     console.log('🔒 Is family member:', isFamilyMember)
@@ -1862,14 +1865,15 @@ const loadPassesFromFirebase = async () => {
 
     const usedThisMonth = passesThisMonth.length
 
-    console.log(`📊 Passes this month: ${usedThisMonth}/${monthlyLimit}`)
+    console.log(`📊 Passes this month: ${usedThisMonth} (monthly enforcement disabled in app)`)
     console.log(`📅 Month start: ${firstDayOfMonth}`)
 
     // Update limits
     passLimits.value = {
       monthlyLimit: monthlyLimit,
       usedThisMonth: usedThisMonth,
-      remainingQuota: Math.max(0, monthlyLimit - usedThisMonth),
+      // remainingQuota is monthly-based; intentionally disabled in daily-only mode.
+      remainingQuota: null,
       dailyLimit: null,
       usedToday: 0,
       dailyRemainingQuota: null,
@@ -1968,9 +1972,10 @@ const loadPassesFromAWS = async () => {
       if (!user) {
         passes.value = []
         passLimits.value = {
-          monthlyLimit: 30,
+          // Monthly values intentionally disabled in app (daily-only mode).
+          monthlyLimit: null,
           usedThisMonth: 0,
-          remainingQuota: 30,
+          remainingQuota: null,
           dailyLimit: null,
           usedToday: 0,
           dailyRemainingQuota: null,
@@ -2007,9 +2012,10 @@ const loadPassesFromAWS = async () => {
 
     // Update limits
     passLimits.value = {
-      monthlyLimit: userStatus.data?.monthlyLimit ?? null,
+      // Monthly values intentionally disabled in app (daily-only mode).
+      monthlyLimit: null,
       usedThisMonth: userStatus.data?.usedThisMonth || 0,
-      remainingQuota: userStatus.data?.remainingQuota ?? null,
+      remainingQuota: null,
       dailyLimit: userStatus.data?.dailyLimit ?? null,
       usedToday: userStatus.data?.usedToday || 0,
       dailyRemainingQuota: userStatus.data?.dailyRemainingQuota ?? null,
@@ -2243,18 +2249,18 @@ const generatePass = async () => {
       return
     }
 
-    // Check if user has reached their monthly limit
-    if (
-      passLimits.value.monthlyLimit !== null &&
-      passLimits.value.monthlyLimit !== undefined &&
-      currentMonthPassCount.value >= passLimits.value.monthlyLimit
-    ) {
-      notificationStore.showWarning(
-        `You have reached your monthly limit of ${passLimits.value.monthlyLimit} passes.`,
-      )
-      isGeneratingPass.value = false
-      return
-    }
+    // Monthly-limit blocking intentionally disabled (daily-limit-only mode).
+    // if (
+    //   passLimits.value.monthlyLimit !== null &&
+    //   passLimits.value.monthlyLimit !== undefined &&
+    //   currentMonthPassCount.value >= passLimits.value.monthlyLimit
+    // ) {
+    //   notificationStore.showWarning(
+    //     `You have reached your monthly limit of ${passLimits.value.monthlyLimit} passes.`,
+    //   )
+    //   isGeneratingPass.value = false
+    //   return
+    // }
     // Check daily limit when configured
     if (
       passLimits.value.dailyLimit !== null &&
@@ -2408,7 +2414,8 @@ const generatePass = async () => {
 
     // Update limits locally for immediate feedback
     passLimits.value.usedThisMonth = (passLimits.value.usedThisMonth || 0) + 1
-    passLimits.value.remainingQuota = Math.max(0, passLimits.value.monthlyLimit - passLimits.value.usedThisMonth)
+    // Monthly remaining quota is intentionally disabled in app (daily-only mode).
+    passLimits.value.remainingQuota = null
     if (passLimits.value.dailyLimit !== null && passLimits.value.dailyLimit !== undefined) {
       passLimits.value.usedToday = (passLimits.value.usedToday || 0) + 1
       passLimits.value.dailyRemainingQuota = Math.max(0, passLimits.value.dailyLimit - passLimits.value.usedToday)
