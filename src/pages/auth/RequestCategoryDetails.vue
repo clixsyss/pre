@@ -90,6 +90,36 @@
               :required="field.required"
               class="field-input"
             />
+
+            <!-- Date Input (calendar picker) -->
+            <input
+              v-else-if="field.fieldType === 'date'"
+              :id="field.id"
+              v-model="formData[field.id]"
+              type="date"
+              :required="field.required"
+              class="field-input"
+            />
+
+            <!-- Time Dropdown -->
+            <select
+              v-else-if="field.fieldType === 'time'"
+              :id="field.id"
+              v-model="formData[field.id]"
+              :required="field.required"
+              class="field-input"
+            >
+              <option value="">
+                {{ field.placeholder || `Select ${field.fieldName.toLowerCase()}` }}
+              </option>
+              <option
+                v-for="timeOption in getTimeSlotOptions(field)"
+                :key="`${field.id}-${timeOption.value}`"
+                :value="timeOption.value"
+              >
+                {{ timeOption.label }}
+              </option>
+            </select>
             
             <!-- Description (Long Text) -->
             <textarea
@@ -268,6 +298,48 @@ const submitting = ref(false);
 const formData = ref({});
 const selectedFiles = ref([]);
 const showUploadOptions = ref(false);
+
+const toMinutes = (timeValue) => {
+  const [hoursText, minutesText] = String(timeValue || '').split(':');
+  const hours = Number(hoursText);
+  const minutes = Number(minutesText);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  return (hours * 60) + minutes;
+};
+
+const toTimeValue = (minutesTotal) => {
+  const hours = Math.floor(minutesTotal / 60) % 24;
+  const minutes = minutesTotal % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
+const formatAmPmLabel = (minutesTotal) => {
+  const hours24 = Math.floor(minutesTotal / 60) % 24;
+  const minutes = minutesTotal % 60;
+  const suffix = hours24 >= 12 ? 'PM' : 'AM';
+  const hours12 = hours24 % 12 || 12;
+  return `${hours12}:${String(minutes).padStart(2, '0')} ${suffix}`;
+};
+
+const getTimeSlotOptions = (field) => {
+  const config = field?.timeConfig || {};
+  const startMinutes = toMinutes(config.startTime || '09:00');
+  const endMinutes = toMinutes(config.endTime || '17:00');
+  const interval = Number(config.intervalMinutes || 30);
+
+  if (startMinutes == null || endMinutes == null || !Number.isFinite(interval) || interval <= 0 || endMinutes < startMinutes) {
+    return [];
+  }
+
+  const options = [];
+  for (let cursor = startMinutes; cursor <= endMinutes; cursor += interval) {
+    options.push({
+      value: toTimeValue(cursor),
+      label: formatAmPmLabel(cursor)
+    });
+  }
+  return options;
+};
 
 // Computed
 const categoryId = computed(() => route.params.id);
@@ -624,7 +696,8 @@ const submitRequest = async () => {
         fieldName: field.fieldName,
         fieldType: field.fieldType,
         required: field.required,
-        placeholder: field.placeholder
+        placeholder: field.placeholder,
+        ...(field.fieldType === 'time' ? { timeConfig: field.timeConfig || null } : {})
       })),
       mediaFiles: selectedFiles.value.map(file => ({
         name: file.name || '',
