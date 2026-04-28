@@ -197,7 +197,10 @@ export async function getNotificationsByProject(projectId, options = {}) {
       KeyConditionExpression: 'parentId = :parentId',
       ExpressionAttributeValues: {
         ':parentId': projectId
-      }
+      },
+      // Always fetch newest partition items first so limited queries include
+      // the latest notifications that users just received.
+      ScanIndexForward: false
     }
     
     if (options.limit) {

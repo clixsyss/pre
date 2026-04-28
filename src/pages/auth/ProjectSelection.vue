@@ -178,6 +178,19 @@ defineOptions({
 const router = useRouter()
 const projectStore = useProjectStore()
 
+// Ensure the device's FCM token is registered for the current user before navigating home.
+// Called from every path that leads to /home so no login route is missed.
+const ensureTokenRegistered = async (user) => {
+  try {
+    const cognitoSub = user?.attributes?.sub || user?.cognitoAttributes?.sub || user?.userSub
+    if (!cognitoSub) return
+    const { fcmService } = await import('../../services/fcmService')
+    await fcmService.registerTokenForUser(cognitoSub)
+  } catch {
+    // Non-critical — never block navigation
+  }
+}
+
 // Reactive user data
 const currentUser = ref(null)
 
@@ -207,6 +220,9 @@ const userDisplayName = computed(() => {
 // Methods
 const selectProjectUnit = async (projectUnit) => {
   projectStore.selectProject(projectUnit)
+
+  // Register FCM token for this user (fire-and-forget, non-blocking)
+  ensureTokenRegistered(currentUser.value)
 
   // Add a small delay for smooth UX, then redirect
   setTimeout(() => {
@@ -270,6 +286,8 @@ onMounted(async () => {
       // This prevents auto-redirect when user intentionally comes back to project selection
       if (userProjects.value.length === 1 && !projectStore.selectedProject) {
         projectStore.selectProject(userProjects.value[0])
+        // Register FCM token for this user (fire-and-forget, non-blocking)
+        ensureTokenRegistered(user)
         // Small delay for smooth UX
         setTimeout(() => {
           router.push('/home')

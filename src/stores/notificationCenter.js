@@ -86,6 +86,39 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
       candidates.forEach((value) => {
         if (value) identifiers.add(normalizeIdentifier(value))
       })
+
+      // Include DynamoDB profile aliases (doc id, authUid, email) so notifications
+      // targeted by any backend identifier shape are visible in the in-app center.
+      try {
+        const { getUserById } = await import('../services/dynamoDBUsersService')
+        const lookupCandidates = [
+          primaryUserId,
+          currentUser?.attributes?.sub,
+          currentUser?.cognitoAttributes?.sub,
+          currentUser?.userSub,
+          currentUser?.email,
+          currentUser?.attributes?.email
+        ].filter(Boolean)
+
+        for (const candidate of lookupCandidates) {
+          try {
+            const profile = await getUserById(String(candidate))
+            if (!profile) continue
+            const profileCandidates = [
+              profile.id,
+              profile.authUid,
+              profile.email
+            ]
+            profileCandidates.forEach((value) => {
+              if (value) identifiers.add(normalizeIdentifier(value))
+            })
+          } catch {
+            // Keep trying other candidates
+          }
+        }
+      } catch (aliasError) {
+        console.warn('NotificationCenter: Could not resolve DynamoDB user aliases:', aliasError)
+      }
     } catch (error) {
       console.warn('NotificationCenter: Could not resolve user aliases:', error)
     }
@@ -118,6 +151,12 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   }
 
   const getNotificationTimestampMs = (notification) => {
+    const normalizeEpochMs = (value) => {
+      if (typeof value !== 'number') return value
+      // Support both epoch seconds and epoch milliseconds.
+      return value > 0 && value < 1e12 ? value * 1000 : value
+    }
+
     const candidates = [
       notification?.createdAt,
       notification?.updatedAt,
@@ -129,8 +168,8 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
     for (const value of candidates) {
       if (!value) continue
       if (typeof value?.toMillis === 'function') return value.toMillis()
-      if (typeof value === 'object' && value.seconds) return value.seconds * 1000
-      if (typeof value === 'number') return value
+      if (typeof value === 'object' && value.seconds) return normalizeEpochMs(value.seconds * 1000)
+      if (typeof value === 'number') return normalizeEpochMs(value)
       const parsed = new Date(value).getTime()
       if (!Number.isNaN(parsed)) return parsed
     }
@@ -298,7 +337,8 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         allNotifications.forEach((notif) => {
           // Filter by date
           if (!notif.createdAt) return
-          const notifDate = new Date(notif.createdAt)
+          const createdAtMs = getNotificationTimestampMs(notif)
+          const notifDate = new Date(createdAtMs || 0)
           if (notifDate < oneMonthAgo) return
           
           const isForCurrentUser = isNotificationForCurrentUser(notif, userIdentifiers)

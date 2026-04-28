@@ -132,6 +132,28 @@ export default defineBoot(async ({ app, router }) => {
       } catch (error) {
         logger.error('FCM Boot: Error unregistering FCM:', error);
       }
+      return;
+    }
+
+    // Ensure token registration on ANY authenticated state change
+    // (covers login flows that don't pass through SignIn.vue directly).
+    try {
+      const cognitoSub = user?.attributes?.sub || user?.cognitoAttributes?.sub || user?.userSub;
+      if (!cognitoSub) {
+        logger.warn('FCM Boot: Authenticated user without Cognito sub, skipping token registration');
+        return;
+      }
+
+      if (!fcmService.isInitialized) {
+        await initializeFCM('auth-state-change');
+      }
+
+      await fcmService.registerTokenForUser(cognitoSub);
+      // Force a non-throttled consistency sync to DynamoDB for active sessions.
+      await fcmService.syncTokenRegistration({ source: 'auth-state-change', force: true, minIntervalMs: 0 });
+      logger.log('FCM Boot: Auth-state token registration/sync complete');
+    } catch (error) {
+      logger.warn('FCM Boot: Auth-state token registration failed:', error?.message || error);
     }
   });
 
@@ -139,29 +161,38 @@ export default defineBoot(async ({ app, router }) => {
   // This handles cases where auth state doesn't fire on app launch
   if (detectedPlatform === 'ios') {
     logger.log('FCM Boot: iOS detected - Setting up optimized fallback user check (Cognito)...');
-    
+
     setTimeout(async () => {
       try {
         const currentUser = await optimizedAuthService.getCurrentUser();
-        
-        if (currentUser && !fcmService.isInitialized) {
-          logger.log('FCM Boot: iOS fallback - Found authenticated user (Cognito), initializing FCM...');
+
+        if (currentUser) {
           const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.userSub;
-          logger.log('FCM Boot: User ID (Cognito sub):', cognitoSub);
-          
-          // iOS-optimized: Shorter delay since cache is fast
-          setTimeout(() => {
-            initializeFCM('ios-fallback-check-cognito');
-          }, 500); // Reduced from 1000ms
-        } else if (!currentUser) {
+          logger.log('FCM Boot: iOS fallback - Found authenticated user (Cognito sub):', cognitoSub);
+
+          if (!fcmService.isInitialized) {
+            // FCM not yet initialized — run full init then register token with known userId
+            setTimeout(async () => {
+              await initializeFCM('ios-fallback-check-cognito');
+              if (cognitoSub) {
+                fcmService.registerTokenForUser(cognitoSub).catch((e) =>
+                  console.error('[FCM Boot] iOS fallback registerTokenForUser failed:', e?.message)
+                );
+              }
+            }, 500);
+          } else if (cognitoSub) {
+            // FCM already initialized — just ensure token is registered for this user
+            fcmService.registerTokenForUser(cognitoSub).catch((e) =>
+              console.error('[FCM Boot] iOS fallback registerTokenForUser failed:', e?.message)
+            );
+          }
+        } else {
           logger.log('FCM Boot: iOS fallback - No user authenticated');
-        } else if (fcmService.isInitialized) {
-          logger.log('FCM Boot: iOS fallback - FCM already initialized, skipping');
         }
       } catch (error) {
         logger.error('FCM Boot: iOS fallback check failed:', error);
       }
-    }, 2000); // iOS-optimized: Reduced from 5000ms to 2000ms (cache is fast)
+    }, 2000);
   }
 
   // Listen for navigation messages from service worker
@@ -177,6 +208,28 @@ export default defineBoot(async ({ app, router }) => {
         router.push(event.data.url);
       }
     });
+  }
+
+  // Re-sync token whenever app returns to foreground.
+  // This makes token persistence resilient to OS token rotation and stale sessions.
+  try {
+    if (window.Capacitor?.Plugins?.App?.addListener) {
+      window.Capacitor.Plugins.App.addListener('appStateChange', async ({ isActive }) => {
+        if (!isActive) return;
+        try {
+          const currentUser = await optimizedAuthService.getCurrentUser();
+          const cognitoSub = currentUser?.attributes?.sub || currentUser?.cognitoAttributes?.sub || currentUser?.userSub;
+          if (!cognitoSub) return;
+          await fcmService.registerTokenForUser(cognitoSub);
+          await fcmService.syncTokenRegistration({ source: 'app-resume', force: true, minIntervalMs: 0 });
+          logger.log('FCM Boot: Foreground token sync complete');
+        } catch (resumeError) {
+          logger.warn('FCM Boot: Foreground token sync failed:', resumeError?.message || resumeError);
+        }
+      });
+    }
+  } catch (listenerError) {
+    logger.warn('FCM Boot: Could not attach appStateChange listener:', listenerError?.message || listenerError);
   }
 
   // Helper function to wait for authentication state to be ready
@@ -206,18 +259,32 @@ export default defineBoot(async ({ app, router }) => {
     return false;
   };
 
-  // iOS-optimized: Check if user is already authenticated via Cognito (on app startup)
-  // Shorter delay for iOS since localStorage cache is fast
+  // Check if user is already authenticated on app startup (handles session restore)
   const startupCheckDelay = detectedPlatform === 'ios' ? 1000 : 2000;
   setTimeout(async () => {
     try {
       const currentUser = await optimizedAuthService.getCurrentUser();
-      if (currentUser && !fcmService.isInitialized) {
-        logger.log('FCM Boot: Found authenticated user on startup, initializing FCM...');
-        const delay = detectedPlatform === 'ios' ? 1000 : 1000; // iOS-optimized: Same delay for both
-        setTimeout(() => {
-          initializeFCM('startup-check');
-        }, delay);
+      if (currentUser) {
+        const cognitoSub = currentUser.attributes?.sub || currentUser.cognitoAttributes?.sub || currentUser.userSub;
+        logger.log('FCM Boot: Found authenticated user on startup, cognitoSub:', cognitoSub);
+
+        if (!fcmService.isInitialized) {
+          logger.log('FCM Boot: Initializing FCM for restored session...');
+          setTimeout(async () => {
+            await initializeFCM('startup-check');
+            // After init, register token with known userId to guarantee the save
+            if (cognitoSub) {
+              fcmService.registerTokenForUser(cognitoSub).catch((e) =>
+                console.error('[FCM Boot] Startup registerTokenForUser failed:', e?.message)
+              );
+            }
+          }, 1000);
+        } else if (cognitoSub) {
+          // Already initialized — just make sure token is saved under the current user
+          fcmService.registerTokenForUser(cognitoSub).catch((e) =>
+            console.error('[FCM Boot] Startup registerTokenForUser (already init) failed:', e?.message)
+          );
+        }
       }
     } catch (error) {
       logger.warn('FCM Boot: Error checking for authenticated user on startup:', error);

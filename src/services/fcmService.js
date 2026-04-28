@@ -29,6 +29,7 @@ class FCMService {
     this.isInitialized = false; // Track if FCM has been initialized
     this.hasTokenUpdateInterval = false; // Track if token update interval is set
     this.lastRegistrationSyncAt = 0; // Throttle token registration sync calls
+    this.userIdAliasCache = new Map(); // Cache mapping between Cognito sub and Dynamo user id
 
     // VAPID key for web push - uses environment variable with fallback
     this.vapidKey = import.meta.env.VITE_FCM_VAPID_KEY || 'BDL03mUP_fsEjpZLMLwj-EW0XGFUPXDu8alAQgAKrlcGrHe39yxSF8DH1yn75Y93vOYc-5nNcRctEhMoBPvQatQ';
@@ -554,7 +555,8 @@ class FCMService {
     logger.log('FCMService: Handling notification tap:', event);
 
     // Extract data
-    const data = event.notification?.data || {};
+    const notification = event.notification || {};
+    const data = notification.data || {};
 
     // Store the deep-link destination immediately so the router guard can pick it
     // up even if auth hasn't restored yet (cold-start race condition).
@@ -563,6 +565,17 @@ class FCMService {
       localStorage.setItem('pendingDeepLink', pendingRoute);
       logger.log('FCMService: Stored pendingDeepLink:', pendingRoute);
     }
+
+    // Register tapped notification in the notification center.
+    // Background and cold-start notifications never pass through handleForegroundNotification,
+    // so this is the only place to capture them for the in-app notification center.
+    this.syncNotificationCenter({
+      title: notification.title || data.title_en || data.title_ar || '',
+      body: notification.body || data.body_en || data.body_ar || '',
+      data,
+    }).catch((error) => {
+      logger.warn('FCMService: Tap notification center sync failed', error?.message || error);
+    });
 
     await this.handleNotificationAction(data);
   }
@@ -721,23 +734,32 @@ class FCMService {
         tokenLength: token?.length 
       });
 
-      // Register token in DynamoDB for Lambda notification system
-      // This is the ONLY storage location - no Firestore
+      // Register token in DynamoDB for Lambda notification system.
+      // We register under all known aliases (Cognito sub + Dynamo user document id)
+      // so any backend path can resolve the user's tokens reliably.
       try {
         const { registerUserToken } = await import('./tokenRegistrationService');
-        const result = await registerUserToken({
-          userId,
-          token,
-          platform: platform || this.platform || 'web'
-        });
-        if (result) {
-          logger.log('✅ FCMService: Token registered in DynamoDB userTokens table', { 
-            userId, 
-            tokenId: result.id, 
-            platform: result.platform 
+        const ownerIds = await this.resolveTokenOwnerIds(userId);
+        let successCount = 0;
+
+        for (const ownerId of ownerIds) {
+          const result = await registerUserToken({
+            userId: ownerId,
+            token,
+            platform: platform || this.platform || 'web'
           });
-        } else {
-          logger.warn('⚠️ FCMService: Token registration returned null (may have been cached or failed silently)');
+          if (result) {
+            successCount += 1;
+            logger.log('✅ FCMService: Token registered in DynamoDB userTokens table', {
+              userId: ownerId,
+              tokenId: result.id,
+              platform: result.platform
+            });
+          }
+        }
+
+        if (successCount === 0) {
+          logger.warn('⚠️ FCMService: Token registration returned null for all owner IDs (may have failed silently)');
         }
       } catch (dynamoError) {
         // Critical: token registration failure means notifications won't work
@@ -1064,9 +1086,15 @@ class FCMService {
           // Permission not yet granted — fall back to full initialize() which will prompt
           logger.log('FCMService.registerTokenForUser: permission not granted, running full initialize()');
           await this.initialize();
-          // After initialize(), token is already saved under the current user via getCurrentUserId().
-          // But getCurrentUserId() may race with auth state; re-save explicitly here.
-          token = this.currentToken;
+          // Re-fetch the token directly after initialize() instead of relying on
+          // this.currentToken, which may still be null if saveTokenWithRetry() is
+          // still in its retry loop when we read it here.
+          try {
+            const freshResult = await FirebaseMessaging.getToken();
+            token = freshResult?.token || this.currentToken;
+          } catch {
+            token = this.currentToken;
+          }
         } else {
           const result = await FirebaseMessaging.getToken();
           token = result?.token || null;
@@ -1075,7 +1103,15 @@ class FCMService {
         if (!('Notification' in window) || Notification.permission !== 'granted') {
           logger.log('FCMService.registerTokenForUser: web permission not granted, running full initialize()');
           await this.initialize();
-          token = this.currentToken;
+          // Re-fetch the token directly after initialize() for the same reason as native.
+          try {
+            if (this.messaging) {
+              token = await getToken(this.messaging, { vapidKey: this.vapidKey });
+            }
+          } catch {
+            // ignore — fall through to this.currentToken below
+          }
+          token = token || this.currentToken;
         } else {
           if (!this.messaging) {
             const { app } = await import('src/boot/firebase');
@@ -1093,11 +1129,47 @@ class FCMService {
       this.currentToken = token;
 
       const { registerUserToken } = await import('./tokenRegistrationService');
-      await registerUserToken({ userId, token, platform: this.platform || 'web' });
-      logger.log(`FCMService.registerTokenForUser: token saved for user ${userId}`);
+      const ownerIds = await this.resolveTokenOwnerIds(userId);
+      let successCount = 0;
+      for (const ownerId of ownerIds) {
+        const result = await registerUserToken({ userId: ownerId, token, platform: this.platform || 'web' });
+        if (result) {
+          successCount += 1;
+          console.log(`[FCMService] ✅ Token registered for user ${ownerId} on ${this.platform || 'web'}`);
+        }
+      }
+      if (successCount === 0) {
+        console.error(`[FCMService] ❌ registerUserToken returned null for user ${userId} aliases — check DynamoDB permissions on userTokens table`);
+      }
     } catch (error) {
-      logger.error('FCMService.registerTokenForUser: error:', error?.message || error);
+      console.error('[FCMService] ❌ registerTokenForUser failed:', error?.message || error, error?.stack);
     }
+  }
+
+  async resolveTokenOwnerIds(primaryUserId) {
+    const normalizedPrimary = String(primaryUserId || '').trim();
+    if (!normalizedPrimary) return [];
+
+    const cached = this.userIdAliasCache.get(normalizedPrimary);
+    if (cached && Date.now() - cached.ts < 10 * 60 * 1000) {
+      return cached.ids;
+    }
+
+    const ownerIds = new Set([normalizedPrimary]);
+    try {
+      const { getUserById } = await import('./dynamoDBUsersService');
+      const user = await getUserById(normalizedPrimary);
+      const docId = String(user?.id || '').trim();
+      const authUid = String(user?.authUid || '').trim();
+      if (docId) ownerIds.add(docId);
+      if (authUid) ownerIds.add(authUid);
+    } catch (error) {
+      logger.warn('FCMService: Failed resolving token owner aliases:', error?.message || error);
+    }
+
+    const resolved = Array.from(ownerIds);
+    this.userIdAliasCache.set(normalizedPrimary, { ids: resolved, ts: Date.now() });
+    return resolved;
   }
 
   /**

@@ -136,7 +136,7 @@ export async function registerUserToken({ userId, token, platform = 'web' }) {
       existingToken = existingTokens.find((t) => t.token === token)
     } catch (queryError) {
       // If query fails, proceed with creating new token
-      log.warn('Error querying existing tokens, creating new:', queryError.message)
+      console.error('[TokenRegistrationService] ❌ Query failed on userTokens table:', queryError?.message || queryError, '— Table may not exist or IAM credentials lack Query permission')
     }
 
     let tokenItem
@@ -210,7 +210,7 @@ export async function registerUserToken({ userId, token, platform = 'web' }) {
 
     return tokenItem
   } catch (error) {
-    log.error('Error registering FCM token:', error)
+    console.error('[TokenRegistrationService] ❌ registerUserToken failed:', error?.message || error, '— userId:', userId, 'platform:', platform)
     // Don't throw - token registration failure shouldn't break the app
     return null
   }

@@ -427,6 +427,14 @@ const handleMigration = async () => {
     registrationStore.clearMigrationChallenge()
     registrationStore.setPersonalData({ email: '' })
 
+    // Register FCM token for the newly migrated user (fire-and-forget, non-blocking)
+    const cognitoSubForFcm = resolvedCognitoSub || signInResult?.user?.attributes?.sub || signInResult?.user?.userSub
+    if (cognitoSubForFcm) {
+      import('../../services/fcmService').then(({ fcmService }) => {
+        fcmService.registerTokenForUser(cognitoSubForFcm).catch(() => {})
+      }).catch(() => {})
+    }
+
     // Auto-login after successful migration and device registration.
     notificationStore.showSuccess('Account migrated successfully. Welcome back!')
     router.push('/home')
