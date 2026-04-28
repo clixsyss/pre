@@ -11,47 +11,36 @@ import { getUserServiceBookings as getDynamoDBUserServiceBookings, getServiceBoo
  * @param {string} userEmail - User's email address
  * @returns {Promise<Object>} User info with email, name, and phone
  */
-async function getUserInfoFromDynamoDB(userEmail) {
+async function getUserInfoFromDynamoDB(uid, userEmail) {
   try {
-    if (!userEmail) {
-      console.warn('[ServiceBookingService] No email provided for user info lookup')
+    const { getUserById, getUserByEmail } = await import('./dynamoDBUsersService')
+    let dynamoUser = null
+
+    if (uid) {
+      try { dynamoUser = await getUserById(uid) } catch {}
+    }
+    if (!dynamoUser && userEmail) {
+      try { dynamoUser = await getUserByEmail(userEmail.trim().toLowerCase()) } catch {}
+    }
+
+    if (dynamoUser) {
+      const proj0 = dynamoUser.projects?.[0]
       return {
-        email: '',
-        name: 'User',
-        phone: ''
+        email: dynamoUser.email || userEmail || '',
+        name: dynamoUser.fullName ||
+          `${dynamoUser.firstName || ''} ${dynamoUser.lastName || ''}`.trim() ||
+          userEmail || 'User',
+        phone: dynamoUser.mobile || '',
+        unit: dynamoUser.unit || proj0?.unit || proj0?.userUnit || '',
+        building: dynamoUser.buildingNum || proj0?.buildingNum || '',
       }
     }
 
-    const { getUserByEmail } = await import('./dynamoDBUsersService')
-    const dynamoUser = await getUserByEmail(userEmail.trim().toLowerCase())
-    
-    if (dynamoUser) {
-      const fullName = dynamoUser.fullName || 
-        `${dynamoUser.firstName || ''} ${dynamoUser.lastName || ''}`.trim() || 
-        'User'
-      
-      return {
-        email: dynamoUser.email || userEmail,
-        name: fullName,
-        phone: dynamoUser.mobile || ''
-      }
-    }
-    
-    // Fallback to Cognito user data if DynamoDB lookup fails
-    console.warn('[ServiceBookingService] User not found in DynamoDB, using Cognito data')
-    return {
-      email: userEmail,
-      name: 'User',
-      phone: ''
-    }
+    console.warn('[ServiceBookingService] User not found in DynamoDB')
+    return { email: userEmail || '', name: 'User', phone: '', unit: '', building: '' }
   } catch (error) {
     console.error('[ServiceBookingService] Error fetching user info from DynamoDB:', error)
-    // Return fallback values on error
-    return {
-      email: userEmail || '',
-      name: 'User',
-      phone: ''
-    }
+    return { email: userEmail || '', name: 'User', phone: '', unit: '', building: '' }
   }
 }
 
@@ -92,10 +81,10 @@ class ServiceBookingService {
           throw new Error('Selected date is required');
         }
 
-        // Get user info from DynamoDB (email, name, phone)
+        // Get user info from DynamoDB (name, email, phone, unit, building)
         const userEmail = user.email || user.attributes?.email || user.cognitoAttributes?.email
-        const userInfo = await getUserInfoFromDynamoDB(userEmail)
-        
+        const userInfo = await getUserInfoFromDynamoDB(user.uid, userEmail)
+
         console.log('[ServiceBookingService] User info from DynamoDB:', userInfo)
 
         const now = new Date()
@@ -104,6 +93,8 @@ class ServiceBookingService {
           userName: userInfo.name,
           userEmail: userInfo.email,
           userPhone: userInfo.phone,
+          userUnit: userInfo.unit,
+          userBuilding: userInfo.building,
           projectId: projectId,
           serviceId: bookingData.serviceId,
           categoryId: bookingData.categoryId,

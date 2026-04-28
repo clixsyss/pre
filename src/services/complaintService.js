@@ -4,6 +4,7 @@ import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
 import optimizedAuthService from './optimizedAuthService'
 import { createNotification, NOTIFICATION_TYPES } from './notificationCenterService'
+import { getUserById } from './dynamoDBUsersService'
 
 class ComplaintService {
   constructor() {
@@ -15,10 +16,22 @@ class ComplaintService {
     return performanceService.timeOperation('createComplaint', async () => {
       try {
         console.log('🚀 Creating complaint:', { projectId, userId, complaintData })
-        
+
+        // Fetch user profile for rich admin email details
+        let userProfile = null;
+        try { userProfile = await getUserById(userId) } catch {}
+        const uProj0 = userProfile?.projects?.[0];
+
         const now = Date.now(); // Use timestamp (number) for DynamoDB index compatibility
         const complaint = {
           userId,
+          userName: userProfile?.fullName ||
+            [userProfile?.firstName, userProfile?.lastName].filter(Boolean).join(' ') ||
+            '',
+          userEmail: userProfile?.email || '',
+          userPhone: userProfile?.mobile || '',
+          userUnit: userProfile?.unit || uProj0?.unit || uProj0?.userUnit || '',
+          userBuilding: userProfile?.buildingNum || uProj0?.buildingNum || '',
           adminId: null,
           title: complaintData.title,
           category: complaintData.category,

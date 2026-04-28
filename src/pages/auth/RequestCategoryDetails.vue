@@ -240,6 +240,7 @@ import { useRequestCategoriesStore } from '../../stores/requestCategoriesStore';
 import { useProjectStore } from '../../stores/projectStore';
 import optimizedAuthService from '../../services/optimizedAuthService';
 import requestSubmissionService from '../../services/requestSubmissionService';
+import { getUserById } from '../../services/dynamoDBUsersService';
 import PageHeader from '../../components/PageHeader.vue';
 
 // Component name for ESLint
@@ -566,7 +567,22 @@ const submitRequest = async () => {
       return;
     }
     console.log('✅ User found:', user.uid);
-    
+
+    // Fetch full user profile for rich admin email details
+    let userProfile = null;
+    try {
+      userProfile = await getUserById(user.uid);
+    } catch (profileErr) {
+      console.warn('⚠️ Could not fetch user profile:', profileErr);
+    }
+    const userProj0 = userProfile?.projects?.[0];
+    const resolvedName =
+      userProfile?.fullName ||
+      [userProfile?.firstName, userProfile?.lastName].filter(Boolean).join(' ') ||
+      user.displayName ||
+      user.email ||
+      'Unknown User';
+
     // Check project
     if (!projectStore.selectedProject?.id) {
       console.error('No project selected');
@@ -574,7 +590,7 @@ const submitRequest = async () => {
       return;
     }
     console.log('✅ Project found:', projectStore.selectedProject.id);
-    
+
     // Clean and prepare form data
     const cleanedFormData = {};
     category.value.fields.forEach(field => {
@@ -588,17 +604,19 @@ const submitRequest = async () => {
         cleanedFormData[field.id] = String(value);
       }
     });
-    
+
     console.log('🧹 Cleaned form data:', cleanedFormData);
-    
+
     // Prepare submission data
     const submissionData = {
       categoryId: category.value.id,
       categoryName: category.value.englishTitle,
       userId: user.uid,
-      userName: user.displayName || 'Unknown User',
-      userEmail: user.email,
-      userPhone: user.phoneNumber || '',
+      userName: resolvedName,
+      userEmail: userProfile?.email || user.email || '',
+      userPhone: userProfile?.mobile || user.phoneNumber || '',
+      userUnit: userProfile?.unit || userProj0?.unit || userProj0?.userUnit || '',
+      userBuilding: userProfile?.buildingNum || userProj0?.buildingNum || '',
       formData: cleanedFormData,
       // Add field metadata for admin dashboard display
       fieldMetadata: category.value.fields.map(field => ({
