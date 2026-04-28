@@ -3,23 +3,43 @@ import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
 import optimizedAuthService from './optimizedAuthService'
 import { createNotification, NOTIFICATION_TYPES } from './notificationCenterService'
+import { getUserById } from './dynamoDBUsersService'
 
 // Create a new support chat
 export const createSupportChat = async (projectId, data) => {
   return performanceService.timeOperation('createSupportChat', async () => {
     try {
       console.log('🚀 Creating support chat:', { projectId, data })
-      
+
       const user = await optimizedAuthService.getCurrentUser()
-      
+
       if (!user) {
         throw new Error('User must be authenticated');
       }
 
+      // Fetch full user profile to embed rich details in the chat record
+      let userProfile = null
+      try {
+        userProfile = await getUserById(user.uid)
+      } catch (profileErr) {
+        console.warn('⚠️ Could not fetch user profile for support chat:', profileErr)
+      }
+
+      const proj0 = userProfile?.projects?.[0]
+      const fullName =
+        userProfile?.fullName ||
+        [userProfile?.firstName, userProfile?.lastName].filter(Boolean).join(' ') ||
+        user.displayName ||
+        user.email ||
+        'Unknown'
+
       const supportChatData = {
         userId: user.uid,
-        userName: user.displayName || 'User',
-        userEmail: user.email,
+        userName: fullName,
+        userEmail: userProfile?.email || user.email || '',
+        userPhone: userProfile?.mobile || '',
+        userUnit: userProfile?.unit || proj0?.unit || proj0?.userUnit || '',
+        userBuilding: userProfile?.buildingNum || proj0?.buildingNum || '',
         title: data.title || `Support Chat - ${new Date().toLocaleString()}`,
         status: 'open',
         category: data.category || 'general',
