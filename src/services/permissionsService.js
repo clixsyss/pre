@@ -350,10 +350,16 @@ class PermissionsService {
 
   /**
    * Request Photo Library Permission
-   * Required for choosing images (matches iOS NSPhotoLibraryUsageDescription)
+   * For Android we rely on one-time system photo picker access (no broad media permission).
+   * iOS still uses the plugin-level photos permission when needed.
    */
   async requestPhotosPermission() {
     try {
+      if (this.platform === 'android') {
+        console.log('🖼️ Android photo picker mode: skipping broad gallery permission request')
+        return true
+      }
+
       console.log('🖼️ Checking photo library permissions...')
       const permission = await Camera.checkPermissions()
       const photosStatus = permission.photos ?? permission.camera

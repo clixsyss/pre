@@ -19,7 +19,11 @@ class ComplaintService {
 
         // Fetch user profile for rich admin email details
         let userProfile = null;
-        try { userProfile = await getUserById(userId) } catch {}
+        try {
+          userProfile = await getUserById(userId)
+        } catch (lookupError) {
+          console.warn('[ComplaintService] Failed to load user profile for complaint email details:', lookupError?.message || lookupError)
+        }
         const uProj0 = userProfile?.projects?.[0];
 
         const now = Date.now(); // Use timestamp (number) for DynamoDB index compatibility

@@ -60,12 +60,8 @@
     <!-- Bluetooth feature declaration -->
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
     
-    <!-- Photo library read (matches iOS NSPhotoLibraryUsageDescription) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <!-- Photo library save (matches iOS NSPhotoLibraryAddUsageDescription) -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <!-- No broad media library permissions:
+         app uses one-time picker access instead of persistent gallery access. -->
     
     <!-- Camera feature (optional - matches iOS camera) -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />

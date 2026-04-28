@@ -17,10 +17,18 @@ async function getUserInfoFromDynamoDB(uid, userEmail) {
     let dynamoUser = null
 
     if (uid) {
-      try { dynamoUser = await getUserById(uid) } catch {}
+      try {
+        dynamoUser = await getUserById(uid)
+      } catch (idLookupError) {
+        console.warn('[ServiceBookingService] getUserById lookup failed:', idLookupError?.message || idLookupError)
+      }
     }
     if (!dynamoUser && userEmail) {
-      try { dynamoUser = await getUserByEmail(userEmail.trim().toLowerCase()) } catch {}
+      try {
+        dynamoUser = await getUserByEmail(userEmail.trim().toLowerCase())
+      } catch (emailLookupError) {
+        console.warn('[ServiceBookingService] getUserByEmail lookup failed:', emailLookupError?.message || emailLookupError)
+      }
     }
 
     if (dynamoUser) {
