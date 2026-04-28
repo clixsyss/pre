@@ -14,10 +14,12 @@
           :class="{ 'has-link': ad.linkUrl }"
         >
           <div class="ad-image-container">
-            <img 
-              :src="ad.imageUrl" 
+            <img
+              :src="ad.imageUrl"
               :alt="`Advertisement`"
               class="ad-image"
+              loading="lazy"
+              decoding="async"
               @error="handleImageError"
             />
             <!-- Gradient overlay for better visual appeal -->
@@ -113,32 +115,20 @@ const isHovered = ref(false);
 const isLoading = ref(true);
 
 const loadAds = async () => {
+  const projectId = projectStore.selectedProject?.id;
+  if (!projectId) return;
+
   try {
     isLoading.value = true;
-    const projectId = projectStore.selectedProject?.id;
-    console.log('AdsCarousel: Loading ads for project:', projectId);
-    
-    if (!projectId) {
-      console.warn('AdsCarousel: No project selected for ads');
-      return;
-    }
-    
     const adsData = await getActiveAds(projectId);
-    console.log('AdsCarousel: Loaded ads:', adsData);
     ads.value = adsData;
-    
-    // Reset to first slide if current index is out of bounds
+
     if (currentIndex.value >= adsData.length) {
       currentIndex.value = 0;
     }
-    
-    // Start auto-play after ads are loaded
-    if (adsData.length > 1) {
-      stopAutoPlay(); // Stop any existing timer first
-      startAutoPlay();
-    } else {
-      stopAutoPlay(); // Stop auto-play if not enough ads
-    }
+
+    stopAutoPlay();
+    if (adsData.length > 1) startAutoPlay();
   } catch (error) {
     console.error('AdsCarousel: Error loading ads:', error);
   } finally {
@@ -176,23 +166,14 @@ const handleImageError = (event) => {
 };
 
 const startAutoPlay = () => {
-  if (!props.autoPlay || ads.value.length <= 1) {
-    console.log('AdsCarousel: Auto-play not started - autoPlay:', props.autoPlay, 'ads count:', ads.value.length);
-    return;
-  }
-  
-  console.log('AdsCarousel: Starting auto-play with interval:', props.autoPlayInterval);
+  if (!props.autoPlay || ads.value.length <= 1) return;
   autoPlayTimer.value = setInterval(() => {
-    if (!isHovered.value) {
-      // console.log('AdsCarousel: Auto-advancing to next slide');
-      nextSlide();
-    }
+    if (!isHovered.value) nextSlide();
   }, props.autoPlayInterval);
 };
 
 const stopAutoPlay = () => {
   if (autoPlayTimer.value) {
-    console.log('AdsCarousel: Stopping auto-play');
     clearInterval(autoPlayTimer.value);
     autoPlayTimer.value = null;
   }
@@ -213,15 +194,13 @@ watch(() => props.autoPlay, (newValue) => {
 });
 
 onMounted(() => {
-  loadAds();
-  startAutoPlay();
-  
-  // Handle mouse events for pause on hover
+  // loadAds is already triggered by the watch below (immediate: true) — don't call it again.
+  // Only set up DOM-dependent listeners here.
   if (carouselContainer.value) {
     carouselContainer.value.addEventListener('mouseenter', () => {
       isHovered.value = true;
     });
-    
+
     carouselContainer.value.addEventListener('mouseleave', () => {
       isHovered.value = false;
     });

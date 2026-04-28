@@ -18,7 +18,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import optimizedAuthService from '../services/optimizedAuthService';
@@ -26,6 +26,7 @@ import { useProjectStore } from '../stores/projectStore';
 import UnifiedChat from './UnifiedChat.vue';
 import firestoreService from '../services/firestoreService';
 import fileUploadService from '../services/fileUploadService';
+import { getLastIncomingAdminMessageId } from '../utils/chatUnread';
 
 const props = defineProps({
   requestId: {
@@ -61,6 +62,12 @@ const normalizeStatus = (value) =>
     .replace(/\s+/g, '_');
 
 const isRequestClosed = () => TERMINAL_REQUEST_STATUSES.has(normalizeStatus(requestData.value?.status));
+const markRequestMessagesAsRead = () => {
+  if (!requestId.value) return;
+  const lastIncomingId = getLastIncomingAdminMessageId(messages.value);
+  if (!lastIncomingId) return;
+  localStorage.setItem(`lastReadMessage_request_${requestId.value}`, String(lastIncomingId));
+};
 
 const redirectIfClosed = (statusValue) => {
   if (!TERMINAL_REQUEST_STATUSES.has(normalizeStatus(statusValue))) return false;
@@ -73,6 +80,7 @@ const redirectIfClosed = (statusValue) => {
 onMounted(async () => {
   await loadRequestData();
   await loadMessages();
+  markRequestMessagesAsRead();
 });
 
 const loadRequestData = async () => {
@@ -341,6 +349,14 @@ onUnmounted(() => {
     pollInterval.value = null;
   }
 });
+
+watch(
+  () => messages.value,
+  () => {
+    markRequestMessagesAsRead();
+  },
+  { deep: true }
+);
 </script>
 
 <style scoped>

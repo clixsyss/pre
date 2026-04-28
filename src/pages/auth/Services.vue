@@ -365,7 +365,7 @@
 
     <!-- Service Booking Modal -->
     <ServiceBookingModal :isOpen="showBookingModal" :booking="selectedBooking" @close="closeBookingModal"
-      @openChat="openBookingChat" />
+      @openChat="openBookingChat" @booking-updated="handleBookingUpdated" />
     </div><!-- end services-page-content -->
   </div>
 </template>
@@ -713,6 +713,11 @@ const openBookingChat = (booking) => {
     return;
   }
   router.push(`/service-booking-chat/${booking.id}`);
+};
+
+const handleBookingUpdated = async () => {
+  await loadBookings();
+  await closeBookingModal();
 };
 
 // Format status for display

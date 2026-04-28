@@ -27,26 +27,22 @@ export const useSplashStore = defineStore('splash', () => {
   }
 
   const setVideoCompleted = () => {
-    console.log('📹 Splash: Video completed')
     videoCompleted.value = true
     checkAndHideSplash()
   }
 
   const setAppInitialized = () => {
-    console.log('✅ Splash: App initialized')
     appInitialized.value = true
     checkAndHideSplash()
   }
 
-  // Add app-loaded only after the router has completed its first navigation.
-  // This prevents the body background from switching from black to #f6f6f6 before
-  // the first page is painted, which causes the white flash between splash and content.
+  // Apply app-loaded class after the router completes its first navigation.
+  // Prevents the body background switching from black → #f6f6f6 before first paint,
+  // which is what causes the white flash.
   const applyAppLoaded = () => {
     if (document.body.classList.contains('app-loaded')) return
     document.body.classList.add('app-loaded')
-    console.log('✅ Splash: App loaded class added to body')
-    // Enable transitions only after two animation frames so the initial paint
-    // (background switch from black to #f6f6f6) happens instantly with no animation.
+    // Enable CSS transitions after two rAF frames so the initial paint is instant
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         document.body.classList.add('transitions-ready')
@@ -56,41 +52,27 @@ export const useSplashStore = defineStore('splash', () => {
 
   const checkAndHideSplash = async () => {
     if (videoCompleted.value && appInitialized.value) {
-      console.log('🎬 Splash: Both video and app ready — hiding splash')
-      // Apply app-loaded BEFORE hiding the splash so the content underneath
-      // already has the correct background when the fade-out completes.
       applyAppLoaded()
       hideSplash()
       setTimeout(async () => {
         try {
-          if (Capacitor.isNativePlatform()) {
-            await SplashScreen.hide()
-            console.log('✅ Native splash hidden - app is fully loaded')
-          }
+          if (Capacitor.isNativePlatform()) await SplashScreen.hide()
         } catch (error) {
           console.warn('⚠️ Could not hide native splash:', error)
         }
       }, 250)
-    } else {
-      console.log('⏳ Splash: Waiting...', {
-        videoCompleted: videoCompleted.value,
-        appInitialized: appInitialized.value
-      })
     }
   }
 
-  // Safety timeout: Force hide splash after 4.5s if still showing
+  // Safety: force-hide after 4.5s if video or app init never resolved
   setTimeout(() => {
     if (show.value) {
-      console.warn('⏱️ Splash Store: Safety timeout reached, forcing hide')
       videoCompleted.value = true
       appInitialized.value = true
       applyAppLoaded()
       hideSplash()
       if (Capacitor.isNativePlatform()) {
-        SplashScreen.hide().catch(err => {
-          console.warn('⚠️ Could not hide native splash on timeout:', err)
-        })
+        SplashScreen.hide().catch(() => {})
       }
     }
   }, 4500)

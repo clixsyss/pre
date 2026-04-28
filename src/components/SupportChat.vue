@@ -18,13 +18,14 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useSupportStore } from '../stores/supportStore';
 import { useNotificationStore } from '../stores/notifications';
 import UnifiedChat from './UnifiedChat.vue';
 import fileUploadService from '../services/fileUploadService';
 import optimizedAuthService from '../services/optimizedAuthService';
+import { getLastIncomingAdminMessageId } from '../utils/chatUnread';
 
 const router = useRouter();
 const route = useRoute();
@@ -55,6 +56,13 @@ const messages = computed(() => {
   });
   return messageList;
 });
+
+const markSupportMessagesAsRead = () => {
+  if (!supportChatId.value) return;
+  const lastIncomingId = getLastIncomingAdminMessageId(messages.value);
+  if (!lastIncomingId) return;
+  localStorage.setItem(`lastReadMessage_support_${supportChatId.value}`, String(lastIncomingId));
+};
 
 // Load support chat data
 const loadSupportChat = async () => {
@@ -123,6 +131,7 @@ onMounted(async () => {
   
   await loadSupportChat();
   await setupRealtimeListener();
+  markSupportMessagesAsRead();
 });
 
 onUnmounted(() => {
@@ -132,6 +141,14 @@ onUnmounted(() => {
     unsubscribe.value = null;
   }
 });
+
+watch(
+  () => messages.value,
+  () => {
+    markSupportMessagesAsRead();
+  },
+  { deep: true }
+);
 
 // Message handling functions
 const handleSendMessage = async (messageText) => {

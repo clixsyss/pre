@@ -214,7 +214,7 @@
         <!-- Submit Button -->
         <div class="form-actions">
           <button type="submit" :disabled="submitting" class="submit-btn">
-            <span>{{ submitting ? 'Uploading files...' : 'Submit Request' }}</span>
+            <span>{{ submitting ? 'Uploading files...' : (isEditMode ? 'Save Changes' : 'Submit Request') }}</span>
           </button>
           <div v-if="submitting" class="upload-progress">
             <p>Please wait while we process and upload your files...</p>
@@ -270,10 +270,15 @@ const showUploadOptions = ref(false);
 
 // Computed
 const categoryId = computed(() => route.params.id);
+const editSubmissionId = computed(() => route.query.editSubmissionId || '');
+const isEditMode = computed(() => Boolean(editSubmissionId.value));
 
 // Load category
 onMounted(async () => {
   await loadCategory();
+  if (isEditMode.value) {
+    await loadEditableSubmission();
+  }
 });
 
 const loadCategory = async () => {
@@ -319,6 +324,33 @@ const initializeFormData = () => {
   formData.value = initialData;
   
   console.log('✅ Form data initialized:', formData.value);
+};
+
+const loadEditableSubmission = async () => {
+  if (!projectStore.selectedProject?.id || !editSubmissionId.value) return;
+  try {
+    const user = await optimizedAuthService.getCurrentUser();
+    if (!user) throw new Error('User must be logged in');
+    const submission = await requestSubmissionService.getSubmissionById(
+      projectStore.selectedProject.id,
+      editSubmissionId.value
+    );
+    if (submission.userId !== user.uid) {
+      throw new Error('You cannot edit this request.');
+    }
+    const status = String(submission.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+    if (!['cancelled', 'rejected'].includes(status)) {
+      throw new Error('Only cancelled or rejected requests can be edited.');
+    }
+    formData.value = {
+      ...formData.value,
+      ...(submission.formData || {})
+    };
+  } catch (err) {
+    console.error('❌ Failed to load editable request:', err);
+    alert(err.message || 'Unable to load request for editing.');
+    router.push('/requests');
+  }
 };
 
 // File handling
@@ -591,24 +623,39 @@ const submitRequest = async () => {
     console.log('📝 Category fields:', category.value.fields);
     console.log('📁 Files to upload:', selectedFiles.value.length);
     
-    // Submit the request
-    const submissionId = await requestSubmissionService.submitRequest(submissionData, selectedFiles.value);
-    console.log('✅ Request submitted successfully with ID:', submissionId);
+    let processedSubmissionId = editSubmissionId.value || '';
+
+    if (isEditMode.value) {
+      await requestSubmissionService.updateSubmissionForUser(
+        projectStore.selectedProject.id,
+        editSubmissionId.value,
+        user.uid,
+        {
+          formData: cleanedFormData,
+          fieldMetadata: submissionData.fieldMetadata
+        }
+      );
+      console.log('✅ Request updated successfully:', editSubmissionId.value);
+    } else {
+      // Submit the request
+      processedSubmissionId = await requestSubmissionService.submitRequest(submissionData, selectedFiles.value);
+      console.log('✅ Request submitted successfully with ID:', processedSubmissionId);
+    }
     
     // iOS-specific: Additional success verification
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     if (isIOS) {
       console.log('📱 iOS: Request submission completed successfully');
-      console.log('📱 iOS: Submission ID:', submissionId);
+      console.log('📱 iOS: Submission ID:', processedSubmissionId);
       console.log('📱 iOS: Category:', submissionData.categoryName);
       console.log('📱 iOS: User:', submissionData.userName);
     }
     
     // Show success message
-    alert('Your request has been submitted successfully!');
+    alert(isEditMode.value ? 'Your request has been updated successfully!' : 'Your request has been submitted successfully!');
     
     // Navigate back
-    router.push('/facilities');
+    router.push('/requests');
     
   } catch (err) {
     console.error('❌ Error submitting request:', err);

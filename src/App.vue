@@ -49,7 +49,6 @@ import DocumentVerificationModal from './components/DocumentVerificationModal.vu
 import { useNetworkStatus } from './composables/useNetworkStatus'
 import { useDocumentVerification } from './composables/useDocumentVerification'
 import { useSplashStore } from './stores/splash'
-import optimizedAuthService from './services/optimizedAuthService'
 
 // Component name for ESLint
 defineOptions({
@@ -69,10 +68,11 @@ const parseQuickOpenUrl = (urlValue) => {
   return value.includes('source=') ? value.split('source=')[1].split('&')[0] : 'deep-link'
 }
 
-// Safety timeout: Ensure splash knows app is initialized within 2 seconds.
+// Safety timeout: Ensure splash knows app is initialized within 3 seconds
+// (only fires if onMounted's normal path failed).
 setTimeout(() => {
-  splashStore.setAppInitialized()
-}, 2000)
+  if (!splashStore.appInitialized) splashStore.setAppInitialized()
+}, 3000)
 
 // Initialize network monitoring
 const { initNetworkMonitoring, stopNetworkMonitoring } = useNetworkStatus()
@@ -147,68 +147,17 @@ onMounted(async () => {
       logger.log('🍎 iOS platform detected - added platform-ios class')
     }
     
-    // Show splash screen and set loading state
-    splashStore.showSplash()
-    splashStore.setLoading(true)
-    splashStore.setLoadingMessage('Loading...')
-    
-    // Initialize network monitoring first
-    logger.log('🌐 App.vue: Initializing network monitoring...')
-    await initNetworkMonitoring()
-    logger.log('✅ Network monitoring initialized')
-    
-    // Wait for Vue to be fully ready
+    // Start network monitoring (non-blocking — fire and forget so it doesn't delay the splash)
+    initNetworkMonitoring().catch(() => {})
+
+    // Give Vue one tick to finish its initial render, then signal the splash immediately.
+    // All prior `setTimeout` delays (80ms + 120ms + 150ms) were artificial and caused
+    // the black/white-screen gap — removed.
     await nextTick()
-    logger.log('🚀 App.vue: Vue app mounted')
-    
-    // Services are already initialized via boot files
-    // Just verify they're available
-    logger.log('🔍 App.vue: Verifying services availability...')
-    
-    try {
-      const authCheck = optimizedAuthService ? 'available' : 'not available'
-      logger.log('🔍 optimizedAuthService:', authCheck)
-    } catch (e) {
-      logger.warn('⚠️ Error checking auth service:', e)
-    }
-    
-    logger.log('🚀 App.vue: Services verification completed')
-    
-    // Shorter delays to reduce white-screen duration (was 200+300 iOS, now 80+120)
-    const initDelay = isIOS ? 80 : (isAndroid ? 120 : 200)
-    const paintDelay = isIOS ? 120 : (isAndroid ? 150 : 300)
-    
-    logger.log('🔍 App.vue: Platform detected', { platform, isIOS, isAndroid, initDelay, paintDelay })
-    
-    // Skip extra "layout not found" wait on native to speed up splash handoff
-    const layoutWaitMs = (isIOS || isAndroid) ? 150 : 500
-    
-    // Wait for smooth initialization (iOS-optimized)
-    await new Promise(resolve => setTimeout(resolve, initDelay))
-    
-    // Wait for Vue to render the content
-    await nextTick()
-    
-    // Wait additional time for the DOM to paint
-    // iOS-optimized: Shorter delay since cache makes everything faster
-    await new Promise(resolve => setTimeout(resolve, paintDelay))
-    
-    logger.log('🔍 App.vue: Checking if content is rendered...')
-    const mainContent = document.querySelector('.main-layout, .auth-layout')
-    if (mainContent) {
-      logger.log('✅ App.vue: Main content found in DOM')
-    } else {
-      logger.warn('⚠️ App.vue: Main content not yet rendered, waiting...')
-      await new Promise(resolve => setTimeout(resolve, layoutWaitMs))
-    }
-    
-    // Notify splash store that app is initialized
-    // The splash will hide when both video AND app are ready
-    logger.log('🚀 App.vue: Notifying splash that app is initialized')
+
     splashStore.setAppInitialized()
-    
-    // Initialize document verification after app is ready
-    logger.log('🔍 App.vue: Initializing document verification...')
+
+    // Initialize document verification after the first paint
     initializeDocumentVerification()
     
   } catch (error) {
@@ -281,33 +230,15 @@ const isGuestPassPage = computed(() => {
 })
 
 const isAuthenticatedPage = computed(() => {
-  logger.log('🔍 App.vue: Checking route:', { 
-    currentPath: route.path, 
-    isRouterLoading: isRouterLoading.value,
-    isGuestPass: isGuestPassPage.value
-  })
-  
   // Guest pass page should never show app UI
-  if (isGuestPassPage.value) {
-    return false
-  }
-  
+  if (isGuestPassPage.value) return false
+
   // Check exact matches first
-  if (authenticatedRoutes.includes(route.path)) {
-    logger.log('🔍 App.vue: Exact match found, showing main layout')
-    return true
-  }
-  
+  if (authenticatedRoutes.includes(route.path)) return true
+
   // Check dynamic routes
-  if (route.path.startsWith('/academy-details/')) {
-    logger.log('🔍 App.vue: Academy details route, showing main layout')
-    return true
-  }
-  
-  if (route.path.startsWith('/academy-registration/')) {
-    logger.log('🔍 App.vue: Academy registration route, showing main layout')
-    return true
-  }
+  if (route.path.startsWith('/academy-details/')) return true
+  if (route.path.startsWith('/academy-registration/')) return true
   
   if (route.path.startsWith('/store/')) {
     return true

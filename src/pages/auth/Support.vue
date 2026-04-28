@@ -54,7 +54,10 @@
               <span class="chat-title">{{ chat.title || $t('supportChat') }}</span>
               <span :class="['chat-status', chat.status]">{{ chat.status }}</span>
             </div>
-            <span class="chat-date">{{ formatDate(chat.lastMessageAt) }}</span>
+            <div class="chat-right">
+              <span class="chat-date">{{ formatDate(chat.lastMessageAt) }}</span>
+              <span v-if="getUnreadCount(chat) > 0" class="unread-badge">{{ getUnreadCount(chat) }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -71,6 +74,7 @@ import { useSupportStore } from '../../stores/supportStore'
 import PageHeader from '../../components/PageHeader.vue'
 import SuspensionBanner from '../../components/SuspensionBanner.vue'
 import { useSuspensionGuard } from '../../composables/useSuspensionGuard'
+import { getUnreadIncomingAdminCount } from '../../utils/chatUnread'
 
 defineOptions({
   name: 'AuthSupportPage'
@@ -132,6 +136,12 @@ const formatDate = (timestamp) => {
   if (!timestamp) return 'N/A'
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
   return date.toLocaleString()
+}
+
+const getUnreadCount = (chat) => {
+  if (!chat?.id) return 0;
+  const lastReadMessageId = localStorage.getItem(`lastReadMessage_support_${chat.id}`);
+  return getUnreadIncomingAdminCount(chat.messages || [], lastReadMessageId);
 }
 
 onMounted(async () => {
@@ -296,6 +306,12 @@ onMounted(async () => {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
+.chat-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Mobile app - hover effects disabled */
 /* .chat-card:hover {
   transform: translateY(-3px);
@@ -344,6 +360,20 @@ onMounted(async () => {
 .chat-date {
   font-size: 0.85rem;
   color: #999;
+}
+
+.unread-badge {
+  background: #ef4444;
+  color: #fff;
+  border-radius: 999px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 

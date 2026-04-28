@@ -229,25 +229,12 @@ const loadGuestPass = async () => {
       throw new Error('Invalid pass link. Please check the URL.')
     }
 
-    console.log('📥 Loading guest pass from DynamoDB:', passId.value, 'for project:', projectId.value)
-
-    // Fetch pass from DynamoDB using AWS-based API
     const passData = await getGuestPass(projectId.value, passId.value)
-    
+
     if (!passData) {
       throw new Error('Guest pass not found. It may have been deleted or the link is invalid.')
     }
 
-    console.log('🔍 Pass data from DynamoDB:', {
-      id: passData.id,
-      guestName: passData.guestName,
-      validUntil: passData.validUntil,
-      validUntilType: typeof passData.validUntil,
-      createdAt: passData.createdAt,
-      createdAtType: typeof passData.createdAt,
-      qrCodeUrl: passData.qrCodeUrl ? 'present (S3)' : 'missing'
-    })
-    
     pass.value = {
       id: passData.id,
       projectId: passData.projectId,
@@ -260,19 +247,6 @@ const loadGuestPass = async () => {
       usedAt: passData.usedAt || null,
       qrCodeUrl: passData.qrCodeUrl || null,
       cardId: passData.cardId || null,
-    }
-
-    console.log('✅ Guest pass loaded from DynamoDB:', pass.value)
-    
-    // Verify QR code URL is from S3, not Firebase
-    if (pass.value.qrCodeUrl) {
-      const isS3 = pass.value.qrCodeUrl.includes('s3.amazonaws.com') || pass.value.qrCodeUrl.includes('.s3.')
-      const isFirebase = pass.value.qrCodeUrl.includes('firebasestorage.googleapis.com') || pass.value.qrCodeUrl.includes('firebase')
-      console.log('🔍 QR code URL check:', { isS3, isFirebase, url: pass.value.qrCodeUrl })
-      
-      if (isFirebase) {
-        console.warn('⚠️ WARNING: QR code URL is from Firebase, not S3. This is an old pass.')
-      }
     }
 
     // If no QR code URL, generate QR code on canvas

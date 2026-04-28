@@ -163,6 +163,9 @@
               </svg>
               {{ formatTime(complaint.lastMessageAt) }}
             </div>
+            <div v-if="getUnreadCount(complaint) > 0" class="unread-badge">
+              {{ getUnreadCount(complaint) }}
+            </div>
             <div class="complaint-arrow">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -170,6 +173,13 @@
               </svg>
             </div>
           </div>
+          <button
+            v-if="canEditComplaint(complaint)"
+            class="edit-complaint-btn"
+            @click.stop="startEditingComplaint(complaint)"
+          >
+            Edit
+          </button>
         </div>
       </div>
     </div>
@@ -328,6 +338,7 @@ import ComplaintLucideIcon from '../../components/ComplaintLucideIcon.vue';
 import { getComplaintCategoryEmoji } from '../../utils/complaintCategoryDisplay';
 import SuspensionBanner from '../../components/SuspensionBanner.vue';
 import { useSuspensionGuard } from '../../composables/useSuspensionGuard';
+import { getUnreadIncomingAdminCount } from '../../utils/chatUnread';
 
 // Component name for ESLint
 defineOptions({
@@ -358,6 +369,7 @@ const newComplaint = ref({
   priority: 'Medium',
   initialMessage: ''
 });
+const editingComplaintId = ref(null);
 
 // File upload variables
 const selectedFile = ref(null);
@@ -414,6 +426,7 @@ const openComplaint = (complaint) => {
 
 const closeModal = () => {
   showNewComplaintModal.value = false;
+  editingComplaintId.value = null;
   newComplaint.value = {
     title: '',
     category: '',
@@ -441,17 +454,31 @@ const submitComplaint = async () => {
       imageFileName = uploadResult.fileName;
     }
 
-    // Create complaint with file data
-    const complaintData = {
-      ...newComplaint.value,
-      imageUrl,
-      imageFileName
-    };
+    if (editingComplaintId.value) {
+      await complaintStore.updateComplaintForUser(editingComplaintId.value, {
+        ...newComplaint.value,
+        imageUrl,
+        imageFileName
+      });
+      notificationStore.showSuccess('Complaint updated successfully');
+    } else {
+      // Create complaint with file data
+      const complaintData = {
+        ...newComplaint.value,
+        imageUrl,
+        imageFileName
+      };
 
-    const createdComplaint = await complaintStore.createComplaint(complaintData);
+      const createdComplaint = await complaintStore.createComplaint(complaintData);
 
-    console.log('✅ ComplaintsPage: Complaint created successfully:', createdComplaint);
-    console.log('✅ ComplaintsPage: Current complaints count after creation:', complaintStore.userComplaints.length);
+      console.log('✅ ComplaintsPage: Complaint created successfully:', createdComplaint);
+      console.log('✅ ComplaintsPage: Current complaints count after creation:', complaintStore.userComplaints.length);
+
+      // Navigate to the created complaint
+      if (createdComplaint && createdComplaint.id) {
+        router.push(`/complaints/${createdComplaint.id}`);
+      }
+    }
 
     // Reset form
     newComplaint.value = {
@@ -463,13 +490,25 @@ const submitComplaint = async () => {
     removeFile();
     closeModal();
     
-    // Navigate to the created complaint
-    if (createdComplaint && createdComplaint.id) {
-      router.push(`/complaints/${createdComplaint.id}`);
-    }
   } catch (error) {
     console.error('Error creating complaint:', error);
   }
+};
+
+const canEditComplaint = (complaint) => {
+  const status = String(complaint?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+  return status === 'cancelled' || status === 'rejected';
+};
+
+const startEditingComplaint = (complaint) => {
+  editingComplaintId.value = complaint.id;
+  newComplaint.value = {
+    title: complaint.title || '',
+    category: complaint.category || '',
+    priority: complaint.priority || 'Medium',
+    initialMessage: ''
+  };
+  showNewComplaintModal.value = true;
 };
 
 const getStatusLabel = (status) => {
@@ -501,6 +540,12 @@ const getCategoryRow = (categoryId) => {
     iconUrl: category.iconUrl || '',
     lucideIcon: category.lucideIcon || '',
   };
+};
+
+const getUnreadCount = (complaint) => {
+  if (!complaint?.id) return 0;
+  const lastReadMessageId = localStorage.getItem(`lastReadMessage_complaint_${complaint.id}`);
+  return getUnreadIncomingAdminCount(complaint.messages || [], lastReadMessageId);
 };
 
 const formatTime = (timestamp) => {
@@ -1034,6 +1079,7 @@ watch(showNewComplaintModal, (isOpen) => {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
 }
 
 /* Mobile app - hover effects disabled */
@@ -1151,6 +1197,7 @@ watch(showNewComplaintModal, (isOpen) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
 }
 
 .complaint-time {
@@ -1164,6 +1211,35 @@ watch(showNewComplaintModal, (isOpen) => {
 .complaint-arrow {
   color: #d1d5db;
   transition: color 0.2s ease;
+}
+
+.unread-badge {
+  background: #ef4444;
+  color: #fff;
+  border-radius: 999px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: auto;
+}
+
+.edit-complaint-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  background: #fff;
+  color: #AF1E23;
+  border: 1px solid #f5c2c4;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 /* Mobile app - hover effects disabled */

@@ -1936,18 +1936,10 @@ const loadPassesFromFirebase = async () => {
 
     console.log(`✅ Loaded ${passes.value.length} total passes (${usedThisMonth} this month)`)
 
-    // Generate QR codes for all passes
+    // Generate QR codes for all passes in parallel (non-blocking)
     if (passes.value.length > 0) {
       await nextTick()
-      setTimeout(async () => {
-        for (const pass of passes.value) {
-          try {
-            await generateQRCode(pass)
-          } catch (qrError) {
-            console.error('❌ Error generating QR for pass:', pass.id, qrError)
-          }
-        }
-      }, 200)
+      Promise.all(passes.value.map(pass => generateQRCode(pass).catch(() => {})))
     }
   } catch (error) {
     console.error('❌ Error loading passes from Firebase:', error)
@@ -1987,21 +1979,17 @@ const loadPassesFromAWS = async () => {
 
     // Get user ID (Cognito sub)
     const primaryUserId = getPrimaryUserIdentifier(user)
-    await hydrateCurrentUserDisplayName(user, primaryUserId)
-    if (!currentUserDisplayName.value) {
-      currentUserDisplayName.value = 'User'
-    }
-    console.log('📥 Loading passes from AWS for project:', projectId)
-    console.log('👤 User ID:', primaryUserId)
 
-    // Get user status (includes unit info and limits)
-    const { status: userStatus, resolvedUserId } = await getUserStatusWithAndroidFallback(user, projectId)
+    // Hydrate display name and fetch user status in parallel
+    const [, { status: userStatus, resolvedUserId }] = await Promise.all([
+      hydrateCurrentUserDisplayName(user, primaryUserId),
+      getUserStatusWithAndroidFallback(user, projectId),
+    ])
+    if (!currentUserDisplayName.value) currentUserDisplayName.value = 'User'
+
     const userUnit = userStatus.data?.unit || ''
 
-    console.log('🏠 User unit:', userUnit)
-    console.log('📊 User status:', userStatus.data)
-
-    // Update blocking status
+    // Update blocking status and limits immediately so the UI reflects them
     userBlockingStatus.value = {
       isBlocked: userStatus.data?.blocked || false,
       blockingDetails: userStatus.data?.blocked
@@ -2009,10 +1997,7 @@ const loadPassesFromAWS = async () => {
         : null,
       loading: false,
     }
-
-    // Update limits
     passLimits.value = {
-      // Monthly values intentionally disabled in app (daily-only mode).
       monthlyLimit: null,
       usedThisMonth: userStatus.data?.usedThisMonth || 0,
       remainingQuota: null,
@@ -2021,10 +2006,7 @@ const loadPassesFromAWS = async () => {
       dailyRemainingQuota: userStatus.data?.dailyRemainingQuota ?? null,
     }
 
-    console.log('✅ Pass limits set:', passLimits.value)
-
-    // Load passes for this unit (or user if no unit)
-    // This function already sorts by newest first
+    // Load passes for this unit (or user if no unit), sorted newest first
     const loadedPasses = await getGuestPassesForUnit(projectId, resolvedUserId, userUnit || null)
     const currentUserIdentifierSet = buildCurrentUserIdentifierSet(user, resolvedUserId)
     const visibleResidentPasses = loadedPasses.filter((pass) => {
@@ -2032,11 +2014,7 @@ const loadPassesFromAWS = async () => {
       return userUnit ? true : doesPassBelongToCurrentUser(pass, currentUserIdentifierSet)
     })
 
-    console.log(
-      `✅ Loaded ${loadedPasses.length} passes from AWS, visible resident passes: ${visibleResidentPasses.length} (${userUnit ? 'showing unit passes' : 'showing current account only'})`,
-    )
-
-    // Map passes to the format expected by the component
+    // Map passes and show them immediately — QR generation happens in the background
     passes.value = visibleResidentPasses.map(pass => ({
       id: pass.id,
       projectId: pass.projectId,
@@ -2056,20 +2034,15 @@ const loadPassesFromAWS = async () => {
       usedAt: pass.usedAt,
     }))
 
-    // Generate QR codes for all passes
+    isLoadingPasses.value = false
+
+    // Generate QR codes for all passes in parallel (non-blocking — list is already visible)
     if (passes.value.length > 0) {
       await nextTick()
-      setTimeout(async () => {
-        for (const pass of passes.value) {
-          try {
-            await generateQRCode(pass)
-          } catch (qrError) {
-            console.error('❌ Error generating QR for pass:', pass.id, qrError)
-          }
-        }
-      }, 200)
+      Promise.all(
+        passes.value.map(pass => generateQRCode(pass).catch(() => {}))
+      )
     }
-    isLoadingPasses.value = false
   } catch (error) {
     console.error('❌ Error loading passes from AWS:', error)
     passes.value = []

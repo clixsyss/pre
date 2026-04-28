@@ -273,6 +273,61 @@ class ComplaintService {
     })
   }
 
+  async updateComplaintForUser(projectId, complaintId, userId, updates = {}) {
+    return performanceService.timeOperation('updateComplaintForUser', async () => {
+      try {
+        const docPath = `projects/${projectId}/complaints/${complaintId}`;
+        const complaintSnap = await firestoreService.getDoc(docPath);
+        if (!complaintSnap.exists()) {
+          throw new Error('Complaint not found');
+        }
+
+        const complaint = complaintSnap.data();
+        if (complaint.userId !== userId) {
+          throw new Error('You are not allowed to edit this complaint.');
+        }
+
+        const status = String(complaint.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+        if (!['cancelled', 'rejected'].includes(status)) {
+          throw new Error('Editing is only allowed for cancelled or rejected complaints.');
+        }
+
+        const now = Date.now();
+        const editedMessage = {
+          id: `${now}`,
+          senderType: 'system',
+          senderId: userId,
+          text: 'Complaint details were edited by user and resubmitted.',
+          timestamp: now
+        };
+
+        await firestoreService.updateDoc(docPath, {
+          title: updates.title ?? complaint.title,
+          category: updates.category ?? complaint.category,
+          priority: updates.priority ?? complaint.priority,
+          status: 'Open',
+          updatedAt: now,
+          lastMessageAt: now,
+          messages: [...(complaint.messages || []), editedMessage]
+        });
+
+        if (updates.initialMessage && String(updates.initialMessage).trim()) {
+          await this.addMessage(projectId, complaintId, {
+            senderType: 'user',
+            senderId: userId,
+            text: String(updates.initialMessage).trim()
+          });
+        }
+
+        return true;
+      } catch (error) {
+        console.error('❌ Error updating complaint for user:', error);
+        errorHandlingService.handleFirestoreError(error, 'updateComplaintForUser');
+        throw error;
+      }
+    });
+  }
+
   // Assign complaint to admin
   async assignComplaint(projectId, complaintId, adminId) {
     return performanceService.timeOperation('assignComplaint', async () => {

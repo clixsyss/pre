@@ -570,6 +570,64 @@ class RequestSubmissionService {
     }
   }
 
+  async getSubmissionById(projectId, submissionId) {
+    try {
+      const { default: firestoreService } = await import('./firestoreService');
+      await firestoreService.initialize();
+      const path = `projects/${projectId}/requestSubmissions/${submissionId}`;
+      const docSnap = await firestoreService.getDoc(path);
+      if (!docSnap?.exists) {
+        throw new Error('Request submission not found');
+      }
+      return {
+        id: docSnap.id || submissionId,
+        ...docSnap.data()
+      };
+    } catch (error) {
+      console.error('❌ RequestSubmissionService: Error getting submission by id:', error);
+      throw new Error(`Failed to load request submission: ${error.message}`);
+    }
+  }
+
+  async updateSubmissionForUser(projectId, submissionId, userId, payload) {
+    try {
+      const { default: firestoreService } = await import('./firestoreService');
+      await firestoreService.initialize();
+
+      const requestPath = `projects/${projectId}/requestSubmissions/${submissionId}`;
+      const requestSnap = await firestoreService.getDoc(requestPath);
+      if (!requestSnap?.exists) {
+        throw new Error('Request submission not found');
+      }
+
+      const current = requestSnap.data() || {};
+      if (current.userId !== userId) {
+        throw new Error('You are not allowed to edit this request.');
+      }
+
+      const status = String(current.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+      if (!['cancelled', 'rejected'].includes(status)) {
+        throw new Error('Editing is only allowed for cancelled or rejected requests.');
+      }
+
+      const updateData = {
+        formData: payload.formData || current.formData || {},
+        updatedAt: new Date().toISOString(),
+        status: 'pending'
+      };
+
+      if (Array.isArray(payload.fieldMetadata)) {
+        updateData.fieldMetadata = payload.fieldMetadata;
+      }
+
+      await firestoreService.updateDoc(requestPath, updateData);
+      return true;
+    } catch (error) {
+      console.error('❌ RequestSubmissionService: Error updating submission for user:', error);
+      throw new Error(`Failed to update request submission: ${error.message}`);
+    }
+  }
+
   /**
    * Add a message to a request submission
    * Messages are stored as an array in the request submission document (DynamoDB compatible)

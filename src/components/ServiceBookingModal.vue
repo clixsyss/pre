@@ -134,6 +134,13 @@
             <span>Chat with Admin</span>
             <span v-if="unreadCount > 0" class="chat-badge">{{ unreadCount }}</span>
           </button>
+          <button
+            v-if="canEditBooking"
+            @click="toggleEditMode"
+            class="secondary-btn"
+          >
+            <span>{{ isEditMode ? 'Cancel Edit' : 'Edit Booking' }}</span>
+          </button>
           
           <!-- <button v-if="booking?.status !== 'closed'" @click="closeModal" class="secondary-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -142,6 +149,16 @@
             </svg>
             <span>View Details</span>
           </button> -->
+        </div>
+        <div v-if="isEditMode" class="edit-section">
+          <h4>Edit and Resubmit</h4>
+          <p class="edit-note">Allowed only for cancelled or rejected bookings.</p>
+          <input v-model="editForm.selectedDate" type="date" class="edit-input" />
+          <input v-model="editForm.selectedTime" type="time" class="edit-input" />
+          <textarea v-model="editForm.notes" class="edit-input" rows="3" placeholder="Notes (optional)"></textarea>
+          <button class="chat-btn" @click="saveEdit" :disabled="savingEdit || !editForm.selectedDate">
+            {{ savingEdit ? 'Saving...' : 'Save Changes' }}
+          </button>
         </div>
       </div>
       </div>
@@ -155,6 +172,7 @@ import { useRouter } from 'vue-router';
 import { useModalState } from '../composables/useModalState';
 import { useProjectStore } from '../stores/projectStore';
 import serviceBookingService from '../services/serviceBookingService';
+import optimizedAuthService from '../services/optimizedAuthService';
 import ModalHeader from './ModalHeader.vue';
 
 // Component name for ESLint
@@ -175,7 +193,7 @@ const props = defineProps({
 });
 
 // Emits
-const emit = defineEmits(['close', 'openChat']);
+const emit = defineEmits(['close', 'openChat', 'booking-updated']);
 
 const router = useRouter();
 const projectStore = useProjectStore();
@@ -184,6 +202,13 @@ const { openModal, closeModal: hideNavigationBars } = useModalState();
 // Reactive state
 const realtimeBooking = ref(null);
 const unsubscribe = ref(null);
+const isEditMode = ref(false);
+const savingEdit = ref(false);
+const editForm = ref({
+  selectedDate: '',
+  selectedTime: '',
+  notes: ''
+});
 
 // Computed properties
 const currentBooking = computed(() => realtimeBooking.value || props.booking);
@@ -219,6 +244,11 @@ const unreadCount = computed(() => {
   return unreadMessages.filter(msg => 
     msg.senderType === 'admin' || msg.senderType === 'system'
   ).length;
+});
+
+const canEditBooking = computed(() => {
+  const status = String(currentBooking.value?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+  return status === 'cancelled' || status === 'rejected';
 });
 
 const lastMessagePreview = computed(() => {
@@ -293,6 +323,44 @@ const closeModal = () => {
   emit('close');
   cleanupListener();
   realtimeBooking.value = null;
+  isEditMode.value = false;
+};
+
+const toggleEditMode = () => {
+  isEditMode.value = !isEditMode.value;
+  if (isEditMode.value) {
+    editForm.value = {
+      selectedDate: currentBooking.value?.selectedDate || '',
+      selectedTime: currentBooking.value?.selectedTime || '',
+      notes: currentBooking.value?.notes || ''
+    };
+  }
+};
+
+const saveEdit = async () => {
+  if (!currentBooking.value?.id || savingEdit.value) return;
+  try {
+    savingEdit.value = true;
+    const user = await optimizedAuthService.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+    await serviceBookingService.updateBookingForUser(
+      projectStore.selectedProject.id,
+      currentBooking.value.id,
+      user.uid,
+      {
+        selectedDate: editForm.value.selectedDate,
+        selectedTime: editForm.value.selectedTime,
+        notes: editForm.value.notes
+      }
+    );
+    isEditMode.value = false;
+    emit('booking-updated');
+  } catch (error) {
+    console.error('❌ Error saving booking edit:', error);
+    alert(error.message || 'Failed to save booking edits.');
+  } finally {
+    savingEdit.value = false;
+  }
 };
 
 // Open chat
@@ -757,6 +825,31 @@ onUnmounted(() => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.edit-section {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edit-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.edit-input {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.9rem;
 }
 
 /* Mobile app - hover effects disabled */

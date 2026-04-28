@@ -56,6 +56,9 @@ async function getUserInfoFromDynamoDB(userEmail) {
 }
 
 class ServiceBookingService {
+  normalizeStatus(value) {
+    return String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
+  }
   /**
    * Create a service booking
    * @param {string} projectId - Project ID
@@ -663,6 +666,49 @@ class ServiceBookingService {
         throw error;
       }
     })
+  }
+
+  async updateBookingForUser(projectId, bookingId, userId, updates = {}) {
+    return performanceService.timeOperation('updateBookingForUser', async () => {
+      try {
+        const booking = await this.getServiceBooking(projectId, bookingId);
+        if (!booking) throw new Error('Service booking not found');
+        if (booking.userId !== userId) {
+          throw new Error('You are not allowed to edit this service booking.');
+        }
+
+        const status = this.normalizeStatus(booking.status);
+        if (!['cancelled', 'rejected'].includes(status)) {
+          throw new Error('Editing is only allowed for cancelled or rejected service bookings.');
+        }
+
+        const now = new Date().toISOString();
+        const editedMessage = {
+          id: Date.now().toString(),
+          text: 'Service booking was edited by user and resubmitted.',
+          senderType: 'system',
+          timestamp: now,
+          messageType: 'details_update'
+        };
+
+        const docPath = `projects/${projectId}/serviceBookings/${bookingId}`;
+        await firestoreService.updateDoc(docPath, {
+          selectedDate: updates.selectedDate ?? booking.selectedDate,
+          selectedTime: updates.selectedTime ?? booking.selectedTime,
+          notes: updates.notes ?? booking.notes ?? '',
+          status: 'open',
+          updatedAt: now,
+          lastMessageAt: now,
+          messages: [...(booking.messages || []), editedMessage]
+        });
+
+        return true;
+      } catch (error) {
+        console.error('❌ Error updating service booking for user:', error);
+        errorHandlingService.handleFirestoreError(error, 'updateBookingForUser');
+        throw error;
+      }
+    });
   }
 
   /**

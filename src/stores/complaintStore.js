@@ -330,6 +330,31 @@ export const useComplaintStore = defineStore('complaint', () => {
     }
   }
 
+  const updateComplaintForUser = async (complaintId, payload) => {
+    try {
+      loading.value = true
+      error.value = null
+
+      const projectId = await ensureProjectLoaded()
+      const user = await optimizedAuthService.getCurrentUser()
+      if (!user?.uid) {
+        throw new Error('User not authenticated')
+      }
+
+      await complaintService.updateComplaintForUser(projectId, complaintId, user.uid, payload)
+      await fetchComplaints()
+      if (currentComplaint.value?.id === complaintId) {
+        await fetchComplaint(complaintId)
+      }
+      return true
+    } catch (err) {
+      error.value = err.message
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   const fetchStats = async () => {
     try {
       loading.value = true
@@ -549,6 +574,7 @@ export const useComplaintStore = defineStore('complaint', () => {
     addMessage,
     uploadImage,
     updateComplaintStatus,
+    updateComplaintForUser,
     fetchStats,
     subscribeToComplaints,
     subscribeToComplaint,

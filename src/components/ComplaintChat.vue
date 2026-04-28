@@ -15,12 +15,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useComplaintStore } from '../stores/complaintStore';
 import { useNotificationStore } from '../stores/notifications';
 import optimizedAuthService from '../services/optimizedAuthService';
 import UnifiedChat from './UnifiedChat.vue';
+import { getLastIncomingAdminMessageId } from '../utils/chatUnread';
 
 const route = useRoute();
 const router = useRouter();
@@ -54,6 +55,13 @@ const chatData = computed(() => {
 const isComplaintClosed = computed(() =>
   complaint.value?.status === 'Resolved' || complaint.value?.status === 'Closed'
 );
+
+const markComplaintMessagesAsRead = () => {
+  if (!complaintId.value) return;
+  const lastIncomingId = getLastIncomingAdminMessageId(complaint.value?.messages || []);
+  if (!lastIncomingId) return;
+  localStorage.setItem(`lastReadMessage_complaint_${complaintId.value}`, String(lastIncomingId));
+};
 
 const handleSendMessage = async (messageText) => {
   if (!messageText.trim() || complaintStore.loading || isComplaintClosed.value) return;
@@ -142,6 +150,7 @@ onMounted(async () => {
     
     // Subscribe to real-time updates
     unsubscribe = await complaintStore.subscribeToComplaint(complaintId.value);
+    markComplaintMessagesAsRead();
     
     console.log('✅ ComplaintChat: Complaint loaded and subscribed to real-time updates');
   } catch (error) {
@@ -156,6 +165,14 @@ onUnmounted(() => {
   }
   complaintStore.clearCurrentComplaint();
 });
+
+watch(
+  () => complaint.value?.messages,
+  () => {
+    markComplaintMessagesAsRead();
+  },
+  { deep: true }
+);
 </script>
 
 <style scoped>

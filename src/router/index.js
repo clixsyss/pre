@@ -4,26 +4,12 @@ import firestoreService from '../services/firestoreService'
 import { canUserAccessRoute, checkUserSuspension } from '../services/suspensionService'
 import logger from '../utils/logger'
 
-
-// Import pages
-import Onboarding from '../pages/unauth/Onboarding.vue'
-import SignIn from '../pages/unauth/SignIn.vue'
-import Register from '../pages/unauth/Register.vue'
-import VerifyEmail from '../pages/unauth/VerifyEmail.vue'
-import PersonalDetails from '../pages/unauth/PersonalDetails.vue'
-import MigrateAccount from '../pages/unauth/MigrateAccount.vue'
-import Home from '../pages/auth/Home.vue'
-import Profile from '../pages/auth/ProfilePage.vue'
-import ProjectSelection from '../pages/auth/ProjectSelection.vue'
-import AuthSupport from '../pages/auth/Support.vue'
-import SupportChatPage from '../pages/auth/SupportChatPage.vue'
-
 const routes = [
   // Root redirects based on auth state - handled in beforeEach guard
   {
     path: '/',
     name: 'Root',
-    component: () => import('../pages/auth/Home.vue'), // Default component, will be redirected by guard
+    component: () => import('../pages/auth/Home.vue'),
     meta: { requiresAuth: true },
   },
 
@@ -31,31 +17,31 @@ const routes = [
   {
     path: '/onboarding',
     name: 'Onboarding',
-    component: Onboarding,
+    component: () => import('../pages/unauth/Onboarding.vue'),
     meta: { requiresAuth: false },
   },
   {
     path: '/signin',
     name: 'SignIn',
-    component: SignIn,
+    component: () => import('../pages/unauth/SignIn.vue'),
     meta: { requiresAuth: false },
   },
   {
     path: '/register',
     name: 'Register',
-    component: Register,
+    component: () => import('../pages/unauth/Register.vue'),
     meta: { requiresAuth: false },
   },
   {
     path: '/register/verify-email',
     name: 'VerifyEmail',
-    component: VerifyEmail,
+    component: () => import('../pages/unauth/VerifyEmail.vue'),
     meta: { requiresAuth: false },
   },
   {
     path: '/register/personal-details',
     name: 'PersonalDetails',
-    component: PersonalDetails,
+    component: () => import('../pages/unauth/PersonalDetails.vue'),
     meta: { requiresAuth: false },
   },
   {
@@ -67,7 +53,7 @@ const routes = [
   {
     path: '/migrate-account',
     name: 'MigrateAccount',
-    component: MigrateAccount,
+    component: () => import('../pages/unauth/MigrateAccount.vue'),
     meta: { requiresAuth: false },
   },
   {
@@ -81,13 +67,13 @@ const routes = [
   {
     path: '/project-selection',
     name: 'ProjectSelection',
-    component: ProjectSelection,
+    component: () => import('../pages/auth/ProjectSelection.vue'),
     meta: { requiresAuth: true },
   },
   {
     path: '/home',
     name: 'Home',
-    component: Home,
+    component: () => import('../pages/auth/Home.vue'),
     meta: { requiresAuth: true },
   },
   {
@@ -196,7 +182,7 @@ const routes = [
   {
     path: '/profile',
     name: 'Profile',
-    component: Profile,
+    component: () => import('../pages/auth/ProfilePage.vue'),
     meta: { requiresAuth: true },
   },
   {
@@ -262,19 +248,19 @@ const routes = [
   {
     path: '/support',
     name: 'AuthSupport',
-    component: AuthSupport,
+    component: () => import('../pages/auth/Support.vue'),
     meta: { requiresAuth: true },
   },
   {
     path: '/support-chat',
     name: 'SupportChat',
-    component: SupportChatPage,
+    component: () => import('../pages/auth/SupportChatPage.vue'),
     meta: { requiresAuth: true },
   },
   {
     path: '/support-chat/:id',
     name: 'SupportChatById',
-    component: SupportChatPage,
+    component: () => import('../pages/auth/SupportChatPage.vue'),
     meta: { requiresAuth: true },
   },
   {

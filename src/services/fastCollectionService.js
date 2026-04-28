@@ -13,145 +13,87 @@ import { getActiveAdsByProject } from './dynamoDBAdsService'
 
 class FastCollectionService {
   constructor() {
-    // No longer using mock data - all data comes from Firebase
+    // In-flight request deduplication: prevents duplicate concurrent fetches for the same key
+    this._inFlight = new Map()
+  }
+
+  /**
+   * Deduplicates concurrent requests for the same key.
+   * If a fetch for `key` is already in-flight, returns that same promise.
+   */
+  _dedupe(key, fn) {
+    if (this._inFlight.has(key)) return this._inFlight.get(key)
+    const promise = fn().finally(() => this._inFlight.delete(key))
+    this._inFlight.set(key, promise)
+    return promise
   }
 
   /**
    * Get ads for a project (optimized with real Firebase data)
    */
   async getAds(projectId, useCache = true) {
-    return performanceService.timeOperation('getAds', async () => {
-      
+    return this._dedupe(`ads:${projectId}`, () => performanceService.timeOperation('getAds', async () => {
+
       // Check cache first
       if (useCache) {
         const cachedAds = cacheService.getCollectionData(`projects/${projectId}/ads`, { active: true })
         if (cachedAds) {
-          console.log(`🚀 FastCollection: Using cached ads for project ${projectId}`)
           return cachedAds
         }
       }
 
       try {
-        console.log(`🚀 FastCollection: Fetching ads for project ${projectId}`)
-        
-        // Use DynamoDB service first
+        // Use DynamoDB service first, fall back to Firestore
         try {
           const ads = await getActiveAdsByProject(projectId, { limit: 100 })
-          
-          // Add projectId to each ad for compatibility
-          const adsWithProjectId = ads.map(ad => ({
-            ...ad,
-            projectId: ad.parentId || projectId
-          }))
-          
-          // Cache the data
+          const adsWithProjectId = ads.map(ad => ({ ...ad, projectId: ad.parentId || projectId }))
           cacheService.setCollectionData(`projects/${projectId}/ads`, { active: true }, adsWithProjectId)
-          
-          console.log(`🚀 FastCollection: Successfully fetched ${adsWithProjectId.length} ads from DynamoDB for project ${projectId}`)
           return adsWithProjectId
         } catch (dynamoError) {
           console.warn('FastCollection: DynamoDB fetch failed, falling back to Firestore:', dynamoError)
-          // Fallback to Firestore
           const snapshot = await firestoreService.getDocs(`projects/${projectId}/ads`, { timeoutMs: 6000 })
-          
-          if (snapshot.empty) {
-            console.log(`🚀 FastCollection: No ads found for project ${projectId}`)
-            const emptyResult = []
-            cacheService.setCollectionData(`projects/${projectId}/ads`, { active: true }, emptyResult)
-            return emptyResult
-          }
-          
-          // Process the real data
-          const ads = snapshot.docs.map(doc => ({
-            id: doc.id,
-            projectId,
-            ...doc.data()
-          }))
-          
-          // Cache the real data
-          cacheService.setCollectionData(`projects/${projectId}/ads`, { active: true }, ads)
-          
-          console.log(`🚀 FastCollection: Successfully fetched ${ads.length} ads from Firestore (fallback) for project ${projectId}`)
-          return ads
+          const result = snapshot.empty ? [] : snapshot.docs.map(doc => ({ id: doc.id, projectId, ...doc.data() }))
+          cacheService.setCollectionData(`projects/${projectId}/ads`, { active: true }, result)
+          return result
         }
-        
       } catch (error) {
-        console.warn(`🚀 FastCollection: Error fetching ads for project ${projectId}:`, error.message)
-        
-        // Return empty array instead of mock data to maintain data integrity
+        console.warn(`FastCollection: Error fetching ads for project ${projectId}:`, error.message)
         const emptyResult = []
         cacheService.setCollectionData(`projects/${projectId}/ads`, { active: true }, emptyResult)
         return emptyResult
       }
-    })
+    }))
   }
 
   /**
    * Get news for a project (optimized with real Firebase data)
    */
   async getNews(projectId, options = {}, useCache = true) {
-    
+    return this._dedupe(`news:${projectId}:${JSON.stringify(options)}`, async () => {
+
     // Check cache first
     if (useCache) {
       const cachedNews = cacheService.getCollectionData(`projects/${projectId}/news`, options)
       if (cachedNews) {
-        console.log(`🚀 FastCollection: Using cached news for project ${projectId} (${cachedNews.length} items)`)
-        // Debug cached data
-        if (cachedNews.length > 0) {
-          console.log('🔍 Cached news sample:', {
-            id: cachedNews[0].id,
-            title: cachedNews[0].title,
-            createdAt: cachedNews[0].createdAt,
-            createdAtType: typeof cachedNews[0].createdAt,
-            hasToDate: cachedNews[0].createdAt && typeof cachedNews[0].createdAt.toDate === 'function'
-          })
-        }
         return cachedNews
       }
     }
 
     try {
-      console.log(`🚀 FastCollection: Fetching fresh news for project ${projectId} (cache disabled: ${!useCache})`)
-      
       const snapshot = await firestoreService.getDocs(`projects/${projectId}/news`, { timeoutMs: 6000 })
-      
-      console.log(`🚀 FastCollection: Snapshot result:`, {
-        empty: snapshot.empty,
-        size: snapshot.size,
-        docsCount: snapshot.docs ? snapshot.docs.length : 0
-      })
-      
+
       if (snapshot.empty) {
-        console.log(`🚀 FastCollection: No news found for project ${projectId} - collection is empty`)
-        console.log(`🔍 FastCollection: This could mean:`)
-        console.log(`  1. The collection doesn't exist`)
-        console.log(`  2. The collection exists but has no documents`)
-        console.log(`  3. Permission issues (though we should see an error)`)
-        console.log(`  4. The collection path is incorrect`)
         const emptyResult = []
         cacheService.setCollectionData(`projects/${projectId}/news`, options, emptyResult)
         return emptyResult
       }
-      
+
       // Process the real data
-      let news = snapshot.docs.map(doc => {
-        const docData = doc.data()
-        console.log('🔍 Raw Firestore doc data for news:', {
-          id: doc.id,
-          createdAt: docData.createdAt,
-          createdAtType: typeof docData.createdAt,
-          hasToDate: docData.createdAt && typeof docData.createdAt.toDate === 'function',
-          updatedAt: docData.updatedAt,
-          updatedAtType: typeof docData.updatedAt,
-          allFields: Object.keys(docData)
-        })
-        
-        return {
-          id: doc.id,
-          projectId,
-          ...docData
-        }
-      })
+      let news = snapshot.docs.map(doc => ({
+        id: doc.id,
+        projectId,
+        ...doc.data()
+      }))
       
       const newsScheduleToDate = (value) => {
         if (!value) return null
@@ -195,17 +137,15 @@ class FastCollectionService {
       // Cache the processed data
       cacheService.setCollectionData(`projects/${projectId}/news`, options, news)
       
-      console.log(`🚀 FastCollection: Successfully fetched ${news.length} news items for project ${projectId}`)
       return news
-      
+
     } catch (error) {
       console.warn(`🚀 FastCollection: Error fetching news for project ${projectId}:`, error.message)
-      
-      // Return empty array instead of mock data to maintain data integrity
       const emptyResult = []
       cacheService.setCollectionData(`projects/${projectId}/news`, options, emptyResult)
       return emptyResult
     }
+    }) // end _dedupe
   }
 
   /**

@@ -6,8 +6,8 @@
 class CacheService {
   constructor() {
     this.cache = new Map()
-    this.defaultTTL = 24 * 60 * 60 * 1000 // 24 hours default TTL (extended for cost optimization)
-    this.maxCacheSize = 200 // Maximum number of cached items (increased for longer cache)
+    this.defaultTTL = 15 * 60 * 1000 // 15 minutes — balances freshness with DynamoDB/Firestore costs
+    this.maxCacheSize = 200
   }
 
   /**
@@ -36,8 +36,6 @@ class CacheService {
       expiresAt,
       createdAt: Date.now()
     })
-
-    console.log(`🗄️ Cache set: ${key} (expires in ${ttl}ms)`)
   }
 
   /**
@@ -46,18 +44,13 @@ class CacheService {
   get(key) {
     const item = this.cache.get(key)
     
-    if (!item) {
-      console.log(`🗄️ Cache miss: ${key}`)
-      return null
-    }
+    if (!item) return null
 
     if (Date.now() > item.expiresAt) {
       this.cache.delete(key)
-      console.log(`🗄️ Cache expired: ${key}`)
       return null
     }
 
-    console.log(`🗄️ Cache hit: ${key} (age: ${Date.now() - item.createdAt}ms)`)
     return item.data
   }
 
@@ -73,11 +66,7 @@ class CacheService {
    * Delete cache item
    */
   delete(key) {
-    const deleted = this.cache.delete(key)
-    if (deleted) {
-      console.log(`🗄️ Cache deleted: ${key}`)
-    }
-    return deleted
+    return this.cache.delete(key)
   }
 
   /**
@@ -85,7 +74,6 @@ class CacheService {
    */
   clear() {
     this.cache.clear()
-    console.log('🗄️ Cache cleared')
   }
 
   /**
@@ -126,10 +114,6 @@ class CacheService {
       }
     }
 
-    if (cleaned > 0) {
-      console.log(`🗄️ Cache cleanup: removed ${cleaned} expired items`)
-    }
-
     return cleaned
   }
 
@@ -140,7 +124,7 @@ class CacheService {
    */
   setUserDocument(userId, userData) {
     const key = this.generateKey(`users/${userId}`)
-    this.set(key, userData, 24 * 60 * 60 * 1000) // 24 hours for user data
+    this.set(key, userData, 15 * 60 * 1000) // 15 minutes for user data
   }
 
   /**
@@ -156,7 +140,7 @@ class CacheService {
    */
   setProjectDocument(projectId, projectData) {
     const key = this.generateKey(`projects/${projectId}`)
-    this.set(key, projectData, 7 * 24 * 60 * 60 * 1000) // 7 days for project data
+    this.set(key, projectData, 30 * 60 * 1000) // 30 minutes for project data (changes infrequently)
   }
 
   /**
@@ -195,10 +179,6 @@ class CacheService {
       }
     }
     
-    if (invalidated > 0) {
-      console.log(`🗄️ Cache invalidated: ${invalidated} items matching "${pattern}"`)
-    }
-    
     return invalidated
   }
 
@@ -220,9 +200,9 @@ class CacheService {
 // Create singleton instance
 const cacheService = new CacheService()
 
-// Clean up expired items every 2 hours (less frequent with longer cache)
+// Clean up expired items every 30 minutes
 setInterval(() => {
   cacheService.cleanup()
-}, 2 * 60 * 60 * 1000)
+}, 30 * 60 * 1000)
 
 export default cacheService

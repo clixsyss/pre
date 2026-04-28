@@ -9,14 +9,14 @@
  * Replaces Firebase/Firestore implementation with AWS-only solution
  */
 
-import { putItem, queryAll, getItem, updateItem, scan } from '../aws/dynamodbClient'
+import { putItem, queryAll, getItem, updateItem } from '../aws/dynamodbClient'
 import fileUploadService from '../services/fileUploadService'
 import { projectsUnitGuestPassSettingsService } from '../services/dynamoDBTableServices'
+import { getUserById, getUserByAuthUid, getUserByEmail } from '../services/dynamoDBUsersService'
 import QRCode from 'qrcode'
 
 const GUEST_PASSES_TABLE = 'projects__guestPasses'
 const GUEST_PASS_SETTINGS_TABLE = 'guestPassSettings'
-const USERS_TABLE = 'users'
 
 // ─── Scanner QR encoding (must stay in sync with scanner/qr-decryptor.js) ────
 // Chars match qr-decryptor.js CHARS — do not reorder.
@@ -81,13 +81,6 @@ const toTimestamp = (value) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed.getTime()
 }
 
-const getNested = (obj, path) => {
-  return path.split('.').reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), obj)
-}
-
-// Session-scoped cache: avoids redundant DynamoDB lookups within a single pass-generation flow.
-const _userRecordCache = new Map()
-
 // Short-lived pass-count cache (60s TTL) so getUserStatus and checkUserEligibility
 // share the same DynamoDB result when called back-to-back during pass generation.
 const _passCountCache = new Map()
@@ -111,6 +104,55 @@ const _setCachedPassCounts = (cacheKey, value) => {
 const _invalidatePassCountCache = (projectId, ownerKey) => {
   const key = `${projectId}:${ownerKey}`
   _passCountCache.delete(key)
+}
+
+// Short-lived passes-list cache (30s TTL) — avoids re-querying DynamoDB on rapid tab revisits.
+const _passesListCache = new Map()
+const _PASSES_LIST_TTL_MS = 30_000
+
+const _getPassesListCacheKey = (projectId, filterValue) => `${projectId}:${filterValue}`
+
+const _getCachedPassesList = (key) => {
+  const entry = _passesListCache.get(key)
+  if (!entry) return null
+  if (Date.now() - entry.ts > _PASSES_LIST_TTL_MS) { _passesListCache.delete(key); return null }
+  return entry.value
+}
+
+const _setCachedPassesList = (key, value) => {
+  _passesListCache.set(key, { ts: Date.now(), value })
+}
+
+const _invalidatePassesList = (projectId, filterValue) => {
+  _passesListCache.delete(_getPassesListCacheKey(projectId, filterValue))
+}
+
+// Short-lived guest pass settings cache (2min TTL) shared across checkUserEligibility + getUserStatus.
+const _settingsCache = new Map()
+const _SETTINGS_TTL_MS = 120_000
+
+const _getCachedSettings = (projectId) => {
+  const entry = _settingsCache.get(projectId)
+  if (!entry) return null
+  if (Date.now() - entry.ts > _SETTINGS_TTL_MS) { _settingsCache.delete(projectId); return null }
+  return entry.value
+}
+
+const _setCachedSettings = (projectId, value) => {
+  _settingsCache.set(projectId, { ts: Date.now(), value })
+}
+
+const _getProjectSettings = async (projectId) => {
+  const cached = _getCachedSettings(projectId)
+  if (cached !== null) return cached
+  try {
+    const settings = await getItem(GUEST_PASS_SETTINGS_TABLE, { id: projectId })
+    const result = settings || {}
+    _setCachedSettings(projectId, result)
+    return result
+  } catch {
+    return {}
+  }
 }
 
 /**
@@ -161,74 +203,26 @@ const _queryResidentPassCounts = async (projectId, { canonicalUserId, unit = '' 
   return result
 }
 
-// Resolve users robustly across mixed legacy identifiers (id/authUid/email/uid).
-// Strategy: try direct GetItem by 'id' first (O(1)), then fall back to a bounded scan.
+// Resolve users via the cached dynamoDBUsersService (5-min TTL, O(1) GetItem first).
+// Falls back through authUid → email lookups — all cached between calls.
 const findUserRecord = async (userIdentifier) => {
   if (!userIdentifier) return null
+  const id = String(userIdentifier).trim()
 
-  const target = String(userIdentifier).trim().toLowerCase()
+  // Try by primary key first (covers Cognito sub stored as 'id')
+  const byId = await getUserById(id).catch(() => null)
+  if (byId) return byId
 
-  // 1. Return cached result immediately (avoids repeated DynamoDB calls for same identifier).
-  if (_userRecordCache.has(target)) {
-    return _userRecordCache.get(target)
+  // Try by authUid (legacy field)
+  const byAuthUid = await getUserByAuthUid(id).catch(() => null)
+  if (byAuthUid) return byAuthUid
+
+  // Try by email if the identifier looks like an email
+  if (id.includes('@')) {
+    const byEmail = await getUserByEmail(id).catch(() => null)
+    if (byEmail) return byEmail
   }
 
-  // 2. Try direct point-read: most users have their Cognito sub stored as 'id'.
-  try {
-    const direct = await getItem(USERS_TABLE, { id: userIdentifier.trim() })
-    if (direct) {
-      _userRecordCache.set(target, direct)
-      return direct
-    }
-  } catch {
-    // GetItem failed (e.g. wrong key type) — fall through to scan.
-  }
-
-  // 3. Bounded scan fallback for legacy identifiers that differ from 'id'.
-  let lastEvaluatedKey = null
-  let scannedCount = 0
-  const maxScanItems = 5000
-
-  do {
-    const scanOptions = { Limit: 100 }
-    if (lastEvaluatedKey) {
-      scanOptions.ExclusiveStartKey = lastEvaluatedKey
-    }
-
-    const scanResult = await scan(USERS_TABLE, scanOptions)
-    const users = Array.isArray(scanResult) ? scanResult : []
-    const match = users.find((u) => {
-      const candidates = [
-        u?.id,
-        u?.authUid,
-        u?.uid,
-        u?.email,
-        u?.username,
-        getNested(u, 'attributes.sub'),
-        getNested(u, 'cognitoAttributes.sub'),
-        getNested(u, 'attributes.email'),
-        getNested(u, 'cognitoAttributes.email'),
-      ]
-        .filter(Boolean)
-        .map((v) => String(v).trim().toLowerCase())
-      return candidates.includes(target)
-    })
-
-    if (match) {
-      _userRecordCache.set(target, match)
-      return match
-    }
-
-    lastEvaluatedKey = scanResult?.LastEvaluatedKey || null
-    scannedCount += 100
-    if (scannedCount >= maxScanItems) {
-      console.warn(`⚠️ findUserRecord reached scan cap (${maxScanItems}) for identifier: ${userIdentifier}`)
-      break
-    }
-  } while (lastEvaluatedKey)
-
-  // Cache negative result to avoid repeat scans for the same unknown identifier.
-  _userRecordCache.set(target, null)
   return null
 }
 
@@ -248,10 +242,11 @@ export const checkUserEligibility = async (projectId, userId) => {
       throw new Error('Project ID is required')
     }
 
-    console.log(`🔍 Checking user eligibility for project ${projectId}`)
-
-    // Get user from DynamoDB (robust lookup for mixed legacy identifiers)
-    const user = await findUserRecord(userId)
+    // Get user and global settings in parallel
+    const [user, globalSettings] = await Promise.all([
+      findUserRecord(userId),
+      _getProjectSettings(projectId),
+    ])
 
     if (!user) {
       return {
@@ -283,44 +278,23 @@ export const checkUserEligibility = async (projectId, userId) => {
       }
     }
 
-    // Get global settings for this project
-    let globalSettings = {}
-    try {
-      // guestPassSettings table uses 'id' as the partition key
-      const settings = await getItem(GUEST_PASS_SETTINGS_TABLE, { id: projectId })
-      globalSettings = settings || {}
-      
-      // Check if project-wide blocking is enabled
-      if (globalSettings.blockAllUsers === true) {
-        return {
-          success: false,
-          error: 'Project blocked',
-          message: 'Guest pass generation is currently disabled for all users in this project',
-          data: {
-            canGenerate: false,
-            reason: 'project_blocked',
-            user: user,
-          },
-        }
+    if (globalSettings.blockAllUsers === true) {
+      return {
+        success: false,
+        error: 'Project blocked',
+        message: 'Guest pass generation is currently disabled for all users in this project',
+        data: { canGenerate: false, reason: 'project_blocked', user },
       }
-      
-      // Check if family members are blocked
-      const userRole = projectInfo.role || user.role || ''
-      if (globalSettings.blockFamilyMembers === true && userRole === 'family') {
-        return {
-          success: false,
-          error: 'Family members blocked',
-          message: 'Guest pass generation is currently disabled for family members. Only property owners can generate passes.',
-          data: {
-            canGenerate: false,
-            reason: 'family_members_blocked',
-            user: user,
-          },
-        }
+    }
+
+    const userRole = projectInfo.role || user.role || ''
+    if (globalSettings.blockFamilyMembers === true && userRole === 'family') {
+      return {
+        success: false,
+        error: 'Family members blocked',
+        message: 'Guest pass generation is currently disabled for family members. Only property owners can generate passes.',
+        data: { canGenerate: false, reason: 'family_members_blocked', user },
       }
-    } catch (settingsError) {
-      console.warn('⚠️ Could not fetch global settings:', settingsError)
-      globalSettings = {}
     }
 
     // Daily-limit-only mode: monthly enforcement is intentionally disabled.
@@ -335,36 +309,22 @@ export const checkUserEligibility = async (projectId, userId) => {
     if (userUnit) {
       try {
         const unitSettings = await projectsUnitGuestPassSettingsService.getSettings(projectId, userUnit)
-        console.log(`🏠 Unit settings for ${userUnit}:`, unitSettings)
-        
         if (unitSettings) {
-          // Use unit-specific limit if set
-          // Monthly limit override is disabled in app (kept commented by request).
-          // if (unitSettings.monthlyLimit !== undefined && unitSettings.monthlyLimit !== null) {
-          //   monthlyLimit = normalizeLimit(unitSettings.monthlyLimit, monthlyLimit)
-          //   console.log(`📊 Using unit-specific limit: ${monthlyLimit} for unit ${userUnit}`)
-          // }
           if (unitSettings.dailyLimit !== undefined && unitSettings.dailyLimit !== null) {
             dailyLimit = normalizeLimit(unitSettings.dailyLimit, dailyLimit)
-            console.log(`📊 Using unit-specific daily limit: ${dailyLimit} for unit ${userUnit}`)
           }
           if (unitSettings.dailyResetAt !== undefined && unitSettings.dailyResetAt !== null) {
             dailyResetAt = toTimestamp(unitSettings.dailyResetAt) ?? dailyResetAt
           }
-          
-          // Check if unit is blocked
           if (unitSettings.blocked === true) {
             unitBlocked = true
-            console.log(`🚫 Unit ${userUnit} is blocked`)
           }
         }
-      } catch (error) {
-        console.warn('⚠️ Could not fetch unit settings:', error)
+      } catch {
         // Use global limit if unit settings not found
       }
     }
-    
-    // Check if unit is blocked
+
     if (unitBlocked) {
       return {
         success: false,
@@ -389,9 +349,8 @@ export const checkUserEligibility = async (projectId, userId) => {
       const counts = await _queryResidentPassCounts(projectId, { canonicalUserId, unit: userUnit }, dailyResetAt)
       usedThisMonth = counts.usedThisMonth
       usedToday = counts.usedToday
-      console.log(`📊 Counted ${usedThisMonth} active passes this month, ${usedToday} today for ${userUnit ? `unit ${userUnit}` : `user ${canonicalUserId}`}`)
     } catch (error) {
-      console.error('❌ Error counting monthly passes:', error)
+      console.error('❌ Error counting passes:', error)
       usedThisMonth = 0
       usedToday = 0
     }
@@ -488,25 +447,22 @@ export const createGuestPass = async (
   phoneNumber = null,
 ) => {
   try {
-    // Run eligibility check, settings fetch, and user record fetch all in parallel.
-    // eligibility internally calls findUserRecord — the second call hits the session cache.
-    const [eligibility, settingsResult, user] = await Promise.all([
+    // Run eligibility check and user record fetch in parallel.
+    // _getProjectSettings is cached — no extra DynamoDB call.
+    const [eligibility, user] = await Promise.all([
       checkUserEligibility(projectId, userId),
-      getItem(GUEST_PASS_SETTINGS_TABLE, { id: projectId }).catch(() => null),
       findUserRecord(userId),
     ])
+    const settingsResult = _getCachedSettings(projectId) || await _getProjectSettings(projectId)
 
     if (!eligibility.success || !eligibility.data.canGenerate) {
       throw new Error(eligibility.message)
     }
 
     const validityDurationHours = settingsResult?.validityDurationHours || 2
-    console.log(`📋 Using validity duration: ${validityDurationHours} hours`)
 
-    // Calculate validUntil based on current time + validity duration
     const createdAt = new Date()
     const validUntil = new Date(createdAt.getTime() + validityDurationHours * 60 * 60 * 1000)
-    console.log(`⏰ Pass valid from ${createdAt.toLocaleString()} until ${validUntil.toLocaleString()}`)
 
     // Generate unique pass ID
     const passId = `GP-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`.toUpperCase()
@@ -520,7 +476,6 @@ export const createGuestPass = async (
     const userProjects = user?.projects || []
     const projectInfo = userProjects.find(p => p.projectId === projectId)
     const userUnit = projectInfo?.unit || user?.unit || ''
-    console.log(`🏠 Creating pass for unit: ${userUnit}`)
 
     // Build the canonical QR payload stored on the pass document.
     const qrPayload = {
@@ -536,8 +491,6 @@ export const createGuestPass = async (
       validUntil: validUntil.getTime(),
     }
 
-    // Generate QR code as data URL (fast — no network)
-    console.log('🎨 Generating QR code...')
     const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrPayload), {
       errorCorrectionLevel: 'H',
       type: 'image/png',
@@ -545,10 +498,8 @@ export const createGuestPass = async (
       margin: 2
     })
 
-    // Compute deterministic S3 URL immediately (no upload needed yet)
     const s3Key = `guestPasses/${projectId}/${passId}.png`
     const qrCodeUrl = _getS3Url(s3Key)
-    console.log('🔗 Pre-computed S3 URL:', qrCodeUrl)
 
     // Prepare pass data
     const passData = {
@@ -575,8 +526,6 @@ export const createGuestPass = async (
       deleted: false
     }
 
-    console.log('💾 Saving pass to DynamoDB:', { passId, projectId, userId, guestName, purpose, unit: userUnit })
-
     // Save pass to DynamoDB (awaited — data integrity required)
     await putItem(GUEST_PASSES_TABLE, {
       parentId: projectId,
@@ -585,10 +534,8 @@ export const createGuestPass = async (
       ...passData
     })
 
-    // Bust the pass-count cache so the next eligibility/status check reflects the new pass.
     _invalidatePassCountCache(projectId, userUnit ? `unit:${userUnit}` : `userId:${userId}`)
-
-    console.log('✅ Pass saved to DynamoDB with ID:', passId)
+    _invalidatePassesList(projectId, userUnit || userId)
 
     // Upload QR image to S3 in the background — URL already stored in DynamoDB.
     // Parse base64 directly from data URL (avoids a second fetch() round-trip).
@@ -599,10 +546,7 @@ export const createGuestPass = async (
     const qrCodeFile = new File([bytes], `${passId}.png`, { type: 'image/png' })
 
     fileUploadService.uploadFile(qrCodeFile, `guestPasses/${projectId}/`, `${passId}.png`)
-      .then(() => console.log('☁️ QR code uploaded to S3 in background:', qrCodeUrl))
       .catch(err => console.warn('⚠️ Background S3 upload failed (pass still valid):', err))
-
-    console.log('✅ Guest pass created successfully:', passId)
 
     return {
       success: true,
@@ -653,7 +597,6 @@ export const markPassAsSent = async (passId, projectId) => {
       }
     })
 
-    console.log('✅ Pass marked as sent successfully')
     return true
   } catch (error) {
     console.error('❌ Error marking pass as sent:', error)
@@ -670,8 +613,6 @@ export const markPassAsSent = async (passId, projectId) => {
  */
 export const verifyAndUsePass = async (projectId, passId, verificationToken) => {
   try {
-    console.log(`🔍 Verifying pass ${passId} in project ${projectId}`)
-
     // Get the pass from DynamoDB (project tables use parentId as partition key)
     const pass = await getItem(GUEST_PASSES_TABLE, { parentId: projectId, id: passId })
 
@@ -728,8 +669,6 @@ export const verifyAndUsePass = async (projectId, passId, verificationToken) => 
       }
     })
 
-    console.log(`✅ Pass ${passId} marked as used`)
-
     return {
       success: true,
       message: 'Pass verified and marked as used',
@@ -762,29 +701,11 @@ export const getGuestPass = async (projectId, passId) => {
       throw new Error('Project ID and Pass ID are required')
     }
 
-    console.log(`📥 Loading guest pass: ${passId} for project: ${projectId}`)
-
     // Get the pass from DynamoDB (project tables use parentId as partition key)
     const pass = await getItem(GUEST_PASSES_TABLE, { parentId: projectId, id: passId })
 
-    if (!pass) {
-      console.log('❌ Guest pass not found in DynamoDB')
-      return null
-    }
-
-    // Check if pass is deleted
-    if (pass.deleted) {
-      console.log('⚠️ Guest pass is marked as deleted')
-      return null
-    }
-
-    console.log('✅ Guest pass loaded from DynamoDB:', {
-      id: pass.id,
-      guestName: pass.guestName,
-      validUntil: pass.validUntil,
-      used: pass.used,
-      qrCodeUrl: pass.qrCodeUrl ? 'present' : 'missing'
-    })
+    if (!pass) return null
+    if (pass.deleted) return null
 
     // Convert DynamoDB timestamp (number) to Date/ISO string for compatibility
     const convertTimestamp = (timestamp) => {
@@ -858,69 +779,36 @@ export const getUserStatus = async (userId, projectId = null) => {
     const projectInfo = userProjects.find(p => p.projectId === projectId)
     const userUnit = projectInfo?.unit || user.unit || ''
     const userRole = projectInfo?.role || user.role || ''
-    
-    // Daily-limit-only mode: monthly enforcement is intentionally disabled.
-    // let monthlyLimit = 30
+
     let monthlyLimit = null
     let dailyLimit = null
     let dailyResetAt = null
     let blocked = false
-    
-    try {
-      // guestPassSettings table uses 'id' as the partition key
-      const globalSettings = await getItem(GUEST_PASS_SETTINGS_TABLE, { id: projectId })
-      
-      if (globalSettings?.blockAllUsers === true) {
-        blocked = true
-      }
-      
-      if (globalSettings?.blockFamilyMembers === true && userRole === 'family') {
-        blocked = true
-      }
-      
-      // Monthly limit from global settings is intentionally ignored in app (daily-only mode).
-      // if (globalSettings?.monthlyLimit) {
-      //   monthlyLimit = normalizeLimit(globalSettings.monthlyLimit, monthlyLimit)
-      // }
-      if (globalSettings?.dailyLimit !== undefined && globalSettings?.dailyLimit !== null) {
-        dailyLimit = normalizeLimit(globalSettings.dailyLimit, dailyLimit)
-      }
-      if (globalSettings?.dailyResetAt !== undefined && globalSettings?.dailyResetAt !== null) {
-        dailyResetAt = toTimestamp(globalSettings.dailyResetAt)
-      }
-    } catch (settingsError) {
-      console.warn('⚠️ Could not fetch global settings:', settingsError)
+
+    const globalSettings = await _getProjectSettings(projectId)
+    if (globalSettings?.blockAllUsers === true) blocked = true
+    if (globalSettings?.blockFamilyMembers === true && userRole === 'family') blocked = true
+    if (globalSettings?.dailyLimit !== undefined && globalSettings?.dailyLimit !== null) {
+      dailyLimit = normalizeLimit(globalSettings.dailyLimit, dailyLimit)
+    }
+    if (globalSettings?.dailyResetAt !== undefined && globalSettings?.dailyResetAt !== null) {
+      dailyResetAt = toTimestamp(globalSettings.dailyResetAt)
     }
     
     // Check per-unit settings if unit exists
     if (userUnit) {
       try {
         const unitSettings = await projectsUnitGuestPassSettingsService.getSettings(projectId, userUnit)
-        console.log(`🏠 Unit settings for ${userUnit}:`, unitSettings)
-        
         if (unitSettings) {
-          // Use unit-specific limit if set
-          // Monthly per-unit override is intentionally disabled in app (daily-only mode).
-          // if (unitSettings.monthlyLimit !== undefined && unitSettings.monthlyLimit !== null) {
-          //   monthlyLimit = normalizeLimit(unitSettings.monthlyLimit, monthlyLimit)
-          //   console.log(`📊 Using unit-specific limit: ${monthlyLimit} for unit ${userUnit}`)
-          // }
           if (unitSettings.dailyLimit !== undefined && unitSettings.dailyLimit !== null) {
             dailyLimit = normalizeLimit(unitSettings.dailyLimit, dailyLimit)
-            console.log(`📊 Using unit-specific daily limit: ${dailyLimit} for unit ${userUnit}`)
           }
           if (unitSettings.dailyResetAt !== undefined && unitSettings.dailyResetAt !== null) {
             dailyResetAt = toTimestamp(unitSettings.dailyResetAt) ?? dailyResetAt
           }
-          
-          // Check if unit is blocked
-          if (unitSettings.blocked === true) {
-            blocked = true
-            console.log(`🚫 Unit ${userUnit} is blocked`)
-          }
+          if (unitSettings.blocked === true) blocked = true
         }
-      } catch (error) {
-        console.warn('⚠️ Could not fetch unit settings:', error)
+      } catch {
         // Use global limit if unit settings not found
       }
     }
@@ -972,12 +860,12 @@ export const getUserStatus = async (userId, projectId = null) => {
  */
 export const getGuestPassesForUnit = async (projectId, userId, unit = null) => {
   try {
-    console.log(`📥 Loading guest passes for project ${projectId}, unit: ${unit || 'NO UNIT (using userId)'}`)
-
-    // Push the unit/userId filter server-side so DynamoDB skips irrelevant items.
-    // Limit to the 50 most recent passes to keep response size bounded.
     const filterField = unit ? 'unit' : 'userId'
     const filterValue = unit || userId
+    const cacheKey = _getPassesListCacheKey(projectId, filterValue)
+    const cached = _getCachedPassesList(cacheKey)
+    if (cached) return cached
+
     const passes = await queryAll(GUEST_PASSES_TABLE, {
       KeyConditionExpression: 'parentId = :parentId',
       FilterExpression: `#filterField = :filterValue AND (attribute_not_exists(deleted) OR deleted = :false) AND (attribute_not_exists(#purpose) OR #purpose <> :gateScanPurpose)`,
@@ -992,8 +880,6 @@ export const getGuestPassesForUnit = async (projectId, userId, unit = null) => {
       maxPages: 10,
     })
 
-    console.log(`📊 Found ${passes.length} passes for project (server-side filtered)`)
-
     // Sort by createdAt descending (newest first) and cap at 50 for display.
     const filteredPasses = passes
       .filter(p => p.deleted !== true && isResidentGuestPass(p))
@@ -1003,9 +889,7 @@ export const getGuestPassesForUnit = async (projectId, userId, unit = null) => {
         return bTime - aTime
       })
       .slice(0, 50)
-    
-    console.log(`✅ Filtered to ${filteredPasses.length} passes for ${unit ? `unit ${unit}` : `user ${userId}`}`)
-    
+
     // Convert timestamps to ISO strings for compatibility
     const convertTimestamp = (timestamp) => {
       if (!timestamp) return null
@@ -1015,8 +899,7 @@ export const getGuestPassesForUnit = async (projectId, userId, unit = null) => {
       return timestamp
     }
     
-    // Format passes for display
-    return filteredPasses.map(pass => ({
+    const result = filteredPasses.map(pass => ({
       id: pass.id,
       projectId: pass.projectId || projectId,
       userId: pass.userId,
@@ -1036,6 +919,8 @@ export const getGuestPassesForUnit = async (projectId, userId, unit = null) => {
       verificationToken: pass.verificationToken,
       cardId: pass.cardId || null,
     }))
+    _setCachedPassesList(cacheKey, result)
+    return result
   } catch (error) {
     console.error('❌ Error loading guest passes:', error)
     throw error

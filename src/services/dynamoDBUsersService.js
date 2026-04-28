@@ -25,6 +25,32 @@ const TABLE_NAME = 'users'
 /** Partition / sort key attribute names — must never appear in UpdateItem SET (DynamoDB rejects). */
 const TABLE_KEY_ATTRIBUTES = ['id']
 
+// Short-lived in-memory cache for user lookups — avoids redundant full-table scans
+// within a single session (auth guard fires on every navigation).
+const USER_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const _userCache = new Map() // key → { user, expiresAt }
+
+function _getCachedUser(key) {
+  const entry = _userCache.get(key)
+  if (!entry) return undefined
+  if (Date.now() > entry.expiresAt) {
+    _userCache.delete(key)
+    return undefined
+  }
+  return entry.user
+}
+
+function _setCachedUser(key, user) {
+  _userCache.set(key, { user, expiresAt: Date.now() + USER_CACHE_TTL })
+}
+
+/** Call after any write that changes user state so the cache stays fresh. */
+export function invalidateUserCache(userId) {
+  for (const key of _userCache.keys()) {
+    if (key.includes(userId)) _userCache.delete(key)
+  }
+}
+
 /**
  * Unmarshall DynamoDB Map for documents object
  * @param {Object} dynamoDocuments - DynamoDB Map format
@@ -158,9 +184,11 @@ export async function getUserByAuthUid(authUid) {
     if (!authUid) {
       return null
     }
-    
-    console.log(`[DynamoDBUsersService] Searching for user by authUid: ${authUid}`)
-    
+
+    const cacheKey = `authUid:${authUid}`
+    const cached = _getCachedUser(cacheKey)
+    if (cached !== undefined) return cached
+
     // With FilterExpression, Limit is items *scanned*, not matches — paginate like getUserByEmail
     let lastEvaluatedKey = null
     let scannedCount = 0
@@ -183,19 +211,20 @@ export async function getUserByAuthUid(authUid) {
 
       if (batchItems.length > 0) {
         const convertedUser = convertUserFromDynamoDB(batchItems[0])
-        console.log(`[DynamoDBUsersService] ✅ Found user by authUid: ${convertedUser.id}`)
+        _setCachedUser(cacheKey, convertedUser)
+        _setCachedUser(`id:${convertedUser.id}`, convertedUser)
+        if (convertedUser.email) _setCachedUser(`email:${convertedUser.email}`, convertedUser)
         return convertedUser
       }
 
       lastEvaluatedKey = scanResult.LastEvaluatedKey || null
       scannedCount += 500
       if (scannedCount >= maxScanItems) {
-        console.warn(`[DynamoDBUsersService] Reached max scan limit (${maxScanItems}) without authUid match`)
         break
       }
     } while (lastEvaluatedKey)
 
-    console.log(`[DynamoDBUsersService] No user found with authUid: ${authUid}`)
+    _setCachedUser(cacheKey, null)
     return null
   } catch (error) {
     console.error(`[DynamoDBUsersService] Error fetching user by authUid:`, error)
@@ -210,32 +239,28 @@ export async function getUserByAuthUid(authUid) {
  */
 export async function getUserById(userId) {
   try {
-    console.log(`[DynamoDBUsersService] Fetching user: ${userId}`)
-    
-    // Try different possible key structures
+    const cacheKey = `id:${userId}`
+    const cached = _getCachedUser(cacheKey)
+    if (cached !== undefined) return cached
+
+    // Try direct primary-key lookup first (O(1), no scan)
     let user = null
-    
-    // Try with 'id' as key (Cognito sub ID)
     try {
       user = await getItem(TABLE_NAME, { id: userId })
       if (user) {
         const convertedUser = convertUserFromDynamoDB(user)
-        console.log(`[DynamoDBUsersService] ✅ Found user by ID: ${convertedUser.email || userId}`)
+        _setCachedUser(cacheKey, convertedUser)
+        if (convertedUser.email) _setCachedUser(`email:${convertedUser.email}`, convertedUser)
+        if (convertedUser.authUid) _setCachedUser(`authUid:${convertedUser.authUid}`, convertedUser)
         return convertedUser
       }
-    } catch {
-      console.log(`[DynamoDBUsersService] User not found with id key: ${userId}`)
-    }
-    
+    } catch { /* fallthrough */ }
+
     // If userId looks like an email (contains @), try email lookup as fallback
     if (userId && userId.includes('@')) {
-      console.log(`[DynamoDBUsersService] userId looks like an email, trying email lookup: ${userId}`)
       try {
         user = await getUserByEmail(userId)
-    if (user) {
-          console.log(`[DynamoDBUsersService] ✅ Found user by email: ${user.email}`)
-          return user
-        }
+        if (user) return user
       } catch (emailError) {
         console.warn(`[DynamoDBUsersService] Email lookup also failed:`, emailError)
       }
@@ -249,16 +274,13 @@ export async function getUserById(userId) {
     if (looksLikeCognitoSub) {
       try {
         const byAuth = await getUserByAuthUid(userId)
-        if (byAuth) {
-          console.log(`[DynamoDBUsersService] ✅ Found user by authUid (Cognito sub): ${byAuth.id}`)
-          return byAuth
-        }
+        if (byAuth) return byAuth
       } catch (authErr) {
         console.warn(`[DynamoDBUsersService] authUid lookup failed:`, authErr?.message || authErr)
       }
     }
     
-    console.log(`[DynamoDBUsersService] ⚠️ User not found: ${userId}`)
+    _setCachedUser(cacheKey, null)
     return null
   } catch (error) {
     console.error(`[DynamoDBUsersService] ❌ Error fetching user ${userId}:`, error)
@@ -274,13 +296,15 @@ export async function getUserById(userId) {
 export async function getUserByEmail(email) {
   try {
     if (!email) {
-      console.warn('[DynamoDBUsersService] No email provided to getUserByEmail')
       return null
     }
-    
+
     // Normalize email (lowercase, trim) - emails are stored normalized in DynamoDB
     const normalizedEmail = email.trim().toLowerCase()
-    console.log(`[DynamoDBUsersService] Searching for user with email: "${email}" (normalized: "${normalizedEmail}")`)
+
+    const cacheKey = `email:${normalizedEmail}`
+    const cached = _getCachedUser(cacheKey)
+    if (cached !== undefined) return cached
     
     // Use filtered scan to find user by email (more efficient than scanning all and filtering in memory)
     // Note: For even better performance, consider adding a GSI on email field
@@ -322,30 +346,22 @@ export async function getUserByEmail(email) {
       }
     } while (lastEvaluatedKey)
     
-    console.log(`[DynamoDBUsersService] FilterExpression scan found ${items.length} result(s) after scanning up to ${scannedCount} items`)
-    
-    // Removed redundant fallback scans for performance - emails are stored normalized in DynamoDB
-    // If not found with normalized email, user doesn't exist
     if (items.length === 0) {
-      console.log(`[DynamoDBUsersService] No user found with normalized email: "${normalizedEmail}"`)
+      _setCachedUser(cacheKey, null)
       return null
     }
-    
-    // If multiple users found (shouldn't happen), return the first one
+
     if (items.length > 1) {
       console.warn(`[DynamoDBUsersService] Multiple users found with email ${email}, returning first match`)
     }
-    
-    console.log(`[DynamoDBUsersService] ✅ Found user: ${items[0].id}`)
+
     const convertedUser = convertUserFromDynamoDB(items[0])
+    _setCachedUser(cacheKey, convertedUser)
+    _setCachedUser(`id:${convertedUser.id}`, convertedUser)
+    if (convertedUser.authUid) _setCachedUser(`authUid:${convertedUser.authUid}`, convertedUser)
     return convertedUser
   } catch (error) {
     console.error(`[DynamoDBUsersService] Error fetching user by email "${email}":`, error)
-    console.error('[DynamoDBUsersService] Error details:', {
-      message: error.message,
-      code: error.code,
-      name: error.name
-    })
     throw error
   }
 }

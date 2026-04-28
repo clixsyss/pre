@@ -111,6 +111,16 @@
               <p>{{ getRequestPreview(request) }}</p>
             </div>
             <div class="request-item-actions">
+              <span v-if="getUnreadCount(request) > 0" class="unread-pill">
+                {{ getUnreadCount(request) }} unread
+              </span>
+              <button
+                v-if="canEditSubmission(request)"
+                class="edit-btn"
+                @click.stop="editSubmission(request)"
+              >
+                Edit
+              </button>
               <button class="chat-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -157,6 +167,16 @@
               <p>{{ getRequestPreview(request) }}</p>
             </div>
             <div class="request-item-actions">
+              <span v-if="getUnreadCount(request) > 0" class="unread-pill">
+                {{ getUnreadCount(request) }} unread
+              </span>
+              <button
+                v-if="canEditSubmission(request)"
+                class="edit-btn"
+                @click.stop="editSubmission(request)"
+              >
+                Edit
+              </button>
               <button class="chat-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -184,6 +204,7 @@ import SuspensionBanner from '../../components/SuspensionBanner.vue';
 import { useSuspensionGuard } from '../../composables/useSuspensionGuard';
 import requestSubmissionService from '../../services/requestSubmissionService';
 import optimizedAuthService from '../../services/optimizedAuthService';
+import { getUnreadIncomingAdminCount } from '../../utils/chatUnread';
 
 // Component name for ESLint
 defineOptions({
@@ -273,7 +294,7 @@ const loadMyRequests = async () => {
       
       // Closed tab: show completed and rejected requests
       closedRequests.value = requests
-        .filter(req => req.status === 'completed' || req.status === 'rejected')
+        .filter(req => req.status === 'completed' || req.status === 'rejected' || req.status === 'cancelled')
         .sort((a, b) => {
           const aTime = a.createdAt?.seconds || (a.createdAt ? new Date(a.createdAt).getTime() / 1000 : 0);
           const bTime = b.createdAt?.seconds || (b.createdAt ? new Date(b.createdAt).getTime() / 1000 : 0);
@@ -331,6 +352,22 @@ const getRequestPreview = (request) => {
     }
   }
   return t('requestSubmitted');
+};
+
+const getUnreadCount = (request) => {
+  if (!request?.id) return 0;
+  const lastReadMessageId = localStorage.getItem(`lastReadMessage_request_${request.id}`);
+  return getUnreadIncomingAdminCount(request.messages || [], lastReadMessageId);
+};
+
+const canEditSubmission = (request) => {
+  const status = String(request?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+  return status === 'cancelled' || status === 'rejected';
+};
+
+const editSubmission = (request) => {
+  if (!request?.id || !request?.categoryId) return;
+  router.push(`/request-category/${request.categoryId}?editSubmissionId=${request.id}`);
 };
 </script>
 
@@ -656,6 +693,18 @@ const getRequestPreview = (request) => {
 .request-item-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.unread-pill {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .chat-btn {
@@ -671,6 +720,20 @@ const getRequestPreview = (request) => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #fff;
+  color: #AF1E23;
+  border: 1px solid #f5c2c4;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 /* Mobile app - hover effects disabled */

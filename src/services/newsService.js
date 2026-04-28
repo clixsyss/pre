@@ -14,8 +14,6 @@ class NewsService {
    * @returns {Promise<Array>} Array of news items
    */
   async fetchNews(projectId, options = {}) {
-    console.log('🔍 NewsService.fetchNews called with:', { projectId, options })
-    
     const {
       publishedOnly = true,
       category = null,
@@ -25,9 +23,6 @@ class NewsService {
     } = options
 
     try {
-      console.log('🚀 NewsService: Getting news from fast collection service...')
-      
-      // If forceRefresh is true, bypass cache
       const newsItems = await fastCollectionService.getNews(projectId, options, !forceRefresh)
       
       let filteredNews = newsItems
@@ -67,14 +62,6 @@ class NewsService {
         filteredNews = filteredNews.slice(0, limit)
       }
 
-      console.log('🚀 NewsService: Retrieved news items:', filteredNews.length)
-      console.log('🚀 NewsService: Filtered news items:', filteredNews.length)
-      
-      // If we got 0 items and this wasn't a forced refresh, log a warning
-      if (filteredNews.length === 0 && !forceRefresh) {
-        console.warn('🚀 NewsService: No news items found. Consider checking Firebase database or using forceRefresh option.')
-      }
-      
       return filteredNews
     } catch (error) {
       console.error('❌ Error fetching news:', error)

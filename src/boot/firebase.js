@@ -22,23 +22,12 @@ const firebaseConfig = {
 const detectPlatformFromUrl = () => {
   const protocol = window.location.protocol
   const hostname = window.location.hostname
-  const href = window.location.href
-  
-  console.log('🔍 Platform Detection Debug:', {
-    protocol,
-    hostname,
-    href,
-    hasCapacitor: window.Capacitor !== undefined,
-    hasWebkit: window.webkit !== undefined,
-    hasNativeBridge: window.webkit?.messageHandlers !== undefined
-  })
-  
+
   // Check for iOS native bridge (most reliable)
   const hasIOSBridge = window.webkit?.messageHandlers !== undefined
-  
+
   // Capacitor iOS uses capacitor:// scheme
   if (protocol === 'capacitor:' || hasIOSBridge) {
-    console.log('✅ iOS detected via', protocol === 'capacitor:' ? 'URL scheme' : 'WebKit bridge')
     return { isNative: true, platform: 'ios' }
   }
   
@@ -69,29 +58,16 @@ const detectPlatformFromUrl = () => {
 // Get platform info from URL (immediately accurate)
 let { isNative, platform } = detectPlatformFromUrl()
 
-console.log('Firebase Boot: Platform detected:', platform, 'Native:', isNative)
-console.log('Firebase Boot: Initializing Firebase app with config:', {
-  projectId: firebaseConfig.projectId,
-  authDomain: firebaseConfig.authDomain
-})
-
 // Initialize Firebase
 const app = initializeApp(firebaseConfig)
-console.log('Firebase Boot: Firebase app initialized successfully ✅')
 
 // Initialize Firebase services - same for all platforms
-console.log('Firebase Boot: Initializing Firebase services...')
-
-// Initialize auth with persistence - handle already initialized case
 let auth
 try {
   auth = initializeAuth(app, {
     persistence: browserLocalPersistence
   })
-  console.log('Firebase Boot: Auth initialized with persistence')
-} catch (initError) {
-  // If already initialized, just get the existing instance
-  console.log('Firebase Boot: Auth already initialized, using existing instance:', initError.message)
+} catch {
   auth = getAuth(app)
 }
 
@@ -105,26 +81,15 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 })
 
-console.log('Firebase Boot: Services initialized successfully')
-
-// Set up auth state listener to sync PRE user with Smart Mirror service
-// Check if user is already logged in (from persistence)
+// Sync PRE user with Smart Mirror service on auth state changes
 if (auth.currentUser) {
-  console.log('Firebase Boot: PRE user already logged in (from persistence), syncing with Smart Mirror service:', auth.currentUser.uid)
   smartMirrorService.setPreUserId(auth.currentUser.uid)
 }
 
-// Set up listener for future auth state changes
-// Store the unsubscribe function so it can be released when no longer needed
 export const unsubscribeFirebaseAuth = onAuthStateChanged(auth, (user) => {
   if (user) {
-    console.log('🔐 Firebase Boot: PRE user logged in:', user.uid)
-    console.log('🔐 User email:', user.email)
-    console.log('🔐 Auth instance:', auth ? 'Valid' : 'Invalid')
-    console.log('🔐 Current user accessible:', auth.currentUser ? 'Yes' : 'No')
     smartMirrorService.setPreUserId(user.uid)
   } else {
-    console.log('Firebase Boot: PRE user logged out, clearing Smart Mirror service')
     void smartMirrorService.clearPreUserId().catch((err) => {
       console.warn('Firebase Boot: clearPreUserId failed (non-fatal):', err?.message || err)
     })
@@ -132,18 +97,8 @@ export const unsubscribeFirebaseAuth = onAuthStateChanged(auth, (user) => {
 })
 
 export default defineBoot(async ({ app }) => {
-  // Verify auth is properly initialized
-  if (!auth) {
-    console.error('🚨 CRITICAL: Auth is not initialized!')
-    throw new Error('Firebase Auth failed to initialize')
-  }
-  
-  console.log('🔐 Firebase Boot: Auth verification:', {
-    authExists: !!auth,
-    currentUser: auth.currentUser?.uid || 'none',
-    authApp: auth.app?.name
-  })
-  
+  if (!auth) throw new Error('Firebase Auth failed to initialize')
+
   // Make Firebase services available globally
   app.config.globalProperties.$firebase = app
   app.config.globalProperties.$auth = auth
@@ -154,30 +109,6 @@ export default defineBoot(async ({ app }) => {
   app.config.globalProperties.$isNative = isNative
   app.config.globalProperties.$platform = platform
 
-  // Global runtime diagnostics for native black-screen investigation.
-  // Keep logging-only to avoid changing behavior while surfacing root causes.
-  if (typeof window !== 'undefined' && !window.__preRuntimeErrorHooksInstalled) {
-    window.__preRuntimeErrorHooksInstalled = true
-    window.addEventListener('error', (event) => {
-      console.error('[RuntimeError][window.error]', {
-        message: event?.message,
-        source: event?.filename,
-        line: event?.lineno,
-        column: event?.colno,
-        stack: event?.error?.stack,
-      })
-    })
-    window.addEventListener('unhandledrejection', (event) => {
-      const reason = event?.reason
-      console.error('[RuntimeError][unhandledrejection]', {
-        message: reason?.message || String(reason),
-        stack: reason?.stack,
-        code: reason?.code,
-        name: reason?.name,
-      })
-    })
-  }
-
   app.config.errorHandler = (err, instance, info) => {
     console.error('[RuntimeError][vue]', {
       info,
@@ -187,8 +118,6 @@ export default defineBoot(async ({ app }) => {
       component: instance?.type?.name || instance?.type?.__name || 'unknown',
     })
   }
-  
-  console.log('Firebase Boot: Complete ✅')
 })
 
 // Export Firebase services and platform info for use in components

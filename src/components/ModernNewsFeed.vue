@@ -803,32 +803,16 @@ const loadDefaultLogo = async () => {
 
 
 const fetchNews = async () => {
-  // Use project store as primary source, prop as fallback
   const projectId = projectStore.selectedProject?.id || props.projectId
-  console.log('🔍 ModernNewsFeed.fetchNews called with projectId:', projectId)
-  console.log('🔍 Project store selectedProject:', projectStore.selectedProject)
-  console.log('🔍 Props projectId:', props.projectId)
-  
-  if (!projectId) {
-    console.log('❌ ModernNewsFeed: No project ID available, skipping news fetch')
-    return
-  }
+  if (!projectId) return
 
-  console.log('🚀 ModernNewsFeed: Starting news fetch for project:', projectId)
   loading.value = true
   try {
-    console.log('📦 ModernNewsFeed: Importing news service...')
-    // Import news service dynamically to avoid circular imports
-    const { default: newsService } = await import('../services/newsService.js')
-    console.log('✅ ModernNewsFeed: News service imported successfully')
-    
-    console.log('🚀 ModernNewsFeed: Calling newsService.fetchNews...')
     const news = await newsService.fetchNews(projectId, {
       publishedOnly: true,
       limit: 20,
       prioritizeFeatured: !props.showAll // Prioritize featured news on homepage only
     })
-    console.log('✅ ModernNewsFeed: News service returned:', news?.length || 0, 'items')
 
     // Normalize display object; keep all Firestore fields (titleEn, titleAr, …) for locale resolution
     newsItems.value = news.map(item => {

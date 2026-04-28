@@ -13,10 +13,7 @@ const storage = getStorage(smartMirrorApp)
 // Get all ads for a project (optimized)
 export const getAds = async (projectId) => {
   try {
-    console.log('🚀 AdsService: Getting ads for project:', projectId);
-    const ads = await fastCollectionService.getAds(projectId);
-    console.log('🚀 AdsService: Retrieved ads:', ads.length);
-    return ads;
+    return await fastCollectionService.getAds(projectId)
   } catch (error) {
     console.error('Error fetching ads:', error);
     throw error;
@@ -26,11 +23,8 @@ export const getAds = async (projectId) => {
 // Get active ads for a project (for display) - optimized
 export const getActiveAds = async (projectId) => {
   try {
-    console.log('🚀 AdsService: Getting active ads for project:', projectId);
     const ads = await fastCollectionService.getAds(projectId);
-    const activeAds = ads.filter(ad => ad.isActive).sort((a, b) => a.order - b.order);
-    console.log('🚀 AdsService: Retrieved active ads:', activeAds.length);
-    return activeAds;
+    return ads.filter(ad => ad.isActive).sort((a, b) => a.order - b.order);
   } catch (error) {
     console.error('Error fetching active ads:', error);
     throw error;
