@@ -19,6 +19,8 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   const unsubscribe = ref(null)
   const unsubscribeReadStatus = ref(null)
   const isModalOpen = ref(false)
+  const currentUserId = ref(null)
+  const currentProjectId = ref(null)
   const readStatusMap = ref(new Map()) // Store read status for persistence
   const pollingInterval = ref(null) // Polling interval for periodic updates
   const lastFetchTime = ref(null) // Track last fetch to prevent duplicate fetches
@@ -116,12 +118,23 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   }
 
   const getNotificationTimestampMs = (notification) => {
-    const value = notification?.createdAt || notification?.scheduledAt || notification?.issuedAt || notification?.startDate || 0
-    if (value && typeof value.toMillis === 'function') return value.toMillis()
-    if (value && typeof value === 'object' && value.seconds) return value.seconds * 1000
-    if (typeof value === 'number') return value
-    const parsed = new Date(value).getTime()
-    return Number.isNaN(parsed) ? 0 : parsed
+    const candidates = [
+      notification?.createdAt,
+      notification?.updatedAt,
+      notification?.sentAt,
+      notification?.scheduledAt,
+      notification?.issuedAt,
+      notification?.startDate
+    ]
+    for (const value of candidates) {
+      if (!value) continue
+      if (typeof value?.toMillis === 'function') return value.toMillis()
+      if (typeof value === 'object' && value.seconds) return value.seconds * 1000
+      if (typeof value === 'number') return value
+      const parsed = new Date(value).getTime()
+      if (!Number.isNaN(parsed)) return parsed
+    }
+    return 0
   }
 
   const mergeAndSortNotifications = (items = []) => {
@@ -227,11 +240,11 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
     if (existingIndex >= 0) {
       const next = [...notifications.value]
       next[existingIndex] = { ...next[existingIndex], ...normalized, read: next[existingIndex].read ?? false }
-      notifications.value = next
+      notifications.value = mergeAndSortNotifications(next)
     } else {
-      notifications.value = [normalized, ...notifications.value]
-      unreadCount.value += 1
+      notifications.value = mergeAndSortNotifications([normalized, ...notifications.value])
     }
+    unreadCount.value = notifications.value.filter((n) => !n.read).length
   }
 
   const fetchNotifications = async (userId, projectId, options = {}) => {
@@ -300,8 +313,8 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
           }
         })
         
-        // Limit to 50 most recent
-        const recentNotifications = notificationsList.slice(0, 50)
+        // Always enforce newest-first ordering before limiting
+        const recentNotifications = mergeAndSortNotifications(notificationsList).slice(0, 50)
         
         // FETCH 2: Get user's read status from DynamoDB (PRE app uses AWS)
         let readStatusMapFromDb = new Map()
@@ -339,7 +352,7 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         
         const mergedNotifications = mergeWithEphemeralNotifications(combinedNotifications)
         notifications.value = mergeAndSortNotifications(mergedNotifications)
-        unreadCount.value = mergedNotifications.filter((n) => !n.read).length
+        unreadCount.value = notifications.value.filter((n) => !n.read).length
         lastFetchTime.value = Date.now()
         isLoading.value = false
         
@@ -454,6 +467,9 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
    * @param {string} projectId - The current project ID
    */
   const subscribeToNotifications = async (userId, projectId) => {
+    currentUserId.value = String(userId || '')
+    currentProjectId.value = String(projectId || '')
+
     if (!userId || !projectId) {
       console.warn('NotificationCenter: Cannot subscribe without userId and projectId')
       return
@@ -629,8 +645,11 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
     isModalOpen.value = !isModalOpen.value
   }
 
-  const openModal = () => {
+  const openModal = async () => {
     isModalOpen.value = true
+    if (currentUserId.value && currentProjectId.value) {
+      await fetchNotifications(currentUserId.value, currentProjectId.value, { force: true })
+    }
   }
 
   const closeModal = () => {

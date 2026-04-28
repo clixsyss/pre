@@ -602,9 +602,9 @@ const getDurationUnit = (pricingType) => {
 
 // Users can only cancel bookings that are still pending/not yet processed
 const canCancel = (booking) => {
-  // Allow cancellation for pending statuses only
-  // Support both old and new status values
-  return ['confirmed', 'pending', 'enrolled', 'open'].includes(booking.status);
+  const status = String(booking?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+  // Allow cancellation while booking is still active / not finalized
+  return ['confirmed', 'pending', 'enrolled', 'open', 'processing', 'in_progress'].includes(status);
 };
 
 const viewBookingDetails = (booking) => {

@@ -628,6 +628,51 @@ class RequestSubmissionService {
     }
   }
 
+  async cancelSubmissionForUser(projectId, submissionId, userId, reason = 'Cancelled by user') {
+    try {
+      const { default: firestoreService } = await import('./firestoreService');
+      await firestoreService.initialize();
+
+      const requestPath = `projects/${projectId}/requestSubmissions/${submissionId}`;
+      const requestSnap = await firestoreService.getDoc(requestPath);
+      if (!requestSnap?.exists) {
+        throw new Error('Request submission not found');
+      }
+
+      const current = requestSnap.data() || {};
+      if (current.userId !== userId) {
+        throw new Error('You are not allowed to cancel this request.');
+      }
+
+      const status = String(current.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+      if (['cancelled', 'completed', 'closed', 'resolved', 'rejected'].includes(status)) {
+        throw new Error('This request cannot be cancelled.');
+      }
+
+      const now = new Date().toISOString();
+      const cancelMessage = {
+        id: Date.now().toString(),
+        text: reason || 'Request cancelled by user.',
+        senderType: 'system',
+        timestamp: now,
+        messageType: 'status_update'
+      };
+
+      await firestoreService.updateDoc(requestPath, {
+        status: 'cancelled',
+        statusReason: reason || 'Cancelled by user',
+        updatedAt: now,
+        lastMessageAt: now,
+        messages: [...(current.messages || []), cancelMessage]
+      });
+
+      return true;
+    } catch (error) {
+      console.error('❌ RequestSubmissionService: Error cancelling submission for user:', error);
+      throw new Error(`Failed to cancel request submission: ${error.message}`);
+    }
+  }
+
   /**
    * Add a message to a request submission
    * Messages are stored as an array in the request submission document (DynamoDB compatible)

@@ -115,6 +115,13 @@
                 {{ getUnreadCount(request) }} unread
               </span>
               <button
+                v-if="canCancelSubmission(request)"
+                class="cancel-request-btn"
+                @click.stop="cancelSubmission(request)"
+              >
+                Cancel
+              </button>
+              <button
                 v-if="canEditSubmission(request)"
                 class="edit-btn"
                 @click.stop="editSubmission(request)"
@@ -363,6 +370,36 @@ const getUnreadCount = (request) => {
 const canEditSubmission = (request) => {
   const status = String(request?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
   return status === 'cancelled' || status === 'rejected';
+};
+
+const canCancelSubmission = (request) => {
+  const status = String(request?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+  return ['pending', 'in_progress', 'open', 'processing', 'confirmed'].includes(status);
+};
+
+const cancelSubmission = async (request) => {
+  try {
+    if (!projectStore.selectedProject?.id || !request?.id) return;
+    const shouldCancel = window.confirm('Are you sure you want to cancel this request?');
+    if (!shouldCancel) return;
+
+    const user = await optimizedAuthService.getCurrentUser();
+    if (!user?.uid) {
+      throw new Error('User not authenticated');
+    }
+
+    await requestSubmissionService.cancelSubmissionForUser(
+      projectStore.selectedProject.id,
+      request.id,
+      user.uid,
+      'Cancelled by user'
+    );
+
+    await loadMyRequests();
+  } catch (error) {
+    console.error('Error cancelling request submission:', error);
+    alert(error?.message || 'Failed to cancel request. Please try again.');
+  }
 };
 
 const editSubmission = (request) => {
@@ -732,6 +769,17 @@ const editSubmission = (request) => {
   border: 1px solid #f5c2c4;
   border-radius: 8px;
   font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancel-request-btn {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }

@@ -135,6 +135,13 @@
             <span v-if="unreadCount > 0" class="chat-badge">{{ unreadCount }}</span>
           </button>
           <button
+            v-if="canCancelBooking"
+            @click="cancelCurrentBooking"
+            class="secondary-btn cancel-booking-btn"
+          >
+            <span>Cancel Booking</span>
+          </button>
+          <button
             v-if="canEditBooking"
             @click="toggleEditMode"
             class="secondary-btn"
@@ -251,6 +258,11 @@ const canEditBooking = computed(() => {
   return status === 'cancelled' || status === 'rejected';
 });
 
+const canCancelBooking = computed(() => {
+  const status = String(currentBooking.value?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
+  return ['open', 'pending', 'processing', 'in_progress', 'confirmed'].includes(status);
+});
+
 const lastMessagePreview = computed(() => {
   if (!currentBooking.value?.messages || currentBooking.value.messages.length === 0) {
     return 'No messages yet';
@@ -360,6 +372,26 @@ const saveEdit = async () => {
     alert(error.message || 'Failed to save booking edits.');
   } finally {
     savingEdit.value = false;
+  }
+};
+
+const cancelCurrentBooking = async () => {
+  try {
+    if (!currentBooking.value?.id || !projectStore.selectedProject?.id) return;
+    const shouldCancel = window.confirm('Are you sure you want to cancel this booking?');
+    if (!shouldCancel) return;
+
+    await serviceBookingService.cancelBooking(
+      projectStore.selectedProject.id,
+      currentBooking.value.id,
+      'Cancelled by user'
+    );
+
+    emit('booking-updated');
+    closeModal();
+  } catch (error) {
+    console.error('❌ Error cancelling booking:', error);
+    alert(error?.message || 'Failed to cancel booking. Please try again.');
   }
 };
 
