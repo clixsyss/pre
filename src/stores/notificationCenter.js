@@ -57,15 +57,104 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
 
   const normalizeIdentifier = (value) => String(value || '').trim().toLowerCase()
 
+  const extractPrimitiveCandidate = (value) => {
+    if (value === null || value === undefined) return null
+    if (typeof value === 'string' || typeof value === 'number') return value
+    if (typeof value !== 'object') return null
+
+    // Backend payloads may pass user identifiers inside lightweight objects.
+    const objectCandidates = [
+      value.id,
+      value.uid,
+      value.userId,
+      value.user_id,
+      value.sub,
+      value.email,
+      value.value
+    ]
+    for (const candidate of objectCandidates) {
+      if (candidate !== null && candidate !== undefined && candidate !== '') {
+        return candidate
+      }
+    }
+    return null
+  }
+
   const valueMatchesUser = (value, identifiers) => {
-    if (!value) return false
-    const normalized = normalizeIdentifier(value)
+    const primitive = extractPrimitiveCandidate(value)
+    if (primitive === null || primitive === undefined || primitive === '') return false
+    const normalized = normalizeIdentifier(primitive)
     return identifiers.has(normalized)
   }
 
   const anyValueMatchesUser = (values, identifiers) => {
     if (!Array.isArray(values)) return false
     return values.some((value) => valueMatchesUser(value, identifiers))
+  }
+
+  const normalizeAudienceValue = (value) => normalizeIdentifier(value)
+
+  const anyValueMatchesAudience = (values, audienceIdentifiers) => {
+    if (!Array.isArray(values) || !(audienceIdentifiers instanceof Set) || audienceIdentifiers.size === 0) return false
+    return values.some((value) => {
+      const primitive = extractPrimitiveCandidate(value)
+      if (primitive === null || primitive === undefined || primitive === '') return false
+      return audienceIdentifiers.has(normalizeAudienceValue(primitive))
+    })
+  }
+
+  const hasMeaningfulArrayValues = (value) => Array.isArray(value) && value.some((entry) => {
+    const primitive = extractPrimitiveCandidate(entry)
+    return primitive !== null && primitive !== undefined && primitive !== ''
+  })
+
+  const hasExplicitTargeting = (notif) => {
+    if (!notif) return false
+    const audience = notif.audience || {}
+    const audienceLists = [
+      audience.uids,
+      audience.userIds,
+      audience.user_ids,
+      audience.users,
+      audience.recipients,
+      audience.recipientIds,
+      audience.recipient_ids,
+      audience.targetUserIds,
+      audience.target_user_ids,
+      audience.subs,
+      audience.emails,
+      audience.units,
+      audience.buildings
+    ]
+    if (audienceLists.some((list) => hasMeaningfulArrayValues(list))) return true
+    const audienceSingles = [
+      audience.userId,
+      audience.user_id,
+      audience.uid,
+      audience.sub,
+      audience.email,
+      audience.unit,
+      audience.building,
+      audience.topic
+    ]
+    if (audienceSingles.some((value) => extractPrimitiveCandidate(value))) return true
+
+    const directTargetCandidates = [
+      notif.userId,
+      notif.user_id,
+      notif.uid,
+      notif.sub,
+      notif.recipientId,
+      notif.recipient_id,
+      notif.targetUserId,
+      notif.target_user_id,
+      notif.userEmail,
+      notif.user_email,
+      notif.email,
+      notif.ownerId,
+      notif.owner_id
+    ]
+    return directTargetCandidates.some((value) => extractPrimitiveCandidate(value))
   }
 
   const resolveUserIdentifiers = async (primaryUserId) => {
@@ -125,29 +214,137 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
     return identifiers
   }
 
-  const isNotificationForCurrentUser = (notif, userIdentifiers) => {
+  const resolveAudienceContext = async (primaryUserId, projectId) => {
+    const unitIdentifiers = new Set()
+    const buildingIdentifiers = new Set()
+    const topicIdentifiers = new Set()
+
+    const addCandidates = (targetSet, candidates = []) => {
+      candidates.forEach((candidate) => {
+        if (candidate === null || candidate === undefined || candidate === '') return
+        targetSet.add(normalizeAudienceValue(candidate))
+      })
+    }
+
+    if (projectId) {
+      addCandidates(topicIdentifiers, [projectId, `project-${projectId}`])
+    }
+
+    try {
+      const { useProjectStore } = await import('../stores/projectStore')
+      const projectStore = useProjectStore()
+      const selectedProject = projectStore?.selectedProject
+
+      addCandidates(unitIdentifiers, [
+        selectedProject?.userUnit,
+        selectedProject?.unit,
+        selectedProject?.unitNumber,
+        selectedProject?.apartmentNumber
+      ])
+      addCandidates(buildingIdentifiers, [
+        selectedProject?.building,
+        selectedProject?.buildingId,
+        selectedProject?.tower
+      ])
+      addCandidates(topicIdentifiers, [
+        selectedProject?.id,
+        selectedProject?.topic
+      ])
+    } catch (error) {
+      console.warn('NotificationCenter: Could not resolve project audience context:', error)
+    }
+
+    try {
+      const { getUserById } = await import('../services/dynamoDBUsersService')
+      const profile = await getUserById(String(primaryUserId || ''))
+      if (profile) {
+        addCandidates(unitIdentifiers, [
+          profile.unit,
+          profile.unitNumber,
+          profile.apartmentNumber
+        ])
+        addCandidates(buildingIdentifiers, [
+          profile.building,
+          profile.buildingId,
+          profile.tower
+        ])
+      }
+    } catch {
+      // Optional enrichment only; ignore if unavailable
+    }
+
+    return {
+      unitIdentifiers,
+      buildingIdentifiers,
+      topicIdentifiers
+    }
+  }
+
+  const isNotificationForCurrentUser = (notif, userIdentifiers, audienceContext = {}) => {
     if (!notif) return false
     const audience = notif.audience || {}
+    const unitIdentifiers = audienceContext.unitIdentifiers || new Set()
+    const buildingIdentifiers = audienceContext.buildingIdentifiers || new Set()
+    const topicIdentifiers = audienceContext.topicIdentifiers || new Set()
+    const audienceTargetCandidates = [
+      audience.uids,
+      audience.userIds,
+      audience.user_ids,
+      audience.users,
+      audience.recipients,
+      audience.recipientIds,
+      audience.recipient_ids,
+      audience.targetUserIds,
+      audience.target_user_ids,
+      audience.subs,
+      audience.emails
+    ]
+    const directTargetCandidates = [
+      notif.userId,
+      notif.user_id,
+      notif.uid,
+      notif.sub,
+      notif.recipientId,
+      notif.recipient_id,
+      notif.targetUserId,
+      notif.target_user_id,
+      notif.userEmail,
+      notif.user_email,
+      notif.email,
+      notif.ownerId,
+      notif.owner_id
+    ]
+
     if (audience.all === true) return true
+    if (audienceTargetCandidates.some((candidateList) => anyValueMatchesUser(candidateList, userIdentifiers))) {
+      return true
+    }
     if (
-      anyValueMatchesUser(audience.uids, userIdentifiers) ||
-      anyValueMatchesUser(audience.userIds, userIdentifiers) ||
-      anyValueMatchesUser(audience.emails, userIdentifiers) ||
+      anyValueMatchesAudience(audience.units, unitIdentifiers) ||
+      anyValueMatchesAudience(audience.buildings, buildingIdentifiers) ||
+      valueMatchesUser(audience.unit, unitIdentifiers) ||
+      valueMatchesUser(audience.building, buildingIdentifiers) ||
+      valueMatchesUser(audience.topic, topicIdentifiers)
+    ) {
+      return true
+    }
+    if (
       valueMatchesUser(audience.userId, userIdentifiers) ||
+      valueMatchesUser(audience.user_id, userIdentifiers) ||
       valueMatchesUser(audience.uid, userIdentifiers) ||
+      valueMatchesUser(audience.sub, userIdentifiers) ||
       valueMatchesUser(audience.email, userIdentifiers)
     ) {
       return true
     }
 
-    return (
-      valueMatchesUser(notif.userId, userIdentifiers) ||
-      valueMatchesUser(notif.uid, userIdentifiers) ||
-      valueMatchesUser(notif.recipientId, userIdentifiers) ||
-      valueMatchesUser(notif.targetUserId, userIdentifiers) ||
-      valueMatchesUser(notif.userEmail, userIdentifiers) ||
-      valueMatchesUser(notif.email, userIdentifiers)
-    )
+    const matchesDirectTarget = directTargetCandidates.some((candidate) => valueMatchesUser(candidate, userIdentifiers))
+    if (matchesDirectTarget) return true
+
+    // Fail-open fallback: when backend writes a project notification without
+    // explicit recipient targeting fields, treat it as project-wide so it
+    // appears in Notification Center instead of being silently dropped.
+    return !hasExplicitTargeting(notif)
   }
 
   const getNotificationTimestampMs = (notification) => {
@@ -304,6 +501,7 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
     try {
       console.log('NotificationCenter: 📊 Fetching notifications (polling mode)...', { userId, projectId })
       const userIdentifiers = await resolveUserIdentifiers(userId)
+      const audienceContext = await resolveAudienceContext(userId, projectId)
       
       // Use DynamoDB service first
       try {
@@ -321,27 +519,18 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
           throw new Error('getNotificationsByProject function not found')
         }
         
-        // Calculate date 1 month ago for filtering
-        const oneMonthAgo = new Date()
-        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
-        
         // Fetch notifications from DynamoDB
-        const allNotifications = await getNotificationsByProject(projectId, {
-          limit: 100 // Fetch more to filter by date and audience
-        })
+        // Do not cap Dynamo partition rows before timestamp sorting.
+        // Some writers use IDs that are not strictly time-ordered, so limiting
+        // early can return an old slice and hide fresh notifications.
+        const allNotifications = await getNotificationsByProject(projectId)
         
         // Filter by date (last month) and audience targeting
         const notificationsList = []
         let unreadCounter = 0
         
         allNotifications.forEach((notif) => {
-          // Filter by date
-          if (!notif.createdAt) return
-          const createdAtMs = getNotificationTimestampMs(notif)
-          const notifDate = new Date(createdAtMs || 0)
-          if (notifDate < oneMonthAgo) return
-          
-          const isForCurrentUser = isNotificationForCurrentUser(notif, userIdentifiers)
+          const isForCurrentUser = isNotificationForCurrentUser(notif, userIdentifiers, audienceContext)
           
           // Only include notifications meant for this user
           if (isForCurrentUser) {
@@ -459,7 +648,7 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
           const readStatus = readStatusMap.value.get(String(doc.id))
           const isRead = readStatus?.read || false
           
-          const isForCurrentUser = isNotificationForCurrentUser(data, userIdentifiers)
+          const isForCurrentUser = isNotificationForCurrentUser(data, userIdentifiers, audienceContext)
           
           // Only include notifications meant for this user
           if (isForCurrentUser) {
@@ -523,8 +712,9 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
 
     console.log('NotificationCenter: 🔄 Starting polling mode (every 5 minutes) to reduce costs')
     
-    // Initial fetch
-    await fetchNotifications(userId, projectId)
+    // Initial fetch must bypass cache. The store can be cleared on layout/user transitions,
+    // and relying on cache here may keep the center empty until the next polling cycle.
+    await fetchNotifications(userId, projectId, { force: true })
     
     // Set up polling interval
     pollingInterval.value = setInterval(async () => {
@@ -667,6 +857,8 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
       unsubscribeReadStatus.value()
       unsubscribeReadStatus.value = null
     }
+    // Reset cache marker so next subscription always rehydrates list immediately.
+    lastFetchTime.value = null
   }
 
   /**
@@ -675,6 +867,7 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   const clearNotifications = () => {
     notifications.value = []
     unreadCount.value = 0
+    lastFetchTime.value = null
     unsubscribeFromNotifications()
   }
 

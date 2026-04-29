@@ -24,13 +24,33 @@ const TABLE_NAME = 'projects__notifications'
  * @returns {Object} JavaScript object
  */
 function unmarshallAudience(dynamoAudience) {
+  const unwrapDynamoValue = (value) => {
+    if (value === null || value === undefined) return null
+    if (typeof value !== 'object') return value
+    if (value.S !== undefined) return value.S
+    if (value.N !== undefined) return Number(value.N)
+    if (value.BOOL !== undefined) return value.BOOL
+    if (value.NULL) return null
+    if (value.L) return value.L.map((entry) => unwrapDynamoValue(entry))
+    if (value.M) {
+      const result = {}
+      Object.entries(value.M).forEach(([key, nested]) => {
+        result[key] = unwrapDynamoValue(nested)
+      })
+      return result
+    }
+    return value
+  }
+
   if (!dynamoAudience || typeof dynamoAudience !== 'object') {
     return {
       all: false,
       topic: null,
       units: [],
       uids: [],
-      buildings: []
+      buildings: [],
+      userIds: [],
+      emails: []
     }
   }
 
@@ -46,7 +66,9 @@ function unmarshallAudience(dynamoAudience) {
     topic: dynamoAudience.topic || (dynamoAudience.M?.topic?.NULL ? null : dynamoAudience.M?.topic?.S || null),
     units: [],
     uids: [],
-    buildings: []
+    buildings: [],
+    userIds: [],
+    emails: []
   }
 
   // Handle units array
@@ -68,6 +90,28 @@ function unmarshallAudience(dynamoAudience) {
     audience.buildings = dynamoAudience.M.buildings.L.map(item => item.S || item)
   } else if (Array.isArray(dynamoAudience.buildings)) {
     audience.buildings = dynamoAudience.buildings
+  }
+
+  if (dynamoAudience.M?.userIds?.L) {
+    audience.userIds = dynamoAudience.M.userIds.L.map(item => item.S || item)
+  } else if (Array.isArray(dynamoAudience.userIds)) {
+    audience.userIds = dynamoAudience.userIds
+  }
+
+  if (dynamoAudience.M?.emails?.L) {
+    audience.emails = dynamoAudience.M.emails.L.map(item => item.S || item)
+  } else if (Array.isArray(dynamoAudience.emails)) {
+    audience.emails = dynamoAudience.emails
+  }
+
+  // Preserve any additional audience keys from DynamoDB payloads
+  // (e.g. recipients, recipientIds, targetUserIds) so client filtering
+  // can match evolving backend schemas without losing data.
+  if (dynamoAudience.M) {
+    Object.entries(dynamoAudience.M).forEach(([key, value]) => {
+      if (audience[key] !== undefined) return
+      audience[key] = unwrapDynamoValue(value)
+    })
   }
 
   return audience
