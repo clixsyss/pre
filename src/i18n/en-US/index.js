@@ -127,6 +127,8 @@ export default {
   // Services Page
   servicesTitle: 'Services',
   servicesSubtitle: 'Smart home devices and other services',
+  facilityManagement: 'Facility Management',
+  communityManagement: 'Community Management',
   loadingServices: 'Loading services...',
   retry: 'Retry',
   noServicesAvailable: 'No Services Available',

@@ -117,6 +117,8 @@ export default {
   // Services Page
   servicesTitle: 'الخدمات',
   servicesSubtitle: 'الأجهزة الذكية وخدمات أخرى',
+  facilityManagement: 'إدارة المرافق',
+  communityManagement: 'إدارة المجتمع',
   loadingServices: 'جاري تحميل الخدمات...',
   retry: 'حاول مرة أخرى',
   noServicesAvailable: 'لا توجد خدمات متاحة',

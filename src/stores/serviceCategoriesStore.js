@@ -54,13 +54,18 @@ export const useServiceCategoriesStore = defineStore('serviceCategories', () => 
     }
   };
 
-  const getServicesByCategory = async (projectId, categoryId) => {
+  const getServicesByCategory = async (projectId, categoryId, forceRefresh = false) => {
     try {
       loading.value = true;
       error.value = null;
       
       // Only fetch available services for mobile app
-      const services = await serviceCategoriesService.getServicesByCategory(projectId, categoryId, true);
+      const services = await serviceCategoriesService.getServicesByCategory(
+        projectId,
+        categoryId,
+        true,
+        !forceRefresh
+      );
       return services;
     } catch (err) {
       console.error('Error fetching services by category:', err);

@@ -3497,8 +3497,8 @@ const addNewProject = async (options = {}) => {
               role: newProject.value.userRole,
               unit: newProject.value.userUnit,
               approvalStatus: 'pending',
-              requestedAt: new Date(),
-              updatedAt: new Date()
+              requestedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
             }
 
             // Use DynamoDB users service for more reliable updates

@@ -202,7 +202,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useRequestCategoriesStore } from '../../stores/requestCategoriesStore';
@@ -254,21 +254,13 @@ const tabs = computed(() => [
   }
 ]);
 
-// Load request categories on component mount
-onMounted(async () => {
-  if (projectStore.selectedProject?.id) {
-    await loadRequestCategories();
-    await loadMyRequests();
-  }
-});
-
-// Watch for project changes
+// Load on mount and whenever project changes
 watch(() => projectStore.selectedProject?.id, async (newProjectId) => {
   if (newProjectId) {
     await loadRequestCategories();
     await loadMyRequests();
   }
-});
+}, { immediate: true });
 
 const loadRequestCategories = async () => {
   if (projectStore.selectedProject?.id) {

@@ -17,6 +17,13 @@ class FastCollectionService {
     this._inFlight = new Map()
   }
 
+  _isPublishedStatus(statusValue) {
+    const normalized = String(statusValue || '').trim().toLowerCase()
+    // Backward compatibility: legacy rows can have empty/missing status.
+    if (!normalized) return true
+    return normalized === 'available' || normalized === 'published' || normalized === 'active'
+  }
+
   /**
    * Deduplicates concurrent requests for the same key.
    * If a fetch for `key` is already in-flight, returns that same promise.
@@ -177,7 +184,7 @@ class FastCollectionService {
         // Apply client-side filtering for status
         let categories = allCategories
         if (availableOnly) {
-          categories = categories.filter((cat) => cat.status === 'available')
+          categories = categories.filter((cat) => this._isPublishedStatus(cat.status))
           console.log(`🚀 FastCollection: Filtered to ${categories.length} available categories`)
         }
         
@@ -210,7 +217,7 @@ class FastCollectionService {
         
         // Apply client-side filtering
         if (availableOnly) {
-          categories = categories.filter(cat => cat.status === 'available')
+          categories = categories.filter((cat) => this._isPublishedStatus(cat.status))
         }
         
         // Sort by name
@@ -259,7 +266,25 @@ class FastCollectionService {
         })
 
         if (availableOnly) {
-          services = services.filter((service) => service.status === 'available')
+          services = services.filter((service) => this._isPublishedStatus(service.status))
+        }
+
+        // If DynamoDB returns empty, try Firestore fallback as well.
+        // This handles environments where categories exist but service rows are still in Firestore.
+        if (!services || services.length === 0) {
+          console.warn(`FastCollection: DynamoDB returned 0 services for category ${categoryId}, trying Firestore fallback`)
+          const snapshot = await firestoreService.getDocs(`projects/${projectId}/serviceCategories/${categoryId}/services`, { timeoutMs: 6000 })
+          if (!snapshot.empty) {
+            services = snapshot.docs.map(doc => ({
+              id: doc.id,
+              categoryId,
+              projectId,
+              ...doc.data()
+            }))
+            if (availableOnly) {
+              services = services.filter((service) => this._isPublishedStatus(service.status))
+            }
+          }
         }
         
         // Sort by englishTitle (or name if available)
@@ -296,7 +321,7 @@ class FastCollectionService {
         
         // Apply client-side filtering
         if (availableOnly) {
-          services = services.filter((service) => service.status === 'available')
+          services = services.filter((service) => this._isPublishedStatus(service.status))
         }
 
         services.sort((a, b) =>

@@ -522,10 +522,30 @@ const loadServices = async () => {
     loading.value = true
     error.value = null
 
-    const servicesData = await serviceCategoriesStore.getServicesByCategory(
+    let servicesData = await serviceCategoriesStore.getServicesByCategory(
       projectStore.selectedProject.id,
       categoryId.value,
+      true,
     )
+
+    // Backward-compat fallback:
+    // some legacy rows may still be stored under the main category bucket.
+    if (
+      (!servicesData || servicesData.length === 0) &&
+      category.value?.mainCategoryId &&
+      category.value.mainCategoryId !== categoryId.value
+    ) {
+      const legacyServices = await serviceCategoriesStore.getServicesByCategory(
+        projectStore.selectedProject.id,
+        category.value.mainCategoryId,
+        true,
+      )
+
+      if (Array.isArray(legacyServices) && legacyServices.length > 0) {
+        servicesData = legacyServices
+      }
+    }
+
     services.value = servicesData
   } catch (err) {
     console.error('Error loading services:', err)
@@ -863,7 +883,6 @@ const confirmBooking = async () => {
   background: white;
   border-radius: 16px;
   padding: 24px;
-  margin: 0 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 

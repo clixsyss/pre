@@ -641,18 +641,19 @@ class FCMService {
       case 'academy_booking':
         return '/my-bookings';
       case 'order':
-        return '/orders';
+        return '/stores-shopping';
       case 'news':
-        return data.newsId ? `/news/${data.newsId}` : '/news';
+        // App router does not define /news/:id, only /news.
+        return '/news';
       case 'announcement':
       case 'alert':
       case 'info':
       case 'success':
       case 'warning':
-        return '/notifications';
+        return '/home';
       case 'promo':
       case 'promotion':
-        return '/promotions';
+        return '/home';
       case 'support':
       case 'support_chat':
         return data.chatId ? `/support-chat/${data.chatId}` : '/support-chat';
@@ -670,7 +671,7 @@ class FCMService {
       case 'fine':
         return '/violations';
       default:
-        return '/notifications';
+        return '/home';
     }
   }
 
@@ -708,7 +709,7 @@ class FCMService {
       import('src/stores/splash').then(({ useSplashStore }) => {
         useSplashStore().setAppInitialized();
       }).catch(() => {});
-      router.push(targetRoute || '/notifications');
+      router.push(targetRoute || '/home');
     }).catch(error => {
       logger.error('FCMService: Error loading router:', error);
     });

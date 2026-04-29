@@ -100,6 +100,49 @@ export async function getServicesByProject(projectId, options = {}) {
         throw queryError
       }
     }
+
+    // Backward compatibility:
+    // if direct query returns empty, rows may be stored with composite parentId like `${projectId}#...`.
+    // Run a scan fallback and keep category/status filtering aligned with the query above.
+    if (!items || items.length === 0) {
+      const { scan } = await import('../aws/dynamodbClient')
+      const scanFilterParts = ['begins_with(parentId, :parentIdPrefix)']
+      const scanExprNames = {}
+      const scanExprValues = {
+        ':parentIdPrefix': `${projectId}#`
+      }
+
+      if (options.categoryId) {
+        scanFilterParts.push('categoryId = :categoryId')
+        scanExprValues[':categoryId'] = options.categoryId
+      }
+
+      if (options.status === 'available') {
+        scanExprNames['#status'] = 'status'
+        scanFilterParts.push('(attribute_not_exists(#status) OR #status = :statusAvailable)')
+        scanExprValues[':statusAvailable'] = 'available'
+      } else if (options.status) {
+        scanExprNames['#status'] = 'status'
+        scanFilterParts.push('#status = :status')
+        scanExprValues[':status'] = options.status
+      }
+
+      const scanOptions = {
+        FilterExpression: scanFilterParts.join(' AND '),
+        ExpressionAttributeValues: scanExprValues
+      }
+      if (Object.keys(scanExprNames).length > 0) {
+        scanOptions.ExpressionAttributeNames = scanExprNames
+      }
+      if (options.limit) {
+        scanOptions.Limit = options.limit
+      }
+
+      const fallbackItems = await scan(TABLE_NAME, scanOptions)
+      if (fallbackItems && fallbackItems.length > 0) {
+        items = fallbackItems
+      }
+    }
     
     // Convert DynamoDB format to JavaScript objects
     const services = items.map(item => {

@@ -26,10 +26,10 @@ class ServiceCategoriesService {
    * @param {boolean} availableOnly - Whether to fetch only available services
    * @returns {Promise<Array>} Array of services in the category
    */
-  async getServicesByCategory(projectId, categoryId, availableOnly = true) {
+  async getServicesByCategory(projectId, categoryId, availableOnly = true, useCache = true) {
     try {
       console.log('🚀 ServiceCategoriesService: Getting services for category:', categoryId);
-      const services = await fastCollectionService.getServicesByCategory(projectId, categoryId, availableOnly);
+      const services = await fastCollectionService.getServicesByCategory(projectId, categoryId, availableOnly, useCache);
       console.log('🚀 ServiceCategoriesService: Retrieved services:', services.length);
       return services;
     } catch (error) {

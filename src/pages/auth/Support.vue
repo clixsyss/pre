@@ -68,9 +68,10 @@
 </template>
 
 <script setup>
-import { onMounted, computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSupportStore } from '../../stores/supportStore'
+import { useProjectStore } from '../../stores/projectStore'
 import PageHeader from '../../components/PageHeader.vue'
 import SuspensionBanner from '../../components/SuspensionBanner.vue'
 import { useSuspensionGuard } from '../../composables/useSuspensionGuard'
@@ -82,6 +83,7 @@ defineOptions({
 
 const router = useRouter()
 const supportStore = useSupportStore()
+const projectStore = useProjectStore()
 const { isBlocked, suspensionMessage } = useSuspensionGuard('support')
 
 // State
@@ -144,18 +146,14 @@ const getUnreadCount = (chat) => {
   return getUnreadIncomingAdminCount(chat.messages || [], lastReadMessageId);
 }
 
-onMounted(async () => {
+watch(() => projectStore.selectedProject?.id, async (projectId) => {
+  if (!projectId) return
   try {
-    // Fetch support chats using getDocs instead of real-time listener
     await supportStore.fetchSupportChats()
-
-    // Note: Real-time listeners are temporarily disabled to prevent app hanging
-    // Support chats will be refreshed when user navigates back to this page
-    console.log('✅ Support chats fetched successfully')
   } catch (error) {
     console.error('Error setting up support chats:', error)
   }
-})
+}, { immediate: true })
 </script>
 
 <style scoped>

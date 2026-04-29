@@ -43,7 +43,18 @@
         </div>
 
         <!-- Empty State - No Services Available -->
-        <div v-else-if="!serviceCategoriesStore.isLoading && !loadingStores && !hasAnyServices" class="empty-state">
+        <div v-else-if="!serviceCategoriesStore.isLoading && !loadingStores && !hasAnyServicesForActiveMainCategory" class="empty-state">
+          <div class="main-category-tabs">
+            <button
+              v-for="tab in mainCategoryTabs"
+              :key="tab.id"
+              class="main-category-tab-btn"
+              :class="{ active: activeMainCategoryTab === tab.id }"
+              @click="setActiveMainCategoryTab(tab.id)"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
           <div class="empty-icon">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M9 11L12 14L22 4" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -56,8 +67,22 @@
 
         <!-- Services Grid -->
         <div v-else class="services-grid">
+          <!-- Main Category Tabs -->
+          <div class="main-category-tabs">
+            <button
+              v-for="tab in mainCategoryTabs"
+              :key="tab.id"
+              class="main-category-tab-btn"
+              :class="{ active: activeMainCategoryTab === tab.id }"
+              @click="setActiveMainCategoryTab(tab.id)"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
+
+          <div :key="activeMainCategoryTab" class="main-category-panel">
           <!-- Dynamic Service Categories -->
-          <div v-for="category in serviceCategoriesStore.getCategories" :key="category.id" class="service-card"
+          <div v-for="category in filteredServiceCategories" :key="category.id" class="service-card"
             @click="navigateToCategory(category)">
             <div class="service-icon">
               <img v-if="category.imageUrl" :src="category.imageUrl" :alt="category.englishTitle"
@@ -83,7 +108,6 @@
               </svg>
             </div>
           </div>
-
           <!-- Static Services -->
           <!-- Smart Devices -->
           <div v-if="isSmartHomeConnected" class="service-card" @click="navigateToSmartDevices">
@@ -272,11 +296,11 @@
         <span class="service-name">Membership Plans</span>
         <span class="coming-soon-badge">Coming Soon</span>
       </div> -->
+          </div>
         </div>
       </div>
 
-      <!-- Open Bookings Tab -->
-      <div v-else-if="activeTab === 'open'" class="bookings-content">
+      <div v-if="activeTab === 'open'" class="bookings-content">
         <div v-if="loadingBookings" class="loading-container">
           <div class="loading-spinner"></div>
           <p>Loading open bookings...</p>
@@ -319,7 +343,7 @@
       </div>
 
       <!-- Closed Bookings Tab -->
-      <div v-else-if="activeTab === 'closed'" class="bookings-content">
+      <div v-if="activeTab === 'closed'" class="bookings-content">
         <div v-if="loadingBookings" class="loading-container">
           <div class="loading-spinner"></div>
           <p>{{ $t('loadingClosedBookings') }}</p>
@@ -371,7 +395,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import optimizedAuthService from 'src/services/optimizedAuthService';
@@ -453,6 +477,67 @@ const getCategoryTitle = (category) => {
 
 // Reactive state
 const activeTab = ref('services');
+
+// Two fixed main categories only (mobile-first, legacy fallback via inference).
+const ACTIVE_MAIN_CATEGORY_STORAGE_KEY = 'servicesMainCategoryTab'
+const DEFAULT_ACTIVE_MAIN_CATEGORY = 'facility'
+
+const MAIN_CATEGORIES = {
+  facility: 'facility',
+  community: 'community'
+}
+
+const getInitialMainCategoryTab = () => {
+  try {
+    const saved = localStorage.getItem(ACTIVE_MAIN_CATEGORY_STORAGE_KEY)
+    if (saved === MAIN_CATEGORIES.facility || saved === MAIN_CATEGORIES.community) return saved
+  } catch {
+    // Ignore localStorage issues (e.g., blocked/disabled).
+  }
+  return DEFAULT_ACTIVE_MAIN_CATEGORY
+}
+
+const activeMainCategoryTab = ref(getInitialMainCategoryTab())
+
+const mainCategoryTabs = computed(() => [
+  { id: MAIN_CATEGORIES.facility, label: t('facilityManagement') },
+  { id: MAIN_CATEGORIES.community, label: t('communityManagement') }
+])
+
+const setActiveMainCategoryTab = (tabId) => {
+  activeMainCategoryTab.value = tabId
+  try {
+    localStorage.setItem(ACTIVE_MAIN_CATEGORY_STORAGE_KEY, tabId)
+  } catch {
+    // Ignore localStorage issues (e.g., blocked/disabled).
+  }
+}
+
+const inferMainCategoryForCategory = (category) => {
+  if (!category) return MAIN_CATEGORIES.facility
+
+  const maybeMain = category.mainCategoryId || category.mainCategory || category.mainCategoryType
+  if (typeof maybeMain === 'string') {
+    const normalized = maybeMain.toLowerCase()
+    if (normalized.includes('community')) return MAIN_CATEGORIES.community
+    if (normalized.includes('facility')) return MAIN_CATEGORIES.facility
+  }
+
+  // Explicit fixed main category docs
+  const id = String(category.id || '').toLowerCase()
+  if (id === 'community') return MAIN_CATEGORIES.community
+  if (id === 'facility') return MAIN_CATEGORIES.facility
+
+  // Default to Facility for legacy/untyped categories.
+  return MAIN_CATEGORIES.facility
+}
+
+const filteredServiceCategories = computed(() => {
+  return serviceCategoriesStore.getCategories.filter(
+    (category) => inferMainCategoryForCategory(category) === activeMainCategoryTab.value
+  )
+})
+
 const loadingBookings = ref(false);
 const openBookings = ref([]);
 const closedBookings = ref([]);
@@ -497,22 +582,13 @@ const isSmartHomeConnected = computed(() => {
   return smartMirrorStore.isProjectConnected(projectStore.selectedProject.id);
 });
 
-// Check if there are any services at all
-const hasAnyServices = computed(() => {
-  const hasDynamicCategories = serviceCategoriesStore.getCategories.length > 0;
-  const hasAny = hasDynamicCategories || hasCourts.value || hasAcademyPrograms.value || hasStores.value || isSmartHomeConnected.value;
-  
-  // Debug logging
-  console.log('Services availability check:', {
-    dynamicCategories: serviceCategoriesStore.getCategories.length,
-    hasCourts: hasCourts.value,
-    hasAcademyPrograms: hasAcademyPrograms.value,
-    hasStores: hasStores.value,
-    isSmartHomeConnected: isSmartHomeConnected.value,
-    hasAnyServices: hasAny
-  });
-  
-  return hasAny;
+// Check if there are any services for the currently selected main category
+const hasAnyServicesForActiveMainCategory = computed(() => {
+  const hasDynamicCategories = filteredServiceCategories.value.length > 0;
+  const hasStaticServices =
+    isSmartHomeConnected.value || hasCourts.value || hasAcademyPrograms.value || hasStores.value;
+
+  return hasDynamicCategories || hasStaticServices;
 });
 
 // Computed properties
@@ -535,24 +611,6 @@ const tabs = computed(() => [
     count: closedBookings.value.length
   }
 ]);
-
-// Load service categories and bookings on component mount
-onMounted(async () => {
-  if (projectStore.selectedProject?.id) {
-    await loadServiceCategories();
-    await loadBookings();
-    await loadServiceData();
-  }
-});
-
-// Watch for project changes
-watch(() => projectStore.selectedProject?.id, async (newProjectId) => {
-  if (newProjectId) {
-    await loadServiceCategories();
-    await loadBookings();
-    await loadServiceData();
-  }
-});
 
 const loadServiceCategories = async () => {
   if (projectStore.selectedProject?.id) {
@@ -586,8 +644,20 @@ const loadStores = async () => {
     // Use DynamoDB service first
     try {
       const { getStoresByProject } = await import('src/services/dynamoDBStoresService')
-      const storesData = await getStoresByProject(projectStore.selectedProject.id, { limit: 100 })
+      let storesData = await getStoresByProject(projectStore.selectedProject.id, { limit: 100 })
       console.log('✅ Services: Retrieved stores from DynamoDB:', storesData.length)
+
+      // If DynamoDB has no rows, try Firestore fallback as well.
+      if (!storesData || storesData.length === 0) {
+        console.warn('⚠️ DynamoDB returned 0 stores, trying Firestore fallback')
+        const collectionPath = `projects/${projectStore.selectedProject.id}/stores`;
+        const queryResult = await firestoreService.getDocs(collectionPath, { timeoutMs: 6000 });
+        storesData = queryResult.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      }
+
       stores.value = storesData
     } catch (dynamoError) {
       console.warn('⚠️ DynamoDB fetch failed, falling back to Firestore:', dynamoError)
@@ -682,6 +752,15 @@ const loadBookings = async () => {
     loadingBookings.value = false;
   }
 };
+
+// Load on mount and whenever project changes
+watch(() => projectStore.selectedProject?.id, async (newProjectId) => {
+  if (newProjectId) {
+    await loadServiceCategories();
+    await loadBookings();
+    await loadServiceData();
+  }
+}, { immediate: true });
 
 // Open booking modal
 const openBookingModal = (booking) => {
@@ -1105,6 +1184,75 @@ const getLastMessagePreview = (booking) => {
   margin-bottom: 20px;
 }
 
+/* Main Category Tabs (two fixed categories) */
+.main-category-tabs {
+  display: flex;
+  background: white;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+[dir="rtl"] .main-category-tabs {
+  direction: rtl;
+}
+
+.main-category-tab-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  padding: 12px 6px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.main-category-tab-btn.active {
+  background: #AF1E23;
+  color: white;
+  box-shadow: 0 2px 8px rgba(175, 30, 35, 0.2);
+}
+
+.main-category-panel {
+  /* Helps avoid layout jumps during transition */
+  width: 100%;
+  animation: main-category-fade-in 0.2s ease both;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@keyframes main-category-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.main-category-transition-enter-active,
+.main-category-transition-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.main-category-transition-enter-from,
+.main-category-transition-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.main-category-transition-enter-to,
+.main-category-transition-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .tabs-nav {
   display: flex;
   background: white;
@@ -1333,7 +1481,7 @@ const getLastMessagePreview = (booking) => {
 /* Empty State */
 .empty-state {
   text-align: center;
-  padding: 60px 20px;
+  padding-top: 0px;
   color: #666;
 }
 

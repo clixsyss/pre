@@ -12,7 +12,7 @@
  *           specialNotes, status, updatedAt, workingDays, workingHours
  */
 
-import { getItem, query } from '../aws/dynamodbClient'
+import { getItem, query, scan } from '../aws/dynamodbClient'
 
 const TABLE_NAME = 'projects__stores'
 
@@ -87,7 +87,34 @@ export async function getStoresByProject(projectId, options = {}) {
       queryOptions.FilterExpression = filterParts.join(' AND ')
     }
     
-    const items = await query(TABLE_NAME, queryOptions)
+    let items = await query(TABLE_NAME, queryOptions)
+
+    // Backward compatibility:
+    // some rows may use composite parentId like `${projectId}#...`.
+    // If direct query is empty, try scan fallback.
+    if (!items || items.length === 0) {
+      const scanOptions = {
+        FilterExpression: 'begins_with(parentId, :parentIdPrefix)',
+        ExpressionAttributeValues: {
+          ':parentIdPrefix': `${projectId}#`
+        }
+      }
+
+      if (options.limit) {
+        scanOptions.Limit = options.limit
+      }
+
+      if (options.status) {
+        scanOptions.FilterExpression = `${scanOptions.FilterExpression} AND #status = :status`
+        scanOptions.ExpressionAttributeNames = { '#status': 'status' }
+        scanOptions.ExpressionAttributeValues[':status'] = options.status
+      }
+
+      const fallbackItems = await scan(TABLE_NAME, scanOptions)
+      if (fallbackItems && fallbackItems.length > 0) {
+        items = fallbackItems
+      }
+    }
     
     // Convert DynamoDB format to JavaScript objects
     const stores = items.map(convertStoreFromDynamoDB)
