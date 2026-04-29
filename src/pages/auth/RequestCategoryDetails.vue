@@ -654,6 +654,14 @@ const submitRequest = async () => {
       user.displayName ||
       user.email ||
       'Unknown User';
+    const resolvedUserEmail =
+      userProfile?.email ||
+      user.attributes?.email ||
+      user.cognitoAttributes?.email ||
+      user.email ||
+      user.username ||
+      '';
+    const resolvedUserId = resolvedUserEmail ? resolvedUserEmail.toLowerCase().trim() : user.uid;
 
     // Check project
     if (!projectStore.selectedProject?.id) {
@@ -683,9 +691,9 @@ const submitRequest = async () => {
     const submissionData = {
       categoryId: category.value.id,
       categoryName: category.value.englishTitle,
-      userId: user.uid,
+      userId: resolvedUserId,
       userName: resolvedName,
-      userEmail: userProfile?.email || user.email || '',
+      userEmail: resolvedUserEmail,
       userPhone: userProfile?.mobile || user.phoneNumber || '',
       userUnit: userProfile?.unit || userProj0?.unit || userProj0?.userUnit || '',
       userBuilding: userProfile?.buildingNum || userProj0?.buildingNum || '',

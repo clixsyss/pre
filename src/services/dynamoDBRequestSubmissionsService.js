@@ -12,7 +12,7 @@
  *           status, createdAt, updatedAt, projectId
  */
 
-import { getItem, query } from '../aws/dynamodbClient'
+import { getItem, queryAll } from '../aws/dynamodbClient'
 
 const TABLE_NAME = 'projects__requestSubmissions'
 
@@ -197,7 +197,7 @@ export async function getRequestSubmissionsByProject(projectId, options = {}) {
       queryOptions.FilterExpression = filterParts.join(' AND ')
     }
     
-    const items = await query(TABLE_NAME, queryOptions)
+    const items = await queryAll(TABLE_NAME, queryOptions)
     
     // Convert DynamoDB format to JavaScript objects
     const submissions = items.map(convertRequestSubmissionFromDynamoDB)
@@ -231,10 +231,13 @@ export async function getRequestSubmissionsByProject(projectId, options = {}) {
  */
 export async function getUserSubmissions(projectId, userId, options = {}) {
   try {
-    return await getRequestSubmissionsByProject(projectId, {
-      ...options,
+    const { limit, ...queryOptions } = options
+    const submissions = await getRequestSubmissionsByProject(projectId, {
+      ...queryOptions,
       userId
     })
+
+    return limit ? submissions.slice(0, limit) : submissions
   } catch (error) {
     console.error(`[DynamoDBRequestSubmissionsService] ❌ Error fetching user submissions:`, error)
     throw error
@@ -319,4 +322,3 @@ export default {
   getSubmissionsByStatus,
   getRequestSubmissionById
 }
-

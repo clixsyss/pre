@@ -233,6 +233,7 @@ import SuspensionBanner from '../../components/SuspensionBanner.vue';
 import { useSuspensionGuard } from '../../composables/useSuspensionGuard';
 import requestSubmissionService from '../../services/requestSubmissionService';
 import optimizedAuthService from '../../services/optimizedAuthService';
+import { getUserById } from '../../services/dynamoDBUsersService';
 import { getUnreadIncomingAdminCount } from '../../utils/chatUnread';
 
 // Component name for ESLint
@@ -330,14 +331,6 @@ const tabs = computed(() => [
   }
 ]);
 
-// Load on mount and whenever project changes
-watch(() => projectStore.selectedProject?.id, async (newProjectId) => {
-  if (newProjectId) {
-    await loadRequestCategories();
-    await loadMyRequests();
-  }
-}, { immediate: true });
-
 const loadRequestCategories = async () => {
   if (projectStore.selectedProject?.id) {
     await requestCategoriesStore.fetchCategories(projectStore.selectedProject.id);
@@ -351,16 +344,52 @@ const loadMyRequests = async () => {
     loadingRequests.value = true;
     const user = await optimizedAuthService.getCurrentUser();
     if (user) {
-      const requests = await requestSubmissionService.getUserSubmissions(
-        projectStore.selectedProject.id, 
-        user.uid
-      );
+      let userProfile = null;
+      try {
+        userProfile = await getUserById(user.uid);
+      } catch (profileError) {
+        console.warn('⚠️ Could not resolve request user profile:', profileError);
+      }
+      const userIds = [
+        userProfile?.email,
+        userProfile?.id,
+        userProfile?.authUid,
+        user.uid,
+        user.username,
+        user.attributes?.sub,
+        user.attributes?.email,
+        user.cognitoAttributes?.sub,
+        user.cognitoAttributes?.email,
+        user.email
+      ]
+        .filter(Boolean)
+        .map(value => String(value).trim())
+        .filter(Boolean);
+      const uniqueUserIds = [...new Set(userIds)];
+      let requests = [];
+      try {
+        const { getRequestSubmissionsByProject } = await import('../../services/dynamoDBRequestSubmissionsService');
+        const allProjectSubmissions = await getRequestSubmissionsByProject(projectStore.selectedProject.id);
+        const userIdSet = new Set(uniqueUserIds.map(id => String(id).toLowerCase().trim()));
+        requests = allProjectSubmissions.filter(req =>
+          req.userId && userIdSet.has(String(req.userId).toLowerCase().trim())
+        );
+        console.log('✅ Requests: Retrieved request submissions from DynamoDB:', requests.length, 'of', allProjectSubmissions.length, 'total');
+      } catch (dynamoError) {
+        console.warn('⚠️ DynamoDB request submissions fetch failed, falling back:', dynamoError);
+        requests = await requestSubmissionService.getUserSubmissions(
+          projectStore.selectedProject.id,
+          uniqueUserIds[0] || user.uid
+        );
+      }
       myRequests.value = requests;
       
       // Separate requests by status
-      // Open tab: show pending and in-progress requests
+      // Open tab: show active requests
       openRequests.value = requests
-        .filter(req => req.status === 'pending' || req.status === 'in_progress')
+        .filter(req => ['pending', 'in_progress', 'open', 'processing', 'confirmed'].includes(
+          String(req.status || '').trim().toLowerCase().replace(/\s+/g, '_')
+        ))
         .sort((a, b) => {
           const aTime = a.createdAt?.seconds || (a.createdAt ? new Date(a.createdAt).getTime() / 1000 : 0);
           const bTime = b.createdAt?.seconds || (b.createdAt ? new Date(b.createdAt).getTime() / 1000 : 0);
@@ -382,6 +411,14 @@ const loadMyRequests = async () => {
     loadingRequests.value = false;
   }
 };
+
+// Watch must come after both functions are declared (avoids temporal dead zone with const)
+watch(() => projectStore.selectedProject?.id, async (newProjectId) => {
+  if (newProjectId) {
+    await loadRequestCategories();
+    await loadMyRequests();
+  }
+}, { immediate: true });
 
 const navigateToRequestCategory = (category) => {
   router.push(`/request-category/${category.id}`);
