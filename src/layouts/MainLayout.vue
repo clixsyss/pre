@@ -3757,7 +3757,7 @@ body.hide-bottom-nav .bottom-navigation {
   .quick-open-gate-fab {
     width: 60px;
     height: 60px;
-    bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(44px + env(safe-area-inset-bottom, 0px));
   }
 }
 

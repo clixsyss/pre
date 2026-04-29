@@ -11,7 +11,7 @@
         <div class="hero-text">
           <h1 class="hero-title">{{ $t('complaintsSupport') }}</h1>
           <p class="hero-subtitle">{{ $t('getHelpIssues') }}</p>
-          <button @click="showNewComplaintModal = true" class="new-complaint-btn">
+          <!-- <button @click="showNewComplaintModal = true" class="new-complaint-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
@@ -19,7 +19,7 @@
                 stroke-linejoin="round" />
             </svg>
             {{ $t('newComplaint') }}
-          </button>
+          </button> -->
         </div>
       </div>
     </div>
@@ -35,7 +35,7 @@
       </div>
       
       <!-- Empty State - No Categories -->
-      <div v-else-if="complaintStore.complaintCategories.length === 0" class="categories-empty-state">
+      <div v-else-if="availableComplaintCategories.length === 0" class="categories-empty-state">
         <div class="empty-icon">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z" stroke="currentColor" stroke-width="2"/>
@@ -44,17 +44,28 @@
           </svg>
         </div>
         <h4>{{ $t('noCategoriesAvailable') }}</h4>
-        <button @click="showNewComplaintModal = true" class="btn-primary">
+        <button @click="openNewComplaintModal()" class="btn-primary">
           {{ $t('startManualComplaint') }}
         </button>
       </div>
       
       <!-- Category picker (supports custom icons from dashboard) -->
       <div v-else class="category-picker-wrap">
+        <div class="main-category-tabs">
+          <button
+            v-for="tab in mainCategoryTabs"
+            :key="tab.id"
+            class="main-category-tab-btn"
+            :class="{ active: activeMainCategoryTab === tab.id }"
+            @click="setActiveMainCategoryTab(tab.id)"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
         <p class="dropdown-label">{{ $t('selectComplaintCategory') }}</p>
         <div class="category-picker-grid" role="list">
           <button
-            v-for="category in complaintStore.complaintCategories"
+            v-for="category in availableComplaintCategories"
             :key="category.id"
             type="button"
             class="category-picker-card"
@@ -117,7 +128,7 @@
         </div>
         <h4>{{ $t('noComplaintsFound') }}</h4>
         <p>{{ $t('startNewComplaintMessage') }}</p>
-        <button @click="showNewComplaintModal = true" class="btn-primary">
+        <button @click="openNewComplaintModal()" class="btn-primary">
           {{ $t('startNewComplaint') }}
         </button>
       </div>
@@ -208,7 +219,7 @@
             <label>{{ $t('category') }}</label>
             <div class="modal-category-picker" role="radiogroup" :aria-label="$t('category')">
               <button
-                v-for="category in complaintStore.complaintCategories"
+                v-for="category in availableComplaintCategories"
                 :key="category.id"
                 type="button"
                 class="modal-category-chip"
@@ -360,6 +371,68 @@ const { openModal, closeModal: hideNavigationBars } = useModalState();
 const { t } = useI18n();
 
 // Reactive data
+const ACTIVE_MAIN_CATEGORY_STORAGE_KEY = 'complaintsMainCategoryTab'
+const DEFAULT_ACTIVE_MAIN_CATEGORY = 'facility'
+const MAIN_CATEGORIES = {
+  facility: 'facility',
+  community: 'community'
+}
+const GENERAL_COMPLAINT_CATEGORY = {
+  id: 'general-complaint',
+  name: 'General Complaint',
+  icon: 'help',
+  iconUrl: '',
+  lucideIcon: '',
+  color: '#fff',
+  mainCategoryId: MAIN_CATEGORIES.facility
+}
+const getInitialMainCategoryTab = () => {
+  try {
+    const saved = localStorage.getItem(ACTIVE_MAIN_CATEGORY_STORAGE_KEY)
+    if (saved === MAIN_CATEGORIES.facility || saved === MAIN_CATEGORIES.community) return saved
+  } catch {
+    // Ignore localStorage access issues (private mode, blocked storage, etc.).
+  }
+  return DEFAULT_ACTIVE_MAIN_CATEGORY
+}
+const activeMainCategoryTab = ref(getInitialMainCategoryTab())
+const mainCategoryTabs = computed(() => [
+  { id: MAIN_CATEGORIES.facility, label: t('facilityManagement') },
+  { id: MAIN_CATEGORIES.community, label: t('communityManagement') }
+])
+const setActiveMainCategoryTab = (tabId) => {
+  activeMainCategoryTab.value = tabId
+  try {
+    localStorage.setItem(ACTIVE_MAIN_CATEGORY_STORAGE_KEY, tabId)
+  } catch {
+    // Ignore localStorage access issues (private mode, blocked storage, etc.).
+  }
+}
+const inferMainCategoryForComplaintCategory = (category) => {
+  if (!category) return MAIN_CATEGORIES.facility
+  const maybeMain = category.mainCategoryId || category.mainCategory || category.mainCategoryType
+  if (typeof maybeMain === 'string') {
+    const normalized = maybeMain.toLowerCase()
+    if (normalized.includes('community')) return MAIN_CATEGORIES.community
+    if (normalized.includes('facility')) return MAIN_CATEGORIES.facility
+  }
+  const id = String(category.id || '').toLowerCase()
+  if (id === 'community') return MAIN_CATEGORIES.community
+  if (id === 'facility') return MAIN_CATEGORIES.facility
+  return MAIN_CATEGORIES.facility
+}
+const filteredComplaintCategories = computed(() =>
+  complaintStore.complaintCategories.filter(
+    (category) => inferMainCategoryForComplaintCategory(category) === activeMainCategoryTab.value
+  )
+)
+const availableComplaintCategories = computed(() => {
+  if (complaintStore.complaintCategories.length === 0) {
+    return [GENERAL_COMPLAINT_CATEGORY]
+  }
+  return filteredComplaintCategories.value
+})
+
 const showNewComplaintModal = ref(false);
 const selectedStatus = ref('all');
 const unsubscribe = ref(null);
@@ -415,6 +488,13 @@ const startQuickComplaint = (category) => {
   showNewComplaintModal.value = true;
 };
 
+const openNewComplaintModal = () => {
+  if (!newComplaint.value.category && availableComplaintCategories.value.length) {
+    newComplaint.value.category = availableComplaintCategories.value[0].id
+  }
+  showNewComplaintModal.value = true
+}
+
 const openComplaint = (complaint) => {
   const status = String(complaint?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
   if (['closed', 'completed', 'cancelled', 'resolved', 'rejected'].includes(status)) {
@@ -439,8 +519,7 @@ const submitComplaint = async () => {
   if (complaintStore.loading) return; // Prevent multiple submissions
 
   if (!newComplaint.value.category) {
-    notificationStore.showError(t('selectCategory'));
-    return;
+    newComplaint.value.category = GENERAL_COMPLAINT_CATEGORY.id;
   }
 
   try {
@@ -530,9 +609,9 @@ const getLastMessage = (complaint) => {
 };
 
 const getCategoryRow = (categoryId) => {
-  const category = complaintStore.complaintCategories.find((c) => c.id === categoryId);
+  const category = availableComplaintCategories.value.find((c) => c.id === categoryId);
   if (!category) {
-    return { name: 'Other', emoji: '📋', iconUrl: '', lucideIcon: '' };
+    return { name: GENERAL_COMPLAINT_CATEGORY.name, emoji: '📋', iconUrl: '', lucideIcon: '' };
   }
   return {
     name: category.name,
@@ -711,12 +790,40 @@ watch(showNewComplaintModal, (isOpen) => {
   margin-bottom: 20px;
 }
 
+.main-category-tabs {
+  display: flex;
+  gap: 8px;
+  background: white;
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  margin-bottom: 14px;
+}
+
+.main-category-tab-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  padding: 12px 6px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.main-category-tab-btn.active {
+  background: #AF1E23;
+  color: white;
+}
+
 .section-title {
   font-size: 1.1rem;
   font-weight: 600;
   color: #333;
   margin: 0 0 12px 0;
   letter-spacing: -0.01em;
+  line-height: normal;
 }
 
 /* Categories Loading State */

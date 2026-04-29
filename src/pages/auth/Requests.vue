@@ -43,7 +43,18 @@
         </div>
 
         <!-- Empty State - No Request Categories -->
-        <div v-else-if="requestCategoriesStore.getCategories.length === 0" class="empty-state">
+        <div v-else-if="!hasAnyCategoriesForActiveMainCategory" class="empty-state">
+          <div class="main-category-tabs">
+            <button
+              v-for="tab in mainCategoryTabs"
+              :key="tab.id"
+              class="main-category-tab-btn"
+              :class="{ active: activeMainCategoryTab === tab.id }"
+              @click="setActiveMainCategoryTab(tab.id)"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
           <div class="empty-icon">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M9 11L12 14L22 4" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -56,8 +67,19 @@
 
         <!-- Requests Grid -->
         <div v-else class="services-grid">
+          <div class="main-category-tabs">
+            <button
+              v-for="tab in mainCategoryTabs"
+              :key="tab.id"
+              class="main-category-tab-btn"
+              :class="{ active: activeMainCategoryTab === tab.id }"
+              @click="setActiveMainCategoryTab(tab.id)"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
           <!-- Dynamic Request Categories -->
-          <div v-for="category in requestCategoriesStore.getCategories" :key="category.id" class="service-card"
+          <div v-for="category in filteredRequestCategories" :key="category.id" class="service-card"
             @click="navigateToRequestCategory(category)">
             <div class="service-icon">
               <img v-if="category.imageUrl" :src="category.imageUrl" :alt="category.englishTitle"
@@ -225,6 +247,60 @@ const { isBlocked, suspensionMessage } = useSuspensionGuard('requests');
 
 // Reactive state
 const activeTab = ref('requests');
+
+const ACTIVE_MAIN_CATEGORY_STORAGE_KEY = 'requestsMainCategoryTab'
+const DEFAULT_ACTIVE_MAIN_CATEGORY = 'facility'
+const MAIN_CATEGORIES = {
+  facility: 'facility',
+  community: 'community'
+}
+
+const getInitialMainCategoryTab = () => {
+  try {
+    const saved = localStorage.getItem(ACTIVE_MAIN_CATEGORY_STORAGE_KEY)
+    if (saved === MAIN_CATEGORIES.facility || saved === MAIN_CATEGORIES.community) return saved
+  } catch {
+    // Ignore localStorage access issues (private mode, blocked storage, etc.).
+  }
+  return DEFAULT_ACTIVE_MAIN_CATEGORY
+}
+
+const activeMainCategoryTab = ref(getInitialMainCategoryTab())
+const mainCategoryTabs = computed(() => [
+  { id: MAIN_CATEGORIES.facility, label: t('facilityManagement') },
+  { id: MAIN_CATEGORIES.community, label: t('communityManagement') }
+])
+
+const setActiveMainCategoryTab = (tabId) => {
+  activeMainCategoryTab.value = tabId
+  try {
+    localStorage.setItem(ACTIVE_MAIN_CATEGORY_STORAGE_KEY, tabId)
+  } catch {
+    // Ignore localStorage access issues (private mode, blocked storage, etc.).
+  }
+}
+
+const inferMainCategoryForRequestCategory = (category) => {
+  if (!category) return MAIN_CATEGORIES.facility
+  const maybeMain = category.mainCategoryId || category.mainCategory || category.mainCategoryType
+  if (typeof maybeMain === 'string') {
+    const normalized = maybeMain.toLowerCase()
+    if (normalized.includes('community')) return MAIN_CATEGORIES.community
+    if (normalized.includes('facility')) return MAIN_CATEGORIES.facility
+  }
+  const id = String(category.id || '').toLowerCase()
+  if (id === 'community') return MAIN_CATEGORIES.community
+  if (id === 'facility') return MAIN_CATEGORIES.facility
+  return MAIN_CATEGORIES.facility
+}
+
+const filteredRequestCategories = computed(() =>
+  requestCategoriesStore.getCategories.filter(
+    (category) => inferMainCategoryForRequestCategory(category) === activeMainCategoryTab.value
+  )
+)
+
+const hasAnyCategoriesForActiveMainCategory = computed(() => filteredRequestCategories.value.length > 0)
 const loadingRequests = ref(false);
 const myRequests = ref([]);
 const openRequests = ref([]);
@@ -449,6 +525,33 @@ const editSubmission = (request) => {
 /* Tabs Navigation */
 .tabs-container {
   margin-bottom: 24px;
+}
+
+.main-category-tabs {
+  display: flex;
+  gap: 8px;
+  background: white;
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  margin-bottom: 16px;
+}
+
+.main-category-tab-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  padding: 12px 6px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.main-category-tab-btn.active {
+  background: #AF1E23;
+  color: white;
 }
 
 .tabs-nav {
@@ -785,7 +888,6 @@ const editSubmission = (request) => {
 /* Empty State */
 .empty-state {
   text-align: center;
-  padding: 60px 20px;
   color: #666;
 }
 

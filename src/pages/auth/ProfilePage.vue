@@ -6007,10 +6007,11 @@ onBeforeUnmount(() => {
 }
 
 .modal-header h3 {
-  margin: 0 0 16px 0;
+  margin: 0;
   color: #f3e5f5 !important;
   font-weight: 600;
   font-size: 1.3rem;
+  line-height: normal;
 }
 
 .modal-body p {
@@ -6368,7 +6369,7 @@ onBeforeUnmount(() => {
 .add-project-form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 0;
   padding: 8px 0;
 }
 
@@ -7044,7 +7045,7 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 32px 32px 24px 32px;
+  padding: 18px;
   background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   position: relative;
@@ -7169,7 +7170,7 @@ onBeforeUnmount(() => {
 }
 
 .modal-body {
-  padding: 32px;
+  padding: 8px 18px;
 }
 
 .login-form {
@@ -7397,7 +7398,7 @@ onBeforeUnmount(() => {
 }
 
 .device-management-modal .modal-header {
-  padding: 32px 32px 24px;
+  padding: 18px;
   background: linear-gradient(135deg, #AF1E23 0%, #AF1E23 100%);
   color: white;
   flex-shrink: 0;
@@ -7416,13 +7417,14 @@ onBeforeUnmount(() => {
 }
 
 .device-management-modal .modal-header h3 {
-  margin: 0 0 12px 0;
+  margin: 0;
   font-size: 20px;
   font-weight: 700;
   color: white;
   display: flex;
   align-items: center;
   gap: 12px;
+  line-height: normal;
 }
 
 .device-management-modal .modal-header h3::before {
