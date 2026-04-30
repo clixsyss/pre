@@ -189,10 +189,7 @@ export async function getUserByAuthUid(authUid) {
     const cached = _getCachedUser(cacheKey)
     if (cached !== undefined) return cached
 
-    // With FilterExpression, Limit is items *scanned*, not matches — paginate like getUserByEmail
     let lastEvaluatedKey = null
-    let scannedCount = 0
-    const maxScanItems = 5000
 
     do {
       const scanOptions = {
@@ -218,10 +215,6 @@ export async function getUserByAuthUid(authUid) {
       }
 
       lastEvaluatedKey = scanResult.LastEvaluatedKey || null
-      scannedCount += 500
-      if (scannedCount >= maxScanItems) {
-        break
-      }
     } while (lastEvaluatedKey)
 
     _setCachedUser(cacheKey, null)
@@ -312,36 +305,26 @@ export async function getUserByEmail(email) {
     // For migration checks, we need to scan more items to find users who might be further in the table
     let items = []
     let lastEvaluatedKey = null
-    let scannedCount = 0
-    const maxScanItems = 5000 // Increased for migration - scan up to 5000 items to find users
-    
+
     do {
       const scanOptions = {
         FilterExpression: 'email = :email',
         ExpressionAttributeValues: {
           ':email': normalizedEmail
         },
-        Limit: 500 // Scan in batches of 500
+        Limit: 500
       }
-      
+
       if (lastEvaluatedKey) {
         scanOptions.ExclusiveStartKey = lastEvaluatedKey
       }
-      
+
       const scanResult = await scan(TABLE_NAME, scanOptions)
       const batchItems = Array.isArray(scanResult) ? scanResult : []
       items = items.concat(batchItems)
       lastEvaluatedKey = scanResult.LastEvaluatedKey || null
-      scannedCount += 500 // Approximate - DynamoDB scans this many but filters after
-      
-      // If we found a match, stop scanning immediately
+
       if (items.length > 0) {
-        break
-      }
-      
-      // Stop if we've scanned enough items
-      if (scannedCount >= maxScanItems) {
-        console.warn(`[DynamoDBUsersService] Reached max scan limit (${maxScanItems}) without finding match`)
         break
       }
     } while (lastEvaluatedKey)
