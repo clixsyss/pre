@@ -134,6 +134,10 @@ export async function getServiceCategoriesByProject(projectId, options = {}) {
         status: status,
         createdAt: item.createdAt || null,
         updatedAt: item.updatedAt || null,
+        // Facility vs community tabs (dashboard writes these; must pass through for mobile filtering)
+        mainCategoryId: item.mainCategoryId ?? null,
+        mainCategory: item.mainCategory ?? null,
+        mainCategoryType: item.mainCategoryType ?? null,
         // Convert availability from DynamoDB format
         availability: convertAvailabilityFromDynamoDB(item.availability || {})
       }
@@ -186,6 +190,9 @@ export async function getServiceCategoryById(projectId, categoryId) {
         status: category.status || 'draft',
         createdAt: category.createdAt || null,
         updatedAt: category.updatedAt || null,
+        mainCategoryId: category.mainCategoryId ?? null,
+        mainCategory: category.mainCategory ?? null,
+        mainCategoryType: category.mainCategoryType ?? null,
         // Convert availability from DynamoDB format
         availability: convertAvailabilityFromDynamoDB(category.availability || {})
       }
@@ -231,6 +238,9 @@ export async function getAllServiceCategories(options = {}) {
       status: item.status || 'draft',
       createdAt: item.createdAt || null,
       updatedAt: item.updatedAt || null,
+      mainCategoryId: item.mainCategoryId ?? null,
+      mainCategory: item.mainCategory ?? null,
+      mainCategoryType: item.mainCategoryType ?? null,
       // Convert availability from DynamoDB format
       availability: convertAvailabilityFromDynamoDB(item.availability || {})
     }))

@@ -80,7 +80,11 @@ function convertRequestCategoryFromDynamoDB(item) {
       : false,
     fields: unmarshallFields(item.fields || []),
     createdAt: item.createdAt || null,
-    updatedAt: item.updatedAt || null
+    updatedAt: item.updatedAt || null,
+    // Facility vs community tabs (dashboard writes these; required for mobile filtering)
+    mainCategoryId: item.mainCategoryId ?? null,
+    mainCategory: item.mainCategory ?? null,
+    mainCategoryType: item.mainCategoryType ?? null
   }
 }
 
