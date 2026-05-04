@@ -20,6 +20,7 @@ export const useComplaintStore = defineStore('complaint', () => {
   const complaintCategories = ref([])
   const categoriesLoading = ref(false)
   const categoriesLastFetch = ref(null)
+  const categoriesLastFetchedProjectId = ref(null)
 
   // Getters
   const userComplaints = computed(() => {
@@ -474,7 +475,8 @@ export const useComplaintStore = defineStore('complaint', () => {
         !force &&
         complaintCategories.value.length > 0 &&
         categoriesLastFetch.value &&
-        now - categoriesLastFetch.value < CACHE_DURATION
+        now - categoriesLastFetch.value < CACHE_DURATION &&
+        categoriesLastFetchedProjectId.value === projectId
       ) {
         console.log('✨ Using cached complaint categories')
         return complaintCategories.value
@@ -507,6 +509,7 @@ export const useComplaintStore = defineStore('complaint', () => {
 
         complaintCategories.value = categories
         categoriesLastFetch.value = now
+        categoriesLastFetchedProjectId.value = projectId
 
         console.log('✅ Complaint categories fetched:', categories.length)
         console.log('📋 Categories data:', categories)
