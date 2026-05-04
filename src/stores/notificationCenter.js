@@ -27,33 +27,71 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   const POLLING_INTERVAL_MS = 5 * 60 * 1000 // Poll every 5 minutes (reduced from real-time)
   const CACHE_DURATION_MS = 2 * 60 * 1000 // Cache for 2 minutes
 
+  /** Single source of truth for ordering — handles Firestore, Dynamo (N), ISO strings, {_seconds}. */
+  const getNotificationTimestampMs = (notification) => {
+    const normalizeEpochMs = (value) => {
+      if (typeof value !== 'number' || Number.isNaN(value)) return value
+      return value > 0 && value < 1e12 ? value * 1000 : value
+    }
+
+    const valueToMs = (value) => {
+      if (value === null || value === undefined || value === '') return null
+      if (typeof value?.toMillis === 'function') return value.toMillis()
+      if (value instanceof Date) return value.getTime()
+      if (typeof value === 'object') {
+        const s = value.seconds ?? value._seconds
+        if (typeof s === 'number' && !Number.isNaN(s)) {
+          const ns = value.nanoseconds ?? value._nanoseconds ?? 0
+          return normalizeEpochMs(s * 1000 + Math.floor(ns / 1e6))
+        }
+        return null
+      }
+      if (typeof value === 'number') return normalizeEpochMs(value)
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
+        if (!trimmed) return null
+        const asNum = Number(trimmed)
+        if (!Number.isNaN(asNum) && asNum > 0 && /^\d{10,}$/.test(trimmed)) {
+          return normalizeEpochMs(asNum)
+        }
+        const parsed = new Date(trimmed).getTime()
+        return Number.isNaN(parsed) ? null : parsed
+      }
+      return null
+    }
+
+    // Prefer sent time over updatedAt so a draft that was edited does not sort above a just-sent item.
+    const candidates = [
+      notification?.createdAt,
+      notification?.sentAt,
+      notification?.scheduledAt,
+      notification?.updatedAt,
+      notification?.issuedAt,
+      notification?.startDate
+    ]
+    for (const value of candidates) {
+      const ms = valueToMs(value)
+      if (ms !== null && ms !== undefined && !Number.isNaN(ms)) return ms
+    }
+    return 0
+  }
+
+  const compareNotificationsNewestFirst = (a, b) => {
+    const tb = getNotificationTimestampMs(b)
+    const ta = getNotificationTimestampMs(a)
+    const diff = tb - ta
+    if (diff !== 0) return diff
+    return String(b.id || '').localeCompare(String(a.id || ''))
+  }
+
   // Computed
   const unreadNotifications = computed(() => 
     notifications.value.filter(n => !n.read)
   )
 
-  const sortedNotifications = computed(() => {
-    const toMs = (item) => {
-      const candidates = [
-        item?.createdAt,
-        item?.updatedAt,
-        item?.sentAt,
-        item?.scheduledAt,
-        item?.issuedAt,
-        item?.startDate,
-      ]
-      for (const value of candidates) {
-        if (!value) continue
-        if (typeof value?.toMillis === 'function') return value.toMillis()
-        if (typeof value === 'object' && value.seconds) return value.seconds * 1000
-        if (typeof value === 'number') return value
-        const parsed = new Date(value).getTime()
-        if (!Number.isNaN(parsed)) return parsed
-      }
-      return 0
-    }
-    return [...notifications.value].sort((a, b) => toMs(b) - toMs(a))
-  })
+  const sortedNotifications = computed(() =>
+    [...notifications.value].sort(compareNotificationsNewestFirst)
+  )
 
   const normalizeIdentifier = (value) => String(value || '').trim().toLowerCase()
 
@@ -347,39 +385,13 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
     return !hasExplicitTargeting(notif)
   }
 
-  const getNotificationTimestampMs = (notification) => {
-    const normalizeEpochMs = (value) => {
-      if (typeof value !== 'number') return value
-      // Support both epoch seconds and epoch milliseconds.
-      return value > 0 && value < 1e12 ? value * 1000 : value
-    }
-
-    const candidates = [
-      notification?.createdAt,
-      notification?.updatedAt,
-      notification?.sentAt,
-      notification?.scheduledAt,
-      notification?.issuedAt,
-      notification?.startDate
-    ]
-    for (const value of candidates) {
-      if (!value) continue
-      if (typeof value?.toMillis === 'function') return value.toMillis()
-      if (typeof value === 'object' && value.seconds) return normalizeEpochMs(value.seconds * 1000)
-      if (typeof value === 'number') return normalizeEpochMs(value)
-      const parsed = new Date(value).getTime()
-      if (!Number.isNaN(parsed)) return parsed
-    }
-    return 0
-  }
-
   const mergeAndSortNotifications = (items = []) => {
     const byId = new Map()
     items.forEach((item) => {
       if (!item?.id) return
       byId.set(String(item.id), item)
     })
-    return [...byId.values()].sort((a, b) => getNotificationTimestampMs(b) - getNotificationTimestampMs(a))
+    return [...byId.values()].sort(compareNotificationsNewestFirst)
   }
 
   const fetchSupplementalNotifications = async (projectId, userId) => {

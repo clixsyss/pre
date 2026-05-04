@@ -285,37 +285,32 @@ export async function getNotificationsByProject(projectId, options = {}) {
     // Convert DynamoDB format to JavaScript objects
     const notifications = items.map(convertNotificationFromDynamoDB)
     
-    // Sort by createdAt (descending - newest first)
+    const rowTimeMs = (row) => {
+      const v = row.createdAt ?? row.sentAt ?? row.scheduledAt
+      if (v == null || v === '') return 0
+      if (typeof v === 'number') return v > 0 && v < 1e12 ? v * 1000 : v
+      if (typeof v === 'string') {
+        const n = Number(v.trim())
+        if (!Number.isNaN(n) && n > 0 && /^\d{10,}$/.test(v.trim())) return n < 1e12 ? n * 1000 : n
+        const t = new Date(v).getTime()
+        return Number.isNaN(t) ? 0 : t
+      }
+      if (v instanceof Date) return v.getTime()
+      if (typeof v === 'object') {
+        const s = v.seconds ?? v._seconds
+        if (typeof s === 'number' && !Number.isNaN(s)) {
+          const ns = v.nanoseconds ?? v._nanoseconds ?? 0
+          return s * 1000 + Math.floor(ns / 1e6)
+        }
+      }
+      return 0
+    }
+
+    // Sort by best-known time (descending — newest first)
     notifications.sort((a, b) => {
-      const timeA = a.createdAt
-      const timeB = b.createdAt
-      
-      // Handle different data types
-      let timeAValue = 0
-      let timeBValue = 0
-      
-      if (timeA) {
-        if (typeof timeA === 'number') {
-          timeAValue = timeA
-        } else if (typeof timeA === 'string') {
-          timeAValue = new Date(timeA).getTime() || 0
-        } else if (timeA instanceof Date) {
-          timeAValue = timeA.getTime()
-        }
-      }
-      
-      if (timeB) {
-        if (typeof timeB === 'number') {
-          timeBValue = timeB
-        } else if (typeof timeB === 'string') {
-          timeBValue = new Date(timeB).getTime() || 0
-        } else if (timeB instanceof Date) {
-          timeBValue = timeB.getTime()
-        }
-      }
-      
-      // Sort descending (newest first)
-      return timeBValue - timeAValue
+      const diff = rowTimeMs(b) - rowTimeMs(a)
+      if (diff !== 0) return diff
+      return String(b.id || '').localeCompare(String(a.id || ''))
     })
     
     console.log(`[DynamoDBNotificationsService] ✅ Fetched ${notifications.length} notifications for project ${projectId}`)
