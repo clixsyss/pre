@@ -93,6 +93,15 @@ const academiesStore = useAcademiesStore();
 // Reactive data
 const currentDate = ref(new Date());
 
+const getCourtSportLabel = (booking) => {
+  const raw = String(booking?.sportName || booking?.sportType || booking?.sport || '').trim();
+  if (!raw) return 'Court';
+  if (!raw.includes(' ') && /^[A-Za-z0-9_-]{14,}$/.test(raw)) {
+    return 'Court';
+  }
+  return raw;
+};
+
 // Computed properties
 const currentMonthYear = computed(() => {
   return currentDate.value.toLocaleDateString('en-US', {
@@ -150,7 +159,7 @@ const upcomingEvents = computed(() => {
     if (booking.type === 'court' && booking.date) {
       events.push({
         id: booking.id,
-        title: `${booking.sport} - ${booking.courtName}`,
+        title: `${getCourtSportLabel(booking)} - ${booking.courtName || 'Court'}`,
         date: booking.date,
         type: 'court'
       });

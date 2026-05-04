@@ -5,6 +5,7 @@ import performanceService from "../services/performanceService";
 import errorHandlingService from "../services/errorHandlingService";
 import { getAcademiesByProject } from "../services/dynamoDBAcademiesService";
 import { getUserBookings as getDynamoDBUserBookings } from "../services/dynamoDBBookingsService";
+import optimizedAuthService from "../services/optimizedAuthService";
 
 export const useAcademiesStore = defineStore("academiesStore", () => {
     const academyOptions = ref([]);
@@ -227,9 +228,23 @@ export const useAcademiesStore = defineStore("academiesStore", () => {
                     try {
                         console.log('🚀 AcademyStore: Fetching user bookings for user:', userId, 'project:', projectId);
                         
-                        // Use DynamoDB service first
+                        // Use DynamoDB service first (match uid, Cognito sub, and email — admin bookings often use a different id)
                         try {
-                            const bookings = await getDynamoDBUserBookings(projectId, userId, { limit: 100 });
+                            let userEmail;
+                            let cognitoSub;
+                            try {
+                                const cu = await optimizedAuthService.getCurrentUser();
+                                cognitoSub = cu?.attributes?.sub || cu?.cognitoAttributes?.sub;
+                                const raw = (cu?.attributes?.email || cu?.email || "").trim();
+                                userEmail = raw ? raw.toLowerCase() : undefined;
+                            } catch (authErr) {
+                                console.warn("AcademyStore: could not read current user for booking id hints", authErr);
+                            }
+                            const bookings = await getDynamoDBUserBookings(projectId, userId, {
+                                limit: 100,
+                                userEmail,
+                                cognitoSub
+                            });
                             
                             // Sort by createdAt descending
                             bookings.sort((a, b) => {

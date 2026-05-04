@@ -9011,6 +9011,7 @@ input:checked+.toggle-slider:before {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: normal;
 }
 
 .member-role {

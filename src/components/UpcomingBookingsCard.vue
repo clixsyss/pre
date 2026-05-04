@@ -64,6 +64,7 @@ import { useAcademiesStore } from 'src/stores/academyStore';
 import { useServiceBookingStore } from 'src/stores/serviceBookingStore';
 import { useProjectStore } from 'src/stores/projectStore';
 import optimizedAuthService from '../services/optimizedAuthService';
+import { getSportsByProject } from 'src/services/dynamoDBSportsService';
 
 // Component name for ESLint
 defineOptions({
@@ -78,6 +79,37 @@ const projectStore = useProjectStore();
 
 // Reactive data
 const loading = ref(true);
+const sportNameById = ref({});
+
+const getCourtSportLabel = (booking) => {
+  const raw = String(booking?.sportName || booking?.sportType || booking?.sport || '').trim();
+  if (!raw) return t('courtBookings');
+  const mapped = sportNameById.value[raw];
+  if (mapped) return mapped;
+  if (!raw.includes(' ') && /^[A-Za-z0-9_-]{14,}$/.test(raw)) {
+    return t('courtBookings');
+  }
+  return raw;
+};
+
+const loadSportNameMap = async (pid) => {
+  if (!pid) {
+    sportNameById.value = {};
+    return;
+  }
+  try {
+    const sports = await getSportsByProject(pid, { limit: 200 });
+    const map = {};
+    (sports || []).forEach((s) => {
+      const id = String(s?.id || '').trim();
+      const name = String(s?.name || '').trim();
+      if (id && name) map[id] = name;
+    });
+    sportNameById.value = map;
+  } catch (err) {
+    console.warn('UpcomingBookingsCard: failed to load sports map', err);
+  }
+};
 
 // Computed properties
 const upcomingBookings = computed(() => {
@@ -151,7 +183,9 @@ const upcomingBookings = computed(() => {
 // Methods
 const getBookingTitle = (booking) => {
   if (booking.type === 'court') {
-    return `${booking.sport} - ${booking.courtName}`;
+    const sport = getCourtSportLabel(booking);
+    const court = booking.courtName || t('courtBookings');
+    return `${sport} - ${court}`;
   } else if (booking.type === 'academy') {
     return booking.programName || t('academyProgram');
   } else if (booking.type === 'service') {
@@ -215,6 +249,7 @@ const fetchBookings = async () => {
       });
       await academiesStore.fetchUserBookings(user.uid, projectStore.selectedProject.id, true);
       await serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid);
+      await loadSportNameMap(projectStore.selectedProject.id);
     } else {
       console.log('Cannot fetch bookings - missing user or project:', {
         hasUser: !!user,

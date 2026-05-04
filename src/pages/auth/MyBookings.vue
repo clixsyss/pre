@@ -210,7 +210,7 @@
               <!-- Court Booking Fields -->
               <div v-if="isCourtBooking(selectedBooking)" class="detail-item">
                 <span class="label">Sport:</span>
-                <span class="value">{{ selectedBooking.sport || 'Court Sport' }}</span>
+                <span class="value">{{ getCourtSportLabel(selectedBooking) }}</span>
               </div>
               <div v-if="isCourtBooking(selectedBooking)" class="detail-item">
                 <span class="label">Court:</span>
@@ -334,6 +334,7 @@ import { useModalState } from 'src/composables/useModalState';
 import bookingService from 'src/services/bookingService';
 import serviceBookingService from 'src/services/serviceBookingService';
 import optimizedAuthService from 'src/services/optimizedAuthService';
+import { getSportsByProject } from 'src/services/dynamoDBSportsService';
 import PageHeader from '../../components/PageHeader.vue';
 import SuspensionBanner from '../../components/SuspensionBanner.vue';
 import { useSuspensionGuard } from '../../composables/useSuspensionGuard';
@@ -358,6 +359,7 @@ const activeFilter = ref('all');
 const selectedBooking = ref(null);
 const unsubscribeServiceBookings = ref(null);
 const unsubscribeAcademyBookings = ref(null);
+const sportNameById = ref({});
 
 
 
@@ -439,6 +441,37 @@ const isServiceBooking = (booking) => {
     (booking.serviceId && booking.serviceName);
 };
 
+const getCourtSportLabel = (booking) => {
+  const raw = String(booking?.sportName || booking?.sportType || booking?.sport || '').trim();
+  if (!raw) return 'Court';
+  const mapped = sportNameById.value[raw];
+  if (mapped) return mapped;
+  // Hide opaque IDs accidentally saved as sport value.
+  if (!raw.includes(' ') && /^[A-Za-z0-9_-]{14,}$/.test(raw)) {
+    return 'Court';
+  }
+  return raw;
+};
+
+const loadSportNameMap = async (pid) => {
+  if (!pid) {
+    sportNameById.value = {};
+    return;
+  }
+  try {
+    const sports = await getSportsByProject(pid, { limit: 200 });
+    const map = {};
+    (sports || []).forEach((s) => {
+      const id = String(s?.id || '').trim();
+      const name = String(s?.name || '').trim();
+      if (id && name) map[id] = name;
+    });
+    sportNameById.value = map;
+  } catch (err) {
+    console.warn('MyBookings: failed to load sports map', err);
+  }
+};
+
 const getStatusLabel = (status) => {
   const statusMap = {
     'confirmed': 'Confirmed',
@@ -473,7 +506,7 @@ const getStatusClass = (status) => {
 
 const getBookingTitle = (booking) => {
   if (isCourtBooking(booking)) {
-    const sport = booking.sport || 'Court';
+    const sport = getCourtSportLabel(booking);
     const courtName = booking.courtName || `${booking.courtType} Court`;
     return `${sport} - ${courtName}`;
   } else if (isAcademyBooking(booking)) {
@@ -725,6 +758,7 @@ const fetchUserBookings = async () => {
 
     // Initial fetch for academy bookings (force refresh for latest data)
     await academiesStore.fetchUserBookings(user.uid, projectId.value, true);
+    await loadSportNameMap(projectId.value);
 
     // Set up real-time listener for service bookings (instant updates)
     unsubscribeServiceBookings.value = serviceBookingStore.subscribeToUserBookings(

@@ -13,7 +13,7 @@
  *           timeSlots (array), totalPrice, type, updatedAt, userId
  */
 
-import { getItem, query } from '../aws/dynamodbClient'
+import { getItem, query, queryAll } from '../aws/dynamodbClient'
 
 const TABLE_NAME = 'projects__bookings'
 
@@ -103,13 +103,37 @@ export async function getBookingsByProject(projectId, options = {}) {
       }
     }
     
-    if (options.limit) {
+    // Do not set Limit on the Dynamo request when filtering by userId — a single page can return 0 matches
+    // even though the user's bookings exist later in the partition. Paginate instead (see below).
+    const hasUserFilter = !!(options.userId || options.matchUserIdentifiers)
+    if (options.limit && !hasUserFilter) {
       queryOptions.Limit = options.limit
     }
-    
+
     // Add filter expressions if provided
     const filterParts = []
-    if (options.userId) {
+    if (options.matchUserIdentifiers) {
+      const { userIds = [], userEmail } = options.matchUserIdentifiers
+      const ids = [...new Set((userIds || []).filter(Boolean))]
+      const orParts = []
+      if (ids.length === 1) {
+        orParts.push('userId = :mid0')
+        queryOptions.ExpressionAttributeValues[':mid0'] = ids[0]
+      } else if (ids.length > 1) {
+        const inn = ids.map((_, i) => `:mid${i}`).join(', ')
+        orParts.push(`userId IN (${inn})`)
+        ids.forEach((id, i) => {
+          queryOptions.ExpressionAttributeValues[`:mid${i}`] = id
+        })
+      }
+      if (userEmail) {
+        orParts.push('userEmail = :mEmail')
+        queryOptions.ExpressionAttributeValues[':mEmail'] = userEmail
+      }
+      if (orParts.length) {
+        filterParts.push(`(${orParts.join(' OR ')})`)
+      }
+    } else if (options.userId) {
       filterParts.push('userId = :userId')
       queryOptions.ExpressionAttributeValues[':userId'] = options.userId
     }
@@ -129,8 +153,25 @@ export async function getBookingsByProject(projectId, options = {}) {
     if (filterParts.length > 0) {
       queryOptions.FilterExpression = filterParts.join(' AND ')
     }
-    
-    const items = await query(TABLE_NAME, queryOptions)
+
+    let items
+    if (hasUserFilter) {
+      const pageSize = Math.min(Math.max(Number(options.pageSize) || 200, 1), 500)
+      const maxPages = Math.min(Math.max(Number(options.maxPages) || 100, 1), 500)
+      items = await queryAll(TABLE_NAME, {
+        KeyConditionExpression: queryOptions.KeyConditionExpression,
+        ExpressionAttributeValues: queryOptions.ExpressionAttributeValues,
+        ExpressionAttributeNames: queryOptions.ExpressionAttributeNames,
+        FilterExpression: queryOptions.FilterExpression,
+        pageSize,
+        maxPages
+      })
+      const cap =
+        typeof options.limit === 'number' && options.limit > 0 ? options.limit : 500
+      items = items.slice(0, cap)
+    } else {
+      items = await query(TABLE_NAME, queryOptions)
+    }
     
     // Convert DynamoDB format to JavaScript objects
     const bookings = items.map(item => {
@@ -139,6 +180,7 @@ export async function getBookingsByProject(projectId, options = {}) {
         parentId: item.parentId || projectId,
         projectId: item.projectId || projectId,
         userId: item.userId || '',
+        userEmail: item.userEmail || '',
         type: item.type || '',
         status: item.status || 'pending',
         date: item.date || null,
@@ -195,10 +237,21 @@ export async function getUserBookings(projectId, userId, options = {}) {
       console.warn('[DynamoDBBookingsService] Missing projectId or userId')
       return []
     }
-    
+
+    const { userEmail, cognitoSub, ...rest } = options
+    const idList = [userId, cognitoSub].filter(Boolean)
+    const uniqueIds = [...new Set(idList)]
+    const em =
+      userEmail && String(userEmail).trim()
+        ? String(userEmail).trim().toLowerCase()
+        : undefined
+
     return await getBookingsByProject(projectId, {
-      ...options,
-      userId: userId
+      ...rest,
+      matchUserIdentifiers: {
+        userIds: uniqueIds,
+        userEmail: em
+      }
     })
   } catch (error) {
     console.error(`[DynamoDBBookingsService] ❌ Error fetching user bookings:`, error)
