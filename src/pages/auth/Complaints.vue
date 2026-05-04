@@ -337,10 +337,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, onActivated, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useComplaintStore } from '../../stores/complaintStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { useNotificationStore } from '../../stores/notifications';
 import { useModalState } from '../../composables/useModalState';
 import { useFormKeyboard } from '../../composables/useFormKeyboard';
@@ -366,9 +367,13 @@ useFormKeyboard({
 const router = useRouter();
 const { isBlocked, suspensionMessage } = useSuspensionGuard('complaints');
 const complaintStore = useComplaintStore();
+const projectStore = useProjectStore();
 const notificationStore = useNotificationStore();
 const { openModal, closeModal: hideNavigationBars } = useModalState();
 const { t } = useI18n();
+const projectId = computed(() => {
+  return projectStore.selectedProject?.id || null;
+});
 
 // Reactive data
 const ACTIVE_MAIN_CATEGORY_STORAGE_KEY = 'complaintsMainCategoryTab'
@@ -683,8 +688,8 @@ onMounted(async () => {
     console.log('🚀 ComplaintsPage: Component mounted, fetching complaints...');
     console.log('🚀 ComplaintsPage: Current user complaints before fetch:', complaintStore.userComplaints.length);
     
-    // Fetch complaint categories first
-    await complaintStore.fetchComplaintCategories();
+    // Fetch complaint categories first (force refresh on initial load)
+    await complaintStore.fetchComplaintCategories(true);
     console.log('✅ ComplaintsPage: Categories fetched:', complaintStore.complaintCategories.length);
     
     await complaintStore.fetchComplaints();
@@ -696,6 +701,25 @@ onMounted(async () => {
     unsubscribe.value = await complaintStore.subscribeToComplaints();
   } catch (error) {
     console.error('❌ ComplaintsPage: Error loading complaints:', error);
+  }
+});
+
+// When this page is kept alive and the user navigates away/back, re-hydrate categories.
+onActivated(async () => {
+  try {
+    await complaintStore.fetchComplaintCategories(true);
+  } catch (err) {
+    console.warn('ComplaintsPage: category refresh on activation failed', err);
+  }
+});
+
+// Also react to selected project changes while this view is alive.
+watch(projectId, async (newPid, oldPid) => {
+  if (!newPid || newPid === oldPid) return;
+  try {
+    await complaintStore.fetchComplaintCategories(true);
+  } catch (err) {
+    console.warn('ComplaintsPage: category refresh on project change failed', err);
   }
 });
 
@@ -984,6 +1008,7 @@ watch(showNewComplaintModal, (isOpen) => {
   max-width: 100%;
   overflow: hidden;
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
