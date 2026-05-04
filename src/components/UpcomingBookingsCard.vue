@@ -1,5 +1,9 @@
 <template>
-  <div class="upcoming-bookings-card" @click="goToBookings">
+  <div
+    v-if="!props.hideWhenEmpty || loading || upcomingBookings.length > 0"
+    class="upcoming-bookings-card"
+    @click="goToBookings"
+  >
     <div class="card-header">
       <h3>{{ $t('upcomingBookings') }}</h3>
     </div>
@@ -76,6 +80,12 @@ const { t } = useI18n();
 const academiesStore = useAcademiesStore();
 const serviceBookingStore = useServiceBookingStore();
 const projectStore = useProjectStore();
+const props = defineProps({
+  hideWhenEmpty: {
+    type: Boolean,
+    default: true
+  }
+});
 
 // Reactive data
 const loading = ref(true);
