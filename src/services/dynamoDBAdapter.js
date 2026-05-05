@@ -19,6 +19,8 @@ const TABLES = {
   PENDING_ADMINS: 'pendingAdmins',
   GUEST_PASS_SETTINGS: 'guestPassSettings',
   DEVICE_KEY_RESET_REQUESTS: 'deviceKeyResetRequests',
+  PROJECTS_DEVICE_KEY_RESET_REQUESTS: 'projects__deviceKeyResetRequests',
+  DEVICE_KEY_AUDIT_LOGS: 'deviceKeyAuditLogs',
   ADMINS: 'admins',
   // Project-specific tables (using double underscore separator)
   PROJECTS_NEWS: 'projects__news',
@@ -62,6 +64,7 @@ const COLLECTION_TO_TABLE_MAP = {
   pendingAdmins: TABLES.PENDING_ADMINS,
   guestPassSettings: TABLES.GUEST_PASS_SETTINGS,
   deviceKeyResetRequests: TABLES.DEVICE_KEY_RESET_REQUESTS,
+  deviceKeyAuditLogs: TABLES.DEVICE_KEY_AUDIT_LOGS,
   admins: TABLES.ADMINS,
 
   // Project subcollections (mapped to flat table names)
@@ -93,6 +96,7 @@ const COLLECTION_TO_TABLE_MAP = {
   'projects/{projectId}/orders': TABLES.PROJECTS_ORDERS,
   'projects/{projectId}/sampleData': TABLES.PROJECTS_SAMPLE_DATA,
   'projects/{projectId}/requestSubmissions': TABLES.PROJECTS_REQUEST_SUBMISSIONS,
+  'projects/{projectId}/deviceKeyResetRequests': TABLES.PROJECTS_DEVICE_KEY_RESET_REQUESTS,
 }
 
 /**

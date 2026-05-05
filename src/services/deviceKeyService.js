@@ -1,5 +1,21 @@
 import firestoreService from './firestoreService'
 
+// Fire-and-forget audit log helper for device key events
+async function logDeviceEvent(eventType, userId, details = {}) {
+  try {
+    const entry = {
+      eventType,   // 'device_registered' | 'device_blocked' | 'device_reset' | 'device_reset_approved'
+      userId,
+      ...details,
+      occurredAt: new Date().toISOString(),
+    }
+    await firestoreService.addDoc('deviceKeyAuditLogs', entry)
+  } catch (err) {
+    // Logging must never break the auth flow
+    console.warn('[deviceKeyService] audit log failed:', err?.message || err)
+  }
+}
+
 /**
  * Device Key Service - Manages device-based authentication
  * Ensures users can only login from their registered device unless reset is approved
@@ -95,9 +111,11 @@ class DeviceKeyService {
     try {
       console.log(`🔍 getUserDeviceKey: Looking up user with ID: ${userId}`)
       
-      // Import DynamoDB user service for reliable user lookup
-      const { getUserByAuthUid, getUserByEmail, getUserById } = await import('./dynamoDBUsersService')
-      
+      // Import DynamoDB user service — always bypass cache so we never read a stale deviceKey
+      const { getUserByAuthUid, getUserByEmail, getUserById, invalidateUserCache } = await import('./dynamoDBUsersService')
+      invalidateUserCache(userId)
+      if (lookupEmail) invalidateUserCache(lookupEmail)
+
       let user = null
       
       // Strategy 1: Try authUid lookup first (most reliable for Cognito sub)
@@ -217,10 +235,10 @@ class DeviceKeyService {
         }
       }
       
-      // Strategy 4: Fallback to firestoreService.getDoc (legacy support)
+      // Strategy 4: Fallback to firestoreService.getDoc (legacy support) — no cache
       try {
         console.log(`🔍 getUserDeviceKey: Trying firestoreService.getDoc fallback for: ${userId}`)
-        const userDoc = await firestoreService.getDoc(`users/${userId}`)
+        const userDoc = await firestoreService.getDoc(`users/${userId}`, { useCache: false })
         if (userDoc.exists()) {
           const deviceKey = userDoc.data().deviceKey
           console.log(`✅ getUserDeviceKey: Found user via firestoreService: ${userId}`)
@@ -341,6 +359,9 @@ class DeviceKeyService {
         deviceKey: deviceKey,
         deviceKeyUpdatedAt: new Date().toISOString()
       })
+      // Bust dynamoDBUsersService cache so the next read sees the new deviceKey immediately
+      const { invalidateUserCache: bust } = await import('./dynamoDBUsersService')
+      bust(actualUserId)
       console.log(`✅ Device key saved to DynamoDB for user: ${actualUserId}`)
       
       // Verify the save worked by directly querying DynamoDB via firestoreService
@@ -512,106 +533,22 @@ class DeviceKeyService {
   }
 
   /**
-   * Check if user has an approved reset request
+   * Check if user has an approved reset request in the global table
    * @param {string} userId - User's ID
    * @returns {Promise<boolean>} True if user has approved reset
    */
-  async hasApprovedResetRequest(userId, projectId = null) {
+  async hasApprovedResetRequest(userId) {
     try {
-      if (projectId) {
-        // Check specific project subcollection
-        const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
-        const requests = await firestoreService.getDocs(collectionPath, {
-          filters: [
-            { field: 'userId', operator: '==', value: userId },
-            { field: 'status', operator: '==', value: 'approved' }
-          ]
-        })
-        console.log(`🔍 Checked project ${projectId}: Found ${requests.size || 0} approved requests`)
-        return !requests.empty && (requests.size || requests.docs?.length || 0) > 0
-      }
-      
-      // Get user's projects first to avoid checking all projects (causes permission errors)
-      console.log('🔍 Getting user projects to check for approved reset requests...')
-      const userDoc = await firestoreService.getDoc(`users/${userId}`)
-      
-      if (!userDoc.exists()) {
-        console.log('❌ User document not found')
-        return false
-      }
-      
-      const userData = userDoc.data()
-      const userProjects = userData?.projects || []
-      
-      // If user has projects, check only those projects
-      if (userProjects.length > 0) {
-        console.log(`🔍 Checking ${userProjects.length} user projects for approved reset requests`)
-        
-        for (const project of userProjects) {
-          const projectId = project.projectId || project.id
-          if (!projectId) continue
-          
-          const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
-          try {
-            const requests = await firestoreService.getDocs(collectionPath, {
-              filters: [
-                { field: 'userId', operator: '==', value: userId },
-                { field: 'status', operator: '==', value: 'approved' }
-              ]
-            })
-            
-            const hasApproved = !requests.empty && (requests.size || requests.docs?.length || 0) > 0
-            if (hasApproved) {
-              console.log(`✅ Found approved reset request in project: ${projectId}`)
-              return true
-            }
-          } catch (err) {
-            console.warn(`⚠️ Error checking requests in project ${projectId}:`, err.message || err)
-          }
-        }
-        
-        console.log('ℹ️ No approved reset requests found in user projects')
-        return false
-      }
-      
-      // If user has no projects, check ALL projects for approved reset requests
-      // This handles cases where user was deleted from projects but reset was approved
-      console.log('⚠️ User has no projects - checking ALL projects for approved reset requests')
-      try {
-        const allProjects = await firestoreService.getDocs('projects', {
-          constraints: [{ _type: 'limit', limitCount: 100 }] // Limit to prevent excessive reads
-        })
-        
-        console.log(`🔍 Checking ${allProjects.docs.length} projects for approved reset requests`)
-        
-        for (const projectDoc of allProjects.docs) {
-          const projectId = projectDoc.id
-          const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
-          
-          try {
-            const requests = await firestoreService.getDocs(collectionPath, {
-              filters: [
-                { field: 'userId', operator: '==', value: userId },
-                { field: 'status', operator: '==', value: 'approved' }
-              ]
-            })
-            
-            const hasApproved = !requests.empty && (requests.size || requests.docs?.length || 0) > 0
-            if (hasApproved) {
-              console.log(`✅ Found approved reset request in project: ${projectId}`)
-              return true
-            }
-          } catch (err) {
-            console.warn(`⚠️ Error checking requests in project ${projectId}:`, err.message || err)
-          }
-        }
-        
-        console.log('ℹ️ No approved reset requests found in any projects')
-        return false
-      } catch (error) {
-        console.error('❌ Error checking all projects for reset requests:', error)
-        return false
-      }
+      console.log('🔍 Checking global deviceKeyResetRequests for approved reset...')
+      const requests = await firestoreService.getDocs('deviceKeyResetRequests', {
+        filters: [
+          { field: 'userId', operator: '==', value: userId },
+          { field: 'status', operator: '==', value: 'approved' }
+        ]
+      })
+      const count = requests.docs?.length || 0
+      console.log(`🔍 Found ${count} approved reset request(s) for user`)
+      return count > 0
     } catch (error) {
       console.error('Error checking reset requests:', error)
       return false
@@ -619,67 +556,23 @@ class DeviceKeyService {
   }
 
   /**
-   * Clear approved reset requests for a user after device is registered
+   * Clear approved reset requests for a user from the global table after device is registered
    * @param {string} userId - User's ID
    */
-  async clearApprovedResetRequests(userId, projectId = null) {
+  async clearApprovedResetRequests(userId) {
     try {
-      if (projectId) {
-        // Clear from specific project subcollection
-        const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
-        const requests = await firestoreService.getDocs(collectionPath, {
-          filters: [
-            { field: 'userId', operator: '==', value: userId },
-            { field: 'status', operator: '==', value: 'approved' }
-          ]
-        })
+      const requests = await firestoreService.getDocs('deviceKeyResetRequests', {
+        filters: [
+          { field: 'userId', operator: '==', value: userId },
+          { field: 'status', operator: '==', value: 'approved' }
+        ]
+      })
 
-        for (const doc of requests.docs) {
-          await firestoreService.deleteDoc(`${collectionPath}/${doc.id}`)
-        }
-      } else {
-        // Get user's projects first to avoid checking all projects
-        const userDoc = await firestoreService.getDoc(`users/${userId}`)
-        
-        if (!userDoc.exists()) {
-          console.log('❌ User document not found, cannot clear reset requests')
-          return
-        }
-        
-        const userData = userDoc.data()
-        const userProjects = userData?.projects || []
-        
-        if (userProjects.length === 0) {
-          console.log('ℹ️ User has no projects, nothing to clear')
-          return
-        }
-        
-        console.log(`🔍 Clearing reset requests from ${userProjects.length} user projects`)
-        
-        // Only clear from the user's actual projects
-        for (const project of userProjects) {
-          const projectId = project.projectId || project.id
-          if (!projectId) continue
-          
-          const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
-          try {
-            const requests = await firestoreService.getDocs(collectionPath, {
-              filters: [
-                { field: 'userId', operator: '==', value: userId },
-                { field: 'status', operator: '==', value: 'approved' }
-              ]
-            })
-
-            for (const doc of requests.docs) {
-              await firestoreService.deleteDoc(`${collectionPath}/${doc.id}`)
-            }
-          } catch (err) {
-            console.warn(`⚠️ Error clearing requests in project ${projectId}:`, err.message || err)
-          }
-        }
+      for (const doc of requests.docs) {
+        await firestoreService.deleteDoc(`deviceKeyResetRequests/${doc.id}`)
       }
 
-      console.log('✅ Cleared approved reset requests')
+      console.log('✅ Cleared approved reset requests from global table')
     } catch (error) {
       console.error('Error clearing reset requests:', error)
     }
@@ -745,6 +638,7 @@ class DeviceKeyService {
       // If first login, register device
       if (validation.isFirstLogin && validation.requiresRegistration) {
         await this.registerDevice(userId, options)
+        logDeviceEvent('device_registered', userId, { reason: 'first_login' })
         return {
           allowed: true,
           message: 'Device registered successfully',
@@ -766,10 +660,9 @@ class DeviceKeyService {
 
       if (hasApprovedReset) {
         console.log('✅ User has approved reset request - allowing device registration')
-        // Register this new device
         await this.registerDevice(userId, options)
-        // Clear the approved reset request
         await this.clearApprovedResetRequests(userId)
+        logDeviceEvent('device_reset_approved', userId, { reason: 'admin_approved_reset' })
         return {
           allowed: true,
           message: 'Device reset approved - new device registered',
@@ -777,7 +670,8 @@ class DeviceKeyService {
         }
       }
 
-      // No approved reset - deny login
+      // No approved reset - deny login and log the blocked attempt
+      logDeviceEvent('device_blocked', userId, { reason: 'device_mismatch' })
       return {
         allowed: false,
         message: validation.message,

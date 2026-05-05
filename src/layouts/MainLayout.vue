@@ -154,8 +154,12 @@
         <div class="modal-body">
           <div class="projects-list">
             <div v-for="project in userProjects" :key="project.id" class="project-option"
-              :class="{ 'current': project.id === currentProjectId, 'clickable': project.id !== currentProjectId }"
-              @click="project.id !== currentProjectId && !projectStore.loading && switchToProject(project)">
+              :class="{
+                'current': project.id === currentProjectId,
+                'pending': project.approvalStatus === 'pending',
+                'clickable': project.id !== currentProjectId && project.approvalStatus !== 'pending'
+              }"
+              @click="project.id !== currentProjectId && project.approvalStatus !== 'pending' && !projectStore.loading && switchToProject(project)">
               <div class="project-info">
                 <h4>{{ project.name }}</h4>
                 <span class="project-role">{{ project.location }} • Unit {{ project.userUnit }}</span>
@@ -163,6 +167,7 @@
 
               <div class="project-actions">
                 <span v-if="project.id === currentProjectId" class="current-badge">{{ $t('currentBadge') }}</span>
+                <span v-else-if="project.approvalStatus === 'pending'" class="pending-badge">Pending Approval</span>
                 <div v-else class="switch-indicator">
                   <div v-if="projectStore.loading" class="loading-spinner"></div>
                   <span v-else class="switch-text">{{ $t('tapToSwitch') }}</span>
@@ -2573,6 +2578,24 @@ body.hide-bottom-nav .bottom-navigation {
     0 0 0 2px rgba(175, 30, 35, 0.15);
   transform: scale(1.02);
   cursor: default;
+}
+
+.project-option.pending {
+  opacity: 0.6;
+  border-color: rgba(217, 119, 6, 0.4);
+  background: rgba(217, 119, 6, 0.06);
+  cursor: not-allowed;
+}
+
+.pending-badge {
+  background: rgba(217, 119, 6, 0.15);
+  color: #f59e0b;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 2px solid rgba(217, 119, 6, 0.35);
+  white-space: nowrap;
 }
 
 .project-info h4 {

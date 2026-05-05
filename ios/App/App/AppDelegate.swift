@@ -144,7 +144,9 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         
         // Show banner, play sound, and update badge even when app is in foreground
         if #available(iOS 14.0, *) {
-            completionHandler([.banner, .sound, .badge])
+            // Include `.list` so foreground notifications are retained in
+            // Notification Center history, not just shown as transient banners.
+            completionHandler([.banner, .list, .sound, .badge])
         } else {
             completionHandler([.alert, .sound, .badge])
         }

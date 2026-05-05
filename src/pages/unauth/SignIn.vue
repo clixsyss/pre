@@ -241,26 +241,6 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">{{ $t('yourProject') }} *</label>
-              <select
-                v-model="deviceKeyResetForm.projectId"
-                class="form-input"
-                required
-                @change="onResetProjectChange"
-                :disabled="loadingProjects"
-              >
-                <option value="" v-if="loadingProjects">{{ $t('loading') }}</option>
-                <option value="" v-else-if="availableProjects.length === 0">{{ $t('noProjectsAvailable') }}</option>
-                <option value="" v-else>{{ $t('selectProjectForReset') }}</option>
-                <option v-for="project in availableProjects" :key="project.id" :value="project.id">
-                  {{ project.name }}
-                </option>
-              </select>
-              <span v-if="loadingProjects" class="loading-text">⏳ {{ $t('loading') }}...</span>
-              <span v-else-if="availableProjects.length === 0" class="error-text">⚠️ {{ $t('noActiveProjectsFound') }}</span>
-            </div>
-
-            <div class="form-group">
               <label class="form-label">{{ $t('reasonForReset') }}</label>
               <textarea
                 v-model="deviceKeyResetForm.reason"
@@ -420,13 +400,10 @@ const deviceKeyErrorMessage = ref('')
 // Device key reset modal state
 const showDeviceKeyResetModal = ref(false)
 const submittingDeviceKeyReset = ref(false)
-const loadingProjects = ref(false)
-const availableProjects = ref([])
 const deviceKeyResetForm = reactive({
   email: '',
   nationalId: '',
   mobile: '',
-  projectId: '',
   reason: ''
 })
 
@@ -447,59 +424,8 @@ const formData = reactive({
   rememberMe: false,
 })
 
-// Load available projects for device key reset
-const loadAvailableProjects = async () => {
-  if (loadingProjects.value) {
-    console.log('⏳ Already loading projects, skipping...')
-    return
-  }
-  
-  try {
-    loadingProjects.value = true
-    console.log('🔄 Loading available projects for device key reset from DynamoDB...')
-    
-    // Use firestoreService which uses DynamoDB
-    const result = await firestoreService.getDocs('projects')
-    
-    const fetchedProjects = result.docs.map(doc => ({
-      id: doc.id || doc.documentId || doc._id,
-      ...(typeof doc.data === 'function' ? doc.data() : doc)
-    }))
-    
-    console.log('[SignIn] ✅ Fetched', fetchedProjects.length, 'projects from DynamoDB')
-    
-    // Sort projects by name (don't filter by status - show all projects like Register page)
-    availableProjects.value = fetchedProjects.sort((a, b) => {
-      const nameA = String(a.name || '').toLowerCase()
-      const nameB = String(b.name || '').toLowerCase()
-      if (nameA < nameB) return -1
-      if (nameA > nameB) return 1
-      return 0
-    })
-    
-    console.log('✅ Loaded', availableProjects.value.length, 'projects:', availableProjects.value.map(p => p.name))
-  } catch (error) {
-    console.error('❌ Error loading projects:', error)
-    console.error('[SignIn] Error details:', error?.message, error?.code)
-    // Only show error notification if we're actually trying to open the modal
-    // Don't show error on initial page load
-    if (showDeviceKeyResetModal.value) {
-      notificationStore.showError('Failed to load projects. Please try again.')
-    }
-    availableProjects.value = []
-  } finally {
-    loadingProjects.value = false
-  }
-}
-
-// Open device key reset modal and ensure projects are loaded
-const openDeviceKeyResetModal = async () => {
-  console.log('🔑 Opening device key reset modal...')
+const openDeviceKeyResetModal = () => {
   showDeviceKeyResetModal.value = true
-  
-  // Always reload projects to ensure fresh data
-  console.log('📋 Reloading projects list...')
-  await loadAvailableProjects()
 }
 
 onMounted(() => {
@@ -758,64 +684,48 @@ const handleSignIn = async () => {
     registrationStore.setFirestoreUserId(userId ?? null)
     registrationStore.clearMigrationChallenge()
 
-    /*
-      Device key login enforcement is TEMPORARILY DISABLED.
-      Keep this block for future re-enable.
+    // --- Single-device enforcement ---
+    console.log('[SignIn] 🔐 Checking device key...')
+    let deviceCheck
+    try {
+      const deviceKeyService = (await import('../../services/deviceKeyService')).default
+      const userIdentifier = cognitoSub || userId
+      console.log('[SignIn] 🔐 Using user identifier for device check:', userIdentifier)
+      deviceCheck = await Promise.race([
+        deviceKeyService.handleLoginDeviceCheck(userIdentifier, {
+          lookupEmail: formData.email.trim(),
+        }),
+        new Promise((_resolve, reject) =>
+          setTimeout(() => reject(new Error('Device key check timed out')), 15000)
+        )
+      ])
+    } catch (deviceKeyError) {
+      console.warn('[SignIn] ⚠️ Device key check failed or timed out:', deviceKeyError.message)
+      // On timeout/error, allow login so a transient network issue does not lock users out.
+      // The check will re-run on the next login.
+      deviceCheck = { allowed: true, action: 'skipped_error' }
+    }
 
-      Original behavior:
-      - validate device key on login
-      - block login on mismatch
-      - require reset approval flow
-    */
-    // console.log('[SignIn] 🔐 Checking device key...')
-    // let deviceCheck
-    // try {
-    //   const deviceKeyService = (await import('../../services/deviceKeyService')).default
-    //   const userIdentifier = cognitoSub || userId
-    //   console.log('[SignIn] 🔐 Using user identifier for device check:', userIdentifier)
-    //   deviceCheck = await Promise.race([
-    //     deviceKeyService.handleLoginDeviceCheck(userIdentifier, {
-    //       lookupEmail: formData.email.trim(),
-    //     }),
-    //     new Promise((_resolve, reject) =>
-    //       setTimeout(() => reject(new Error('Device key check timed out')), 10000)
-    //     )
-    //   ])
-    // } catch (deviceKeyError) {
-    //   console.warn('[SignIn] ⚠️ Device key check failed or timed out:', deviceKeyError.message)
-    //   const isDevelopment = import.meta.env.DEV || import.meta.env.MODE === 'development'
-    //   if (isDevelopment) {
-    //     console.log('[SignIn] ⚠️ Development mode - allowing sign-in despite device key check failure')
-    //     deviceCheck = { allowed: true, action: 'skipped_dev_mode' }
-    //   } else {
-    //     deviceCheck = { allowed: false, message: deviceKeyError.message || 'Device key check failed' }
-    //   }
-    // }
-    //
-    // if (!deviceCheck.allowed) {
-    //   console.log('[SignIn] ❌ Device key check failed:', deviceCheck.message)
-    //   localStorage.setItem('showDeviceKeyError', deviceCheck.message)
-    //   console.log('[SignIn] 💾 Saved device key error to localStorage')
-    //   console.log('[SignIn] 🚪 Signing out user with device key error...')
-    //   loading.value = false
-    //   try {
-    //     await optimizedAuthService.signOut()
-    //     console.log('[SignIn] ✅ User signed out after device key error')
-    //     await new Promise(resolve => setTimeout(resolve, 100))
-    //     console.log('[SignIn] 🔍 Checking for device key error to display modal...')
-    //     checkAndShowDeviceKeyError()
-    //   } catch (err) {
-    //     console.error('[SignIn] ❌ Error during device key signout:', err)
-    //   }
-    //   return
-    // }
-    //
-    // console.log('[SignIn] ✅ Device key check passed:', deviceCheck.action)
-    // if (deviceCheck.action === 'registered') {
-    //   notificationStore.showSuccess('Device registered successfully!')
-    // } else if (deviceCheck.action === 'reset_approved') {
-    //   notificationStore.showSuccess('Device reset approved! Welcome to your new device.')
-    // }
+    if (!deviceCheck.allowed) {
+      console.log('[SignIn] ❌ Device key check failed:', deviceCheck.message)
+      localStorage.setItem('showDeviceKeyError', deviceCheck.message)
+      loading.value = false
+      try {
+        await optimizedAuthService.signOut()
+        await new Promise(resolve => setTimeout(resolve, 100))
+        checkAndShowDeviceKeyError()
+      } catch (err) {
+        console.error('[SignIn] ❌ Error during device key signout:', err)
+      }
+      return
+    }
+
+    console.log('[SignIn] ✅ Device key check passed:', deviceCheck.action)
+    if (deviceCheck.action === 'registered') {
+      notificationStore.showSuccess(t('deviceRegistered') || 'Device registered successfully!')
+    } else if (deviceCheck.action === 'reset_approved') {
+      notificationStore.showSuccess(t('deviceResetApproved') || 'Device reset approved! Welcome to your new device.')
+    }
 
     // Sync PRE user with Smart Mirror service for user isolation
     console.log('[SignIn] 🔐 Syncing PRE user with Smart Mirror service:', userId)
@@ -1092,6 +1002,19 @@ const handleSignIn = async () => {
         console.log('[SignIn] ✅ FCM token registered for user:', cognitoSub)
       } catch (fcmError) {
         console.warn('[SignIn] ⚠️ FCM token registration failed (non-critical):', fcmError?.message || fcmError)
+      }
+    })()
+
+    // Update lastLoginAt in background (non-blocking)
+    ;(async () => {
+      try {
+        if (dynamoUser?.id) {
+          await firestoreService.updateDoc(`users/${dynamoUser.id}`, {
+            lastLoginAt: new Date().toISOString()
+          })
+        }
+      } catch (loginAtErr) {
+        console.warn('[SignIn] ⚠️ lastLoginAt update failed (non-critical):', loginAtErr?.message || loginAtErr)
       }
     })()
 
@@ -1406,16 +1329,10 @@ const goToSignUp = () => {
 // Device key reset modal handlers
 const closeDeviceKeyResetModal = () => {
   showDeviceKeyResetModal.value = false
-  // Reset form
   deviceKeyResetForm.email = ''
   deviceKeyResetForm.nationalId = ''
   deviceKeyResetForm.mobile = ''
-  deviceKeyResetForm.projectId = ''
   deviceKeyResetForm.reason = ''
-}
-
-const onResetProjectChange = () => {
-  console.log('📋 Project selected for reset:', deviceKeyResetForm.projectId)
 }
 
 const handleDeviceKeyResetSubmit = async () => {
@@ -1431,116 +1348,57 @@ const handleDeviceKeyResetSubmit = async () => {
     const normalizedNationalId = deviceKeyResetForm.nationalId.trim()
     const normalizedMobile = deviceKeyResetForm.mobile.trim()
     
-    // Validate user exists with matching details
+    // Validate user exists with matching identity details
     console.log('🔍 Validating user details...')
     const usersResult = await firestoreService.getDocs('users', {
       filters: [{ field: 'email', operator: '==', value: normalizedEmail }],
       timeoutMs: 10000
     })
-    
+
     if (!usersResult || usersResult.empty || usersResult.docs.length === 0) {
-      notificationStore.showError(
-        '❌ No account found with this email. Please check your email and try again.'
-      )
+      notificationStore.showError('❌ No account found with this email. Please check your email and try again.')
       submittingDeviceKeyReset.value = false
       return
     }
-    
+
     const userDoc = usersResult.docs[0]
     const userData = userDoc.data()
     const userId = userDoc.id
-    
+
     console.log('✅ User found:', userId)
-    
-    // Validate national ID
+
     if (userData.nationalId !== normalizedNationalId) {
-      notificationStore.showError(
-        '❌ National ID does not match our records. Please check and try again.'
-      )
+      notificationStore.showError('❌ National ID does not match our records. Please check and try again.')
       submittingDeviceKeyReset.value = false
       return
     }
-    
-    // Validate mobile number
+
     if (userData.mobile !== normalizedMobile) {
-      notificationStore.showError(
-        '❌ Mobile number does not match our records. Please check and try again.'
-      )
+      notificationStore.showError('❌ Mobile number does not match our records. Please check and try again.')
       submittingDeviceKeyReset.value = false
       return
     }
-    
-    // Validate user is part of the selected project
-    const userProjects = userData.projects || []
-    const isInProject = userProjects.some(p => p.projectId === deviceKeyResetForm.projectId)
-    
-    if (!isInProject) {
-      notificationStore.showError(
-        '❌ You are not registered in the selected project. Please select the correct project.'
-      )
-      submittingDeviceKeyReset.value = false
-      return
-    }
-    
+
     console.log('✅ All validations passed')
-    
-    // Use direct Firebase SDK for better reliability
-    const { collection, addDoc, serverTimestamp } = await import('firebase/firestore')
-    const { signInAnonymously, signOut } = await import('firebase/auth')
-    const { smartMirrorDb: db, smartMirrorAuth: auth } = await import('../../boot/smartMirrorFirebase')
-    
-    // iOS native apps require authentication to write to Firestore, even with "allow create: if true"
-    // Sign in anonymously first to get write permissions
-    console.log('🔐 Signing in anonymously to enable Firestore write...')
-    try {
-      await signInAnonymously(auth)
-      console.log('✅ Anonymous sign-in successful')
-    } catch (authError) {
-      console.log('⚠️ Anonymous sign-in failed (might already be signed in):', authError.code)
-      // Continue anyway - user might already be signed in
-    }
-    
-    // Note: We skip checking for existing pending requests because:
-    // 1. User is not authenticated with their real account (they're locked out)
-    // 2. The admin dashboard will handle any duplicate requests
-    console.log('ℹ️ Skipping duplicate check (user not authenticated on SignIn page)')
-    
-    const requestsRef = collection(db, 'projects', deviceKeyResetForm.projectId, 'deviceKeyResetRequests')
-    
-    // Create the reset request
+
+    // Write to the global deviceKeyResetRequests table — device keys are user-level, not project-level
     console.log('📝 Creating device key reset request...')
     const requestData = {
-      userId: userId,
+      userId,
       userEmail: normalizedEmail,
       userName: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
-      userUnit: userProjects.find(p => p.projectId === deviceKeyResetForm.projectId)?.unit || '',
       nationalId: normalizedNationalId,
       mobile: normalizedMobile,
-      projectId: deviceKeyResetForm.projectId,
       reason: deviceKeyResetForm.reason.trim(),
       status: 'pending',
-      requestedAt: new Date(),
+      requestedAt: new Date().toISOString(),
       resolvedAt: null,
       resolvedBy: null,
       adminNotes: ''
     }
-    
-    // Use Firebase Web SDK (works on all platforms including iOS)
-    console.log('[SignIn] Creating device key reset request via Firebase Web SDK...')
-    await addDoc(requestsRef, {
-      ...requestData,
-      requestedAt: serverTimestamp()
-    })
-    
-    console.log('✅ Device key reset request submitted successfully via Web SDK')
-    
-    // Sign out the anonymous user immediately after submission
-    try {
-      await signOut(auth)
-      console.log('✅ Signed out anonymous user')
-    } catch (signOutError) {
-      console.log('⚠️ Error signing out anonymous user:', signOutError.code)
-    }
+
+    await firestoreService.addDoc('deviceKeyResetRequests', requestData)
+    console.log('✅ Device key reset request submitted successfully via DynamoDB')
     
     notificationStore.showSuccess(
       '✅ Your device key reset request has been submitted successfully! Our admin will review it shortly. You will be notified once approved.'

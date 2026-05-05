@@ -1,224 +1,82 @@
 import firestoreService from './firestoreService'
-import { Timestamp } from 'firebase/firestore'
 
-/**
- * Service for managing device key reset requests
- */
 const deviceKeyResetService = {
   /**
-   * Submit a device key reset request
-   * @param {string} userId - The user's ID
-   * @param {string} reason - The reason for the reset request
-   * @param {string} projectId - The project ID (optional)
-   * @returns {Promise<object>} The created request
+   * Submit a device key reset request to the global table.
+   * Device keys are user-level, not project-level.
    */
-  async submitResetRequest(userId, reason, projectId = null) {
-    try {
-      if (!userId) {
-        throw new Error('User ID is required')
-      }
-      
-      if (!reason || reason.trim().length === 0) {
-        throw new Error('Reason is required')
-      }
+  async submitResetRequest(userId, reason) {
+    if (!userId) throw new Error('User ID is required')
+    if (!reason || !reason.trim()) throw new Error('Reason is required')
 
-      if (!projectId) {
-        throw new Error('Project ID is required')
-      }
-
-      const requestData = {
-        userId,
-        reason: reason.trim(),
-        projectId,
-        status: 'pending', // pending, approved, rejected
-        requestedAt: Timestamp.now(),
-        resolvedAt: null,
-        resolvedBy: null,
-        adminNotes: null
-      }
-
-      console.log('📝 Submitting device key reset request:', requestData)
-      
-      // Save to project subcollection: projects/{projectId}/deviceKeyResetRequests
-      const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
-      const docRef = await firestoreService.addDoc(collectionPath, requestData)
-      
-      console.log('✅ Device key reset request submitted:', docRef.id)
-      
-      return {
-        id: docRef.id,
-        ...requestData
-      }
-    } catch (error) {
-      console.error('❌ Error submitting device key reset request:', error)
-      throw error
+    const requestData = {
+      userId,
+      reason: reason.trim(),
+      status: 'pending',
+      requestedAt: new Date().toISOString(),
+      resolvedAt: null,
+      resolvedBy: null,
+      adminNotes: null
     }
+
+    console.log('📝 Submitting device key reset request:', requestData)
+    const docRef = await firestoreService.addDoc('deviceKeyResetRequests', requestData)
+    console.log('✅ Device key reset request submitted:', docRef.id)
+
+    return { id: docRef.id, ...requestData }
   },
 
   /**
-   * Get all reset requests for a user
-   * @param {string} userId - The user's ID
-   * @returns {Promise<Array>} List of reset requests
+   * Get all reset requests for a user from the global table.
    */
-  async getUserResetRequests(userId, projectId = null) {
-    try {
-      // If projectId is provided, query that specific project's subcollection
-      if (projectId) {
-        const collectionPath = `projects/${projectId}/deviceKeyResetRequests`
-        const snapshot = await firestoreService.getDocs(collectionPath, {
-          filters: [
-            { field: 'userId', operator: '==', value: userId }
-          ]
-        })
-        
-        const requests = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        
-        // Sort by requestedAt descending (newest first)
-        requests.sort((a, b) => {
-          const aTime = a.requestedAt?.toMillis() || 0
-          const bTime = b.requestedAt?.toMillis() || 0
-          return bTime - aTime
-        })
-        
-        return requests
+  async getUserResetRequests(userId) {
+    const snapshot = await firestoreService.getDocs('deviceKeyResetRequests', {
+      filters: [{ field: 'userId', operator: '==', value: userId }]
+    })
+
+    const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+    requests.sort((a, b) => {
+      const toMs = (v) => {
+        if (!v) return 0
+        if (typeof v === 'string') return new Date(v).getTime()
+        if (v?.toMillis) return v.toMillis()
+        if (v?.toDate) return v.toDate().getTime()
+        if (v instanceof Date) return v.getTime()
+        return 0
       }
-      
-      // Otherwise, query all projects' subcollections for this user
-      // OPTIMIZATION: Get projects with limit
-      const { limit } = await import('firebase/firestore')
-      const projectsSnapshot = await firestoreService.getDocs('projects', {
-        constraints: [limit(50)]
-      })
-      const allRequests = []
-      
-      for (const projectDoc of projectsSnapshot.docs) {
-        const collectionPath = `projects/${projectDoc.id}/deviceKeyResetRequests`
-        try {
-          const snapshot = await firestoreService.getDocs(collectionPath, {
-            filters: [
-              { field: 'userId', operator: '==', value: userId }
-            ]
-          })
-          
-          snapshot.docs.forEach(doc => {
-            allRequests.push({
-              id: doc.id,
-              ...doc.data()
-            })
-          })
-        } catch (err) {
-          console.warn(`Error fetching requests from project ${projectDoc.id}:`, err)
-        }
-      }
-      
-      // Sort by requestedAt descending (newest first)
-      // Handle both Firestore Timestamp and DynamoDB ISO string formats
-      allRequests.sort((a, b) => {
-        let aTime = 0
-        let bTime = 0
-        
-        if (a.requestedAt) {
-          if (typeof a.requestedAt === 'string') {
-            // DynamoDB ISO string format
-            aTime = new Date(a.requestedAt).getTime()
-          } else if (a.requestedAt?.toMillis) {
-            // Firestore Timestamp
-            aTime = a.requestedAt.toMillis()
-          } else if (a.requestedAt?.toDate) {
-            // Firestore Timestamp (alternative)
-            aTime = a.requestedAt.toDate().getTime()
-          } else if (a.requestedAt instanceof Date) {
-            // JavaScript Date
-            aTime = a.requestedAt.getTime()
-          }
-        }
-        
-        if (b.requestedAt) {
-          if (typeof b.requestedAt === 'string') {
-            // DynamoDB ISO string format
-            bTime = new Date(b.requestedAt).getTime()
-          } else if (b.requestedAt?.toMillis) {
-            // Firestore Timestamp
-            bTime = b.requestedAt.toMillis()
-          } else if (b.requestedAt?.toDate) {
-            // Firestore Timestamp (alternative)
-            bTime = b.requestedAt.toDate().getTime()
-          } else if (b.requestedAt instanceof Date) {
-            // JavaScript Date
-            bTime = b.requestedAt.getTime()
-          }
-        }
-        
-        return bTime - aTime
-      })
-      
-      return allRequests
-    } catch (error) {
-      console.error('❌ Error fetching user reset requests:', error)
-      throw error
-    }
+      return toMs(b.requestedAt) - toMs(a.requestedAt)
+    })
+
+    return requests
   },
 
-  /**
-   * Check if user has a pending reset request
-   * @param {string} userId - The user's ID
-   * @returns {Promise<boolean>} True if user has pending request
-   */
   async hasPendingRequest(userId) {
     try {
       const requests = await this.getUserResetRequests(userId)
       return requests.some(req => req.status === 'pending')
-    } catch (error) {
-      console.error('❌ Error checking pending requests:', error)
+    } catch {
       return false
     }
   },
 
-  /**
-   * Get the most recent request for a user
-   * @param {string} userId - The user's ID
-   * @returns {Promise<object|null>} The most recent request or null
-   */
   async getLatestRequest(userId) {
     try {
       const requests = await this.getUserResetRequests(userId)
-      return requests.length > 0 ? requests[0] : null
-    } catch (error) {
-      console.error('❌ Error fetching latest request:', error)
+      return requests[0] ?? null
+    } catch {
       return null
     }
   },
 
-  /**
-   * Format the request status for display
-   * @param {string} status - The status string
-   * @returns {object} Display information for the status
-   */
   getStatusDisplay(status) {
-    const statusMap = {
-      pending: {
-        label: 'Pending Review',
-        color: '#f59e0b',
-        icon: 'clock'
-      },
-      approved: {
-        label: 'Approved',
-        color: '#10b981',
-        icon: 'check'
-      },
-      rejected: {
-        label: 'Rejected',
-        color: '#ef4444',
-        icon: 'x'
-      }
+    const map = {
+      pending:  { label: 'Pending Review', color: '#f59e0b', icon: 'clock' },
+      approved: { label: 'Approved',       color: '#10b981', icon: 'check' },
+      rejected: { label: 'Rejected',       color: '#ef4444', icon: 'x'     }
     }
-    
-    return statusMap[status] || statusMap.pending
+    return map[status] ?? map.pending
   }
 }
 
 export default deviceKeyResetService
-

@@ -30,6 +30,7 @@ class FCMService {
     this.hasTokenUpdateInterval = false; // Track if token update interval is set
     this.lastRegistrationSyncAt = 0; // Throttle token registration sync calls
     this.userIdAliasCache = new Map(); // Cache mapping between Cognito sub and Dynamo user id
+    this.nativeNotificationMirrorReady = false;
 
     // VAPID key for web push - uses environment variable with fallback
     this.vapidKey = import.meta.env.VITE_FCM_VAPID_KEY || 'BDL03mUP_fsEjpZLMLwj-EW0XGFUPXDu8alAQgAKrlcGrHe39yxSF8DH1yn75Y93vOYc-5nNcRctEhMoBPvQatQ';
@@ -467,6 +468,14 @@ class FCMService {
       ]
     });
 
+    // Mirror every foreground push into native notification center (Android/iOS),
+    // so it remains visible in the OS tray/history.
+    if (this.isNative) {
+      this.mirrorToNativeNotificationCenter({ title, body, data }).catch((error) => {
+        logger.warn('FCMService: Native notification mirror failed', error?.message || error);
+      });
+    }
+
     // Ensure every received push is immediately reflected in Notification Center
     this.syncNotificationCenter({ title, body, data }).catch((error) => {
       logger.warn('FCMService: Notification center sync failed', error?.message || error);
@@ -480,6 +489,64 @@ class FCMService {
         logger.error('FCMService: Handler error:', error);
       }
     });
+  }
+
+  async mirrorToNativeNotificationCenter({ title, body, data }) {
+    if (!title && !body) return;
+
+    const { LocalNotifications } = await import('@capacitor/local-notifications');
+    await this.ensureNativeNotificationMirrorReady(LocalNotifications);
+
+    const notificationId = this.buildLocalNotificationId(data);
+    const now = Date.now();
+
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: notificationId,
+          title: title || 'Notification',
+          body: body || '',
+          extra: data || {},
+          schedule: { at: new Date(now + 250) },
+          smallIcon: 'ic_launcher',
+          channelId: 'fcm_default_channel',
+        }
+      ]
+    });
+  }
+
+  async ensureNativeNotificationMirrorReady(LocalNotifications) {
+    if (this.nativeNotificationMirrorReady) return;
+
+    const permissions = await LocalNotifications.checkPermissions();
+    if (permissions?.display !== 'granted') {
+      const requested = await LocalNotifications.requestPermissions();
+      if (requested?.display !== 'granted') {
+        throw new Error('Local notification display permission not granted');
+      }
+    }
+
+    if (this.platform === 'android') {
+      await LocalNotifications.createChannel({
+        id: 'fcm_default_channel',
+        name: 'General Notifications',
+        description: 'Notifications from PRE Group',
+        importance: 5,
+        visibility: 1,
+      });
+    }
+
+    this.nativeNotificationMirrorReady = true;
+  }
+
+  buildLocalNotificationId(data = {}) {
+    const rawId = data.notificationId || data.id || data.messageId || `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    let hash = 0;
+    for (let i = 0; i < String(rawId).length; i += 1) {
+      hash = ((hash << 5) - hash) + String(rawId).charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash) % 2147483647;
   }
 
   async syncNotificationCenter({ title, body, data }) {

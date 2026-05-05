@@ -21,6 +21,30 @@
 import { getItem, scan, scanAll, putItem, updateItem } from '../aws/dynamodbClient'
 
 const TABLE_NAME = 'users'
+const JOIN_TABLE = 'usersByProject'
+
+// Keep the usersByProject join table in sync so the dashboard's fast-path
+// (Query join table → BatchGet users) can find this user for every project they belong to.
+async function syncUsersByProject(userId, projects) {
+  if (!userId || !projects) return
+  const ids = []
+  if (Array.isArray(projects)) {
+    for (const p of projects) {
+      const id = typeof p === 'object' && p !== null ? (p.projectId || p.id) : p
+      if (id) ids.push(id)
+    }
+  } else if (typeof projects === 'object') {
+    const id = projects.projectId || projects.id
+    if (id) ids.push(id)
+  }
+  await Promise.all(
+    ids.map(projectId =>
+      putItem(JOIN_TABLE, { projectId, userId }).catch(err =>
+        console.warn(`[DynamoDBUsersService] usersByProject sync failed for ${projectId}:`, err?.message)
+      )
+    )
+  )
+}
 
 /** Partition / sort key attribute names — must never appear in UpdateItem SET (DynamoDB rejects). */
 const TABLE_KEY_ATTRIBUTES = ['id']
@@ -468,9 +492,10 @@ export async function createUser(userId, userData) {
     }
     
     await putItem(TABLE_NAME, item)
-    
+    syncUsersByProject(userId, item.projects)
+
     console.log(`[DynamoDBUsersService] ✅ Created new user: ${userId}`)
-    
+
     return item
   } catch (error) {
     console.error(`[DynamoDBUsersService] ❌ Error creating user ${userId}:`, error)
@@ -540,9 +565,15 @@ export async function updateUser(userId, userData) {
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues
     })
-    
+
+    // Sync join table so the dashboard can find this user under every project they belong to.
+    // Fire-and-forget — must not block or fail the user-facing update.
+    if (updateFields.projects) {
+      syncUsersByProject(userId, updateFields.projects)
+    }
+
     console.log(`[DynamoDBUsersService] ✅ Updated user: ${userId}`)
-    
+
     // Fetch and return the updated user
     const updatedUser = await getUserById(userId)
     return updatedUser

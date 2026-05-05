@@ -552,7 +552,7 @@
               <div class="project-header">
                 <div class="project-main-info">
                   <div class="project-title-section">
-                    <h4 class="project-name">{{ project.name || $t('unnamedProject') }}</h4>
+                    <h4 class="project-name">{{ project.name || $t('unnamedProject') }} - {{ project.userUnit || $t('notAvailable') }}</h4>
                     <p class="project-location">{{ project.location || $t('locationNotSet') }}</p>
                   </div>
                   <div class="project-status-badges">
@@ -563,7 +563,7 @@
                   </div>
                 </div>
                 <div class="project-role-info">
-                  <span class="project-unit">{{ $t('unit') }} {{ project.userUnit || $t('notAvailable') }}</span>
+                  <!-- <span class="project-unit">{{ $t('unit') }} {{ project.userUnit || $t('notAvailable') }}</span> -->
                   <span class="project-role">{{ formatRole(project.userRole) || $t('member') }}</span>
                 </div>
               </div>
@@ -3491,6 +3491,17 @@ const addNewProject = async (options = {}) => {
             const userData = actualUserDoc.data()
             const currentProjects = userData.projects || []
 
+            const existingEmailEntry = currentProjects.find(p => p.projectId === selectedProjectId)
+            if (existingEmailEntry) {
+              if (existingEmailEntry.approvalStatus === 'pending') {
+                notificationStore.showError('Your request for this project is already pending approval.')
+              } else {
+                notificationStore.showError('You are already a member of this project.')
+              }
+              addProjectLoading.value = false
+              return
+            }
+
             // Create the project object to add to the user's projects array with pending approval status
             const newUserProject = {
               projectId: selectedProjectId,
@@ -3503,7 +3514,7 @@ const addNewProject = async (options = {}) => {
 
             // Use DynamoDB users service for more reliable updates
             const { updateUser } = await import('src/services/dynamoDBUsersService')
-            
+
             // Update user document with new project - preserve all existing fields
             const updatedUserData = {
               ...userData, // Preserve all existing user data
@@ -3565,6 +3576,18 @@ const addNewProject = async (options = {}) => {
     const userData = userDoc.data()
     const currentProjects = userData.projects || []
 
+    // Prevent duplicate project entries: if already pending or approved for this project, skip
+    const existingEntry = currentProjects.find(p => p.projectId === selectedProjectId)
+    if (existingEntry) {
+      if (existingEntry.approvalStatus === 'pending') {
+        notificationStore.showError('Your request for this project is already pending approval.')
+      } else {
+        notificationStore.showError('You are already a member of this project.')
+      }
+      addProjectLoading.value = false
+      return
+    }
+
     // Create the project object to add to the user's projects array with pending approval status
     const newUserProject = {
       projectId: selectedProjectId,
@@ -3577,7 +3600,7 @@ const addNewProject = async (options = {}) => {
 
     // Use DynamoDB users service for more reliable updates
     const { updateUser } = await import('src/services/dynamoDBUsersService')
-    
+
     // Update user document with new project - preserve all existing fields
     // Merge the new project into the existing projects array
     const updatedUserData = {
@@ -3585,14 +3608,14 @@ const addNewProject = async (options = {}) => {
       projects: [...currentProjects, newUserProject],
       updatedAt: new Date().toISOString()
     }
-    
+
     console.log('ProfilePage: Updating user with data:', {
       userId,
       currentProjectsCount: currentProjects.length,
       newProjectCount: 1,
       totalProjectsAfterUpdate: updatedUserData.projects.length
     })
-    
+
     await updateUser(userId, updatedUserData)
 
     // Create a unit request document for admin review
@@ -6721,6 +6744,7 @@ onBeforeUnmount(() => {
 
 /* Smart Mirror Section */
 .smart-mirror-section {
+  display: none;
   background: #f9fafb;
   border-radius: 12px;
   padding: 16px;

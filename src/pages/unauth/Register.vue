@@ -646,6 +646,7 @@ import { projectsUnitsService } from '../../services/dynamoDBTableServices'
 import optimizedAuthService from '../../services/optimizedAuthService'
 import { signupDraftService } from '../../services/signupDraftService'
 import fileUploadService from '../../services/fileUploadService'
+import firestoreService from '../../services/firestoreService'
 import {
   getPendingRegistrationEnrollments,
   clearPendingRegistrationEnrollments,
@@ -821,7 +822,10 @@ const addProjectToSelection = () => {
     selectedProjects.value.push({
       projectId: propertyForm.selectedProject,
       unit: propertyForm.unit,
-      role: propertyForm.role
+      role: propertyForm.role,
+      approvalStatus: 'pending',
+      requestedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     })
     propertyForm.selectedProject = ''
     propertyForm.unit = ''
@@ -862,7 +866,10 @@ const addAdditionalProperty = () => {
     selectedProjects.value.push({
       projectId: additionalPropertyForm.selectedProject,
       unit: additionalPropertyForm.unit,
-      role: additionalPropertyForm.role
+      role: additionalPropertyForm.role,
+      approvalStatus: 'pending',
+      requestedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     })
 
     // Reset form
@@ -1256,6 +1263,28 @@ const handlePropertySubmit = async () => {
     }
 
     console.log('[Register] ✅ Registration saved to DynamoDB')
+
+    // Create a unitRequest record for each project so they appear in Pending Units tab
+    const nowISO = new Date().toISOString()
+    const unitRequestPromises = (selectedProjects.value || []).map(proj => {
+      const project = availableProjects.value.find(p => p.id === proj.projectId) || {}
+      return firestoreService.addDoc('unitRequests', {
+        userId: userSub,
+        userName: completeUserData.fullName || completeUserData.email,
+        userEmail: completeUserData.email,
+        userPhone: completeUserData.mobile || '',
+        projectId: proj.projectId,
+        parentId: proj.projectId,
+        projectName: project.name || '',
+        unit: proj.unit,
+        role: proj.role,
+        status: 'pending',
+        requestedAt: nowISO,
+        createdAt: nowISO
+      }).catch(err => console.warn('[Register] ⚠️ Failed to create unitRequest (non-fatal):', err))
+    })
+    await Promise.allSettled(unitRequestPromises)
+
     clearPendingRegistrationEnrollments(userSub)
 
     signupDraftService.clear()

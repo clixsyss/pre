@@ -137,7 +137,11 @@ async function main() {
     return;
   }
 
-  const tablesToEnsure = new Set();
+  const tablesToEnsure = new Set([
+    // Device key feature tables — added manually (not in Firestore export)
+    'projects__deviceKeyResetRequests',
+    'deviceKeyAuditLogs',
+  ]);
 
   for (const file of jsonFiles) {
     const tableName = path.basename(file.name, '.json');
