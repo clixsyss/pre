@@ -71,10 +71,18 @@ class OptimizedAuthService {
     this.hubListener = Hub.listen('auth', async ({ payload }) => {
       const { event } = payload
 
-      if (event === 'signOut' || event === 'signIn_failure') {
+      if (event === 'signOut') {
         this.currentUser = null
         cacheService.clear()
         this.authListeners.forEach((callback) => callback(null))
+        return
+      }
+
+      // signIn_failure fires transiently during token refresh retries and network hiccups.
+      // It does NOT mean the session ended — Cognito will retry automatically.
+      // Treating it as a logout was the primary cause of random session drops.
+      if (event === 'signIn_failure') {
+        console.warn('⚠️ OptimizedAuthService: signIn_failure event received — ignoring to prevent spurious logout (Cognito will retry)')
         return
       }
 

@@ -44,7 +44,7 @@
 
         <!-- Empty State - No Request Categories -->
         <div v-else-if="!hasAnyCategoriesForActiveMainCategory" class="empty-state">
-          <div class="main-category-tabs">
+          <div v-if="!isUndeliveredProject" class="main-category-tabs">
             <button
               v-for="tab in mainCategoryTabs"
               :key="tab.id"
@@ -67,7 +67,7 @@
 
         <!-- Requests Grid -->
         <div v-else class="services-grid">
-          <div class="main-category-tabs">
+          <div v-if="!isUndeliveredProject" class="main-category-tabs">
             <button
               v-for="tab in mainCategoryTabs"
               :key="tab.id"
@@ -267,6 +267,7 @@ const getInitialMainCategoryTab = () => {
 }
 
 const activeMainCategoryTab = ref(getInitialMainCategoryTab())
+const isUndeliveredProject = computed(() => Boolean(projectStore.selectedProject?.undelivered))
 const mainCategoryTabs = computed(() => [
   { id: MAIN_CATEGORIES.facility, label: t('facilityManagement') },
   { id: MAIN_CATEGORIES.community, label: t('communityManagement') }
@@ -296,9 +297,11 @@ const inferMainCategoryForRequestCategory = (category) => {
 }
 
 const filteredRequestCategories = computed(() =>
-  requestCategoriesStore.getCategories.filter(
-    (category) => inferMainCategoryForRequestCategory(category) === activeMainCategoryTab.value
-  )
+  isUndeliveredProject.value
+    ? requestCategoriesStore.getCategories
+    : requestCategoriesStore.getCategories.filter(
+      (category) => inferMainCategoryForRequestCategory(category) === activeMainCategoryTab.value
+    )
 )
 
 const hasAnyCategoriesForActiveMainCategory = computed(() => filteredRequestCategories.value.length > 0)

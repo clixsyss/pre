@@ -51,7 +51,7 @@
       
       <!-- Category picker (supports custom icons from dashboard) -->
       <div v-else class="category-picker-wrap">
-        <div class="main-category-tabs">
+        <div v-if="!isUndeliveredProject" class="main-category-tabs">
           <button
             v-for="tab in mainCategoryTabs"
             :key="tab.id"
@@ -401,6 +401,7 @@ const getInitialMainCategoryTab = () => {
   return DEFAULT_ACTIVE_MAIN_CATEGORY
 }
 const activeMainCategoryTab = ref(getInitialMainCategoryTab())
+const isUndeliveredProject = computed(() => Boolean(projectStore.selectedProject?.undelivered))
 const mainCategoryTabs = computed(() => [
   { id: MAIN_CATEGORIES.facility, label: t('facilityManagement') },
   { id: MAIN_CATEGORIES.community, label: t('communityManagement') }
@@ -427,9 +428,11 @@ const inferMainCategoryForComplaintCategory = (category) => {
   return MAIN_CATEGORIES.facility
 }
 const filteredComplaintCategories = computed(() =>
-  complaintStore.complaintCategories.filter(
-    (category) => inferMainCategoryForComplaintCategory(category) === activeMainCategoryTab.value
-  )
+  isUndeliveredProject.value
+    ? complaintStore.complaintCategories
+    : complaintStore.complaintCategories.filter(
+      (category) => inferMainCategoryForComplaintCategory(category) === activeMainCategoryTab.value
+    )
 )
 const availableComplaintCategories = computed(() => {
   if (complaintStore.complaintCategories.length === 0) {

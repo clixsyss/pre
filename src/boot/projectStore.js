@@ -33,22 +33,26 @@ export default boot(({ app }) => {
       const userEmail = user.email || cognitoAttrs.email || cognitoAttrs.Email || null
       const cognitoSub = cognitoAttrs.sub || user.attributes?.sub || user.uid
 
+      // Check if a fresh cache already exists (populated by a prior auth cycle)
+      const existingCache = window.__profileCache
+      if (existingCache?.data?.id && existingCache?.userId === cognitoSub && (Date.now() - existingCache.timestamp) < 300000) {
+        return existingCache.data.id
+      }
+
       const { getUserByEmail, getUserById } = await import('src/services/dynamoDBUsersService')
 
-      let dynamoUser = null
+      // Fire both lookups simultaneously instead of sequentially
+      const [byIdResult, byEmailResult] = await Promise.allSettled([
+        cognitoSub ? getUserById(cognitoSub) : Promise.resolve(null),
+        userEmail ? getUserByEmail(userEmail.trim().toLowerCase()) : Promise.resolve(null),
+      ])
 
-      if (cognitoSub) {
-        try { dynamoUser = await getUserById(cognitoSub) } catch { /* fallthrough */ }
-      }
-
-      if (!dynamoUser && userEmail) {
-        try { dynamoUser = await getUserByEmail(userEmail.trim().toLowerCase()) } catch (e) {
-          console.warn('App boot: email lookup failed:', e?.message)
-        }
-      }
+      const dynamoUser =
+        (byIdResult.status === 'fulfilled' && byIdResult.value?.id ? byIdResult.value : null) ||
+        (byEmailResult.status === 'fulfilled' && byEmailResult.value?.id ? byEmailResult.value : null)
 
       if (dynamoUser?.id) {
-        // Cache for ProfilePage so it doesn't need a second fetch
+        // Cache for router guard and ProfilePage so they don't need a second fetch
         window.__profileCache = { data: dynamoUser, userId: cognitoSub || user.uid, timestamp: Date.now() }
         return dynamoUser.id
       }

@@ -354,58 +354,42 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
     
     // Run profile and suspension checks in parallel for better performance
     try {
-      // First, get the actual DynamoDB user record using getUserByAuthUid or getUserByEmail
       const { getUserByAuthUid, getUserByEmail, getUserById } = await import('../services/dynamoDBUsersService')
       let dynamoUser = null
       let actualUserId = cognitoSub // Fallback to Cognito sub if lookup fails
-      
-      // Try getUserByAuthUid first (searches by authUid field, more reliable)
-      if (cognitoSub) {
-        try {
-          dynamoUser = await getUserByAuthUid(cognitoSub)
-          if (dynamoUser && dynamoUser.id) {
+
+      // Check window.__profileCache first — projectStore boot already resolved this
+      const profileCache = window.__profileCache
+      if (profileCache?.data && profileCache?.userId === cognitoSub && (Date.now() - profileCache.timestamp) < 300000) {
+        dynamoUser = profileCache.data
+        actualUserId = dynamoUser.id || cognitoSub
+      } else {
+        // Fire all three lookup strategies simultaneously instead of sequentially
+        const lookups = await Promise.allSettled([
+          cognitoSub ? getUserByAuthUid(cognitoSub) : Promise.resolve(null),
+          userEmail ? getUserByEmail(userEmail.trim().toLowerCase()) : Promise.resolve(null),
+          cognitoSub ? getUserById(cognitoSub) : Promise.resolve(null),
+        ])
+        for (const result of lookups) {
+          if (result.status === 'fulfilled' && result.value?.id) {
+            dynamoUser = result.value
             actualUserId = dynamoUser.id
+            break
           }
-        } catch (authUidError) {
-          logger.warn('[Router] Error getting user by authUid, trying email:', authUidError)
         }
       }
-      
-      // Fallback to getUserByEmail if authUid lookup failed
-      if (!dynamoUser && userEmail) {
-        try {
-          dynamoUser = await getUserByEmail(userEmail.trim().toLowerCase())
-          if (dynamoUser && dynamoUser.id) {
-            actualUserId = dynamoUser.id
-          }
-        } catch (emailError) {
-          logger.warn('[Router] Error getting user by email:', emailError)
-        }
-      }
-      
-      // If we still don't have user data, try getUserById as last resort
-      if (!dynamoUser && cognitoSub) {
-        try {
-          dynamoUser = await getUserById(cognitoSub)
-          if (dynamoUser && dynamoUser.id) {
-            actualUserId = dynamoUser.id
-          }
-        } catch (idError) {
-          logger.warn('[Router] Error getting user by ID:', idError)
-        }
-      }
-      
-      const [userDocResult, suspensionResult] = await Promise.allSettled([
-        firestoreService.getDoc(`users/${actualUserId}`),
-        canUserAccessRoute(actualUserId, to.path),
-      ])
+
+      // Only await the profile doc — suspension check runs in the background
+      // so it never blocks navigation. The app listens for 'showSuspensionMessage'.
+      const suspensionCheckPromise = canUserAccessRoute(actualUserId, to.path)
+      const userDocResult = await firestoreService.getDoc(`users/${actualUserId}`).catch(() => null)
 
       // Check profile completion - use dynamoUser if available, otherwise use userDocResult
       let userData = dynamoUser
-      if (!userData && userDocResult.status === 'fulfilled' && userDocResult.value.exists()) {
-        userData = userDocResult.value.data()
+      if (!userData && userDocResult?.exists?.()) {
+        userData = userDocResult.data()
       }
-      
+
       if (userData) {
         const isProfileComplete = userData.isProfileComplete
 
@@ -416,7 +400,6 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
 
           if (hasRequiredFields) {
             logger.log('Profile has required fields but marked incomplete, fixing...')
-            // Import and use markProfileComplete
             const { markProfileComplete } = await import('../utils/firestore')
             try {
               await markProfileComplete(actualUserId)
@@ -433,37 +416,33 @@ async function processAuthState(user, to, from, next, resolve, requiresAuth) {
         }
       }
 
-      // Check suspension status
-      if (suspensionResult.status === 'fulfilled' && !suspensionResult.value) {
-        logger.log('User is suspended and cannot access this route:', to.path)
-
-        // Check suspension details to show proper message
-        try {
-          const suspensionStatus = await checkUserSuspension(actualUserId)
-          if (suspensionStatus.isSuspended) {
-            // Emit event to show suspension message
-            window.dispatchEvent(
-              new CustomEvent('showSuspensionMessage', {
-                detail: {
-                  suspensionDetails: suspensionStatus.suspensionDetails,
-                  attemptedRoute: to.path,
-                },
-              }),
-            )
-          }
-        } catch (error) {
-          logger.error('Error checking suspension details:', error)
-        }
-
-        // Redirect to home page for suspended users
-        next('/home')
-        resolve()
-        return
-      }
-
-      // All checks passed - allow access
+      // All profile checks passed — allow navigation immediately
       next()
       resolve()
+
+      // Suspension check fires after navigation, so it never adds latency.
+      // If suspended, the app receives 'showSuspensionMessage' and redirects.
+      suspensionCheckPromise.then((canAccess) => {
+        if (!canAccess) {
+          logger.log('User is suspended and cannot access this route:', to.path)
+          checkUserSuspension(actualUserId).then((suspensionStatus) => {
+            if (suspensionStatus.isSuspended) {
+              window.dispatchEvent(
+                new CustomEvent('showSuspensionMessage', {
+                  detail: {
+                    suspensionDetails: suspensionStatus.suspensionDetails,
+                    attemptedRoute: to.path,
+                  },
+                }),
+              )
+            }
+          }).catch((error) => {
+            logger.error('Error checking suspension details:', error)
+          })
+        }
+      }).catch((error) => {
+        logger.error('Error in deferred suspension check:', error)
+      })
     } catch (error) {
       logger.error('Error in auth state processing:', error)
       // On error, allow access to prevent blocking
@@ -610,30 +589,30 @@ router.beforeEach(async (to, from, next) => {
             return
           }
 
-          const { getUserByAuthUid, getUserByEmail, getUserById } = await import('../services/dynamoDBUsersService')
-
           const cognitoSub = currentUser?.attributes?.sub || currentUser?.cognitoAttributes?.sub || currentUser?.uid
           let dynamoUser = null
 
-          // 1. Fastest: indexed authUid lookup
-          if (cognitoSub) {
-            logger.log('[Router] 🔍 Checking DynamoDB by authUid (Cognito sub):', cognitoSub)
-            try { dynamoUser = await getUserByAuthUid(cognitoSub) } catch { /* fallthrough */ }
-            if (dynamoUser) logger.log('[Router] ✅ User found by authUid')
-          }
+          // Use cache populated by projectStore boot — avoids a full DynamoDB round-trip on startup
+          const rootProfileCache = window.__profileCache
+          if (rootProfileCache?.data && rootProfileCache?.userId === cognitoSub && (Date.now() - rootProfileCache.timestamp) < 300000) {
+            logger.log('[Router] ✅ Using cached DynamoDB user from projectStore boot')
+            dynamoUser = rootProfileCache.data
+          } else {
+            const { getUserByAuthUid, getUserByEmail, getUserById } = await import('../services/dynamoDBUsersService')
 
-          // 2. Fallback: email scan
-          if (!dynamoUser && userEmail) {
-            logger.log('[Router] 🔍 Fallback: checking DynamoDB by email:', userEmail)
-            try { dynamoUser = await getUserByEmail(userEmail.trim().toLowerCase()) } catch { /* fallthrough */ }
-            if (dynamoUser) logger.log('[Router] ✅ User found by email')
-          }
-
-          // 3. Last resort: direct id lookup
-          if (!dynamoUser && cognitoSub) {
-            logger.log('[Router] 🔍 Last resort: checking DynamoDB by id:', cognitoSub)
-            try { dynamoUser = await getUserById(cognitoSub) } catch { /* fallthrough */ }
-            if (dynamoUser) logger.log('[Router] ✅ User found by id')
+            // Fire all three lookup strategies simultaneously
+            const lookups = await Promise.allSettled([
+              cognitoSub ? getUserByAuthUid(cognitoSub) : Promise.resolve(null),
+              userEmail ? getUserByEmail(userEmail.trim().toLowerCase()) : Promise.resolve(null),
+              cognitoSub ? getUserById(cognitoSub) : Promise.resolve(null),
+            ])
+            for (const result of lookups) {
+              if (result.status === 'fulfilled' && result.value?.id) {
+                dynamoUser = result.value
+                logger.log('[Router] ✅ User found via parallel DynamoDB lookup')
+                break
+              }
+            }
           }
 
           if (!dynamoUser) {
@@ -650,12 +629,22 @@ router.beforeEach(async (to, from, next) => {
 
           const approvalStatus = String(dynamoUser.approvalStatus || '').trim().toLowerCase()
           const isApproved = approvalStatus === 'approved'
+          // Explicit rejection statuses — anything else (empty, undefined, unknown) is ambiguous
+          // and should NOT trigger a sign-out (could be a partial DynamoDB write or stale read).
+          const isExplicitlyRejected = approvalStatus === 'rejected' || approvalStatus === 'pending' || approvalStatus === 'denied'
 
           logger.log('[Router] Approval status:', approvalStatus, '| approved?', isApproved)
 
           if (!isApproved) {
-            // Only sign out when we KNOW the status is a rejection/pending — not on lookup failure.
-            logger.log('[Router] ❌ User not approved (status:', approvalStatus, ') — signing out')
+            if (!isExplicitlyRejected) {
+              // Ambiguous status (empty, unknown value) — don't sign out, allow through.
+              // A bad DynamoDB read should never destroy a valid Cognito session.
+              logger.warn('[Router] ⚠️ Ambiguous approval status:', approvalStatus, '— allowing access (will not sign out)')
+              next('/home')
+              return
+            }
+            // Only sign out when we KNOW the status is a clear rejection.
+            logger.log('[Router] ❌ User explicitly not approved (status:', approvalStatus, ') — signing out')
             await optimizedAuthService.signOut()
             next('/signin')
             return

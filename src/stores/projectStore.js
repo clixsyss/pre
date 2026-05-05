@@ -263,6 +263,7 @@ export const useProjectStore = defineStore('project', () => {
                 location: projectData.location || 'Location not set',
                 status: projectData.status || 'active',
                 type: projectData.type || 'residential',
+                undelivered: Boolean(projectData.undelivered),
                 // User-specific project data (unique per entry)
                 userRole: userProject.role || 'member',
                 userUnit: userProject.unit || 'N/A',
@@ -281,6 +282,7 @@ export const useProjectStore = defineStore('project', () => {
                 location: 'Location not set',
                 status: 'unknown',
                 type: 'unknown',
+                undelivered: false,
                 userRole: userProject.role || 'member',
                 userUnit: userProject.unit || 'N/A',
                 registrationStatus: userProject.registrationStatus || 'unknown',
@@ -364,7 +366,8 @@ export const useProjectStore = defineStore('project', () => {
       description: projectWithUnit.description,
       location: projectWithUnit.location,
       status: projectWithUnit.status,
-      type: projectWithUnit.type
+      type: projectWithUnit.type,
+      undelivered: Boolean(projectWithUnit.undelivered)
     }
     selectedUnit.value = projectWithUnit.userUnit
     
@@ -462,7 +465,8 @@ export const useProjectStore = defineStore('project', () => {
           description: projectWithUnit.description,
           location: projectWithUnit.location,
           status: projectWithUnit.status,
-          type: projectWithUnit.type
+          type: projectWithUnit.type,
+          undelivered: Boolean(projectWithUnit.undelivered)
         }
         selectedUnit.value = projectWithUnit.userUnit
         console.log('ProjectStore: Restored selected project and unit:', projectWithUnit.name, '- Unit:', savedUnit)
