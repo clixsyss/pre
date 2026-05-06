@@ -135,7 +135,7 @@
           </div>
 
           <!-- Court Booking -->
-          <div v-if="hasCourts" class="facility-card" @click="navigateToCourtBooking">
+          <div v-if="isCommunityMainCategoryActive && hasCourts" class="facility-card" @click="navigateToCourtBooking">
             <div class="facility-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
@@ -158,7 +158,7 @@
           </div>
 
           <!-- Academy Programs -->
-          <div v-if="hasAcademyPrograms" class="facility-card" @click="navigateToAcademyPrograms">
+          <div v-if="isCommunityMainCategoryActive && hasAcademyPrograms" class="facility-card" @click="navigateToAcademyPrograms">
             <div class="facility-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
@@ -185,7 +185,7 @@
           </div>
 
           <!-- Stores & Shopping -->
-          <div v-if="hasStores" class="facility-card" @click="navigateToStores">
+          <div v-if="isCommunityMainCategoryActive && hasStores" class="facility-card" @click="navigateToStores">
             <div class="facility-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
@@ -581,6 +581,10 @@ const hasStores = computed(() => {
   return stores.value.length > 0;
 });
 
+const isCommunityMainCategoryActive = computed(
+  () => isUndeliveredProject.value || activeMainCategoryTab.value === MAIN_CATEGORIES.community
+);
+
 const isSmartHomeConnected = computed(() => {
   if (!projectStore.selectedProject?.id) return false;
   return smartMirrorStore.isProjectConnected(projectStore.selectedProject.id);
@@ -589,8 +593,9 @@ const isSmartHomeConnected = computed(() => {
 // Check if there are any services for the currently selected main category
 const hasAnyServicesForActiveMainCategory = computed(() => {
   const hasDynamicCategories = filteredServiceCategories.value.length > 0;
-  const hasStaticServices =
-    isSmartHomeConnected.value || hasCourts.value || hasAcademyPrograms.value || hasStores.value;
+  const hasStaticServices = isSmartHomeConnected.value || (
+    isCommunityMainCategoryActive.value && (hasCourts.value || hasAcademyPrograms.value || hasStores.value)
+  );
 
   return hasDynamicCategories || hasStaticServices;
 });
