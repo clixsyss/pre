@@ -9,7 +9,7 @@ import { smartMirrorDb as db } from '../boot/smartMirrorFirebase'
 // Note: Storage should be migrated to S3 - using Smart Mirror Firebase for now
 import { getStorage } from 'firebase/storage'
 import { smartMirrorApp } from '../boot/smartMirrorFirebase'
-const storage = getStorage(smartMirrorApp)
+const getSmartStorage = () => getStorage(smartMirrorApp)
 
 // Create a new fine/violation
 export const createFine = async (projectId, fineData) => {
@@ -424,7 +424,7 @@ export const uploadFineImage = async (projectId, fineId, imageFile) => {
 // Delete fine image
 export const deleteFineImage = async (imageUrl) => {
   try {
-    const imageRef = ref(storage, imageUrl);
+    const imageRef = ref(getSmartStorage(), imageUrl);
     await deleteObject(imageRef);
     return { success: true };
   } catch (error) {

@@ -1,16 +1,28 @@
 import performanceService from './performanceService'
 import errorHandlingService from './errorHandlingService'
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
-import { collection, query, getDocs, doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore'
-import { smartMirrorAuth, smartMirrorDb } from '../boot/smartMirrorFirebase'
 
-// Log Smart Mirror Firebase initialization status
-console.log('[SmartMirrorService] Module loaded - Auth status:', {
-  authExists: !!smartMirrorAuth,
-  dbExists: !!smartMirrorDb,
-  authApp: smartMirrorAuth?.app?.name,
-  authProjectId: smartMirrorAuth?.app?.options?.projectId
-})
+// Firebase refs — null until _initFirebase() is called.
+// Previously imported at module level, which triggered Firebase initialization
+// (initializeAuth + indexedDBLocalPersistence) on every page load regardless of
+// whether Smart Mirror was used, adding significant startup latency on native.
+let signInWithEmailAndPassword, signOut, onAuthStateChanged
+let collection, query, getDocs, doc, getDoc, onSnapshot, updateDoc
+let smartMirrorAuth, smartMirrorDb
+let _firebaseReady = false
+
+const _initFirebase = async () => {
+  if (_firebaseReady) return
+  ;[
+    { signInWithEmailAndPassword, signOut, onAuthStateChanged },
+    { collection, query, getDocs, doc, getDoc, onSnapshot, updateDoc },
+    { smartMirrorAuth, smartMirrorDb },
+  ] = await Promise.all([
+    import('firebase/auth'),
+    import('firebase/firestore'),
+    import('../boot/smartMirrorFirebase'),
+  ])
+  _firebaseReady = true
+}
 
 class SmartMirrorService {
   constructor() {
@@ -90,6 +102,7 @@ class SmartMirrorService {
 
   // Authentication methods
   async login(email, password, projectId) {
+    await _initFirebase()
     return performanceService.timeOperation('smartMirrorLogin', async () => {
       try {
         console.log('🚀 Smart mirror login:', { projectId, email })
@@ -345,7 +358,8 @@ class SmartMirrorService {
   }
 
   // Set up auth state listener
-  setupAuthListener() {
+  async setupAuthListener() {
+    await _initFirebase()
     return onAuthStateChanged(smartMirrorAuth, async (user) => {
       if (user) {
         this.currentUser = user

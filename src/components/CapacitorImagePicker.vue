@@ -31,7 +31,7 @@ import { Capacitor } from '@capacitor/core';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getStorage } from 'firebase/storage'
 import { smartMirrorApp } from '../boot/smartMirrorFirebase'
-const storage = getStorage(smartMirrorApp)
+const getSmartStorage = () => getStorage(smartMirrorApp)
 
 // Component name for ESLint
 defineOptions({
@@ -94,7 +94,7 @@ const uploadToFirebase = async (blob, fileName, mimeType) => {
     
     // Create storage reference
     const fullPath = `${props.storagePath}${fileName}`;
-    const fileRef = storageRef(storage, fullPath);
+    const fileRef = storageRef(getSmartStorage(), fullPath);
     
     console.log('📱 Storage reference created:', fullPath);
     

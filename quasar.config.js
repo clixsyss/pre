@@ -37,8 +37,10 @@ export default defineConfig((ctx) => {
       // 'line-awesome',
       // 'roboto-font-latin-ext', // this or either 'roboto-font', NEVER both!
 
-      'roboto-font', // optional, you are not bound to it
-      'material-icons', // optional, you are not bound to it
+      // Do NOT add 'roboto-font' or 'material-icons' webfonts here: their .woff/.woff2
+      // files are copied into the Capacitor iOS bundle and App Store validation
+      // rejects them (ITMS-90853). Use framework.iconSet svg-material-icons +
+      // system UI fonts instead (see typography in app.scss).
     ],
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
@@ -164,7 +166,8 @@ export default defineConfig((ctx) => {
     framework: {
       config: {},
 
-      // iconSet: 'material-icons', // Quasar icon set
+      // SVG Material Icons — no bundled webfonts (required for iOS App Store).
+      iconSet: 'svg-material-icons',
       // lang: 'en-US', // Quasar language pack (set dynamically in i18n boot file)
 
       // For special cases outside of where the auto-import strategy can have an impact

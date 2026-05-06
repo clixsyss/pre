@@ -322,7 +322,7 @@ import { useProjectStore } from '../stores/projectStore'
 import { getDownloadURL, ref as storageRef } from 'firebase/storage'
 import { getStorage } from 'firebase/storage'
 import { smartMirrorApp, detectPlatformFromUrl } from '../boot/smartMirrorFirebase'
-const storage = getStorage(smartMirrorApp)
+const storage = smartMirrorApp ? getStorage(smartMirrorApp) : null
 const { isNative } = detectPlatformFromUrl()
 import NewsComments from './NewsComments.vue'
 import ComplaintLucideIcon from './ComplaintLucideIcon.vue'

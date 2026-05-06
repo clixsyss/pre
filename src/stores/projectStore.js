@@ -122,29 +122,30 @@ export const useProjectStore = defineStore('project', () => {
     // Long TTL avoids hammering DynamoDB; callers must pass { force: true } after local writes (e.g. join project / new unit).
     const now = Date.now()
     if (!force && userProjects.value.length > 0 && (now - lastFetchTime.value) < cacheDuration) {
-      console.log('Using cached projects data')
-      try {
-        let userData = await getUserById(userId)
-        if (!userData && userId && userId.includes('@')) {
-          const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
-          const currentUser = await optimizedAuthService.getCurrentUser()
-          if (currentUser?.id) userData = await getUserById(currentUser.id)
-          else if (currentUser?.userSub) userData = await getUserById(currentUser.userSub)
-        }
-        if (!userData && userId && !String(userId).includes('@')) {
-          const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
-          const currentUser = await optimizedAuthService.getCurrentUser()
-          const sessionEmail =
-            currentUser?.attributes?.email ||
-            currentUser?.cognitoAttributes?.email ||
-            (typeof currentUser?.username === 'string' && currentUser.username.includes('@')
-              ? currentUser.username
-              : null)
-          if (sessionEmail) userData = await getUserByEmail(sessionEmail)
-        }
-        setUserAccountExpiryFromProfile(userData)
-      } catch (e) {
-        console.warn('ProjectStore: Could not refresh temporary-account banner fields from cache path', e)
+      // Use window.__profileCache to refresh expiry banner without a DynamoDB round-trip.
+      // Only fall back to a network call if the cache is absent (rare cold path).
+      const cached = window.__profileCache
+      if (cached?.data && (now - cached.timestamp) < 300000) {
+        setUserAccountExpiryFromProfile(cached.data)
+      } else {
+        // Fire in background — don't block the caller
+        Promise.resolve().then(async () => {
+          try {
+            let userData = await getUserById(userId)
+            if (!userData) {
+              const { default: optimizedAuthService } = await import('../services/optimizedAuthService')
+              const currentUser = await optimizedAuthService.getCurrentUser()
+              const sub = currentUser?.id || currentUser?.userSub
+              const email = currentUser?.attributes?.email || currentUser?.cognitoAttributes?.email ||
+                (typeof currentUser?.username === 'string' && currentUser.username.includes('@') ? currentUser.username : null)
+              if (sub) userData = await getUserById(sub)
+              if (!userData && email) userData = await getUserByEmail(email)
+            }
+            setUserAccountExpiryFromProfile(userData)
+          } catch (e) {
+            console.warn('ProjectStore: Could not refresh expiry banner fields', e)
+          }
+        })
       }
       return
     }

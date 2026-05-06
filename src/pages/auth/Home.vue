@@ -618,45 +618,43 @@ onMounted(async () => {
     if (currentUser) {
       user.value = currentUser
 
-      // Ensure projects are loaded
+      // If the boot's rehydrateStore is still in flight, wait for it (max 3s) rather
+      // than firing a redundant fetchUserProjects that hits DynamoDB a second time.
       if (projectStore.userProjects.length === 0) {
-        console.log('Home: Projects not loaded yet, fetching...')
-        // Use Cognito sub ID (userSub) if available, otherwise fall back to uid
+        await new Promise((resolve) => {
+          const onReady = () => { window.removeEventListener('projectStoreReady', onReady); resolve() }
+          window.addEventListener('projectStoreReady', onReady)
+          setTimeout(resolve, 3000) // fallback: don't hang forever
+        })
+      }
+
+      // If boot still didn't populate projects, fetch now as last resort
+      if (projectStore.userProjects.length === 0) {
         const userIdToUse = currentUser.userSub || currentUser.attributes?.sub || currentUser.id || currentUser.uid
-        console.log('Home: Using userId for fetchUserProjects:', userIdToUse)
         await projectStore.fetchUserProjects(userIdToUse)
       }
 
       // Check if project is selected, if not try to auto-select
       if (!projectStore.hasSelectedProject) {
-        // Try to load the selected project from localStorage
         projectStore.loadSelectedProject()
-
-        // If still no project selected, auto-select the first available project
         if (!projectStore.hasSelectedProject && projectStore.userProjects.length > 0) {
-          console.log('Home: No project selected, auto-selecting first available project')
           projectStore.selectProject(projectStore.userProjects[0])
         }
       }
 
-      // Fetch user bookings for the selected project (force refresh on mount)
-      try {
-        if (projectStore.selectedProject?.id) {
-          await academiesStore.fetchUserBookings(currentUser.uid, projectStore.selectedProject.id, true)
-        }
-      } catch (error) {
-        console.error('Error fetching user bookings:', error)
+      // Fetch bookings in background — don't await, Home renders immediately
+      if (projectStore.selectedProject?.id) {
+        academiesStore.fetchUserBookings(currentUser.uid, projectStore.selectedProject.id, true)
+          .catch((error) => console.error('Error fetching user bookings:', error))
       }
 
-      // Initialize Smart Mirror app to restore authentication and project connections
-      try {
-        await smartMirrorStore.initializeApp()
-
-        // Check and load the correct project data
-        await checkAndLoadProjectData()
-      } catch (error) {
-        console.error('Error initializing Smart Mirror app:', error)
-      }
+      // Smart Mirror init is deferred — it only matters on SmartDevices page
+      // and was previously blocking Home mount on every startup.
+      setTimeout(() => {
+        smartMirrorStore.initializeApp()
+          .then(() => checkAndLoadProjectData())
+          .catch((error) => console.error('Error initializing Smart Mirror app:', error))
+      }, 0)
 
       // Setup polling for bookings updates
       setupBookingsPolling()
