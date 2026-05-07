@@ -142,6 +142,41 @@ const _setCachedSettings = (projectId, value) => {
   _settingsCache.set(projectId, { ts: Date.now(), value })
 }
 
+const _normalizeProjectEntry = (entry = {}) => {
+  if (!entry || typeof entry !== 'object') return {}
+  if (entry.M && typeof entry.M === 'object') {
+    const m = entry.M
+    const readScalar = (key) => {
+      if (!m[key]) return undefined
+      if (m[key].S !== undefined) return m[key].S
+      if (m[key].BOOL !== undefined) return m[key].BOOL
+      if (m[key].N !== undefined) return Number(m[key].N)
+      if (m[key].L !== undefined) return m[key].L.map((item) => item?.S ?? item).filter(Boolean)
+      return m[key]
+    }
+    return {
+      projectId: readScalar('projectId'),
+      role: readScalar('role'),
+      unit: readScalar('unit'),
+      isSuspended: readScalar('isSuspended'),
+      suspensionLevel: readScalar('suspensionLevel'),
+      blockedFeatures: readScalar('blockedFeatures') || [],
+    }
+  }
+  return entry
+}
+
+const _isQrGenerationSuspended = (projectInfo = {}) => {
+  const isSuspended = projectInfo?.isSuspended === true || projectInfo?.isSuspended === 'true'
+  if (!isSuspended) return false
+
+  const level = String(projectInfo?.suspensionLevel || 'full').toLowerCase()
+  if (level === 'full') return true
+
+  const blockedFeatures = Array.isArray(projectInfo?.blockedFeatures) ? projectInfo.blockedFeatures : []
+  return blockedFeatures.includes('qr_codes')
+}
+
 const _getProjectSettings = async (projectId) => {
   const cached = _getCachedSettings(projectId)
   if (cached !== null) return cached
@@ -262,8 +297,12 @@ export const checkUserEligibility = async (projectId, userId) => {
     }
 
     // Check if user belongs to this project
-    const userProjects = user.projects || []
-    const projectInfo = userProjects.find(project => project.projectId === projectId)
+    const userProjects = Array.isArray(user.projects) ? user.projects : []
+    const projectInfoRaw = userProjects.find((project) => {
+      const normalized = _normalizeProjectEntry(project)
+      return normalized.projectId === projectId
+    })
+    const projectInfo = _normalizeProjectEntry(projectInfoRaw)
     
     if (!projectInfo) {
       return {
@@ -275,6 +314,15 @@ export const checkUserEligibility = async (projectId, userId) => {
           reason: 'not_in_project',
           user: null,
         },
+      }
+    }
+
+    if (_isQrGenerationSuspended(projectInfo)) {
+      return {
+        success: false,
+        error: 'Suspended',
+        message: 'Guest pass generation is blocked due to account suspension',
+        data: { canGenerate: false, reason: 'suspended', user },
       }
     }
 

@@ -339,9 +339,16 @@ const translateSport = (sportName) => {
   if (translationKey && t(translationKey)) {
     return t(translationKey);
   }
-  
-  // If no translation found, return original name
-  return sportName;
+
+  // Fallback: decode coded IDs like "sport_football", "sp-padel"
+  const decoded = sportName
+    .replace(/^(sport[_-]?|sp[_-]?)/i, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!decoded) return sportName;
+  return decoded.replace(/\b\w/g, (ch) => ch.toUpperCase());
 };
 
 // Helper function to format numbers with proper locale

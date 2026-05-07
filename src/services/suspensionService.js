@@ -151,15 +151,63 @@ export const isFeatureBlocked = (suspensionDetails, featureId) => {
   return (suspensionDetails.blockedFeatures || []).includes(featureId);
 };
 
+const _ROUTE_FEATURE_MAP = [
+  { prefix: '/my-bookings', feature: 'bookings' },
+  { prefix: '/court-booking', feature: 'bookings' },
+  { prefix: '/calendar', feature: 'bookings' },
+  { prefix: '/services', feature: 'services' },
+  { prefix: '/service-category', feature: 'services' },
+  { prefix: '/service-booking', feature: 'services' },
+  { prefix: '/requests', feature: 'requests' },
+  { prefix: '/request-category', feature: 'requests' },
+  { prefix: '/complaints', feature: 'complaints' },
+  { prefix: '/violations', feature: 'complaints' },
+  { prefix: '/support', feature: 'support' },
+  { prefix: '/support-chat', feature: 'support' },
+  { prefix: '/access', feature: 'qr_codes' },
+  { prefix: '/gate-access', feature: 'qr_codes' },
+  { prefix: '/gate', feature: 'qr_codes' },
+];
+
+const _normalizeRoutePath = (route) => {
+  const value = String(route || '').trim();
+  if (!value) return '/';
+  return value.split('?')[0].split('#')[0] || '/';
+};
+
+const _getFeatureForRoute = (route) => {
+  const normalized = _normalizeRoutePath(route);
+  const match = _ROUTE_FEATURE_MAP.find(({ prefix }) => normalized === prefix || normalized.startsWith(`${prefix}/`));
+  return match?.feature || null;
+};
+
 /**
  * Check if a user can access a specific route.
  */
 export const canUserAccessRoute = async (userId, route) => {
   const suspensionStatus = await checkUserSuspension(userId);
   if (!suspensionStatus.isSuspended) return true;
+  const details = suspensionStatus.suspensionDetails;
+  if (!details) return true;
 
-  const allowedRoutes = ['/', '/home', '/profile', '/access', '/gate-access', '/gate', '/support', '/support-chat'];
-  return allowedRoutes.includes(route);
+  const routePath = _normalizeRoutePath(route);
+  const featureId = _getFeatureForRoute(routePath);
+
+  // Support must remain accessible during full suspension; only partial can explicitly block it.
+  if (featureId === 'support') {
+    if (details.level === 'full') return true;
+    return !(details.blockedFeatures || []).includes('support');
+  }
+
+  // Full suspension blocks all actionable routes except always-allowed utility routes.
+  if (details.level === 'full') {
+    const allowedRoutes = ['/', '/home', '/profile', '/notifications', '/onboarding', '/project-selection'];
+    return allowedRoutes.includes(routePath);
+  }
+
+  // Partial suspension only blocks mapped features that are explicitly listed.
+  if (!featureId) return true;
+  return !(details.blockedFeatures || []).includes(featureId);
 };
 
 /**

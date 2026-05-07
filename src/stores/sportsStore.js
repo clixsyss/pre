@@ -2,6 +2,17 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import firestoreService from "../services/firestoreService";
 
+const prettifySportCode = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    return raw
+        .replace(/^(sport[_-]?|sp[_-]?)/i, '')
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\b\w/g, (ch) => ch.toUpperCase()) || raw;
+};
+
 export const useSportsStore = defineStore("sportsStore", () => {
     const sportsOptions = ref([]);
     const courtsBySport = ref({});
@@ -107,9 +118,10 @@ export const useSportsStore = defineStore("sportsStore", () => {
                 
                 // Only include sports that have courts
                 if (courtsData[sportId] && courtsData[sportId].length > 0) {
+                    const resolvedSportName = sportData.name || prettifySportCode(sportId) || sportId;
                     sportsData.push({
                         id: sportId,
-                        name: sportData.name || sportId, // Use name if available, fallback to ID
+                        name: resolvedSportName, // Human-readable fallback for coded IDs
                         ...sportData
                     });
                     console.log('Added sport to sportsData:', sportId);
@@ -127,9 +139,10 @@ export const useSportsStore = defineStore("sportsStore", () => {
                     if (courtData) {
                         await createSportFromCourt(projectId, sportId, courtData);
                         // Add the newly created sport to sportsData
+                        const resolvedSportName = prettifySportCode(sportId) || sportId;
                         sportsData.push({
                             id: sportId,
-                            name: sportId, // Use ID as name for now
+                            name: resolvedSportName,
                             description: `Sport for ${courtData.name || 'court'}`,
                             category: 'General',
                             active: true
@@ -262,8 +275,9 @@ export const useSportsStore = defineStore("sportsStore", () => {
     // Method to create a sport from court data if it doesn't exist
     const createSportFromCourt = async (projectId, sportId, courtData) => {
         try {
+            const resolvedSportName = prettifySportCode(sportId) || sportId;
             await firestoreService.setDoc(`projects/${projectId}/sports/${sportId}`, {
-                name: sportId, // Use the ID as name for now
+                name: resolvedSportName,
                 description: `Sport for ${courtData.name || 'court'}`,
                 category: 'General',
                 active: true,
