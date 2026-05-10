@@ -254,7 +254,7 @@
       </router-link>
     </nav>
 
-    <button v-if="!isChatPage" class="quick-open-gate-fab quick-open-gate-fab--center" type="button"
+    <button v-if="!isChatPage && !shouldHideBottomNav" class="quick-open-gate-fab quick-open-gate-fab--center" type="button"
       :title="$t('quickOpen')"
       :disabled="isGateFeedbackLoading || (isNativePlatform && (proximityState === 'OPENING' || proximityState === 'COOLDOWN'))"
       @click.stop.prevent="handleGlassGatePrimaryAction">

@@ -46,7 +46,7 @@
       <!-- Registration Form -->
       <div class="registration-form">
         <h2 class="section-title">{{ $t('registrationDetails') }}</h2>
-        <form @submit.prevent="submitRegistration">
+        <form @submit.prevent="openBookingSummaryModal">
           <div class="form-group">
             <label for="studentName">{{ $t('studentName') }} *</label>
             <input
@@ -130,26 +130,59 @@
                   {{ $t('processing') }}
                 </div>
               </span>
-              <span v-else>{{ $t('completeRegistration') }}</span>
+              <span v-else>{{ 'Review Booking Summary' }}</span>
             </button>
           </div>
         </form>
       </div>
 
-      <!-- Success Message -->
-      <div v-if="success" class="success-message">
-        <div class="success-icon">✅</div>
-        <h3>{{ $t('registrationSuccessful') }}</h3>
-        <p>{{ $t('academyRegistrationSubmitted') }}</p>
-        <div class="registration-details">
-          <p><strong>{{ $t('registrationID') }}:</strong> {{ registrationId }}</p>
-          <p><strong>{{ $t('program') }}:</strong> {{ program.name }}</p>
-          <p><strong>{{ $t('academyTitle') }}:</strong> {{ academy.name }}</p>
-          <p><strong>{{ $t('student') }}:</strong> {{ formData.studentName }}</p>
-        </div>
-        <p class="redirect-notice">{{ $t('redirectNotice') }}</p>
-      </div>
     </div>
+
+    <teleport to="body">
+      <div v-if="showBookingSummary" class="summary-modal-overlay" @click="showBookingSummary = false">
+        <div class="summary-modal-card" @click.stop>
+          <h3 class="summary-modal-title">Booking Summary</h3>
+          <div class="summary-modal-details">
+            <div class="summary-row"><span>{{ $t('program') }}:</span><strong>{{ program?.name }}</strong></div>
+            <div class="summary-row"><span>{{ $t('academyTitle') }}:</span><strong>{{ academy?.name }}</strong></div>
+            <div class="summary-row"><span>{{ $t('studentName') }}:</span><strong>{{ formData.studentName }}</strong></div>
+            <div class="summary-row"><span>{{ $t('studentAge') }}:</span><strong>{{ formData.studentAge }}</strong></div>
+            <div class="summary-row"><span>{{ $t('parentGuardianName') }}:</span><strong>{{ formData.parentName }}</strong></div>
+            <div class="summary-row"><span>{{ $t('phoneNumber') }}:</span><strong>{{ formData.phone }}</strong></div>
+            <div v-if="program?.schedule?.length" class="summary-row">
+              <span>{{ $t('schedule') }}:</span>
+              <strong>{{ program.schedule.map((s) => `${s.day || ''} ${s.time || ''}`.trim()).filter(Boolean).join(', ') }}</strong>
+            </div>
+            <div class="summary-row total"><span>{{ $t('totalCost') }}:</span><strong>{{ totalCost }} {{ $t('currency') }}</strong></div>
+          </div>
+          <div class="summary-modal-actions">
+            <button type="button" class="cancel-btn" @click="showBookingSummary = false">{{ $t('edit') }}</button>
+            <button type="button" class="submit-btn" :disabled="isSubmitting" @click="submitRegistration">
+              <span v-if="isSubmitting">{{ $t('processing') }}</span>
+              <span v-else>{{ $t('completeRegistration') }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </teleport>
+
+    <teleport to="body">
+      <div v-if="success" class="success-modal-overlay" @click="closeSuccessModalAndRedirect">
+        <div class="success-modal-card" @click.stop>
+          <h3 class="success-modal-title">{{ $t('registrationSuccessful') }}</h3>
+          <p class="success-modal-message">{{ $t('academyRegistrationSubmitted') }}</p>
+          <div class="success-modal-details">
+            <p><strong>{{ $t('registrationID') }}:</strong> {{ registrationId }}</p>
+            <p><strong>{{ $t('program') }}:</strong> {{ program?.name }}</p>
+            <p><strong>{{ $t('academyTitle') }}:</strong> {{ academy?.name }}</p>
+            <p><strong>{{ $t('student') }}:</strong> {{ formData.studentName }}</p>
+          </div>
+          <button class="success-modal-btn" @click="closeSuccessModalAndRedirect">
+            {{ $t('ok') }}
+          </button>
+        </div>
+      </div>
+    </teleport>
   </div>
 </template>
 
@@ -188,6 +221,7 @@ const loading = ref(false);
 const error = ref(null);
 const isSubmitting = ref(false);
 const success = ref(false);
+const showBookingSummary = ref(false);
 const registrationId = ref(null);
 const academy = ref(null);
 const program = ref(null);
@@ -272,32 +306,43 @@ const loadProgramDetails = async () => {
   }
 };
 
-const submitRegistration = async () => {
+const validateRegistrationForm = () => {
   if (!academy.value || !program.value || !currentProject.value?.id) {
     error.value = 'Missing required information';
-    return;
+    return false;
   }
   
   // Validate required form fields
   if (!formData.value.studentName.trim()) {
     error.value = 'Student name is required';
-    return;
+    return false;
   }
   
   if (!formData.value.studentAge || formData.value.studentAge < 3 || formData.value.studentAge > 100) {
     error.value = 'Please enter a valid student age (3-100)';
-    return;
+    return false;
   }
   
   if (!formData.value.parentName.trim()) {
     error.value = 'Parent/Guardian name is required';
-    return;
+    return false;
   }
   
   if (!formData.value.phone.trim()) {
     error.value = 'Phone number is required';
-    return;
+    return false;
   }
+  error.value = null;
+  return true;
+};
+
+const openBookingSummaryModal = () => {
+  if (!validateRegistrationForm()) return;
+  showBookingSummary.value = true;
+};
+
+const submitRegistration = async () => {
+  if (!validateRegistrationForm()) return;
   
   isSubmitting.value = true;
   error.value = null;
@@ -328,14 +373,25 @@ const submitRegistration = async () => {
       phone: formData.value.phone,
       email: formData.value.email,
       notes: formData.value.notes,
+      participant: {
+        fullName: formData.value.studentName,
+        age: parseInt(formData.value.studentAge),
+        parentName: formData.value.parentName,
+        phone: formData.value.phone,
+        email: formData.value.email
+      },
       
       // Program details
       category: program.value.category || 'Sports',
       ageGroup: program.value.ageGroup,
       duration: program.value.duration,
       pricingType: program.value.pricingType,
+      programSchedule: Array.isArray(program.value.schedule) ? program.value.schedule : [],
       price: program.value.price,
       totalCost: totalCost.value,
+      // Keep a normalized booking date so dashboard/app cards can always display a date
+      date: new Date().toISOString(),
+      enrollmentDate: new Date().toISOString(),
       
       // Timestamps
       createdAt: serverTimestamp(),
@@ -363,11 +419,7 @@ const submitRegistration = async () => {
     // Set success state
     registrationId.value = bookingId;
     success.value = true;
-    
-    // Don't redirect immediately, show success message first
-    setTimeout(() => {
-      router.push('/academy-programs');
-    }, 2500);
+    showBookingSummary.value = false;
     
   } catch (err) {
     console.error('Error submitting registration:', err);
@@ -375,6 +427,11 @@ const submitRegistration = async () => {
   } finally {
     isSubmitting.value = false;
   }
+};
+
+const closeSuccessModalAndRedirect = async () => {
+  success.value = false;
+  await router.push('/academy-programs');
 };
 
 const getDurationUnit = (pricingType) => {
@@ -639,6 +696,126 @@ onMounted(() => {
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
+}
+
+.summary-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 999999;
+  backdrop-filter: blur(2px);
+}
+
+.summary-modal-card {
+  width: min(520px, 100%);
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 22px 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+
+.summary-modal-title {
+  margin: 0 0 12px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.summary-modal-details {
+  margin-bottom: 14px;
+}
+
+.summary-modal-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.booking-review-summary {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+}
+
+.booking-review-summary h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 6px 0;
+  font-size: 0.92rem;
+  color: #374151;
+}
+
+.summary-row.total {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #d1d5db;
+}
+
+.success-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 999999;
+  backdrop-filter: blur(2px);
+}
+
+.success-modal-card {
+  width: min(440px, 100%);
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 24px 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+
+.success-modal-title {
+  margin: 0 0 10px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111827;
+  text-align: center;
+}
+
+.success-modal-message {
+  margin: 0 0 14px;
+  color: #4b5563;
+  text-align: center;
+}
+
+.success-modal-details {
+  margin: 0 0 16px;
+  color: #111827;
+  font-size: 0.95rem;
+}
+
+.success-modal-details p {
+  margin: 6px 0;
+}
+
+.success-modal-btn {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  background: #AF1E23;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 12px 18px;
 }
 
 .button-loading {

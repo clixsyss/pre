@@ -27,7 +27,7 @@
               {{ getBookingTitle(booking) }}
             </div>
             <div class="booking-date">
-              {{ formatDate(booking.date) }}
+              {{ formatDate(resolveBookingDateValue(booking)) }}
             </div>
           </div>
           <div class="booking-status">
@@ -90,6 +90,45 @@ const props = defineProps({
 // Reactive data
 const loading = ref(true);
 const sportNameById = ref({});
+const resolveUserId = (user) =>
+  user?.uid ||
+  user?.attributes?.sub ||
+  user?.cognitoAttributes?.sub ||
+  user?.username ||
+  user?.id ||
+  user?.userSub ||
+  null;
+const normalizeStatus = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
+const toDateObject = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (typeof value?.toDate === 'function') {
+    const d = value.toDate();
+    return d instanceof Date && !Number.isNaN(d.getTime()) ? d : null;
+  }
+  if (typeof value?.seconds === 'number') {
+    const d = new Date(value.seconds * 1000);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof value?._seconds === 'number') {
+    const d = new Date(value._seconds * 1000);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof value === 'object' && typeof value.S === 'string') {
+    const d = new Date(value.S);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+const toDateMs = (value) => toDateObject(value)?.getTime() ?? 0;
+const resolveBookingDateValue = (booking) =>
+  booking?.date ||
+  booking?.selectedDate ||
+  booking?.enrollmentDate ||
+  booking?.bookingDate ||
+  booking?.createdAt ||
+  null;
 
 const getCourtSportLabel = (booking) => {
   const raw = String(booking?.sportName || booking?.sportType || booking?.sport || '').trim();
@@ -132,13 +171,19 @@ const upcomingBookings = computed(() => {
   
   // Filter court and academy bookings
   const upcomingCourtAndAcademy = courtAndAcademyBookings.filter(booking => {
-    if (booking.type === 'court' && booking.date) {
-      const bookingDate = new Date(booking.date);
+    const status = normalizeStatus(booking?.status);
+    const isCourt = booking?.type === 'court' || !!booking?.courtId;
+    const isAcademy = booking?.type === 'academy' || !!booking?.academyId || !!booking?.programId;
+
+    if (isCourt && booking.date) {
+      const bookingDate = toDateObject(booking.date);
+      if (!bookingDate) return false;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      return bookingDate >= today && booking.status !== 'cancelled';
-    } else if (booking.type === 'academy') {
-      return booking.status === 'enrolled';
+      return bookingDate >= today && status !== 'cancelled' && status !== 'rejected';
+    } else if (isAcademy) {
+      // Academy rows can be pending/confirmed/enrolled depending on dashboard flow
+      return ['enrolled', 'confirmed', 'pending', 'processing', 'open', 'in_progress'].includes(status);
     }
     return false;
   });
@@ -158,7 +203,8 @@ const upcomingBookings = computed(() => {
     if (upcomingStatuses.includes(booking.status)) {
       // Check if the selected date is in the future
       if (booking.selectedDate) {
-        const bookingDate = new Date(booking.selectedDate);
+        const bookingDate = toDateObject(booking.selectedDate);
+        if (!bookingDate) return true;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         return bookingDate >= today;
@@ -178,12 +224,14 @@ const upcomingBookings = computed(() => {
   
   // Sort by date (earliest first)
   const sorted = allUpcoming.sort((a, b) => {
-    if (a.date && b.date) {
-      return new Date(a.date) - new Date(b.date);
+    const dateA = toDateMs(resolveBookingDateValue(a));
+    const dateB = toDateMs(resolveBookingDateValue(b));
+    if (dateA && dateB) {
+      return dateA - dateB;
     }
     // If one has a date and the other doesn't, prioritize the one with a date
-    if (a.date && !b.date) return -1;
-    if (!a.date && b.date) return 1;
+    if (dateA && !dateB) return -1;
+    if (!dateA && dateB) return 1;
     return 0;
   });
   
@@ -205,8 +253,9 @@ const getBookingTitle = (booking) => {
 };
 
 const formatDate = (dateString) => {
-  if (!dateString) return t('ongoing');
-  return new Date(dateString).toLocaleDateString("en-US", {
+  const d = toDateObject(dateString);
+  if (!d) return t('ongoing');
+  return d.toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -252,13 +301,14 @@ const fetchBookings = async () => {
   try {
     loading.value = true;
     const user = await optimizedAuthService.getCurrentUser();
-    if (user && projectStore.selectedProject?.id) {
+    const resolvedUserId = resolveUserId(user);
+    if (resolvedUserId && projectStore.selectedProject?.id) {
       console.log('Fetching user bookings for:', {
-        userId: user.uid,
+        userId: resolvedUserId,
         projectId: projectStore.selectedProject.id
       });
-      await academiesStore.fetchUserBookings(user.uid, projectStore.selectedProject.id, true);
-      await serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, user.uid);
+      await academiesStore.fetchUserBookings(resolvedUserId, projectStore.selectedProject.id, true);
+      await serviceBookingStore.fetchUserBookings(projectStore.selectedProject.id, resolvedUserId, true);
       await loadSportNameMap(projectStore.selectedProject.id);
     } else {
       console.log('Cannot fetch bookings - missing user or project:', {

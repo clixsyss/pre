@@ -91,7 +91,8 @@ button, a, [role="button"], .clickable {
 
 /* iOS Fix: Hide navigation bars when any modal is open */
 body.modal-open .app-header,
-body.modal-open .bottom-navigation {
+body.modal-open .bottom-navigation,
+body.modal-open .quick-open-gate-fab {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
@@ -283,6 +284,14 @@ body.keyboard-open {
 /* Hide bottom navigation when keyboard is open */
 body.keyboard-open .bottom-navigation {
   transform: translateY(100%) !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Keep center FAB hidden whenever keyboard or explicit nav-hide is active */
+body.keyboard-open .quick-open-gate-fab,
+body.hide-bottom-nav .quick-open-gate-fab {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;

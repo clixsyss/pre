@@ -137,10 +137,10 @@
               </div>
               <!-- Additional Info (if any) -->
               <div
-                v-if="(isAcademyBooking(booking) && booking.studentName) || (isCourtBooking(booking) && booking.courtLocation)"
+                v-if="(isAcademyBooking(booking) && academyField(booking, 'studentName', 'fullName')) || (isCourtBooking(booking) && booking.courtLocation)"
                 class="additional-info">
-                <span v-if="isAcademyBooking(booking) && booking.studentName" class="info-tag">
-                  {{ $t('student') }} {{ booking.studentName }}
+                <span v-if="isAcademyBooking(booking) && academyField(booking, 'studentName', 'fullName')" class="info-tag">
+                  {{ $t('student') }} {{ academyField(booking, 'studentName', 'fullName') }}
                 </span>
                 <span v-if="isCourtBooking(booking) && booking.courtLocation" class="info-tag">
                   {{ booking.courtLocation }}
@@ -172,8 +172,9 @@
     </div>
 
     <!-- Booking Details Modal -->
+    <teleport to="body">
     <div v-if="selectedBooking" class="modal-overlay" @click="closeModal">
-      <div class="modal-content" @click.stop>
+      <div class="modal-content" ref="bookingModalContentRef" @click.stop>
         <div class="modal-header">
           <h2>Booking Details</h2>
           <button class="close-btn" @click="closeModal">
@@ -186,7 +187,7 @@
           </button>
         </div>
         <div class="modal-body">
-          <div class="detail-section">
+          <!-- <div class="detail-section">
             <h3>Booking Information</h3>
             <div class="detail-grid">
               <div class="detail-item">
@@ -199,10 +200,10 @@
               </div>
               <div class="detail-item">
                 <span class="label">Created:</span>
-                <span class="value">{{ formatBookingDate(selectedBooking) }}</span>
+                <span class="value">{{ formatCreatedDate(selectedBooking) }}</span>
               </div>
             </div>
-          </div>
+          </div> -->
 
           <div class="detail-section">
             <h3>{{ isCourtBooking(selectedBooking) ? 'Court Details' : isServiceBooking(selectedBooking) ? 'Service Details' : 'Program Details' }}</h3>
@@ -251,9 +252,9 @@
                 <span class="value">{{ selectedBooking.totalPrice || selectedBooking.servicePrice || selectedBooking.price || 0 }} EGP</span>
               </div>
               <!-- Additional academy-specific details -->
-              <div v-if="selectedBooking.type === 'academy' && selectedBooking.category" class="detail-item">
+              <div v-if="selectedBooking.type === 'academy' && academyField(selectedBooking, 'category')" class="detail-item">
                 <span class="label">Category:</span>
-                <span class="value">{{ selectedBooking.category }}</span>
+                <span class="value">{{ academyField(selectedBooking, 'category') }}</span>
               </div>
               <div v-if="selectedBooking.type === 'academy' && selectedBooking.ageGroup" class="detail-item">
                 <span class="label">Age Group:</span>
@@ -277,23 +278,23 @@
             <div class="detail-grid">
               <div class="detail-item">
                 <span class="label">Student Name:</span>
-                <span class="value">{{ selectedBooking.studentName || 'N/A' }}</span>
+                <span class="value">{{ academyField(selectedBooking, 'studentName', 'fullName') || 'N/A' }}</span>
               </div>
               <div class="detail-item">
                 <span class="label">Student Age:</span>
-                <span class="value">{{ selectedBooking.studentAge || 'N/A' }}</span>
+                <span class="value">{{ academyField(selectedBooking, 'studentAge', 'age') || 'N/A' }}</span>
               </div>
               <div class="detail-item">
                 <span class="label">Parent/Guardian:</span>
-                <span class="value">{{ selectedBooking.parentName || 'N/A' }}</span>
+                <span class="value">{{ academyField(selectedBooking, 'parentName', 'guardianName', 'parentGuardian', 'parentGuardianName') || 'N/A' }}</span>
               </div>
               <div class="detail-item">
                 <span class="label">Phone:</span>
-                <span class="value">{{ selectedBooking.phone || 'N/A' }}</span>
+                <span class="value">{{ academyField(selectedBooking, 'phone', 'mobile', 'parentPhone') || 'N/A' }}</span>
               </div>
               <div class="detail-item">
                 <span class="label">Email:</span>
-                <span class="value">{{ selectedBooking.email || 'N/A' }}</span>
+                <span class="value">{{ academyField(selectedBooking, 'email') || 'N/A' }}</span>
               </div>
               <div v-if="selectedBooking.notes" class="detail-item">
                 <span class="label">Notes:</span>
@@ -320,11 +321,12 @@
         </div>
       </div>
     </div>
+    </teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAcademiesStore } from 'src/stores/academyStore';
 import { useProjectStore } from 'src/stores/projectStore';
@@ -360,6 +362,81 @@ const selectedBooking = ref(null);
 const unsubscribeServiceBookings = ref(null);
 const unsubscribeAcademyBookings = ref(null);
 const sportNameById = ref({});
+const academyProgramScheduleById = ref({});
+const isDetailsModalRegistered = ref(false);
+const bookingModalContentRef = ref(null);
+const parseMaybeJsonObject = (value) => {
+  if (!value) return null;
+  if (typeof value === 'object') return value;
+  if (typeof value !== 'string') return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const academyParticipant = (booking) => {
+  if (!booking || typeof booking !== 'object') return {};
+
+  const candidates = [
+    booking.participant,
+    booking.participantData,
+    booking.studentDetails,
+    booking.student,
+    booking.formData?.participant,
+    booking.formData?.participantData,
+    booking.details?.participant,
+    booking.metadata?.participant
+  ];
+
+  for (const candidate of candidates) {
+    const parsed = parseMaybeJsonObject(candidate);
+    if (parsed && Object.keys(parsed).length > 0) {
+      return parsed;
+    }
+  }
+
+  return {};
+};
+const academyField = (booking, ...keys) => {
+  const p = academyParticipant(booking);
+  const formData = booking?.formData && typeof booking.formData === 'object' ? booking.formData : null;
+  const aliases = {
+    fullName: ['participantName', 'name', 'student_full_name', 'studentName'],
+    studentName: ['fullName', 'participantName', 'name', 'student_full_name'],
+    age: ['studentAge', 'participantAge', 'student_age'],
+    studentAge: ['age', 'participantAge', 'student_age'],
+    parentName: ['guardianName', 'parentGuardian', 'parentGuardianName', 'parent_name'],
+    guardianName: ['parentName', 'parentGuardian', 'parentGuardianName', 'guardian_name'],
+    phone: ['mobile', 'participantPhone', 'parentPhone', 'phoneNumber', 'phone_number'],
+    mobile: ['phone', 'participantPhone', 'parentPhone', 'phoneNumber', 'phone_number'],
+    email: ['participantEmail', 'studentEmail', 'emailAddress', 'email_address'],
+    category: ['studentCategory', 'programCategory'],
+  };
+
+  const expandKey = (k) => [k, ...(aliases[k] || [])];
+  const getCaseInsensitive = (obj, key) => {
+    if (!obj || typeof obj !== 'object') return undefined;
+    if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key];
+    const target = String(key).toLowerCase();
+    const found = Object.keys(obj).find((k) => String(k).toLowerCase() === target);
+    return found ? obj[found] : undefined;
+  };
+
+  for (const k of keys) {
+    for (const candidateKey of expandKey(k)) {
+      const direct = getCaseInsensitive(booking, candidateKey);
+      if (direct !== undefined && direct !== null && String(direct).trim() !== '') return direct;
+      const formValue = getCaseInsensitive(formData, candidateKey);
+      if (formValue !== undefined && formValue !== null && String(formValue).trim() !== '') return formValue;
+      const nested = getCaseInsensitive(p, candidateKey);
+      if (nested !== undefined && nested !== null && String(nested).trim() !== '') return nested;
+    }
+  }
+  return null;
+};
 
 
 
@@ -409,12 +486,12 @@ const setFilter = (filter) => {
   activeFilter.value = filter;
 };
 
-const getTypeLabel = (type) => {
-  if (type === 'court') return 'Court';
-  if (type === 'academy') return 'Academy';
-  if (type === 'service') return 'Service';
-  return 'Booking';
-};
+// const getTypeLabel = (type) => {
+//   if (type === 'court') return 'Court';
+//   if (type === 'academy') return 'Academy';
+//   if (type === 'service') return 'Service';
+//   return 'Booking';
+// };
 
 const getTypeClass = (type) => {
   if (type === 'court') return 'court-type';
@@ -432,7 +509,7 @@ const isCourtBooking = (booking) => {
 // Helper function to detect academy bookings by their data structure
 const isAcademyBooking = (booking) => {
   return booking.type === 'academy' ||
-    (booking.programName && (booking.studentName || booking.academyName));
+    (booking.programName && ((booking.studentName || booking.participant?.fullName) || booking.academyName));
 };
 
 // Helper function to detect service bookings by their data structure
@@ -470,6 +547,45 @@ const loadSportNameMap = async (pid) => {
   } catch (err) {
     console.warn('MyBookings: failed to load sports map', err);
   }
+};
+
+const loadAcademyProgramScheduleMap = async (pid) => {
+  if (!pid) {
+    academyProgramScheduleById.value = {};
+    return;
+  }
+  const map = {};
+  const indexPrograms = (programs) => {
+    (programs || []).forEach((program) => {
+      const programId = String(program?.id || '').trim();
+      const programName = String(program?.name || '').trim().toLowerCase();
+      const scheduleCandidate =
+        program?.schedule ||
+        program?.programSchedule ||
+        program?.timeSlotsByDay ||
+        program?.programTimes ||
+        program?.sessionTimes ||
+        [];
+      const parsedCandidate = parseMaybeJsonObject(scheduleCandidate) || scheduleCandidate;
+      const hasSchedule =
+        (Array.isArray(parsedCandidate) && parsedCandidate.length > 0) ||
+        (parsedCandidate && typeof parsedCandidate === 'object' && Object.keys(parsedCandidate).length > 0);
+      if (!hasSchedule) return;
+      if (programId) map[programId] = parsedCandidate;
+      if (programName) map[`name:${programName}`] = parsedCandidate;
+    });
+  };
+  try {
+    await academiesStore.fetchAcademies(pid);
+    (academiesStore.academyOptions || []).forEach((academy) => indexPrograms(academy?.programs));
+    Object.values(academiesStore.programsByAcademy || {}).forEach((programs) => indexPrograms(programs));
+  } catch (err) {
+    console.warn('MyBookings: failed to load academy program schedules', err);
+    // Best-effort fallback using whatever is already cached in store.
+    (academiesStore.academyOptions || []).forEach((academy) => indexPrograms(academy?.programs));
+    Object.values(academiesStore.programsByAcademy || {}).forEach((programs) => indexPrograms(programs));
+  }
+  academyProgramScheduleById.value = map;
 };
 
 const getStatusLabel = (status) => {
@@ -534,7 +650,7 @@ const getBookingSubtitle = (booking) => {
 
 const formatBookingDate = (booking) => {
   // Try different date fields in order of preference
-  const dateFields = [booking.date, booking.bookingDate, booking.createdAt];
+  const dateFields = [booking.selectedDate, booking.date, booking.enrollmentDate, booking.bookingDate, booking.createdAt];
 
   for (const dateField of dateFields) {
     if (dateField) {
@@ -567,6 +683,10 @@ const formatBookingDate = (booking) => {
   return 'N/A';
 };
 
+// const formatCreatedDate = (booking) => {
+//   return formatCreationDate(booking);
+// };
+
 const formatCreationDate = (booking) => {
   if (!booking.createdAt) return 'N/A';
 
@@ -596,6 +716,72 @@ const formatCreationDate = (booking) => {
   }
 };
 
+const getAcademyScheduleText = (booking) => {
+  const directDays =
+    booking?.programDays ||
+    booking?.days ||
+    booking?.sessionDays ||
+    booking?.selectedDays ||
+    booking?.day ||
+    booking?.weekday;
+  if (Array.isArray(directDays) && directDays.length > 0) {
+    return directDays.map((d) => String(d || '').trim()).filter(Boolean).join(', ');
+  }
+  if (typeof directDays === 'string' && directDays.trim()) {
+    return directDays.trim();
+  }
+
+  const rawSchedule =
+    booking?.programSchedule ||
+    booking?.schedule ||
+    booking?.timeSlotsByDay ||
+    booking?.program?.schedule ||
+    booking?.program?.timeSlotsByDay ||
+    booking?.academyProgram?.schedule ||
+    academyProgramScheduleById.value[String(booking?.programId || '').trim()] ||
+    academyProgramScheduleById.value[`name:${String(booking?.programName || '').trim().toLowerCase()}`];
+  const parsed = parseMaybeJsonObject(rawSchedule) || rawSchedule;
+
+  // Shape A: [{ day, time }] or ["Mon 5:00 PM"]
+  if (Array.isArray(parsed)) {
+    const normalized = parsed
+      .map((slot) => {
+        if (!slot) return '';
+        if (typeof slot === 'string') return slot.trim();
+        const day = String(slot.day || slot.weekday || slot.dateLabel || '').trim();
+        const start = String(slot.time || slot.timeSlot || slot.startTime || '').trim();
+        const end = String(slot.endTime || '').trim();
+        const time = start && end ? `${start}-${end}` : start;
+        if (day && time) return `${day} ${time}`;
+        return day || time || '';
+      })
+      .filter(Boolean);
+    return normalized.join(', ');
+  }
+
+  // Shape B: { Monday: [{ startTime, endTime }], Tuesday: [...] }
+  if (parsed && typeof parsed === 'object') {
+    const rows = Object.entries(parsed)
+      .map(([day, slots]) => {
+        if (Array.isArray(slots) && slots.length > 0) {
+          const first = slots[0] || {};
+          const start = String(first.startTime || first.time || '').trim();
+          const end = String(first.endTime || '').trim();
+          const time = start && end ? `${start}-${end}` : start;
+          return time ? `${day} ${time}` : String(day).trim();
+        }
+        if (typeof slots === 'string' && slots.trim()) {
+          return `${day} ${slots.trim()}`;
+        }
+        return String(day).trim();
+      })
+      .filter(Boolean);
+    return rows.join(', ');
+  }
+
+  return '';
+};
+
 const getBookingTime = (booking) => {
   if (isCourtBooking(booking)) {
     if (booking.timeSlots && Array.isArray(booking.timeSlots)) {
@@ -608,7 +794,9 @@ const getBookingTime = (booking) => {
     // Service bookings have selectedTime
     return booking.selectedTime || 'As scheduled';
   } else if (isAcademyBooking(booking)) {
-    return 'Program Schedule';
+    const scheduleText = getAcademyScheduleText(booking);
+    if (scheduleText) return scheduleText;
+    return booking.enrollmentDate ? 'Enrollment Date' : 'Program Schedule';
   }
   return 'N/A';
 };
@@ -641,6 +829,15 @@ const canCancel = (booking) => {
 };
 
 const viewBookingDetails = (booking) => {
+  if (isAcademyBooking(booking)) {
+    console.log('MyBookings academy booking payload:', {
+      id: booking?.id,
+      type: booking?.type,
+      participant: booking?.participant,
+      participantData: booking?.participantData,
+      studentDetails: booking?.studentDetails
+    });
+  }
   selectedBooking.value = booking;
 };
 
@@ -717,12 +914,27 @@ watch(projectId, async (newProjectId, oldProjectId) => {
   }
 });
 
-// Watch for modal state changes - iOS fix to hide navigation bars
-watch(selectedBooking, (booking) => {
-  if (booking) {
+// Watch for modal state changes - ensure modal counter stays balanced
+watch(selectedBooking, (booking, previousBooking) => {
+  const isOpen = !!booking;
+  const wasOpen = !!previousBooking;
+
+  if (isOpen && !wasOpen) {
     openModal();
-  } else {
+    isDetailsModalRegistered.value = true;
+    document.body.classList.add('hide-bottom-nav');
+    void nextTick(() => {
+      if (bookingModalContentRef.value) {
+        bookingModalContentRef.value.scrollTop = 0;
+      }
+    });
+    return;
+  }
+
+  if (!isOpen && wasOpen && isDetailsModalRegistered.value) {
     hideNavigationBars();
+    isDetailsModalRegistered.value = false;
+    document.body.classList.remove('hide-bottom-nav');
   }
 });
 
@@ -759,6 +971,7 @@ const fetchUserBookings = async () => {
     // Initial fetch for academy bookings (force refresh for latest data)
     await academiesStore.fetchUserBookings(user.uid, projectId.value, true);
     await loadSportNameMap(projectId.value);
+    await loadAcademyProgramScheduleMap(projectId.value);
 
     // Set up real-time listener for service bookings (instant updates)
     unsubscribeServiceBookings.value = serviceBookingStore.subscribeToUserBookings(
@@ -781,6 +994,11 @@ const fetchUserBookings = async () => {
 
 // Clean up listeners on unmount
 onBeforeUnmount(() => {
+  if (isDetailsModalRegistered.value) {
+    hideNavigationBars();
+    isDetailsModalRegistered.value = false;
+  }
+  document.body.classList.remove('hide-bottom-nav');
   if (unsubscribeServiceBookings.value) {
     console.log('🔌 MyBookings: Unsubscribing from service bookings listener');
     unsubscribeServiceBookings.value();
@@ -1223,6 +1441,8 @@ onBeforeUnmount(() => {
   justify-content: center;
   z-index: 999999;
   padding: 20px;
+  min-height: 100dvh;
+  overflow-y: auto;
   /* iOS Safari fixes */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
@@ -1235,8 +1455,11 @@ onBeforeUnmount(() => {
   border-radius: 20px;
   max-width: 600px;
   width: 100%;
-  max-height: 80vh;
-  overflow-y: auto;
+  max-height: calc(100dvh - 40px);
+  margin: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   /* iOS smooth scrolling */
   -webkit-overflow-scrolling: touch;
@@ -1287,6 +1510,9 @@ onBeforeUnmount(() => {
 .modal-body {
   padding: 24px;
   padding-bottom: 12px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
 }
 
 .detail-section {
@@ -1425,7 +1651,7 @@ onBeforeUnmount(() => {
   }
 
   .modal-content {
-    max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
   }
 }
 

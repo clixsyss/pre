@@ -77,6 +77,41 @@ function convertParticipantFromDynamoDB(dynamoParticipant) {
   return converted
 }
 
+function decodeDynamoValue(value) {
+  if (!value || typeof value !== 'object') return value
+  if (value.S !== undefined) return value.S
+  if (value.N !== undefined) return parseFloat(value.N)
+  if (value.BOOL !== undefined) return value.BOOL
+  if (value.L !== undefined) return value.L.map((item) => decodeDynamoValue(item))
+  if (value.M !== undefined) {
+    const out = {}
+    Object.entries(value.M).forEach(([k, v]) => {
+      out[k] = decodeDynamoValue(v)
+    })
+    return out
+  }
+  return value
+}
+
+function convertProgramScheduleFromDynamoDB(raw) {
+  if (!raw) return []
+  if (Array.isArray(raw)) {
+    return raw.map((item) => decodeDynamoValue(item)).filter(Boolean)
+  }
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+  if (raw.L && Array.isArray(raw.L)) {
+    return raw.L.map((item) => decodeDynamoValue(item)).filter(Boolean)
+  }
+  return []
+}
+
 /**
  * Get all bookings for a specific project
  * @param {string} projectId - Project ID (parentId)
@@ -202,9 +237,22 @@ export async function getBookingsByProject(projectId, options = {}) {
         academyName: item.academyName || '',
         programId: item.programId || '',
         programName: item.programName || '',
+        category: item.category || '',
+        ageGroup: item.ageGroup || '',
+        duration: item.duration || '',
+        pricingType: item.pricingType || '',
+        totalCost: item.totalCost ? parseFloat(item.totalCost) : 0,
+        studentName: item.studentName || '',
+        studentAge: item.studentAge || item.age || '',
+        parentName: item.parentName || item.guardianName || item.parentGuardianName || '',
+        phone: item.phone || item.mobile || '',
+        email: item.email || '',
+        notes: item.notes || '',
+        programDays: item.programDays || item.days || item.sessionDays || item.selectedDays || [],
         // Convert nested objects/arrays
         timeSlots: convertTimeSlotsFromDynamoDB(item.timeSlots || []),
-        participant: convertParticipantFromDynamoDB(item.participant || {})
+        participant: convertParticipantFromDynamoDB(item.participant || {}),
+        programSchedule: convertProgramScheduleFromDynamoDB(item.programSchedule || item.schedule || [])
       }
       
       return booking
@@ -349,9 +397,22 @@ export async function getBookingById(projectId, bookingId) {
         academyName: booking.academyName || '',
         programId: booking.programId || '',
         programName: booking.programName || '',
+        category: booking.category || '',
+        ageGroup: booking.ageGroup || '',
+        duration: booking.duration || '',
+        pricingType: booking.pricingType || '',
+        totalCost: booking.totalCost ? parseFloat(booking.totalCost) : 0,
+        studentName: booking.studentName || '',
+        studentAge: booking.studentAge || booking.age || '',
+        parentName: booking.parentName || booking.guardianName || booking.parentGuardianName || '',
+        phone: booking.phone || booking.mobile || '',
+        email: booking.email || '',
+        notes: booking.notes || '',
+        programDays: booking.programDays || booking.days || booking.sessionDays || booking.selectedDays || [],
         // Convert nested objects/arrays
         timeSlots: convertTimeSlotsFromDynamoDB(booking.timeSlots || []),
-        participant: convertParticipantFromDynamoDB(booking.participant || {})
+        participant: convertParticipantFromDynamoDB(booking.participant || {}),
+        programSchedule: convertProgramScheduleFromDynamoDB(booking.programSchedule || booking.schedule || [])
       }
       
       console.log(`[DynamoDBBookingsService] ✅ Found booking: ${bookingId}`)

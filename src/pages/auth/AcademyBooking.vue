@@ -230,6 +230,18 @@
         </button>
       </div>
     </div>
+
+    <teleport to="body">
+      <div v-if="showEnrollmentSuccessModal" class="success-modal-overlay" @click="closeSuccessModalAndGoToBookings">
+        <div class="success-modal-card" @click.stop>
+          <h3 class="success-modal-title">{{ $t('success') }}</h3>
+          <p class="success-modal-message">{{ successMessage }}</p>
+          <button class="success-modal-btn" @click="closeSuccessModalAndGoToBookings">
+            {{ $t('ok') }}
+          </button>
+        </div>
+      </div>
+    </teleport>
   </div>
 </template>
 
@@ -268,6 +280,8 @@ useFormKeyboard({
 const selectedAcademy = ref(null);
 const selectedProgram = ref(null);
 const isSubmitting = ref(false);
+const showEnrollmentSuccessModal = ref(false);
+const successMessage = ref('');
 const participantData = ref({
   fullName: '',
   email: '',
@@ -346,18 +360,28 @@ const confirmEnrollment = async () => {
       programId: selectedProgram.value.id,
       programName: selectedProgram.value.name,
       participant: participantData.value,
+      studentName: participantData.value.fullName,
+      studentAge: participantData.value.age,
+      phone: participantData.value.phone,
+      email: participantData.value.email,
+      programSchedule: Array.isArray(selectedProgram.value.schedule) ? selectedProgram.value.schedule : [],
       price: selectedProgram.value.price,
+      date: new Date().toISOString(),
       enrollmentDate: new Date().toISOString(),
       status: 'enrolled'
     };
 
     const result = await bookingService.createAcademyBooking(projectStore.selectedProject.id, enrollmentData);
-    
-    if (result.success) {
-      notificationStore.showSuccess(`${selectedProgram.value.name} enrollment confirmed successfully!`);
-      
-      // Navigate to bookings page immediately
-      router.push('/my-bookings');
+    const bookingSucceeded = Boolean(
+      result?.success === true ||
+      result?.bookingId ||
+      result?.id ||
+      (typeof result === 'string' && result.trim().length > 0)
+    );
+
+    if (bookingSucceeded) {
+      successMessage.value = `${selectedProgram.value.name} enrollment confirmed successfully!`;
+      showEnrollmentSuccessModal.value = true;
     } else {
       notificationStore.showError('Failed to confirm enrollment. Please try again.');
     }
@@ -367,6 +391,11 @@ const confirmEnrollment = async () => {
   } finally {
     isSubmitting.value = false;
   }
+};
+
+const closeSuccessModalAndGoToBookings = async () => {
+  showEnrollmentSuccessModal.value = false;
+  await router.push('/my-bookings');
 };
 
 // Lifecycle
@@ -840,6 +869,50 @@ onMounted(async () => {
   to {
     transform: rotate(360deg);
   }
+}
+
+.success-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 999999;
+  backdrop-filter: blur(2px);
+}
+
+.success-modal-card {
+  width: min(420px, 100%);
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 24px 20px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+
+.success-modal-title {
+  margin: 0 0 10px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.success-modal-message {
+  margin: 0 0 16px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.success-modal-btn {
+  border: none;
+  border-radius: 12px;
+  background: #AF1E23;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 12px 18px;
+  min-width: 140px;
 }
 
 /* Mobile app - hover effects disabled */

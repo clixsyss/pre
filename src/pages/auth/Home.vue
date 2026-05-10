@@ -178,6 +178,14 @@ const route = useRoute()
 const { t, locale } = useI18n()
 const projectStore = useProjectStore()
 const isArabic = computed(() => locale.value === 'ar' || locale.value === 'ar-SA')
+const resolveUserId = (userObj) =>
+  userObj?.uid ||
+  userObj?.attributes?.sub ||
+  userObj?.cognitoAttributes?.sub ||
+  userObj?.username ||
+  userObj?.id ||
+  userObj?.userSub ||
+  null;
 
 // ── Warnings banner & modal ───────────────────────────────────────────────
 const showWarningBanner = ref(false)
@@ -475,8 +483,9 @@ const switchToProject = async (project) => {
     smartMirrorStore.loadDeviceSettingsForProject(project.id)
 
     // Fetch user bookings for the new project
-    if (user.value?.uid) {
-      await academiesStore.fetchUserBookings(user.value.uid, project.id)
+    const currentUserId = resolveUserId(user.value)
+    if (currentUserId) {
+      await academiesStore.fetchUserBookings(currentUserId, project.id)
     }
 
     showProjectSwitcher.value = false
@@ -508,7 +517,9 @@ const checkAndLoadProjectData = async () => {
     // Always refresh user bookings for the current project when Home is (re)loaded
     // Force refresh to bypass cache so new bookings appear without needing a full app refresh
     try {
-      await academiesStore.fetchUserBookings(currentUser.uid, projectStore.selectedProject.id, true)
+      const currentUserId = resolveUserId(currentUser)
+      if (!currentUserId) return
+      await academiesStore.fetchUserBookings(currentUserId, projectStore.selectedProject.id, true)
     } catch (bookingError) {
       console.error('Error refreshing user bookings in checkAndLoadProjectData:', bookingError)
     }
@@ -526,8 +537,9 @@ const handleProjectChange = async (event) => {
     smartMirrorStore.loadDeviceSettingsForProject(newProject.id)
 
     // Fetch user bookings for the new project (force refresh)
-    if (user.value?.uid && newProject?.id) {
-      await academiesStore.fetchUserBookings(user.value.uid, newProject.id, true)
+    const currentUserId = resolveUserId(user.value)
+    if (currentUserId && newProject?.id) {
+      await academiesStore.fetchUserBookings(currentUserId, newProject.id, true)
     }
 
     // Restart polling for the new project
@@ -560,8 +572,10 @@ const setupBookingsPolling = () => {
       bookingsPollInterval = setInterval(async () => {
         try {
           // Silently refresh bookings in the background
+          const currentUserId = resolveUserId(currentUser)
+          if (!currentUserId) return
           await academiesStore.fetchUserBookings(
-            currentUser.uid,
+            currentUserId,
             projectStore.selectedProject.id,
             true // Force refresh to get latest updates
           )
@@ -582,8 +596,10 @@ const handleVisibilityChange = async () => {
     if (currentUser && projectStore.selectedProject?.id) {
       // Force refresh when app becomes visible
       try {
+        const currentUserId = resolveUserId(currentUser)
+        if (!currentUserId) return
         await academiesStore.fetchUserBookings(
-          currentUser.uid,
+          currentUserId,
           projectStore.selectedProject.id,
           true
         )
@@ -644,7 +660,9 @@ onMounted(async () => {
 
       // Fetch bookings in background — don't await, Home renders immediately
       if (projectStore.selectedProject?.id) {
-        academiesStore.fetchUserBookings(currentUser.uid, projectStore.selectedProject.id, true)
+        const currentUserId = resolveUserId(currentUser)
+        if (!currentUserId) return
+        academiesStore.fetchUserBookings(currentUserId, projectStore.selectedProject.id, true)
           .catch((error) => console.error('Error fetching user bookings:', error))
       }
 

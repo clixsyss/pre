@@ -319,7 +319,7 @@
           <div v-for="booking in openBookings" :key="booking.id" class="booking-card"
             @click="openBookingModal(booking)">
             <div class="booking-header">
-              <h3 class="booking-title">{{ booking.serviceName }}</h3>
+              <h3 class="booking-title">{{ getBookingTitle(booking) }}</h3>
               <div class="header-right">
                 <span :class="['booking-status', booking.status]">{{ formatStatus(booking.status) }}</span>
                 <div v-if="getUnreadCount(booking) > 0" class="unread-badge">
@@ -328,15 +328,15 @@
               </div>
             </div>
             <div class="booking-details">
-              <p class="booking-category">{{ booking.categoryName }}</p>
-              <p class="booking-date">{{ formatDate(booking.selectedDate) }}</p>
-              <p class="booking-price">EGP {{ booking.servicePrice }}</p>
+              <p class="booking-category">{{ getBookingSubtitle(booking) }}</p>
+              <p class="booking-date">{{ getBookingDateLabel(booking) }}</p>
+              <p class="booking-price">EGP {{ getBookingPrice(booking) }}</p>
             </div>
             <div class="booking-footer">
               <span class="last-message">
-                {{ getLastMessagePreview(booking) }}
+                {{ getLastMessagePreviewSafe(booking) }}
               </span>
-              <span class="booking-time">{{ formatTime(booking.lastMessageAt) }}</span>
+              <span class="booking-time">{{ formatTime(booking.lastMessageAt || booking.updatedAt || booking.createdAt) }}</span>
             </div>
           </div>
         </div>
@@ -363,7 +363,7 @@
           <div v-for="booking in closedBookings" :key="booking.id" class="booking-card"
             @click="openBookingModal(booking)">
             <div class="booking-header">
-              <h3 class="booking-title">{{ booking.serviceName }}</h3>
+              <h3 class="booking-title">{{ getBookingTitle(booking) }}</h3>
               <div class="header-right">
                 <span :class="['booking-status', booking.status]">{{ formatStatus(booking.status) }}</span>
                 <div v-if="getUnreadCount(booking) > 0" class="unread-badge">
@@ -372,30 +372,112 @@
               </div>
             </div>
             <div class="booking-details">
-              <p class="booking-category">{{ booking.categoryName }}</p>
-              <p class="booking-date">{{ formatDate(booking.selectedDate) }}</p>
-              <p class="booking-price">EGP {{ booking.servicePrice }}</p>
+              <p class="booking-category">{{ getBookingSubtitle(booking) }}</p>
+              <p class="booking-date">{{ getBookingDateLabel(booking) }}</p>
+              <p class="booking-price">EGP {{ getBookingPrice(booking) }}</p>
             </div>
             <div class="booking-footer">
               <span class="last-message">
-                {{ getLastMessagePreview(booking) }}
+                {{ getLastMessagePreviewSafe(booking) }}
               </span>
-              <span class="booking-time">{{ formatTime(booking.lastMessageAt) }}</span>
+              <span class="booking-time">{{ formatTime(booking.lastMessageAt || booking.updatedAt || booking.createdAt) }}</span>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Service Booking Modal -->
-    <ServiceBookingModal :isOpen="showBookingModal" :booking="selectedBooking" @close="closeBookingModal"
-      @openChat="openBookingChat" @booking-updated="handleBookingUpdated" />
+    <!-- Service Booking Modal (service bookings only) -->
+    <ServiceBookingModal
+      v-if="showBookingModal && selectedBooking && isServiceBooking(selectedBooking)"
+      :isOpen="showBookingModal"
+      :booking="selectedBooking"
+      @close="closeBookingModal"
+      @openChat="openBookingChat"
+      @booking-updated="handleBookingUpdated"
+    />
+
+    <!-- Details modal for court/academy bookings (no chat) -->
+    <teleport to="body">
+    <div
+      v-if="showBookingModal && selectedBooking && !isServiceBooking(selectedBooking)"
+      class="modal-overlay"
+      @click="closeBookingModal"
+    >
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>{{ getBookingTitle(selectedBooking) }}</h2>
+          <button class="close-btn" @click="closeBookingModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-section">
+            <div class="detail-row">
+              <span class="detail-label">Type</span>
+              <span class="detail-value">{{ isCourtBooking(selectedBooking) ? 'Court' : 'Academy' }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Status</span>
+              <span class="detail-value">{{ formatStatus(selectedBooking.status) }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Date</span>
+              <span class="detail-value">{{ formatDate(getBookingDate(selectedBooking)) || '-' }}</span>
+            </div>
+            <div v-if="isAcademyBooking(selectedBooking) && getAcademyScheduleText(selectedBooking)" class="detail-row">
+              <span class="detail-label">Program Days</span>
+              <span class="detail-value">{{ getAcademyScheduleText(selectedBooking) }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Price</span>
+              <span class="detail-value">EGP {{ getBookingPrice(selectedBooking) }}</span>
+            </div>
+            <div v-if="isCourtBooking(selectedBooking)" class="detail-row">
+              <span class="detail-label">Court</span>
+              <span class="detail-value">{{ selectedBooking.courtName || selectedBooking.courtType || '-' }}</span>
+            </div>
+            <div v-if="isCourtBooking(selectedBooking)" class="detail-row">
+              <span class="detail-label">Sport</span>
+              <span class="detail-value">{{ selectedBooking.sportName || selectedBooking.sportType || selectedBooking.sport || '-' }}</span>
+            </div>
+            <div v-if="isAcademyBooking(selectedBooking)" class="detail-row">
+              <span class="detail-label">Academy</span>
+              <span class="detail-value">{{ selectedBooking.academyName || '-' }}</span>
+            </div>
+            <div v-if="isAcademyBooking(selectedBooking)" class="detail-row">
+              <span class="detail-label">Program</span>
+              <span class="detail-value">{{ selectedBooking.programName || '-' }}</span>
+            </div>
+            <div v-if="isAcademyBooking(selectedBooking)" class="detail-row">
+              <span class="detail-label">Student</span>
+              <span class="detail-value">{{ academyField(selectedBooking, 'studentName', 'fullName') || '-' }}</span>
+            </div>
+            <div v-if="isAcademyBooking(selectedBooking)" class="detail-row">
+              <span class="detail-label">Student Age</span>
+              <span class="detail-value">{{ academyField(selectedBooking, 'studentAge', 'age') || '-' }}</span>
+            </div>
+            <div v-if="isAcademyBooking(selectedBooking)" class="detail-row">
+              <span class="detail-label">Parent/Guardian</span>
+              <span class="detail-value">{{ academyField(selectedBooking, 'parentName', 'guardianName', 'parentGuardian', 'parentGuardianName') || '-' }}</span>
+            </div>
+            <div v-if="isAcademyBooking(selectedBooking)" class="detail-row">
+              <span class="detail-label">Phone</span>
+              <span class="detail-value">{{ academyField(selectedBooking, 'phone', 'mobile', 'parentPhone') || '-' }}</span>
+            </div>
+            <div v-if="isAcademyBooking(selectedBooking)" class="detail-row">
+              <span class="detail-label">Email</span>
+              <span class="detail-value">{{ academyField(selectedBooking, 'email') || '-' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </teleport>
     </div><!-- end services-page-content -->
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import optimizedAuthService from 'src/services/optimizedAuthService';
@@ -409,6 +491,7 @@ import firestoreService from '../../services/firestoreService';
 import ServiceBookingModal from '../../components/ServiceBookingModal.vue';
 import SuspensionBanner from '../../components/SuspensionBanner.vue';
 import { useSuspensionGuard } from '../../composables/useSuspensionGuard';
+import { useModalState } from '../../composables/useModalState';
 
 // Component name for ESLint
 defineOptions({
@@ -423,6 +506,8 @@ const { isBlocked, suspensionMessage } = useSuspensionGuard('services');
 const sportsStore = useSportsStore();
 const academiesStore = useAcademiesStore();
 const smartMirrorStore = useSmartMirrorStore();
+const { openModal: openGlobalModal, closeModal: closeGlobalModal } = useModalState();
+const academyProgramScheduleById = ref({});
 
 // Helper function to get localized category title
 const getCategoryTitle = (category) => {
@@ -718,6 +803,134 @@ const navigateToSmartDevices = () => {
   router.push('/smart-devices');
 };
 
+const resolveUserId = (user) =>
+  user?.uid ||
+  user?.attributes?.sub ||
+  user?.cognitoAttributes?.sub ||
+  user?.username ||
+  user?.id ||
+  user?.userSub ||
+  null;
+
+const normalizeStatus = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
+
+const getBookingTimestamp = (booking) => {
+  const v = booking?.lastMessageAt || booking?.updatedAt || booking?.createdAt || booking?.enrollmentDate || booking?.date || booking?.selectedDate;
+  if (!v) return 0;
+  if (v?.seconds) return v.seconds * 1000;
+  const parsed = new Date(v).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const isServiceBooking = (booking) => !!(booking?.serviceId || booking?.type === 'service');
+const isCourtBooking = (booking) => !!(booking?.courtId || booking?.type === 'court');
+const isAcademyBooking = (booking) => !!(booking?.academyId || booking?.programId || booking?.type === 'academy');
+
+const mapAcademyOrCourtBookings = (bookings = []) =>
+  bookings.map((booking) => ({ ...booking, bookingKind: isCourtBooking(booking) ? 'court' : 'academy' }));
+const parseMaybeJsonObject = (value) => {
+  if (!value) return null;
+  if (typeof value === 'object') return value;
+  if (typeof value !== 'string') return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+const academyParticipant = (booking) => {
+  const candidates = [
+    booking?.participant,
+    booking?.participantData,
+    booking?.studentDetails,
+    booking?.student,
+    booking?.formData?.participant,
+    booking?.formData?.participantData
+  ];
+  for (const candidate of candidates) {
+    const parsed = parseMaybeJsonObject(candidate);
+    if (parsed && Object.keys(parsed).length > 0) return parsed;
+  }
+  return {};
+};
+const academyField = (booking, ...keys) => {
+  const participant = academyParticipant(booking);
+  const aliases = {
+    fullName: ['participantName', 'name', 'student_full_name', 'studentName'],
+    studentName: ['fullName', 'participantName', 'name', 'student_full_name'],
+    age: ['studentAge', 'participantAge', 'student_age'],
+    studentAge: ['age', 'participantAge', 'student_age'],
+    parentName: ['guardianName', 'parentGuardian', 'parentGuardianName', 'parent_name'],
+    guardianName: ['parentName', 'parentGuardian', 'parentGuardianName', 'guardian_name'],
+    phone: ['mobile', 'participantPhone', 'parentPhone', 'phoneNumber', 'phone_number'],
+    mobile: ['phone', 'participantPhone', 'parentPhone', 'phoneNumber', 'phone_number'],
+    email: ['participantEmail', 'studentEmail', 'emailAddress', 'email_address'],
+  };
+  const getCaseInsensitive = (obj, key) => {
+    if (!obj || typeof obj !== 'object') return undefined;
+    if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key];
+    const normalized = String(key).toLowerCase();
+    const found = Object.keys(obj).find((k) => String(k).toLowerCase() === normalized);
+    return found ? obj[found] : undefined;
+  };
+  for (const key of keys) {
+    const candidateKeys = [key, ...(aliases[key] || [])];
+    for (const candidateKey of candidateKeys) {
+      const direct = getCaseInsensitive(booking, candidateKey);
+      if (direct !== undefined && direct !== null && String(direct).trim() !== '') return direct;
+      const nested = getCaseInsensitive(participant, candidateKey);
+      if (nested !== undefined && nested !== null && String(nested).trim() !== '') return nested;
+    }
+  }
+  return null;
+};
+const getAcademyScheduleText = (booking) => {
+  const rawSchedule =
+    booking?.programSchedule ||
+    booking?.schedule ||
+    booking?.program?.schedule ||
+    booking?.academyProgram?.schedule ||
+    academyProgramScheduleById.value[String(booking?.programId || '').trim()];
+  if (!Array.isArray(rawSchedule) || rawSchedule.length === 0) return '';
+  return rawSchedule
+    .map((slot) => {
+      if (!slot) return '';
+      if (typeof slot === 'string') return slot.trim();
+      const day = String(slot.day || slot.weekday || slot.dateLabel || '').trim();
+      const time = String(slot.time || slot.timeSlot || slot.startTime || '').trim();
+      if (day && time) return `${day} ${time}`;
+      return day || time || '';
+    })
+    .filter(Boolean)
+    .join(', ');
+};
+
+const isOpenLikeStatus = (status) => ['open', 'pending', 'processing', 'confirmed', 'enrolled', 'in_progress'].includes(normalizeStatus(status));
+const isClosedLikeStatus = (status) => ['completed', 'closed', 'cancelled', 'rejected', 'resolved'].includes(normalizeStatus(status));
+const loadAcademyProgramScheduleMap = async (projectId) => {
+  if (!projectId) {
+    academyProgramScheduleById.value = {};
+    return;
+  }
+  try {
+    await academiesStore.fetchAcademies(projectId);
+    const map = {};
+    (academiesStore.academyOptions || []).forEach((academy) => {
+      (academy?.programs || []).forEach((program) => {
+        const id = String(program?.id || '').trim();
+        if (!id) return;
+        if (Array.isArray(program?.schedule)) {
+          map[id] = program.schedule;
+        }
+      });
+    });
+    academyProgramScheduleById.value = map;
+  } catch (error) {
+    console.warn('Services: failed to load academy schedules map', error);
+  }
+};
+
 // Load bookings function
 const loadBookings = async () => {
   if (!projectStore.selectedProject?.id) return;
@@ -727,34 +940,32 @@ const loadBookings = async () => {
 
     // Get current user
     const user = await optimizedAuthService.getCurrentUser();
+    const userId = resolveUserId(user);
 
-    if (!user) {
+    if (!user || !userId) {
       console.error('User not authenticated');
       return;
     }
 
-    // Load open bookings (pending and in-progress)
-    // Load closed bookings (completed and cancelled)
-    const [openResults, processingResults, completedResults, cancelledResults] = await Promise.all([
-      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'open'),
-      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'processing'),
-      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'completed'),
-      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, user.uid, 'cancelled')
+    const [openResults, processingResults, completedResults, closedResults, cancelledResults, academyAndCourtResults] = await Promise.all([
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, userId, 'open'),
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, userId, 'processing'),
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, userId, 'completed'),
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, userId, 'closed'),
+      serviceBookingService.getServiceBookingsByStatus(projectStore.selectedProject.id, userId, 'cancelled'),
+      academiesStore.fetchUserBookings(userId, projectStore.selectedProject.id, true)
     ]);
+    await loadAcademyProgramScheduleMap(projectStore.selectedProject.id);
 
-    // Open tab: show pending (open) and in-progress (processing) bookings
-    openBookings.value = [...openResults, ...processingResults].sort((a, b) => {
-      const aTime = a.lastMessageAt?.seconds || a.lastMessageAt || 0;
-      const bTime = b.lastMessageAt?.seconds || b.lastMessageAt || 0;
-      return bTime - aTime;
-    });
+    const normalizedAcademyCourt = mapAcademyOrCourtBookings(academyAndCourtResults || []);
+    const openAcademyCourt = normalizedAcademyCourt.filter((b) => isOpenLikeStatus(b.status));
+    const closedAcademyCourt = normalizedAcademyCourt.filter((b) => isClosedLikeStatus(b.status));
+
+    openBookings.value = [...openResults, ...processingResults, ...openAcademyCourt]
+      .sort((a, b) => getBookingTimestamp(b) - getBookingTimestamp(a));
     
-    // Closed tab: show completed and cancelled bookings
-    closedBookings.value = [...completedResults, ...cancelledResults].sort((a, b) => {
-      const aTime = a.lastMessageAt?.seconds || a.lastMessageAt || 0;
-      const bTime = b.lastMessageAt?.seconds || b.lastMessageAt || 0;
-      return bTime - aTime;
-    });
+    closedBookings.value = [...completedResults, ...closedResults, ...cancelledResults, ...closedAcademyCourt]
+      .sort((a, b) => getBookingTimestamp(b) - getBookingTimestamp(a));
   } catch (error) {
     console.error('Error loading bookings:', error);
   } finally {
@@ -793,8 +1004,28 @@ const closeBookingModal = () => {
   selectedBooking.value = null;
 };
 
+watch(showBookingModal, (isOpen) => {
+  if (isOpen) {
+    openGlobalModal();
+    document.body.classList.add('hide-bottom-nav');
+  } else {
+    closeGlobalModal();
+    document.body.classList.remove('hide-bottom-nav');
+  }
+});
+
+onBeforeUnmount(() => {
+  document.body.classList.remove('hide-bottom-nav');
+  if (showBookingModal.value) {
+    closeGlobalModal();
+  }
+});
+
 // Open booking chat (called from modal)
 const openBookingChat = (booking) => {
+  if (!isServiceBooking(booking)) {
+    return;
+  }
   const status = String(booking?.status || '').trim().toLowerCase().replace(/\s+/g, '_');
   if (['closed', 'completed', 'cancelled', 'rejected', 'resolved'].includes(status)) {
     alert('This service booking is closed/completed/cancelled and chat cannot be started.');
@@ -806,6 +1037,38 @@ const openBookingChat = (booking) => {
 const handleBookingUpdated = async () => {
   await loadBookings();
   await closeBookingModal();
+};
+
+const getBookingTitle = (booking) => {
+  if (isServiceBooking(booking)) return booking.serviceName || booking.categoryName || 'Service Booking';
+  if (isCourtBooking(booking)) return booking.courtName || booking.courtType || 'Court Booking';
+  if (isAcademyBooking(booking)) return booking.programName || booking.academyName || 'Academy Booking';
+  return 'Booking';
+};
+
+const getBookingSubtitle = (booking) => {
+  if (isServiceBooking(booking)) return booking.categoryName || 'Service';
+  if (isCourtBooking(booking)) return booking.sportName || booking.sportType || booking.sport || 'Court';
+  if (isAcademyBooking(booking)) return booking.academyName || 'Academy';
+  return 'Booking';
+};
+
+const getBookingDate = (booking) => booking.selectedDate || booking.date || booking.enrollmentDate || '';
+const getBookingDateLabel = (booking) => {
+  if (isAcademyBooking(booking)) {
+    const schedule = getAcademyScheduleText(booking);
+    if (schedule) return schedule;
+  }
+  const date = getBookingDate(booking);
+  return formatDate(date) || '-';
+};
+
+const getBookingPrice = (booking) =>
+  booking.servicePrice ?? booking.totalPrice ?? booking.price ?? 0;
+
+const getLastMessagePreviewSafe = (booking) => {
+  if (!isServiceBooking(booking)) return 'Tap to view booking details';
+  return getLastMessagePreview(booking);
 };
 
 // Format status for display
@@ -1485,6 +1748,79 @@ const getLastMessagePreview = (booking) => {
   font-size: 0.75rem;
   font-weight: 500;
   flex-shrink: 0;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  min-height: 100dvh;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 520px;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #222;
+}
+
+.close-btn {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  color: #666;
+}
+
+.modal-body {
+  padding: 14px 18px 18px;
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #f3f3f3;
+  padding-bottom: 8px;
+}
+
+.detail-label {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.detail-value {
+  color: #222;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: right;
 }
 
 /* Empty State */
