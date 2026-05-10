@@ -272,6 +272,28 @@
             </div>
           </div>
 
+          <!-- Academy Program Schedule -->
+          <div v-if="isAcademyBooking(selectedBooking)" class="detail-section">
+            <h3>Program Schedule</h3>
+            <div class="schedule-card">
+              <div class="schedule-header-row">
+                <span class="schedule-label">Sessions</span>
+              </div>
+              <div v-if="getAcademyScheduleItems(selectedBooking).length" class="schedule-list">
+                <span
+                  v-for="(session, idx) in getAcademyScheduleItems(selectedBooking)"
+                  :key="`${selectedBooking?.id || 'booking'}-session-${idx}`"
+                  class="schedule-chip"
+                >
+                  {{ session }}
+                </span>
+              </div>
+              <div v-else class="schedule-empty">
+                Schedule details will appear here once assigned.
+              </div>
+            </div>
+          </div>
+
           <!-- Academy Student Information -->
           <div v-if="isAcademyBooking(selectedBooking)" class="detail-section">
             <h3>Student Information</h3>
@@ -375,6 +397,42 @@ const parseMaybeJsonObject = (value) => {
   } catch {
     return null;
   }
+};
+
+const decodeDynamoValue = (value) => {
+  if (value == null) return value;
+  if (Array.isArray(value)) return value.map(decodeDynamoValue);
+  if (typeof value !== 'object') return value;
+  if (Object.prototype.hasOwnProperty.call(value, 'S')) return value.S;
+  if (Object.prototype.hasOwnProperty.call(value, 'N')) return Number(value.N);
+  if (Object.prototype.hasOwnProperty.call(value, 'BOOL')) return Boolean(value.BOOL);
+  if (Object.prototype.hasOwnProperty.call(value, 'L')) return Array.isArray(value.L) ? value.L.map(decodeDynamoValue) : [];
+  if (Object.prototype.hasOwnProperty.call(value, 'M')) return decodeDynamoValue(value.M);
+  if (Object.prototype.hasOwnProperty.call(value, 'NULL')) return null;
+
+  const out = {};
+  Object.entries(value).forEach(([k, v]) => {
+    out[k] = decodeDynamoValue(v);
+  });
+  return out;
+};
+
+const findNestedValueByKeys = (obj, keys, depth = 0) => {
+  if (!obj || typeof obj !== 'object' || depth > 4) return null;
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(obj, key) && obj[key] != null) {
+      return obj[key];
+    }
+    const ciKey = Object.keys(obj).find((k) => String(k).toLowerCase() === String(key).toLowerCase());
+    if (ciKey && obj[ciKey] != null) return obj[ciKey];
+  }
+  for (const value of Object.values(obj)) {
+    if (value && typeof value === 'object') {
+      const nested = findNestedValueByKeys(value, keys, depth + 1);
+      if (nested != null) return nested;
+    }
+  }
+  return null;
 };
 
 const academyParticipant = (booking) => {
@@ -717,30 +775,70 @@ const formatCreationDate = (booking) => {
 };
 
 const getAcademyScheduleText = (booking) => {
-  const directDays =
+  const directDays = decodeDynamoValue(
     booking?.programDays ||
     booking?.days ||
     booking?.sessionDays ||
     booking?.selectedDays ||
     booking?.day ||
-    booking?.weekday;
+    booking?.weekday ||
+    booking?.formData?.programDays ||
+    booking?.formData?.days ||
+    booking?.formData?.sessionDays ||
+    booking?.formData?.selectedDays ||
+    findNestedValueByKeys(booking, ['programDays', 'sessionDays', 'selectedDays', 'days', 'weekday', 'day'])
+  );
   if (Array.isArray(directDays) && directDays.length > 0) {
     return directDays.map((d) => String(d || '').trim()).filter(Boolean).join(', ');
   }
   if (typeof directDays === 'string' && directDays.trim()) {
-    return directDays.trim();
+    const normalized = directDays
+      .split(',')
+      .map((d) => d.trim())
+      .filter(Boolean)
+      .join(', ');
+    return normalized || directDays.trim();
   }
 
-  const rawSchedule =
+  const rawSchedule = decodeDynamoValue(
     booking?.programSchedule ||
     booking?.schedule ||
     booking?.timeSlotsByDay ||
+    booking?.sessionSchedule ||
+    booking?.sessions ||
+    booking?.formData?.programSchedule ||
+    booking?.formData?.schedule ||
+    booking?.formData?.sessions ||
+    booking?.formData?.timeSlotsByDay ||
+    booking?.participant?.programSchedule ||
+    booking?.participant?.schedule ||
+    booking?.details?.programSchedule ||
+    booking?.details?.schedule ||
+    booking?.metadata?.programSchedule ||
+    booking?.metadata?.schedule ||
     booking?.program?.schedule ||
     booking?.program?.timeSlotsByDay ||
     booking?.academyProgram?.schedule ||
+    booking?.academyProgram?.programSchedule ||
+    findNestedValueByKeys(booking, ['programSchedule', 'schedule', 'timeSlotsByDay', 'sessionSchedule', 'sessions']) ||
     academyProgramScheduleById.value[String(booking?.programId || '').trim()] ||
-    academyProgramScheduleById.value[`name:${String(booking?.programName || '').trim().toLowerCase()}`];
+    academyProgramScheduleById.value[`name:${String(booking?.programName || '').trim().toLowerCase()}`]
+  );
   const parsed = parseMaybeJsonObject(rawSchedule) || rawSchedule;
+
+  // Shape 0: wrapped object { days: [...]} / { schedule: [...] } / { sessions: [...] }
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    const nested =
+      parsed.days ||
+      parsed.schedule ||
+      parsed.sessions ||
+      parsed.programDays ||
+      parsed.timeSlotsByDay;
+    if (nested) {
+      const nestedText = getAcademyScheduleText({ ...booking, programSchedule: nested });
+      if (nestedText) return nestedText;
+    }
+  }
 
   // Shape A: [{ day, time }] or ["Mon 5:00 PM"]
   if (Array.isArray(parsed)) {
@@ -780,6 +878,27 @@ const getAcademyScheduleText = (booking) => {
   }
 
   return '';
+};
+
+const getAcademyScheduleItems = (booking) => {
+  const text = String(getAcademyScheduleText(booking) || '').trim();
+  if (!text) return [];
+  return text
+    .split(/\s*,\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+};
+
+const resolveProgramScheduleFromMap = (booking) => {
+  const decodedProgramId = String(decodeDynamoValue(booking?.programId) || '').trim();
+  if (decodedProgramId && academyProgramScheduleById.value[decodedProgramId]) {
+    return academyProgramScheduleById.value[decodedProgramId];
+  }
+  const decodedProgramName = String(decodeDynamoValue(booking?.programName) || '').trim().toLowerCase();
+  if (decodedProgramName) {
+    return academyProgramScheduleById.value[`name:${decodedProgramName}`] || null;
+  }
+  return null;
 };
 
 const getBookingTime = (booking) => {
@@ -829,16 +948,30 @@ const canCancel = (booking) => {
 };
 
 const viewBookingDetails = (booking) => {
+  let bookingForModal = booking;
+  if (isAcademyBooking(booking)) {
+    const fromMap = resolveProgramScheduleFromMap(booking);
+    if (fromMap && !getAcademyScheduleText(booking)) {
+      bookingForModal = {
+        ...booking,
+        programSchedule: fromMap
+      };
+    }
+  }
+
   if (isAcademyBooking(booking)) {
     console.log('MyBookings academy booking payload:', {
-      id: booking?.id,
-      type: booking?.type,
-      participant: booking?.participant,
-      participantData: booking?.participantData,
-      studentDetails: booking?.studentDetails
+      id: bookingForModal?.id,
+      type: bookingForModal?.type,
+      participant: bookingForModal?.participant,
+      participantData: bookingForModal?.participantData,
+      studentDetails: bookingForModal?.studentDetails,
+      programId: bookingForModal?.programId,
+      programName: bookingForModal?.programName,
+      programSchedule: bookingForModal?.programSchedule
     });
   }
-  selectedBooking.value = booking;
+  selectedBooking.value = bookingForModal;
 };
 
 const closeModal = () => {
@@ -1561,6 +1694,53 @@ onBeforeUnmount(() => {
   color: #231F20;
   font-weight: 500;
   text-align: right;
+}
+
+.schedule-card {
+  background: linear-gradient(180deg, #fbfbfd 0%, #f5f7fb 100%);
+  border: 1px solid #e8edf5;
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+}
+
+.schedule-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.schedule-label {
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #5d677a;
+  text-transform: uppercase;
+}
+
+.schedule-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.schedule-chip {
+  display: inline-flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dbe3f0;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1f2a44;
+  line-height: 1.25;
+}
+
+.schedule-empty {
+  font-size: 0.9rem;
+  color: #6d7687;
+  font-style: italic;
 }
 
 .notes-content {
