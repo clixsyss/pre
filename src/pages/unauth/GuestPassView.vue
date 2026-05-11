@@ -268,14 +268,19 @@ const generateQRCode = async () => {
     const qrData = pass.value.cardId
       ? String(pass.value.cardId)
       : JSON.stringify({
-          passId: pass.value.id,
-          projectId: pass.value.projectId,
-          guestName: pass.value.guestName,
-          validUntil: pass.value.validUntil,
+          t: 'gp',
+          i: pass.value.id,
+          p: pass.value.projectId,
+          g: pass.value.guestName || '',
+          u: pass.value.unit || '',
+          z: ['main'],
+          x: pass.value.validUntil ? new Date(pass.value.validUntil).getTime() : null,
+          c: pass.value.createdAt  ? new Date(pass.value.createdAt).getTime()  : null,
         })
 
     await QRCode.toCanvas(qrCanvas.value, qrData, {
       width: 300,
+      errorCorrectionLevel: 'L',
       margin: 2,
       color: {
         dark: '#231F20',

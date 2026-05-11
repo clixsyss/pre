@@ -1980,36 +1980,56 @@ const loadPassesFromAWS = async () => {
     // Get user ID (Cognito sub)
     const primaryUserId = getPrimaryUserIdentifier(user)
 
-    // Hydrate display name and fetch user status in parallel
-    const [, { status: userStatus, resolvedUserId }] = await Promise.all([
-      hydrateCurrentUserDisplayName(user, primaryUserId),
-      getUserStatusWithAndroidFallback(user, projectId),
+    // Unit is already known from the project store — use it to start the passes
+    // query in parallel with the status/limits check instead of waiting for it.
+    const storeUnit = projectStore.selectedProject?.userUnit || ''
+
+    // Fire display name hydration without blocking the critical path
+    hydrateCurrentUserDisplayName(user, primaryUserId).then(() => {
+      if (!currentUserDisplayName.value) currentUserDisplayName.value = 'User'
+    })
+
+    // Run status check and passes list fetch in parallel
+    const [statusResult, loadedPasses] = await Promise.all([
+      getUserStatusWithAndroidFallback(user, projectId).catch(err => {
+        console.error('❌ getUserStatus failed:', err)
+        return null
+      }),
+      getGuestPassesForUnit(projectId, primaryUserId, storeUnit || null).catch(err => {
+        console.error('❌ getGuestPassesForUnit failed:', err)
+        return []
+      }),
     ])
-    if (!currentUserDisplayName.value) currentUserDisplayName.value = 'User'
 
-    const userUnit = userStatus.data?.unit || ''
+    const resolvedUserId = statusResult?.resolvedUserId || primaryUserId
+    const userStatus = statusResult?.status
+    const userUnit = userStatus?.data?.unit || storeUnit
 
-    // Update blocking status and limits immediately so the UI reflects them
+    // Update blocking status and limits
     userBlockingStatus.value = {
-      isBlocked: userStatus.data?.blocked || false,
-      blockingDetails: userStatus.data?.blocked
+      isBlocked: userStatus?.data?.blocked || false,
+      blockingDetails: userStatus?.data?.blocked
         ? { reason: 'Guest pass generation is currently disabled' }
         : null,
       loading: false,
     }
     passLimits.value = {
       monthlyLimit: null,
-      usedThisMonth: userStatus.data?.usedThisMonth || 0,
+      usedThisMonth: userStatus?.data?.usedThisMonth || 0,
       remainingQuota: null,
-      dailyLimit: userStatus.data?.dailyLimit ?? null,
-      usedToday: userStatus.data?.usedToday || 0,
-      dailyRemainingQuota: userStatus.data?.dailyRemainingQuota ?? null,
+      dailyLimit: userStatus?.data?.dailyLimit ?? null,
+      usedToday: userStatus?.data?.usedToday || 0,
+      dailyRemainingQuota: userStatus?.data?.dailyRemainingQuota ?? null,
     }
 
-    // Load passes for this unit (or user if no unit), sorted newest first
-    const loadedPasses = await getGuestPassesForUnit(projectId, resolvedUserId, userUnit || null)
+    // If the authoritative unit differs from what the store had (rare), re-fetch passes
+    let finalPasses = loadedPasses || []
+    if (userUnit && storeUnit && userUnit !== storeUnit) {
+      finalPasses = await getGuestPassesForUnit(projectId, resolvedUserId, userUnit).catch(() => finalPasses)
+    }
+
     const currentUserIdentifierSet = buildCurrentUserIdentifierSet(user, resolvedUserId)
-    const visibleResidentPasses = loadedPasses.filter((pass) => {
+    const visibleResidentPasses = finalPasses.filter((pass) => {
       if (!isResidentGuestPass(pass)) return false
       return userUnit ? true : doesPassBelongToCurrentUser(pass, currentUserIdentifierSet)
     })
@@ -2150,44 +2170,11 @@ const setQRRef = (el, passId) => {
   }
 }
 
-const checkLocationRestrictionStatus = async () => {
-  try {
-    locationRestriction.value.loading = true
-
-    const projectId = projectStore.selectedProject?.id
-    const locationCheckService = (await import('../../services/locationCheckService')).default
-
-    // Pass current project ID to check ONLY this project
-    const status = await locationCheckService.getLocationRestrictionStatus(projectId)
-
-    locationRestriction.value = {
-      active: status.active,
-      projectCount: status.projectCount,
-      projects: status.projects,
-      loading: false,
-    }
-
-    console.log('📍 Location restriction status for current project:', locationRestriction.value)
-  } catch (error) {
-    console.error('Error checking location restriction status:', error)
-    locationRestriction.value = {
-      active: false,
-      projectCount: 0,
-      projects: [],
-      loading: false,
-    }
-  }
-}
 
 const switchToPassesTab = async () => {
   activeTab.value = 'passes'
-  displayedPassesCount.value = 5 // Reset to show 5 passes initially
-  // Load passes (this also calculates limits) and check blocking status
-  await Promise.all([
-    loadPassesFromAWS(),
-    checkUserBlockingStatus(),
-    checkLocationRestrictionStatus()
-  ])
+  displayedPassesCount.value = 5
+  await loadPassesFromAWS()
 }
 
 const generatePass = async () => {
@@ -2460,17 +2447,15 @@ const generateQRCode = async (pass, options = {}) => {
     ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, canvasWidth, canvasHeight)
 
-    // QR code data MUST be unique per pass (avoid repeating the same QR).
     const qrData = JSON.stringify({
-      type: 'guest_pass',
-      version: 1,
-      passId: pass.id || pass.code,
-      projectId: pass.projectId || projectStore.selectedProject?.id || null,
-      verificationToken: pass.verificationToken || null,
-      cardId: pass.cardId || null,
-      guestName: pass.guestName,
-      validUntil: pass.validUntil,
-      createdAt: pass.createdAt,
+      t: 'gp',
+      i: pass.id || pass.code,
+      p: pass.projectId || projectStore.selectedProject?.id || null,
+      g: pass.guestName || '',
+      u: pass.unit || '',
+      z: ['main'],
+      x: pass.validUntil ? new Date(pass.validUntil).getTime() : null,
+      c: pass.createdAt  ? new Date(pass.createdAt).getTime()  : null,
     })
 
     console.log('🎯 Generating QR code for pass:', pass.id)
@@ -2485,6 +2470,7 @@ const generateQRCode = async (pass, options = {}) => {
       const qrCanvas = document.createElement('canvas')
       await QRCode.toCanvas(qrCanvas, qrData, {
         width: 280 * qualityScale,
+        errorCorrectionLevel: 'L',
         margin: 2,
         color: {
           dark: '#000000',
@@ -2508,6 +2494,7 @@ const generateQRCode = async (pass, options = {}) => {
       // Method 2: Fallback to dataURL method
       const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
         width: 280 * qualityScale,
+        errorCorrectionLevel: 'L',
         margin: 2,
         color: {
           dark: '#000000',

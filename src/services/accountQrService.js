@@ -38,19 +38,13 @@ function getPreferredIdentifier(cu) {
 function buildLegacyUnsignedPayload(cu, projectId) {
   const sub =
     cu?.attributes?.sub || cu?.userSub || cu?.cognitoAttributes?.sub || cu?.id || null
-  const uid = cu?.uid || null
   const w = currentQrWindowStart()
   return {
-    t: 'jdar_user_identity',
-    v: 1,
-    id: getPreferredIdentifier(cu),
-    sub,
-    uid,
-    email: cu?.attributes?.email || cu?.email || null,
-    name: cu?.attributes?.name || cu?.cognitoAttributes?.name || null,
-    projectId: projectId || null,
+    t: 'u',
+    sub: sub || getPreferredIdentifier(cu),
+    p: projectId || null,
     w,
-    exp: w + ACCOUNT_QR_ROTATION_MS,
+    x: w + ACCOUNT_QR_ROTATION_MS,
   }
 }
 

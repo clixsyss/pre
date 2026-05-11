@@ -525,22 +525,22 @@ export const createGuestPass = async (
     const projectInfo = userProjects.find(p => p.projectId === projectId)
     const userUnit = projectInfo?.unit || user?.unit || ''
 
-    // Build the canonical QR payload stored on the pass document.
+    // Build the compact QR payload — matches the 'gp' format the gate scanner expects.
+    // Short keys keep the QR data small (~185 chars) for fast scanning.
     const qrPayload = {
-      v: 1,
-      id: passId,
-      projectId,
-      userId,
-      userName,
-      guestName,
-      unit: userUnit,
-      purpose,
-      validFrom: createdAt.getTime(),
-      validUntil: validUntil.getTime(),
+      t: 'gp',
+      i: passId,
+      p: projectId,
+      g: guestName || '',
+      u: userUnit,
+      z: ['main'],
+      x: validUntil.getTime(),
+      c: createdAt.getTime(),
+      s: userId,
     }
 
     const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrPayload), {
-      errorCorrectionLevel: 'H',
+      errorCorrectionLevel: 'L',
       type: 'image/png',
       width: 512,
       margin: 2
