@@ -25,8 +25,8 @@ export const STONE_RESIDENCE_GATE_SYSTEM = {
   characteristicUUID: BLE_CHARACTERISTIC_UUID,
   password: STONE_SHARED_GATE_PASSWORD,
   fastMode: true,
-  veryCloseRssiMin: -55,
-  scanDurationMs: 2200,
+  veryCloseRssiMin: -75,
+  scanDurationMs: 3000,
   deviceNames: ['GATE_LEFT', 'GATE_RIGHT'],
   deviceDisplayNames: {
     GATE_LEFT: 'Gate 1',

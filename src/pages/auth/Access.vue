@@ -980,7 +980,7 @@ const currentGatePassword = computed(() => currentGateSystem.value.password)
 const currentGateBleName = computed(() => activeGate.value?.bleName || null)
 const currentGateDeviceNames = computed(() => currentGateSystem.value.deviceNames || [])
 const currentGateScanDurationMs = computed(() => currentGateSystem.value.scanDurationMs || 3000)
-const currentGateVeryCloseRssiMin = computed(() => currentGateSystem.value.veryCloseRssiMin ?? -55)
+const currentGateVeryCloseRssiMin = computed(() => currentGateSystem.value.veryCloseRssiMin ?? -75)
 
 // Passes state
 const passes = ref([])

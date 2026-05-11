@@ -326,7 +326,7 @@ export function useBluetooth() {
       lastError.value = null
 
       const timeoutMs = options.timeoutMs || 3000
-      const minRssi = options.minRssi ?? -55
+      const minRssi = options.minRssi ?? -75
       const candidateNames = Array.isArray(options.deviceNames) ? options.deviceNames : []
 
       let strongestResult = null
